@@ -23,7 +23,7 @@ Claude Code session ends
 1. **Filter + store:** keep prompts, agent text, Write/Edit summaries, Bash commands; drop thinking blocks and attachments; redact again.
 2. **Timeline:** number kept events E1, E2, … with a map back to the raw JSONL line.
 3. **Big logs:** count tokens first; drop Read results, trim long tool output, then split at user prompts.
-4. **Extract:** one model call returns 3–5 decisions as JSON validated by `decisionCardSchema`. Invalid output: retry once, then `failed`.
+4. **Extract:** one model call returns 3–5 decisions as JSON. Validate it with a model-output schema that has the decision fields only (`decision`, `why`, `source`, `evidence` without `verified`, `files`, `question`, `model_answer`). The server adds ids, `position` and `user_id`; Postgres generates `flagged` and `hidden`. Invalid output: retry once, then `failed`.
 5. **Evidence check (plain code):** the cited event exists and contains the quote, which sets each item's `verified`. Postgres generates `flagged` and `hidden` from `evidence` with the same rule as `getEvidenceFlags()`.
 
 ## Review loop (Zia, planned)
