@@ -1,5 +1,3 @@
-import { Button } from "@/components/ui/button";
-
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 px-6 py-24">
@@ -7,9 +5,6 @@ export default function Home() {
       <p className="text-muted-foreground">
         Turn each Claude Code session into decision cards, then explain them back on day 1, 3 and 7.
       </p>
-      <div>
-        <Button>Get started</Button>
-      </div>
     </main>
   );
 }

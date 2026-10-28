@@ -22,3 +22,14 @@ test("fixture cards agree with getEvidenceFlags", () => {
     assert.deepEqual(getEvidenceFlags(card.evidence), { flagged: card.flagged, hidden: card.hidden }, card.id);
   }
 });
+
+test("schema rejects cards whose flags disagree with their evidence", () => {
+  const card = fixture.cards[0];
+  assert.equal(decisionCardSchema.safeParse({ ...card, hidden: true }).success, false);
+});
+
+test("schema rejects reversed line ranges", () => {
+  const card = fixture.cards[0];
+  const evidence = [{ ...card.evidence[0], file: "a.ts", lines: [9, 3] }];
+  assert.equal(decisionCardSchema.safeParse({ ...card, evidence }).success, false);
+});

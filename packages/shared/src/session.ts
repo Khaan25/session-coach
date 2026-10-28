@@ -19,7 +19,7 @@ export const sessionSchema = z.object({
   duration_min: z.number().int().min(0).nullable(),
   event_count: z.number().int().min(0).nullable(),
   /** Storage path of the redacted .jsonl.gz. */
-  raw_path: z.string(),
+  raw_path: z.string().min(1),
   status: sessionStatusSchema,
   /** Shown to the user when status is failed. */
   error: z.string().nullable(),

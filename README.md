@@ -6,6 +6,8 @@ Built by Kasam Thapa Magar and Zia Ur Rehman Khan for the 8x Playmakers trial (c
 
 ## How it works
 
+Planned flow. This PR is the scaffold: schemas, migration and an empty web app.
+
 1. A Claude Code session ends. The `SessionEnd` hook starts a detached worker and exits, so Claude Code never waits.
 2. The worker redacts secrets, gzips the log and uploads it (or `session-coach push --latest`).
 3. The server filters the log, numbers the events (E1, E2, …) and one model call extracts 3–5 decisions.
@@ -20,14 +22,14 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | Path | What | Owner |
 |---|---|---|
 | `apps/web` | Next.js app: pages, API routes, pipeline | both |
-| `packages/cli` | `init`, `login`, `push`, hook, worker | Kasam |
+| `packages/cli` | stub; `init`, `login`, `push`, hook and worker planned | Kasam |
 | `packages/shared` | Decision and Session types + zod schemas, sample fixture | shared, change after agreement |
 | `supabase/migrations` | every schema change as a migration file | shared, change after agreement |
 | `docs/` | architecture and team decisions | both |
 
 ## Run it locally
 
-Needs Node 22+. pnpm comes from Corepack, pinned in `package.json`.
+Needs Node 22.6+ (22 LTS recommended). pnpm comes from Corepack, pinned in `package.json`. Node 25+ no longer bundles Corepack: run `npm install -g corepack` first.
 
 ```bash
 corepack enable pnpm

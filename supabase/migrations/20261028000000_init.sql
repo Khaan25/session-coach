@@ -1,6 +1,7 @@
 -- Session Coach initial schema.
--- Rule: learners read only their own rows. Every write except profile settings goes through
--- the server with the service role key, so a learner can't set their own scores or card flags.
+-- Rule: learners read only their own rows. Every write except profile settings and token
+-- revocation goes through the server with the service role key, so a learner can't set their
+-- own scores or card flags.
 
 -- profiles -------------------------------------------------------------------
 create table public.profiles (
@@ -35,6 +36,7 @@ create table public.cli_tokens (
   last_used_at timestamptz,
   created_at timestamptz not null default now()
 );
+create index cli_tokens_user_idx on public.cli_tokens (user_id);
 
 -- sessions (Kasam) -----------------------------------------------------------
 create table public.sessions (
@@ -48,56 +50,67 @@ create table public.sessions (
   started_at timestamptz,
   duration_min integer check (duration_min >= 0),
   event_count integer check (event_count >= 0),
-  raw_path text not null, -- Storage path of the redacted .jsonl.gz
+  raw_path text not null check (raw_path <> ''), -- Storage path of the redacted .jsonl.gz
   status text not null default 'pending' check (status in ('pending', 'processing', 'ready', 'failed')),
   error text,
   created_at timestamptz not null default now(),
-  unique (user_id, external_id) -- a repeat upload returns 409
+  unique (user_id, external_id), -- a repeat upload returns 409
+  unique (id, user_id) -- target of the owner-preserving foreign key on decision_cards
 );
 create index sessions_user_created_idx on public.sessions (user_id, created_at desc);
 
 -- decision_cards (Kasam) -----------------------------------------------------
 create table public.decision_cards (
   id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.sessions (id) on delete cascade,
+  session_id uuid not null,
   user_id uuid not null references public.profiles (id) on delete cascade,
   position smallint not null check (position >= 0),
   decision text not null,
   why text not null,
   source text not null check (source in ('stated', 'inferred')),
-  evidence jsonb not null, -- [{ event_index, quote, file, lines, verified }]
+  evidence jsonb not null check (jsonb_typeof(evidence) = 'array' and jsonb_array_length(evidence) > 0),
+    -- [{ event_index, quote, file, lines, verified }]
   files text[] not null default '{}',
   question text not null,
   model_answer text not null,
-  flagged boolean not null default false, -- any evidence item failed the check
-  hidden boolean not null default false,  -- no evidence item passed; kept for the accuracy check
+  -- Derived from evidence so a writer can't store flags that disagree with it.
+  -- Same rule as getEvidenceFlags() in packages/shared/src/decision.ts.
+  flagged boolean generated always as (jsonb_path_exists(evidence, '$[*] ? (@.verified != true)')) stored,
+  hidden boolean generated always as (not jsonb_path_exists(evidence, '$[*] ? (@.verified == true)')) stored,
   created_at timestamptz not null default now(),
-  unique (session_id, position)
+  unique (session_id, position),
+  unique (id, user_id), -- target of the owner-preserving foreign keys on answers and reviews
+  -- the card's owner must be its session's owner
+  foreign key (session_id, user_id) references public.sessions (id, user_id) on delete cascade
 );
 create index decision_cards_user_idx on public.decision_cards (user_id) where not hidden;
 
 -- answers (Zia) --------------------------------------------------------------
 create table public.answers (
   id uuid primary key default gen_random_uuid(),
-  card_id uuid not null references public.decision_cards (id) on delete cascade,
+  card_id uuid not null,
   user_id uuid not null references public.profiles (id) on delete cascade,
   review_step smallint not null check (review_step between 0 and 3), -- 0 first try, 1-3 = day 1/3/7
   answer text not null,
   score smallint not null check (score in (0, 1, 2)), -- wrong, partly, got it
   missing text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  foreign key (card_id, user_id) references public.decision_cards (id, user_id) on delete cascade
 );
+create index answers_card_idx on public.answers (card_id);
 create index answers_user_created_idx on public.answers (user_id, created_at desc);
 
 -- reviews (Zia): one row per card, drives the day 1/3/7 schedule --------------
 create table public.reviews (
-  card_id uuid primary key references public.decision_cards (id) on delete cascade,
+  card_id uuid primary key,
   user_id uuid not null references public.profiles (id) on delete cascade,
   step smallint not null default 0 check (step between 0 and 3),
   due_on date, -- null once mastered
   last_score smallint check (last_score in (0, 1, 2)),
   mastered boolean not null default false,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  check (mastered = (due_on is null)), -- a pending card always has a due date
+  foreign key (card_id, user_id) references public.decision_cards (id, user_id) on delete cascade
 );
 create index reviews_due_idx on public.reviews (user_id, due_on) where not mastered;
 
@@ -123,15 +136,23 @@ alter table public.email_log enable row level security;
 create policy "read own profile" on public.profiles for select to authenticated using (id = (select auth.uid()));
 create policy "update own profile" on public.profiles for update to authenticated
   using (id = (select auth.uid())) with check (id = (select auth.uid()));
+-- Learners may change settings only, not email, github_login or created_at.
+revoke update on public.profiles from anon, authenticated;
+grant update (timezone, notify_email) on public.profiles to authenticated;
 
 create policy "read own tokens" on public.cli_tokens for select to authenticated using (user_id = (select auth.uid()));
 create policy "delete own tokens" on public.cli_tokens for delete to authenticated using (user_id = (select auth.uid()));
 
 create policy "read own sessions" on public.sessions for select to authenticated using (user_id = (select auth.uid()));
-create policy "delete own sessions" on public.sessions for delete to authenticated using (user_id = (select auth.uid()));
+-- No learner delete on sessions: the server deletes the Storage object first, then the row.
 
 create policy "read own visible cards" on public.decision_cards for select to authenticated
   using (user_id = (select auth.uid()) and not hidden);
+-- model_answer is the answer key: learners get every column except it, so select the columns
+-- by name (select * fails). The server returns it after the learner answers.
+revoke select on public.decision_cards from anon, authenticated;
+grant select (id, session_id, user_id, position, decision, why, source, evidence, files, question,
+  flagged, hidden, created_at) on public.decision_cards to authenticated;
 
 create policy "read own answers" on public.answers for select to authenticated using (user_id = (select auth.uid()));
 create policy "read own reviews" on public.reviews for select to authenticated using (user_id = (select auth.uid()));

@@ -18,15 +18,15 @@ Claude Code session ends
 
 `SessionEnd` hooks run inside a short time budget and can be killed mid-upload. The hook reads `session_id` and `transcript_path` from stdin, spawns the worker with `detached: true` + `unref()`, and exits. The worker does the slow work: redact, gzip, upload with 3 retries, and on failure saves to `~/.session-coach/outbox/`. It skips sessions already in `~/.session-coach/sent`; the server returns 409 for repeats.
 
-## Pipeline stages (Kasam)
+## Pipeline stages (Kasam, planned)
 
 1. **Filter + store:** keep prompts, agent text, Write/Edit summaries, Bash commands; drop thinking blocks and attachments; redact again.
 2. **Timeline:** number kept events E1, E2, … with a map back to the raw JSONL line.
-3. **Extract:** one model call returns 3–5 decisions as JSON validated by `decisionCardSchema`. Invalid output: retry once, then `failed`.
-4. **Evidence check (plain code):** the cited event exists and contains the quote. `getEvidenceFlags()` sets `flagged` and `hidden`.
-5. **Big logs:** count tokens first; drop Read results, trim long tool output, then split at user prompts.
+3. **Big logs:** count tokens first; drop Read results, trim long tool output, then split at user prompts.
+4. **Extract:** one model call returns 3–5 decisions as JSON validated by `decisionCardSchema`. Invalid output: retry once, then `failed`.
+5. **Evidence check (plain code):** the cited event exists and contains the quote, which sets each item's `verified`. Postgres generates `flagged` and `hidden` from `evidence` with the same rule as `getEvidenceFlags()`.
 
-## Review loop (Zia)
+## Review loop (Zia, planned)
 
 - **Grading:** `callModel("grade", …)` returns `{ score: 0 | 1 | 2, missing, modelAnswer }` against the card's why, evidence and model answer.
 - **Schedule:** score 2 moves a card to the next gap (1, 3, 7 days); below 2 restarts at day 1; passing day 7 sets `mastered`.
