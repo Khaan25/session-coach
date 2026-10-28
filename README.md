@@ -29,9 +29,10 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Run it locally
 
-Needs Node 22.6+ (22 LTS recommended). pnpm comes from Corepack, pinned in `package.json`. Node 25+ no longer bundles Corepack: run `npm install -g corepack` first.
+Needs Node 22.6+ (22 LTS recommended). pnpm comes from Corepack, pinned in `package.json`. pnpm 12 needs a newer Corepack than old Node 22 releases bundle, and Node 25+ bundles none, so install the latest Corepack first.
 
 ```bash
+npm install -g corepack@latest
 corepack enable pnpm
 pnpm install
 cp .env.example apps/web/.env.local   # fill in values

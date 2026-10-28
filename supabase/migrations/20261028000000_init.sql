@@ -68,7 +68,11 @@ create table public.decision_cards (
   decision text not null,
   why text not null,
   source text not null check (source in ('stated', 'inferred')),
-  evidence jsonb not null check (jsonb_typeof(evidence) = 'array' and jsonb_array_length(evidence) > 0),
+  evidence jsonb not null check (
+    jsonb_typeof(evidence) = 'array' and jsonb_array_length(evidence) > 0
+    -- every item is an object with a boolean verified, so the generated flags can't misread it
+    and not jsonb_path_exists(evidence, 'lax $[*] ? (@.type() != "object" || !exists(@.verified) || @.verified.type() != "boolean")')
+  ),
     -- [{ event_index, quote, file, lines, verified }]
   files text[] not null default '{}',
   question text not null,
