@@ -1,0 +1,10 @@
+{
+  "name": "session-coach",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "CLI: init, login, push, plus the SessionEnd hook and background worker. Owned by Kasam.",
+  "scripts": {
+    "typecheck": "echo \"cli: nothing to check yet\""
+  }
+}
