@@ -13,10 +13,7 @@
     "clientWidth": 375,
     "hScroll": false,
     "darkClass": false,
-    "overflowing": [
-      "DIV:381",
-      "card:381"
-    ]
+    "overflowing": ["DIV:381", "card:381"]
   },
   {
     "file": "landing-dark-1440.png",
@@ -32,10 +29,7 @@
     "clientWidth": 375,
     "hScroll": false,
     "darkClass": true,
-    "overflowing": [
-      "DIV:381",
-      "card:381"
-    ]
+    "overflowing": ["DIV:381", "card:381"]
   },
   {
     "file": "design-system-light-1440.png",
@@ -43,13 +37,7 @@
     "clientWidth": 1440,
     "hScroll": false,
     "darkClass": false,
-    "overflowing": [
-      "chart-data-table:1447",
-      "CAPTION:1447",
-      "THEAD:1447",
-      "TR:1447",
-      "TH:1447"
-    ]
+    "overflowing": ["chart-data-table:1447", "CAPTION:1447", "THEAD:1447", "TR:1447", "TH:1447"]
   },
   {
     "file": "design-system-light-375.png",
@@ -57,13 +45,7 @@
     "clientWidth": 375,
     "hScroll": false,
     "darkClass": false,
-    "overflowing": [
-      "chart-data-table:550",
-      "CAPTION:550",
-      "THEAD:550",
-      "TR:550",
-      "TH:550"
-    ]
+    "overflowing": ["chart-data-table:550", "CAPTION:550", "THEAD:550", "TR:550", "TH:550"]
   },
   {
     "file": "design-system-dark-1440.png",
@@ -71,13 +53,7 @@
     "clientWidth": 1440,
     "hScroll": false,
     "darkClass": true,
-    "overflowing": [
-      "chart-data-table:1447",
-      "CAPTION:1447",
-      "THEAD:1447",
-      "TR:1447",
-      "TH:1447"
-    ]
+    "overflowing": ["chart-data-table:1447", "CAPTION:1447", "THEAD:1447", "TR:1447", "TH:1447"]
   },
   {
     "file": "design-system-dark-375.png",
@@ -85,13 +61,7 @@
     "clientWidth": 375,
     "hScroll": false,
     "darkClass": true,
-    "overflowing": [
-      "chart-data-table:550",
-      "CAPTION:550",
-      "THEAD:550",
-      "TR:550",
-      "TH:550"
-    ]
+    "overflowing": ["chart-data-table:550", "CAPTION:550", "THEAD:550", "TR:550", "TH:550"]
   },
   {
     "file": "dashboard-light-1440.png",
