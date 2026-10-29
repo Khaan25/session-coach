@@ -217,7 +217,10 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
       className={mergeClass(listItemClass, className)}
       {...props}
     >
-      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {/* Plain text truncates; two or more parts (a name, then ms-auto meta) lay out in a row. */}
+      <span className="min-w-0 flex-1 truncate has-[>*+*]:flex has-[>*+*]:items-center has-[>*+*]:gap-2">
+        {children}
+      </span>
       <ComboboxPrimitive.ItemIndicator
         render={
           <span className="pointer-events-none absolute end-2 flex size-4 items-center justify-center" />
