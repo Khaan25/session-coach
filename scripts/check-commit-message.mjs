@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Adapted from 8xsocial/template-monorepo (MIT).
+import { pathToFileURL } from "node:url";
 // Shared by .githooks/commit-msg (local, every commit) and the CI "commits"
 // job (every PR) — one implementation, so the rule can never drift between
 // the two enforcement points. Edit the rule here, not in either caller.
@@ -33,6 +34,8 @@ const SCOPES = [
   "ui",
   "ci",
   "docs",
+  "logs",
+  "auth",
   "deps",
 ];
 
@@ -106,9 +109,14 @@ async function main() {
   const rangeIndex = args.indexOf("--range");
   if (rangeIndex !== -1) {
     // CI mode: validate every commit header in base..head.
-    const { execSync } = await import("node:child_process");
+    const { execFileSync } = await import("node:child_process");
     const range = args[rangeIndex + 1];
-    const log = execSync(`git log --format=%B -z ${range}`, { encoding: "utf-8" });
+    if (!range || range.startsWith("-")) {
+      console.error("Usage: check-commit-message.mjs --range base..head");
+      process.exit(1);
+    }
+    // No shell: the range comes from CI input and must never be interpreted.
+    const log = execFileSync("git", ["log", "--format=%B", "-z", range], { encoding: "utf-8" });
     const commits = log.split("\0").filter(Boolean);
     let failed = false;
     for (const commitMessage of commits) {
@@ -141,6 +149,6 @@ async function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }

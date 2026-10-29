@@ -495,7 +495,7 @@ function isProbablyBinary(text) {
 }
 
 function stagedFiles() {
-  const out = git("diff", "--cached", "--name-only", "-z", "--diff-filter=ACM");
+  const out = git("diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR");
   return out.status === 0 ? out.stdout.split("\0").filter(Boolean) : [];
 }
 
