@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Session } from "@session-coach/shared/session";
 
+import { sessionName } from "@/lib/sessions/name";
 import { localDate } from "@/lib/sessions/rows";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,19 +31,6 @@ async function learnerToday(supabase: Supabase, userId: string, now: Date) {
     .maybeSingle<{ timezone: string }>();
   if (error) throw new Error(`learnerToday: ${error.message}`);
   return localDate(data?.timezone ?? "UTC", now);
-}
-
-/**
- * A session's name as the app shows it: title, else repo on branch.
- *
- * @param session - The embedded session, or null when the embed came back empty.
- */
-export function sessionName(session: SessionName | null) {
-  return (
-    session?.title ||
-    [session?.repo, session?.branch].filter(Boolean).join(" on ") ||
-    "Untitled session"
-  );
 }
 
 /**
@@ -120,7 +108,7 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
     id: card.id,
     decision: card.decision,
     sessionId: card.session_id,
-    sessionName: sessionName(card.session),
+    sessionName: sessionName(card.session ?? {}),
     step,
     dueOn,
   });
@@ -167,6 +155,6 @@ export async function getQuizCard(userId: string, cardId: string): Promise<QuizC
     decision: data.decision,
     question: data.question,
     sessionId: data.session_id,
-    sessionName: sessionName(data.session),
+    sessionName: sessionName(data.session ?? {}),
   };
 }

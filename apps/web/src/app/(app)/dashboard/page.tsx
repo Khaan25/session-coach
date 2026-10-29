@@ -19,7 +19,8 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { dueTodayCount, listSessions } from "@/lib/sessions/queries";
+import { dueTodayCount } from "@/lib/review/queries";
+import { listSessions } from "@/lib/sessions/queries";
 import { PAGE_SIZE, parsePage } from "@/lib/sessions/rows";
 
 export const metadata: Metadata = { title: "Dashboard" };
