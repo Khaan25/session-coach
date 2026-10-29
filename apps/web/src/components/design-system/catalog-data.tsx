@@ -89,7 +89,7 @@ function DataCatalog() {
       description="Chart, chart scale, timeline, code block, inline code and masked key."
     >
       <Specimen label="Chart: bars and lines, tooltip and legend">
-        <div className="grid w-full gap-6 lg:grid-cols-2">
+        <div className="grid w-full gap-6 *:min-w-0 lg:grid-cols-2">
           <ChartContainer config={CHART_CONFIG} className="h-56 w-full">
             <BarChart data={BY_DAY}>
               <CartesianGrid vertical={false} />
@@ -125,7 +125,7 @@ function DataCatalog() {
       </Specimen>
 
       <Specimen label="Timeline: kind bars, quiet bars, small and loading">
-        <div className="grid w-full gap-4">
+        <div className="grid w-full gap-4 *:min-w-0">
           <Timeline label={session.title} spans={SPANS} now={4600} kind="agent" />
           <Timeline
             label="Quiet bars"
@@ -140,7 +140,7 @@ function DataCatalog() {
       </Specimen>
 
       <Specimen label="Code">
-        <div className="grid w-full gap-4 lg:grid-cols-2">
+        <div className="grid w-full gap-4 *:min-w-0 lg:grid-cols-2">
           <CodeBlock
             code={SAMPLE_CODE}
             language="ts"

@@ -356,7 +356,7 @@ function Disclosure() {
       </Specimen>
 
       <Specimen label="Tabs: default and line, sizes, vertical (the indicator slides)">
-        <div className="grid w-full gap-6 lg:grid-cols-2">
+        <div className="grid w-full gap-6 *:min-w-0 lg:grid-cols-2">
           {(["default", "line"] as const).map((variant) =>
             (["default", "sm"] as const).map((size) => (
               <Tabs key={`${variant}-${size}`} defaultValue="cards">

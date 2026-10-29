@@ -57,7 +57,7 @@ function BlocksGallery() {
       title="Blocks"
       description="Whole cards built from the components above."
     >
-      <div className="grid items-start gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid items-start gap-6 *:min-w-0 sm:grid-cols-2 xl:grid-cols-3">
         {BLOCKS.map(({ name, note, Component }) => (
           <section key={name} aria-label={name} className="flex flex-col gap-2">
             <div className="flex flex-col gap-0.5">

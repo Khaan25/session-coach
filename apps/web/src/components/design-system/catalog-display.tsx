@@ -187,7 +187,7 @@ function Numbers() {
   return (
     <>
       <Specimen label="Stat sizes, variants, states and group">
-        <div className="grid w-full gap-4 lg:grid-cols-3">
+        <div className="grid w-full gap-4 *:min-w-0 lg:grid-cols-3">
           {(["default", "lg", "xl"] as const).map((size) => (
             <Stat key={size} size={size} variant="framed" kind="run">
               <StatLabel>Cards this week ({size})</StatLabel>
@@ -277,7 +277,7 @@ function Numbers() {
         />
       </Specimen>
       <Specimen label="Progress">
-        <div className="grid w-full gap-6 sm:grid-cols-2">
+        <div className="grid w-full gap-6 *:min-w-0 sm:grid-cols-2">
           <Progress value={33}>
             <ProgressLabel>Day 1 of 3 reviews</ProgressLabel>
             <ProgressValue />
@@ -310,7 +310,7 @@ function Surfaces() {
   return (
     <>
       <Specimen label="Card sizes">
-        <div className="grid w-full gap-4 lg:grid-cols-3">
+        <div className="grid w-full gap-4 *:min-w-0 lg:grid-cols-3">
           {(["sm", "default", "lg"] as const).map((size) => (
             <Card key={size} size={size}>
               <CardHeader>
@@ -332,7 +332,7 @@ function Surfaces() {
       </Specimen>
 
       <Specimen label="Item variants, sizes and parts">
-        <div className="grid w-full gap-4 lg:grid-cols-2">
+        <div className="grid w-full gap-4 *:min-w-0 lg:grid-cols-2">
           {(["default", "outline", "muted"] as const).map((variant) => (
             <ItemGroup key={variant}>
               {(["default", "sm", "xs"] as const).map((size, index) => (
@@ -392,7 +392,7 @@ function Surfaces() {
       </Specimen>
 
       <Specimen label="Data list">
-        <div className="grid w-full gap-4 lg:grid-cols-2">
+        <div className="grid w-full gap-4 *:min-w-0 lg:grid-cols-2">
           {(["plain", "framed"] as const).map((variant) =>
             (["horizontal", "vertical"] as const).map((orientation) => (
               <DataList
@@ -430,7 +430,7 @@ function Surfaces() {
       </Specimen>
 
       <Specimen label="Empty: reasons, variants and sizes">
-        <div className="grid w-full gap-4 lg:grid-cols-2">
+        <div className="grid w-full gap-4 *:min-w-0 lg:grid-cols-2">
           <Empty>
             <EmptyHeader>
               <EmptyTitle>No sessions yet</EmptyTitle>

@@ -84,7 +84,7 @@ function TextFields() {
   return (
     <>
       <Specimen label="Input and textarea">
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid w-full gap-3 *:min-w-0 sm:grid-cols-2 lg:grid-cols-4">
           <Input aria-label="Default input" placeholder="Explain the decision" />
           <Input aria-label="Disabled input" placeholder="Disabled" disabled />
           <Input aria-label="Invalid input" defaultValue="too short" aria-invalid />
@@ -109,7 +109,7 @@ function TextFields() {
       </Specimen>
 
       <Specimen label="Field">
-        <div className="grid w-full gap-6 lg:grid-cols-2">
+        <div className="grid w-full gap-6 *:min-w-0 lg:grid-cols-2">
           <FieldSet>
             <FieldLegend>Explain back</FieldLegend>
             <FieldGroup>
@@ -161,7 +161,7 @@ function TextFields() {
       </Specimen>
 
       <Specimen label="Input group">
-        <div className="grid w-full gap-3 sm:grid-cols-2">
+        <div className="grid w-full gap-3 *:min-w-0 sm:grid-cols-2">
           <InputGroup>
             <InputGroupAddon>
               <MagnifyingGlassIcon />
@@ -265,7 +265,7 @@ function ChoiceControls() {
       </Specimen>
 
       <Specimen label="Slider">
-        <div className="grid w-full items-center gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid w-full items-center gap-6 *:min-w-0 sm:grid-cols-2 lg:grid-cols-4">
           <Slider aria-label="Cards per session" defaultValue={[4]} min={3} max={5} />
           <Slider
             defaultValue={[1, 7]}
@@ -393,7 +393,7 @@ function Comboboxes() {
   const anchor = useComboboxAnchor();
   return (
     <Specimen label="Combobox">
-      <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid w-full gap-3 *:min-w-0 sm:grid-cols-2 lg:grid-cols-3">
         {CONTROL_SIZES.map((size) => (
           <Combobox key={size} items={DECISIONS}>
             <ComboboxInput
