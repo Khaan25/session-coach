@@ -53,6 +53,7 @@ const inputGroupAddonVariants = cva(
 function InputGroupAddon({
   className,
   align = "inline-start",
+  onMouseDown,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof inputGroupAddonVariants>) {
   return (
@@ -65,7 +66,14 @@ function InputGroupAddon({
       data-align={align}
       className={cn(inputGroupAddonVariants({ align }), className)}
       onMouseDown={(event) => {
-        if ((event.target as HTMLElement).closest("button")) {
+        onMouseDown?.(event);
+        // Anything that takes its own press (a button, a link, a select) keeps it.
+        if (
+          event.defaultPrevented ||
+          (event.target as HTMLElement).closest(
+            "button, a[href], input, select, textarea, [role=button]",
+          )
+        ) {
           return;
         }
 
