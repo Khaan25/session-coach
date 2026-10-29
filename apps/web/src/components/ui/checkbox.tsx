@@ -19,7 +19,7 @@ function Checkbox({ className, onClick, ...props }: CheckboxPrimitive.Root.Props
       }}
       className={cn(
         "peer relative inline-flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-soft outline-none [-webkit-tap-highlight-color:transparent]",
-        "bg-page text-text-inverse control-edge transition-shadow duration-(--dur-fast) ease-(--ease-step) [--frame-color:var(--border-control)]",
+        "bg-page text-text-inverse control-edge transition-shadow [--frame-color:var(--border-control)]",
         "touch-target not-pointer-coarse:after:absolute not-pointer-coarse:after:-inset-x-3 not-pointer-coarse:after:-inset-y-2",
         "hover:not-data-disabled:not-data-readonly:not-data-checked:not-data-indeterminate:not-aria-invalid:[--frame-color:var(--ink)]",
         "data-indeterminate:bg-ink data-checked:bg-ink",

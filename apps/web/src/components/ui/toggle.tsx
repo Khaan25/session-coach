@@ -11,7 +11,7 @@ import { controlHeight } from "@/lib/quartz/utils";
 const toggleVariants = cva(
   [
     "group/toggle relative inline-flex items-center justify-center gap-1.5 rounded-soft type-label whitespace-nowrap text-text-1 outline-none select-none [-webkit-tap-highlight-color:transparent]",
-    "transition-[color,background-color,border-color,box-shadow] duration-(--dur-fast) ease-(--ease-step)",
+    "transition-[color,background-color,border-color,box-shadow]",
     "hover:not-data-disabled:not-data-pressed:bg-ghost-hover active:not-data-disabled:not-data-pressed:bg-pressed",
     "data-pressed:bg-inverse data-pressed:text-text-inverse data-pressed:shadow-none data-pressed:hover:not-data-disabled:bg-button-primary-hover data-pressed:focus-visible:focus-ring-ink",
     "disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:text-text-disabled data-disabled:data-pressed:bg-pressed",

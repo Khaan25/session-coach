@@ -55,7 +55,7 @@
  * Motion, from the vennsol design-system zip (shared/styles/tokens.css), kept as it was.
  *
  * Not `inline`: these must survive as real variables so a hand-written `transition` shorthand can
- * reference them (Switch needs a per-property delay no utility can express). Something entering or
+ * reference them (Toast's stacking transition does). Something entering or
  * leaving takes the out curve, so it commits at once; something moving between two on-screen
  * positions takes the in-out curve. Quartz's --dur-* and --ease-step stay available beside them.
  */

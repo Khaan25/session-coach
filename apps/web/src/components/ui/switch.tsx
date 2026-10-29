@@ -39,7 +39,7 @@ function Switch({
         // two sizes is a ratio that will disagree with itself. `--track` is the track's
         // width, the distance the thumb actually has.
         "peer group/switch relative inline-flex shrink-0 cursor-pointer items-center rounded-full outline-none [-webkit-tap-highlight-color:transparent]",
-        "bg-page control-edge transition-[background-color,border-color,box-shadow] duration-(--dur-fast) ease-(--ease-step) [--frame-color:var(--border-control)]",
+        "bg-page control-edge transition-[background-color,border-color,box-shadow] [--frame-color:var(--border-control)]",
         "touch-target not-pointer-coarse:after:absolute not-pointer-coarse:after:-inset-x-3 not-pointer-coarse:after:-inset-y-2",
         "data-[size=default]:h-5 data-[size=default]:w-9 data-[size=default]:[--thumb:--spacing(4)] data-[size=default]:[--track-h:20px] data-[size=default]:[--track:36px]",
         "data-[size=sm]:h-4 data-[size=sm]:w-7 data-[size=sm]:[--thumb:--spacing(3)] data-[size=sm]:[--track-h:16px] data-[size=sm]:[--track:28px]",
@@ -128,7 +128,7 @@ function Switch({
           "data-checked:translate-x-[calc(var(--track)-var(--w)-var(--gap))] rtl:data-checked:-translate-x-[calc(var(--track)-var(--w)-var(--gap))] data-unchecked:translate-x-(--gap) rtl:data-unchecked:-translate-x-(--gap)",
           // A disabled or pending switch still receives hover, and `!` is what keeps
           // this ahead of both states without relying on utility order.
-          "group-data-pending/switch:[--sx:1]! group-data-pending/switch:[--sy:1]! group-data-disabled/switch:[--sx:1]! group-data-disabled/switch:[--sy:1]!",
+          "group-data-pending/switch:[--sx:1]! group-data-pending/switch:[--sy:1]! group-data-readonly/switch:[--sx:1]! group-data-readonly/switch:[--sy:1]! group-data-disabled/switch:[--sx:1]! group-data-disabled/switch:[--sy:1]!",
           /*
            * One duration, one curve, no per-property delay - and that is a
            * correctness constraint here, not a preference.

@@ -24,7 +24,7 @@ type ControlSize = "sm" | "default" | "lg";
 // The field box holds the bare control (data-control) and draws the edge, hover, focus and fail states for it.
 const fieldBoxClass = cn(
   "group/field-box relative flex w-full min-w-0 items-center rounded-soft bg-page type-label text-text-1 control-edge forced-colors:border pointer-coarse:text-base",
-  "transition-[background-color,box-shadow,outline-color] duration-(--dur-fast) ease-(--ease-step)",
+  "transition-[background-color,box-shadow,outline-color]",
   // Focus: the edge turns ink and a soft ink halo grows around it, eased. No outline floats off the box.
   "has-[[data-control]:focus]:[--control-lift:var(--focus-halo)]! has-[[data-control]:focus]:[--frame-color:var(--border-focus)]!",
   "has-[[data-control][aria-invalid=true]]:[--frame-color:var(--fail-line)]",

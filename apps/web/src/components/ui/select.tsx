@@ -35,7 +35,7 @@ const listItemClass = cn(
 
 const fieldTriggerClass = cn(
   "group/select-trigger flex w-fit min-w-40 items-center justify-between gap-2 rounded-soft bg-page px-3 text-start type-label whitespace-nowrap control-edge select-none",
-  "text-text-1 transition-[background-color,box-shadow,outline-color] duration-(--dur-fast) ease-(--ease-step)",
+  "text-text-1 transition-[background-color,box-shadow,outline-color]",
   "hover:not-data-disabled:not-aria-invalid:[--frame-color:var(--line-control-hover)] data-popup-open:not-aria-invalid:[--frame-color:var(--line-control-hover)]",
   "aria-invalid:[--frame-color:var(--fail-line)]",
   // Focus and open are the edge turning ink, eased in, in place of an outline.

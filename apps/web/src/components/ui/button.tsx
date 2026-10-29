@@ -16,7 +16,7 @@ const tapScale =
 const buttonVariants = cva(
   [
     "group/button relative inline-flex max-w-full shrink-0 items-center justify-center gap-2 rounded-soft whitespace-nowrap outline-none select-none",
-    "type-label transition-[color,background-color,border-color,box-shadow,scale] duration-(--dur-fast) ease-(--ease-step) [-webkit-tap-highlight-color:transparent] active:duration-(--dur-press)",
+    "type-label transition-[color,background-color,border-color,box-shadow,scale] [-webkit-tap-highlight-color:transparent]",
     "disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:text-text-disabled",
     "aria-invalid:[--frame-color:var(--fail-line)]",
     "in-data-[slot=button-group]:after:hidden in-data-[slot=input-group]:rounded-inner in-data-[slot=input-group]:after:hidden in-data-[slot=item-actions]:after:hidden",
