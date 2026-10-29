@@ -4,7 +4,15 @@ import type { MetadataRoute } from "next";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 // The public pages only; the app behind sign-in is disallowed in robots.ts.
-const paths = ["/", "/how-it-works", "/pricing", "/privacy", "/terms", "/support"];
+const paths = [
+  "/",
+  "/how-it-works",
+  "/pricing",
+  "/privacy",
+  "/terms",
+  "/support",
+  "/delete-account",
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return paths.map((path) => ({ url: new URL(path, siteUrl).href }));

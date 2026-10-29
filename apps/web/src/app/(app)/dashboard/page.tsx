@@ -1,36 +1,49 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { Container } from "@/components/app/container";
+import { NoSessionsEmpty } from "@/components/app/empty-state";
+import { SessionListLoading } from "@/components/app/loading-state";
 import { AppPageHeader } from "@/components/app/page-header";
-import { SessionRow } from "@/components/app/session-row";
-import { StatRow } from "@/components/app/stat-row";
+import { SessionList } from "@/components/sessions/session-list";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemTitle,
-} from "@/components/ui/item";
-import { SAMPLE_NOW, sampleSessions, sampleStats } from "@/lib/sample/sessions";
+import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { dueTodayCount, listSessions } from "@/lib/sessions/queries";
+import { PAGE_SIZE, parsePage } from "@/lib/sessions/rows";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-// SAMPLE data until Phase 4. The empty state (NoSessionsEmpty) shows on /design-system#app.
-// TODO(zia): the learner's sessions (20 per page, page in the URL with nuqs), a Realtime subscription that updates
-// each row's status and prepends new sessions (a client SessionList), and the due count from `reviews`.
-export default function DashboardPage() {
-  const due = sampleStats.cardsDueToday;
+// shortcut: the page is read from searchParams directly; nuqs isn't installed (no new dependencies this phase).
+export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <Container>
       <AppPageHeader
         title="Dashboard"
         description="Explain back the decisions your coding agent made."
       />
-      <StatRow {...sampleStats} />
+      <Suspense
+        fallback={
+          <Card>
+            <SessionListLoading />
+          </Card>
+        }
+      >
+        <Sessions searchParams={searchParams} />
+      </Suspense>
+    </Container>
+  );
+}
+
+async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchParams">) {
+  const user = await getCurrentUser();
+  if (!user) return <NoSessionsEmpty />;
+  const page = parsePage((await searchParams).page);
+  const { now, sessions, hasMore, due } = await load(user.id, page);
+  return (
+    <>
       {due > 0 && (
         <Item variant="outline">
           <ItemContent>
@@ -52,12 +65,49 @@ export default function DashboardPage() {
             <h2>Sessions</h2>
           </CardTitle>
         </CardHeader>
-        <ItemGroup>
-          {sampleSessions.map(({ session, cardCount }) => (
-            <SessionRow key={session.id} session={session} cardCount={cardCount} now={SAMPLE_NOW} />
-          ))}
-        </ItemGroup>
+        <SessionList
+          key={page}
+          sessions={sessions}
+          userId={user.id}
+          now={now.toISOString()}
+          prepend={page === 1}
+          limit={PAGE_SIZE}
+        />
+        {(page > 1 || hasMore) && (
+          <CardFooter>
+            <nav aria-label="Session pages" className="flex w-full justify-between gap-2">
+              {page > 1 ? (
+                <Link
+                  href={page === 2 ? "/dashboard" : `/dashboard?page=${page - 1}`}
+                  className={buttonVariants({ variant: "secondary" })}
+                >
+                  Newer
+                </Link>
+              ) : (
+                <span />
+              )}
+              {hasMore && (
+                <Link
+                  href={`/dashboard?page=${page + 1}`}
+                  className={buttonVariants({ variant: "secondary" })}
+                >
+                  Older
+                </Link>
+              )}
+            </nav>
+          </CardFooter>
+        )}
       </Card>
-    </Container>
+    </>
   );
+}
+
+/** Reads the clock outside render (cacheComponents and the compiler's purity rule), then both queries. */
+async function load(userId: string, page: number) {
+  const now = new Date();
+  const [{ sessions, hasMore }, due] = await Promise.all([
+    listSessions({ userId, page }),
+    dueTodayCount(userId, now),
+  ]);
+  return { now, sessions, hasMore, due };
 }

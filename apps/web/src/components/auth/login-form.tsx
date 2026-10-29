@@ -1,14 +1,16 @@
 "use client";
 
-import { GoogleLogoIcon, InfoIcon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useId, useRef, useState } from "react";
+import { useActionState, useId, useRef, useState } from "react";
 
+import { type AuthState, signIn } from "@/app/(auth)/actions";
+import { AuthNotice } from "@/components/auth/auth-notice";
+import { GoogleForm } from "@/components/auth/google-form";
+import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 
 type Errors = { email?: string; password?: string };
 
@@ -23,33 +25,29 @@ function validate(email: string, password: string): Errors {
 }
 
 /**
- * The sign-in form from docs/plans/auth.md, as a UI mock: it validates, then shows a notice. Nothing is sent or stored,
- * and there is no form action, so the browser never posts the fields anywhere.
+ * The sign-in form (docs/plans/auth.md): email and password through the signIn Server Action, or Google. The fields
+ * are checked here first; the server checks them again and answers bad credentials with one generic message.
+ *
+ * @param next - Where to go after signing in; the server keeps it only when it stays on this origin.
  */
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const id = useId();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const [errors, setErrors] = useState<Errors>({});
-  const [notice, setNotice] = useState(false);
+  const [state, action, pending] = useActionState<AuthState, FormData>(signIn, {});
+  // Set when the browser-side check fails; cleared when a submit goes through, so the server's answer shows.
+  const [clientErrors, setClientErrors] = useState<Errors>();
+  const errors = clientErrors ?? state.fields ?? {};
 
-  // TODO(zia): call the signIn Server Action (auth.signInWithPassword). On email_not_confirmed show a resend button
-  // with a 60 s cooldown; on bad credentials one generic message. Redirect to safeNext(next).
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
     const email = emailRef.current?.value.trim() ?? "";
     const password = passwordRef.current?.value ?? "";
-    const next = validate(email, password);
-    setErrors(next);
-    if (next.email) emailRef.current?.focus();
-    else if (next.password) passwordRef.current?.focus();
-    setNotice(!next.email && !next.password);
-  }
-
-  // TODO(zia): call the signInWithGoogle Server Action (auth.signInWithOAuth, redirectTo from the request origin).
-  function handleGoogle() {
-    setErrors({});
-    setNotice(true);
+    const found = validate(email, password);
+    if (!found.email && !found.password) return setClientErrors(undefined);
+    event.preventDefault();
+    setClientErrors(found);
+    if (found.email) emailRef.current?.focus();
+    else passwordRef.current?.focus();
   }
 
   return (
@@ -57,12 +55,10 @@ export function LoginForm() {
       <Card size="lg">
         <CardContent>
           <FieldGroup>
-            <Button type="button" variant="secondary" size="lg" onClick={handleGoogle}>
-              <GoogleLogoIcon weight="bold" data-icon="inline-start" aria-hidden />
-              Continue with Google
-            </Button>
+            <GoogleForm next={next} />
             <FieldSeparator>or</FieldSeparator>
-            <form noValidate onSubmit={handleSubmit}>
+            <form noValidate action={action} onSubmit={handleSubmit}>
+              <input type="hidden" name="next" value={next ?? ""} />
               <FieldGroup>
                 <Field data-invalid={errors.email ? true : undefined}>
                   <FieldLabel htmlFor={`${id}-email`}>Email</FieldLabel>
@@ -74,6 +70,7 @@ export function LoginForm() {
                     autoComplete="email"
                     inputMode="email"
                     spellCheck={false}
+                    defaultValue={state.email}
                     aria-invalid={errors.email ? true : undefined}
                     aria-describedby={errors.email ? `${id}-email-error` : undefined}
                   />
@@ -97,7 +94,7 @@ export function LoginForm() {
                   />
                   <FieldError id={`${id}-password-error`}>{errors.password}</FieldError>
                 </Field>
-                <Button type="submit" size="lg">
+                <Button type="submit" size="lg" disabled={pending}>
                   Sign in
                 </Button>
               </FieldGroup>
@@ -110,20 +107,19 @@ export function LoginForm() {
       <output>: the notice is block content. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <div role="status">
-        {notice && (
-          <Item variant="outline">
-            <ItemMedia variant="icon">
-              <InfoIcon weight="duotone" aria-hidden />
-            </ItemMedia>
-            <ItemContent>
-              <ItemTitle>Sign-in isn&apos;t open yet</ItemTitle>
-              <ItemDescription>
-                Accounts arrive with the next release. Nothing you typed was sent or saved.
-              </ItemDescription>
-            </ItemContent>
-          </Item>
+        {!clientErrors && state.status === "unconfirmed" && (
+          <AuthNotice title="Confirm your email">{state.message}</AuthNotice>
+        )}
+        {!clientErrors && state.status === "error" && state.message && (
+          <AuthNotice title="Couldn't sign in" fail>
+            {state.message}
+          </AuthNotice>
         )}
       </div>
+      {/* Outside the live region: it has its own, for the resend answer. Keyed by address so another address starts fresh. */}
+      {!clientErrors && state.status === "unconfirmed" && state.email && (
+        <ResendConfirmation key={state.email} email={state.email} />
+      )}
 
       <p className="type-body-sm text-text-2">
         New to Session Coach?{" "}

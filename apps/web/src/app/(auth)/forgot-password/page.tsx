@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-// A UI mock until auth (Phase 2).
 export default function ForgotPasswordPage() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">

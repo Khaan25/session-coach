@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import type { Session } from "@session-coach/shared/session";
 import {
   ExamIcon,
   ChartLineUpIcon,
@@ -25,6 +24,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import type { SessionListItem } from "@/lib/sessions/rows";
 
 // Routes from docs/plans/pages-and-dashboard.md. Only /dashboard exists so far; the rest land in later phases.
 export const navMain = [
@@ -36,15 +36,17 @@ export const navMain = [
   { title: "Settings", url: "/settings", icon: <GearIcon /> },
 ];
 
-// TODO(zia): the signed-in profile (display_name, email, avatar_url) once auth lands.
-
 export function AppSidebar({
   sessions,
+  userId,
   user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
-  sessions: Session[];
-  user: React.ComponentProps<typeof NavUser>["user"];
+  sessions: SessionListItem[];
+  /** Turns on live status updates for the sessions; null while signed out or loading. */
+  userId: string | null;
+  /** Null while signed out or loading: the footer then shows only the theme toggle. */
+  user: React.ComponentProps<typeof NavUser>["user"] | null;
 }) {
   return (
     <Sidebar variant="inset" {...props}>
@@ -60,13 +62,11 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
-        <NavSessions sessions={sessions} />
+        <NavSessions sessions={sessions} userId={userId} />
       </SidebarContent>
       <SidebarFooter>
         <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">
-            <NavUser user={user} />
-          </div>
+          <div className="min-w-0 flex-1">{user && <NavUser user={user} />}</div>
           <ThemeToggle />
         </div>
       </SidebarFooter>
