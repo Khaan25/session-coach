@@ -5,6 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { safeNext } from "@/lib/auth/safe-next";
+import { EMAIL, MIN_PASSWORD } from "@/lib/auth/validate";
 import { SIGNUP_EMAIL_COOKIE } from "@/lib/auth/signup-email";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,10 +18,6 @@ export type AuthState = {
   email?: string;
 };
 
-/** Matches the dashboard and supabase/config.toml minimum (docs/plans/auth.md #23); checked here first for a fast error. */
-const MIN_PASSWORD = 10;
-// Only catches typos; Supabase decides what a valid address is.
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const GENERIC = "Something went wrong on our side. Try again in a minute.";
 const RATE_LIMITED = "Too many attempts. Wait a minute, then try again.";
 
