@@ -29,7 +29,7 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Run it locally
 
-Needs Node 22.6+ (22 LTS recommended). pnpm comes from Corepack, pinned in `package.json`. pnpm 12 needs a newer Corepack than old Node 22 releases bundle, and Node 25+ bundles none, so install the latest Corepack first.
+Needs Node 22.22.2+ or 24.15+ (the LTS lines current Corepack supports). pnpm comes from Corepack, pinned in `package.json`. Older bundled Corepack can't install pnpm 12, so install the latest Corepack first.
 
 ```bash
 npm install -g corepack@latest
