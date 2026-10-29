@@ -6,8 +6,8 @@ import { Container } from "@/components/app/container";
 import { AppPageHeader } from "@/components/app/page-header";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ProfileForm } from "@/components/settings/profile-form";
+import { SettingsCard } from "@/components/settings/settings-card";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSettingsProfile, timeZoneOptions } from "@/lib/settings/profile";
 
@@ -23,19 +23,14 @@ export default function SettingsPage() {
       <Suspense fallback={<SettingsLoading />}>
         <AccountSettings />
       </Suspense>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>CLI tokens</h2>
-          </CardTitle>
-          <CardDescription>Create and revoke the tokens the CLI signs in with.</CardDescription>
-          <CardAction>
-            <Link href="/setup" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-              Manage tokens
-            </Link>
-          </CardAction>
-        </CardHeader>
-      </Card>
+      <SettingsCard
+        title="CLI tokens"
+        description="Create and revoke the tokens the CLI signs in with."
+      >
+        <Link href="/setup" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+          Manage tokens
+        </Link>
+      </SettingsCard>
     </Container>
   );
 }
@@ -47,36 +42,22 @@ async function AccountSettings() {
   return (
     <>
       <ProfileForm profile={profile} timezones={timeZoneOptions(profile.timezone)} />
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Sign out everywhere</h2>
-          </CardTitle>
-          <CardDescription>
-            Signs you out on every browser and device, including this one.
-          </CardDescription>
-          <CardAction>
-            <form action={signOutEverywhere}>
-              <Button type="submit" variant="secondary" size="sm">
-                Sign out everywhere
-              </Button>
-            </form>
-          </CardAction>
-        </CardHeader>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Delete account</h2>
-          </CardTitle>
-          <CardDescription>
-            Deletes your sessions, cards, answers and tokens. It can&apos;t be undone.
-          </CardDescription>
-          <CardAction>
-            <DeleteAccountDialog email={profile.email ?? ""} />
-          </CardAction>
-        </CardHeader>
-      </Card>
+      <SettingsCard
+        title="Sign out everywhere"
+        description="Signs you out on every browser and device, including this one."
+      >
+        <form action={signOutEverywhere}>
+          <Button type="submit" variant="secondary" size="sm">
+            Sign out everywhere
+          </Button>
+        </form>
+      </SettingsCard>
+      <SettingsCard
+        title="Delete account"
+        description="Deletes your sessions, cards, answers and tokens. It can't be undone."
+      >
+        <DeleteAccountDialog email={profile.email ?? ""} />
+      </SettingsCard>
     </>
   );
 }
