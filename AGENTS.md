@@ -1,6 +1,7 @@
 # Session Coach
 
 pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (Decision + Session zod schemas), `packages/cli` (empty stub; hook and worker planned), `supabase/migrations`.
+New here? [docs/CODEBASE.md](docs/CODEBASE.md) explains how the code works and why; [docs/DATA_MODEL.md](docs/DATA_MODEL.md) explains every table and policy.
 
 ## Commands
 
