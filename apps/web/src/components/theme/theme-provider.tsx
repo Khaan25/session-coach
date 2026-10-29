@@ -2,6 +2,8 @@
 
 import { createContext, use, useEffect, useMemo, useSyncExternalStore } from "react";
 
+import { DARK_QUERY, STORAGE_KEY } from "./theme-script";
+
 /*
  * Ported from the vennsol design-system zip (`theme-provider.tsx`), itself adapted from
  * https://ui.shadcn.com/docs/dark-mode. Changes for Next.js:
@@ -23,15 +25,6 @@ export type Theme = (typeof THEMES)[number];
 export type ResolvedTheme = Exclude<Theme, "system">;
 
 const DEFAULT_THEME: Theme = "system";
-const STORAGE_KEY = "session-coach-theme";
-const DARK_QUERY = "(prefers-color-scheme: dark)";
-
-/*
- * Runs in <head> before first paint. Mirrors `readStoredTheme` and `resolveTheme` below; keep
- * them in step. Wrapped in try/catch because storage access throws where it is blocked.
- */
-export const themeScript = `(function(){try{var t=localStorage.getItem("${STORAGE_KEY}");if(t!=="light"&&t!=="dark")t=matchMedia("${DARK_QUERY}").matches?"dark":"light";document.documentElement.classList.add(t)}catch(e){}})()`;
-
 type ThemeProviderState = {
   /** The user's choice, which may be `system`. */
   theme: Theme;
@@ -46,12 +39,15 @@ const ThemeProviderContext = createContext<ThemeProviderState | null>(null);
 
 const isTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme);
 
+// Where storage is blocked, the choice lives here for this page view.
+let memoryTheme: Theme | null = null;
+
 const readStoredTheme = (): Theme | null => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return isTheme(stored) ? stored : null;
+    return isTheme(stored) ? stored : memoryTheme;
   } catch {
-    return null;
+    return memoryTheme;
   }
 };
 
@@ -59,6 +55,7 @@ const readStoredTheme = (): Theme | null => {
 const storageListeners = new Set<() => void>();
 
 const writeStoredTheme = (theme: Theme) => {
+  memoryTheme = theme;
   try {
     localStorage.setItem(STORAGE_KEY, theme);
   } catch {
@@ -84,36 +81,38 @@ const subscribeSystem = (onChange: () => void) => {
 
 const getSystemPrefersDark = () => window.matchMedia(DARK_QUERY).matches;
 
+const noopSubscribe = () => () => {};
+
 /**
  * Owns the app theme: the user's choice, its persistence, and the class on `<html>` that the
  * tokens and every `dark:` utility resolve against. `<html>` because dialogs and menus portal
  * outside the app subtree, and only `<html>` is an ancestor of both.
  */
-export function ThemeProvider({
-  children,
-  defaultTheme = DEFAULT_THEME,
-}: {
-  children: React.ReactNode;
-  /** Theme to use when nothing is stored yet. */
-  defaultTheme?: Theme;
-}) {
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const storedTheme = useSyncExternalStore(subscribeStorage, readStoredTheme, () => null);
   const systemPrefersDark = useSyncExternalStore(
     subscribeSystem,
     getSystemPrefersDark,
     () => false,
   );
-  const theme = storedTheme ?? defaultTheme;
+  // The hydration render uses the server snapshots (light); themeScript already set the right class.
+  const isHydrated = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+  const theme = storedTheme ?? DEFAULT_THEME;
 
   // `system` is a rule, not a value, so it is resolved every render instead of stored.
   const resolvedTheme: ResolvedTheme =
     theme === "system" ? (systemPrefersDark ? "dark" : "light") : theme;
 
   useEffect(() => {
+    if (!isHydrated) return;
     const root = document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(resolvedTheme);
-  }, [resolvedTheme]);
+  }, [isHydrated, resolvedTheme]);
 
   const value = useMemo<ThemeProviderState>(
     () => ({ theme, resolvedTheme, setTheme: writeStoredTheme }),

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 
-import { ThemeProvider, themeScript } from "@/components/theme/theme-provider";
+import { ThemeProvider } from "@/components/theme/theme-provider";
+import { themeScript } from "@/components/theme/theme-script";
 import { QuartzPortalProvider } from "@/lib/quartz/portal";
 
 import "./globals.css";

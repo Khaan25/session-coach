@@ -22,10 +22,10 @@ const OPTIONS: { value: Theme; label: string }[] = [
 /*
  * Ported from the vennsol design-system zip (`ThemeToggle.tsx`). A three-way radio menu, because
  * "follow the OS" is its own choice and a boolean cannot hold it. Both icons stay mounted and
- * cross-fade off `resolvedTheme`; `motion-reduce` drops the rotation and keeps the fade.
+ * cross-fade off the `dark` class the head script sets before paint, so the icon is right before hydration; `motion-reduce` drops the rotation and keeps the fade.
  */
 export function ThemeToggle() {
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   return (
     <DropdownMenu>
@@ -36,13 +36,11 @@ export function ThemeToggle() {
         <span className="relative size-4">
           <SunIcon
             aria-hidden="true"
-            data-resolved={resolvedTheme}
-            className="absolute inset-0 size-4 scale-100 rotate-0 opacity-100 transition duration-200 ease-out-quint data-[resolved=dark]:scale-0 data-[resolved=dark]:-rotate-90 data-[resolved=dark]:opacity-0 motion-reduce:transition-opacity"
+            className="absolute inset-0 size-4 scale-100 rotate-0 opacity-100 transition duration-200 ease-out-quint motion-reduce:transition-opacity dark:scale-0 dark:-rotate-90 dark:opacity-0"
           />
           <MoonIcon
             aria-hidden="true"
-            data-resolved={resolvedTheme}
-            className="absolute inset-0 size-4 scale-0 rotate-90 opacity-0 transition duration-200 ease-out-quint data-[resolved=dark]:scale-100 data-[resolved=dark]:rotate-0 data-[resolved=dark]:opacity-100 motion-reduce:transition-opacity"
+            className="absolute inset-0 size-4 scale-0 rotate-90 opacity-0 transition duration-200 ease-out-quint motion-reduce:transition-opacity dark:scale-100 dark:rotate-0 dark:opacity-100"
           />
         </span>
       </DropdownMenuTrigger>
