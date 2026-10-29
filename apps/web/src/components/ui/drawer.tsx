@@ -4,17 +4,17 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 import { cn } from "cn";
 
-import { overlaySurface, useOverlayOpen } from "@/lib/quartz/overlay";
-import { useQuartzModal, useQuartzPortal } from "@/lib/quartz/portal";
+import { overlaySurface, useOverlayOpen } from "@/lib/ui/overlay";
+import { useModalLock, usePortalContainer } from "@/lib/ui/portal";
 
-// Quartz has no drawer: this one wears its overlay surface (paper, the frame corner, the overlay edge and shadow)
+// The design system has no drawer: this one wears its overlay surface (paper, the frame corner, the overlay edge and shadow)
 // and its sheet's grab bar and type roles. The motion is the zip's: it follows the finger, snaps, stacks nested
 // drawers, and dims the backdrop with the swipe.
 
 type DrawerContextProps = {
   hasSnapPoints: boolean;
   modal: DrawerPrimitive.Root.Props["modal"];
-  /** Open and modal: the page behind is inert while it is true (useQuartzModal). */
+  /** Open and modal: the page behind is inert while it is true (useModalLock). */
   locks: boolean;
   showSwipeHandle: boolean;
   swipeDirection: NonNullable<DrawerPrimitive.Root.Props["swipeDirection"]>;
@@ -76,7 +76,7 @@ function DrawerTrigger({ ...props }: DrawerPrimitive.Trigger.Props) {
 }
 
 function DrawerPortal({ ...props }: DrawerPrimitive.Portal.Props) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
   return <DrawerPrimitive.Portal data-slot="drawer-portal" container={container} {...props} />;
 }
 
@@ -103,7 +103,7 @@ function DrawerSwipeHandle({ className, ...props }: React.ComponentProps<"div">)
       data-slot="drawer-swipe-handle"
       aria-hidden="true"
       className={cn(
-        // Quartz's grab bar: --grab-size long, 4px thick, the control edge colour, soft corners.
+        // The design system's grab bar: --grab-size long, 4px thick, the control edge colour, soft corners.
         "relative z-10 flex shrink-0 cursor-grab transition-opacity duration-200 group-data-nested-drawer-open/drawer-popup:opacity-0 group-data-nested-drawer-swiping/drawer-popup:opacity-100 group-data-[swipe-axis=x]/drawer-popup:h-full group-data-[swipe-axis=x]/drawer-popup:w-3 group-data-[swipe-axis=x]/drawer-popup:items-center group-data-[swipe-axis=y]/drawer-popup:h-3 group-data-[swipe-axis=y]/drawer-popup:w-full group-data-[swipe-axis=y]/drawer-popup:justify-center group-data-[swipe-direction=down]/drawer-popup:items-end group-data-[swipe-direction=left]/drawer-popup:order-last group-data-[swipe-direction=left]/drawer-popup:justify-start group-data-[swipe-direction=right]/drawer-popup:justify-end group-data-[swipe-direction=up]/drawer-popup:order-last group-data-[swipe-direction=up]/drawer-popup:items-start after:block after:shrink-0 after:rounded-soft after:bg-control group-data-[swipe-axis=x]/drawer-popup:after:h-(--grab-size) group-data-[swipe-axis=x]/drawer-popup:after:w-1 group-data-[swipe-axis=y]/drawer-popup:after:h-1 group-data-[swipe-axis=y]/drawer-popup:after:w-(--grab-size) active:cursor-grabbing forced-colors:after:bg-[CanvasText]",
         className,
       )}
@@ -115,7 +115,7 @@ function DrawerSwipeHandle({ className, ...props }: React.ComponentProps<"div">)
 function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.Props) {
   const { hasSnapPoints, modal, locks, showSwipeHandle, swipeDirection } = useDrawer();
   const swipeAxis = swipeDirection === "down" || swipeDirection === "up" ? "y" : "x";
-  useQuartzModal(locks);
+  useModalLock(locks);
 
   return (
     <DrawerPortal>
@@ -138,7 +138,7 @@ function DrawerContent({ className, children, ...props }: DrawerPrimitive.Popup.
             "data-nested-drawer-open:overflow-hidden data-nested-drawer-open:brightness-95",
             // Bleed.
             "after:pointer-events-none after:absolute after:bg-(--drawer-bleed-background,var(--color-page)) data-[swipe-axis=x]:after:inset-y-0 data-[swipe-axis=x]:after:w-(--bleed) data-[swipe-axis=y]:after:inset-x-0 data-[swipe-axis=y]:after:h-(--bleed) data-[swipe-direction=down]:after:top-full data-[swipe-direction=left]:after:inset-e-full data-[swipe-direction=right]:after:inset-s-full data-[swipe-direction=up]:after:bottom-full",
-            // Sizing: an x drawer is Quartz's overlay width from 640px up.
+            // Sizing: an x drawer is the design system's overlay width from 640px up.
             "[--drawer-content-height:var(--drawer-height,auto)] data-[swipe-axis=x]:[--drawer-content-width:75%] data-[swipe-axis=y]:[--drawer-content-max-height:calc(100dvh-6rem)] data-[swipe-axis=y]:data-snap-points:[--drawer-content-height:100dvh] data-[swipe-axis=x]:sm:[--drawer-content-width:var(--overlay)]",
             // Stack.
             "[--bleed:3rem] [--peek:1rem] [--stack-height:var(--drawer-frontmost-height,var(--drawer-height,0px))] [--stack-peek-offset:max(0px,calc((var(--nested-drawers)-var(--stack-progress))*var(--peek)))] [--stack-progress:clamp(0,var(--drawer-swipe-progress),1)] [--stack-scale-base:max(0,calc(1-(var(--nested-drawers)*var(--stack-step))))] [--stack-scale:clamp(0,calc(var(--stack-scale-base)+(var(--stack-step)*var(--stack-progress))),1)] [--stack-shrink:calc(1-var(--stack-scale))] [--stack-step:0.05]",

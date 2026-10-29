@@ -1,13 +1,11 @@
-/* Quartz utilities, from design.how/r/quartz/theme.json (styles.css), checked 2026-10-29.
-   Changed for Session Coach: Quartz ships this file as a second, scoped Tailwind compile. Here it is
-   imported into globals.css so there is one compile that @shadcn/lint can read. Dropped: the @import of
-   tokens and base (globals.css imports them), the @source lines, the :where(.quartz) utilities scope and
-   `--*: initial` in the theme, so Tailwind's defaults stay and Quartz's values override them. */
-/* dark: matches wherever the ink channel is light: in the dark theme, set on .quartz or on an ancestor as
-   [data-theme="dark"] or an app's .dark, and inside ink. .quartz[data-theme="light"] under a dark ancestor stays
+/* The design system's utilities (type roles, frames, keys, menu rows, fades) and its Tailwind theme
+   mapping, imported into globals.css so there is one compile that @shadcn/lint can read. Tailwind's
+   defaults stay; the theme block below overrides the names it maps. */
+/* dark: matches wherever the ink channel is light: in the dark theme, set on :root or on an ancestor as
+   [data-theme="dark"] or an app's .dark, and inside ink. :root[data-theme="light"] under a dark ancestor stays
    light. An inverse surface is dark on a light page and light in the dark theme or inside ink, so it joins the
    first list and leaves through the last :not(). */
-@custom-variant dark (&:where(:is(:is([data-theme="dark"], [data-theme="dark"] *, .dark *):not(.quartz[data-theme="light"], .quartz[data-theme="light"] *), [data-surface="ink"], [data-surface="ink"] *, [data-surface="inverse"], [data-surface="inverse"] *):not(:is(.quartz[data-theme="dark"], :is([data-theme="dark"], .dark) .quartz:not([data-theme="light"]), [data-surface="ink"]) :is([data-surface="inverse"], [data-surface="inverse"] *))));
+@custom-variant dark (&:where(:is(:is([data-theme="dark"], [data-theme="dark"] *, .dark *):not(:root[data-theme="light"], :root[data-theme="light"] *), [data-surface="ink"], [data-surface="ink"] *, [data-surface="inverse"], [data-surface="inverse"] *):not(:is(:root[data-theme="dark"], :root:is([data-theme="dark"], .dark):not([data-theme="light"]), [data-surface="ink"]) :is([data-surface="inverse"], [data-surface="inverse"] *))));
 
 /* A component's state can be shown without the pointer or keyboard, for a style guide, a story or a screenshot
    test, by setting data-force-hover, data-force-focus, data-force-focus-visible or data-force-active on its
@@ -112,7 +110,7 @@
   --container-popover: var(--popover);
   --container-toast: var(--toast-width);
 
-  /* Tailwind's other theme-backed families that --*: initial wiped and that Quartz pages use: aspect-video
+  /* Tailwind's other theme-backed families that --*: initial wiped and that the design system pages use: aspect-video
      (a 16:9 skeleton or media area) and leading-tight. aspect-square and the other fixed ratios need no
      theme value. */
   --aspect-video: 16 / 9;
@@ -121,7 +119,7 @@
   /* 4px base: p-1 is --space-1, p-4 is --space-4. */
   --spacing: var(--space-1);
 
-  /* The semantic names generic components expect (background, card, muted, accent), pointed at Quartz roles. A card is still the grey field until Card becomes the frame;
+  /* The semantic names generic components expect (background, card, muted, accent), pointed at the design system's roles. A card is still the grey field until Card becomes the frame;
      muted is the well. */
   --color-background: var(--surface-page);
   --color-foreground: var(--text-1);
@@ -147,7 +145,7 @@
   --color-sidebar-accent: var(--surface-hover);
   --color-sidebar-border: var(--border-hair);
 
-  /* Quartz's own roles. */
+  /* The design system's own roles. */
   --color-paper: var(--paper);
   --color-ink: var(--ink);
   --color-page: var(--surface-page);
@@ -200,7 +198,7 @@
   --font-weight-semibold: var(--weight-strong);
   --font-weight-bold: 700;
 
-  /* The usual size names (text-sm, text-base) mapped to Quartz roles (size, line-height). Prefer the type-* utilities. */
+  /* The usual size names (text-sm, text-base) mapped to the design system's roles (size, line-height). Prefer the type-* utilities. */
   --text-xs: 12px;
   --text-xs--line-height: 16px;
   --text-sm: 14px;
@@ -242,9 +240,9 @@
 
   --ease-step: var(--ease-step);
 
-  --animate-run: quartz-spin var(--dur-run) linear infinite;
-  --animate-slide: quartz-slide var(--dur-slide) var(--ease-step) infinite;
-  --animate-spin: quartz-spin var(--dur-spin) var(--ease-spin) infinite;
+  --animate-run: turn var(--dur-run) linear infinite;
+  --animate-slide: slide-across var(--dur-slide) var(--ease-step) infinite;
+  --animate-spin: turn var(--dur-spin) var(--ease-spin) infinite;
 }
 
 /* One utility per type role. Text at 14px and below tracks at 0 (--tracking-text); 16px text takes
@@ -726,7 +724,7 @@
     gap: var(--space-2);
     min-height: var(--row-sm);
     padding: calc(var(--space-1) * 1.5) var(--space-2);
-    /* Session Coach: 6px, so the row nests in the 10px popup inside its 4px padding (Quartz: --radius-inner). */
+    /* Session Coach: 6px, so the row nests in the 10px popup inside its 4px padding (the design system: --radius-inner). */
     border-radius: var(--radius-soft);
     font: var(--type-label);
     letter-spacing: var(--tracking-text);
@@ -858,7 +856,7 @@
 }
 
 /* An indeterminate progress bar: a third of the track slides across it once per --dur-slide, then starts again (animate-slide). */
-@keyframes quartz-slide {
+@keyframes slide-across {
   from {
     transform: translateX(-100%);
   }
@@ -868,20 +866,20 @@
 }
 
 /* A running mark is a 3/4 arc turning once per --dur-run (animate-run). */
-@keyframes quartz-spin {
+@keyframes turn {
   to {
     transform: rotate(1turn);
   }
 }
 
 /* Native scrollbars take the thumb role, so a thin scrollbar reads in both themes. */
-.quartz,
-.quartz * {
+:root,
+:root * {
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 /* Toast (ui/toast.tsx): the drain line shrinks to nothing over the toast's timeout. */
-@keyframes quartz-toast-drain {
+@keyframes toast-drain {
   from {
     scale: 1 1;
   }
@@ -944,7 +942,7 @@
   inherits: false;
   initial-value: 0px;
 }
-@keyframes quartz-fade-top {
+@keyframes fade-top-edge {
   from {
     --fade-top: 0px;
   }
@@ -952,7 +950,7 @@
     --fade-top: var(--fade-edge);
   }
 }
-@keyframes quartz-fade-bottom {
+@keyframes fade-bottom-edge {
   from {
     --fade-bottom: var(--fade-edge);
   }
@@ -970,8 +968,8 @@
   );
   @supports (animation-timeline: scroll()) {
     animation:
-      quartz-fade-top linear both,
-      quartz-fade-bottom linear both;
+      fade-top-edge linear both,
+      fade-bottom-edge linear both;
     animation-timeline: scroll(self), scroll(self);
     animation-range:
       0 var(--fade-edge),

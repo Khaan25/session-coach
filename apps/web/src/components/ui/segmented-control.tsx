@@ -8,10 +8,10 @@ import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import type { Kind } from "@/lib/quartz/kind";
-import { controlHeight } from "@/lib/quartz/utils";
+import type { Kind } from "@/lib/ui/kind";
+import { controlHeight } from "@/lib/ui/utils";
 
-// Quartz's segmented control: two to five views of the same thing. It also does the job of a toggle group.
+// The design system's segmented control: two to five views of the same thing. It also does the job of a toggle group.
 // - single (default): one selected at a time. A radio group underneath (Base UI RadioGroup), so arrow
 //   keys move and select and Tab leaves. Without value or defaultValue nothing is selected until the
 //   first press, and a radio cannot be cleared back to none, so callers always pass one.

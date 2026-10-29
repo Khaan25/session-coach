@@ -3,9 +3,9 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { cn } from "cn";
 
-import { useQuartzPortal } from "@/lib/quartz/portal";
+import { usePortalContainer } from "@/lib/ui/portal";
 
-// Quartz's tooltip chip: the inverse surface (data-surface="inverse" flips the channels, so bg-page reads ink
+// The design system's tooltip chip: the inverse surface (data-surface="inverse" flips the channels, so bg-page reads ink
 // on a light page and paper on a dark one), the soft 6px corner, a 12px label and no arrow. The motion is the
 // zip's: it grows out of --transform-origin from the trigger's side.
 
@@ -39,7 +39,7 @@ function TooltipContent({
     TooltipPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "collisionPadding"
   >) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
 
   return (
     <TooltipPrimitive.Portal container={container}>

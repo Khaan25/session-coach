@@ -3,7 +3,7 @@ import { cn } from "cn";
 
 import { CodeTag } from "@/components/ui/badge";
 
-// What a region shows when it has nothing else to show. Quartz's empty state: it sits where the first row would
+// What a region shows when it has nothing else to show. The design system's empty state: it sits where the first row would
 // have been, top-left of the body, never centred in a void, with a title, one muted line and the action. Four
 // reasons share the shape and differ in how loud they are:
 //   empty      nothing here yet; the first action creates it
@@ -75,7 +75,7 @@ function EmptyHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-// Quartz draws no tile and no hue behind an empty state's icon: both variants are a bare 16px glyph in text-3.
+// The design system draws no tile and no hue behind an empty state's icon: both variants are a bare 16px glyph in text-3.
 const emptyMediaVariants = cva(
   "flex shrink-0 items-center justify-center text-text-3 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {

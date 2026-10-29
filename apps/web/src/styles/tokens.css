@@ -1,4 +1,4 @@
-/* Quartz tokens. The one file to retune.
+/* The design system's tokens. The one file to retune.
 
    Palette: Frost. Cold navy ink on icy paper, cards on a cool fog canvas, and five cold kind tints. A kind shows as a word, never a fill.
 
@@ -17,7 +17,7 @@
    - Text on a hue uses --accent-on-field on a field and --text-on-field on a mark, fixed dark in both
      themes. Text on a wash is ink, because the wash flips with the theme. The kind label is the one
      tinted text: --accent-label on --accent-tint.
-   - Floors, worked out on Quartz's color page (design.how/systems/quartz/foundations/color): ink on every field and wash is at
+   - Floors, worked out from the token values: ink on every field and wash is at
      least 7.5:1, ink on every mark at least 5:1, every line step at least 3:1 on paper and on the grey
      card, and every label at least 4.5:1 on its tint, in both themes. The dark theme points each line at
      its mark. Fills are flat: no ring, no shadow.
@@ -26,20 +26,17 @@
 
    Format
    - One declaration per line: --name: value; followed by a comment of the form job | used by.
-   - A line that starts with == opens a token group. Tools that list Quartz's tokens read both, so keep
+   - A line that starts with == opens a token group. Tools that list the design system's tokens read both, so keep
      them when you retune.
 
-   Scope: the tokens live on .quartz, not :root, so an app's own --space-* and --font-* on :root stay
+   Scope: the tokens live on :root, not :root, so an app's own --space-* and --font-* on :root stay
    as they are. Derived tokens are declared again on [data-surface] so an inverse section
    recomputes them from its own ink and paper channels. */
 
-/* Fonts. Quartz is drawn in Quartz Sans (Normal width) and Quartz Mono, which are declared
-   on Quartz's own pages only and are not part of this theme. This file declares no @font-face, so each family
-   stack (--font-sans, --font-mono) renders its fallback: the platform's UI sans and monospace.
-   With a licence of your own, declare @font-face rules named "Quartz Sans"
-   and "Quartz Mono", and they take over. */
+/* Fonts. Geist and Geist Mono come from next/font (app/layout.tsx), which sets --font-geist-sans and
+   --font-geist-mono on <html>. */
 
-.quartz {
+:root {
   /* == Ink and paper == */
   --ink-c: 20% 0.024 262; /* the ink channel: cold navy graphite, 18.0:1 on --surface-page and 15.9:1 on --surface-card; every text and line is this at an alpha | all ink tokens */
   --paper-c: 99.7% 0.001 250; /* the paper channel: an icy white | all paper tokens */
@@ -168,15 +165,15 @@
 
   /* == Type families == */
   --font-sans:
-    "Quartz Sans", ui-sans-serif, system-ui, sans-serif; /* all UI and prose: Quartz Sans where declared, else the platform UI sans | every text role */
+    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; /* all UI and prose | every text role */
   --font-mono:
-    "Quartz Mono", ui-monospace, "SF Mono", Menlo, monospace; /* Quartz Mono where declared, else the platform monospace | ordinals, codes, IDs, code blocks */
+    var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace; /* ordinals, codes, IDs, code blocks */
 
   /* == Type weights == */
   --weight-body: 340; /* Regular | running text */
   --weight-medium: 400; /* Medium | labels, buttons, headings, display */
   --weight-strong: 500; /* Semibold | emphasis inside prose, code keywords */
-  --width-normal: normal; /* each face's own width; Quartz Sans's Normal file has no width axis, and a "wdth" value here would stretch the fallback sans | every role */
+  --width-normal: normal; /* each face's own width; a "wdth" value here would stretch the sans | every role */
   --features-data:
     "tnum", "zero", "ss04"; /* tabular figures, slashed zero, serif I; every duration, count and value | tables, labels, stats, data roles */
   --features-id: "ss04"; /* serif I tells I, l and 1 apart | identifiers in sans */
@@ -342,8 +339,8 @@
 }
 
 /* Derived tokens. Declared on every element that changes a channel, so they recompute there. */
-.quartz,
-.quartz [data-surface] {
+:root,
+:root [data-surface] {
   /* == Surface == */
   --ink: oklch(var(--ink-c)); /* solid ink | primary text, primary button */
   --paper: oklch(var(--paper-c)); /* solid paper | page background */
@@ -540,7 +537,7 @@
    reads --accent-wash and --accent-mark without naming the fail hue. A field box (Input, the combobox
    field and chips, the time field) holding an invalid control takes the slot too, because the box, not the
    bare control, paints the field. */
-@scope (.quartz [data-kind="agent"]) {
+@scope (:root [data-kind="agent"]) {
   :scope[data-kind],
   :scope [data-surface] {
     --accent-mark: var(--hue-1-mark);
@@ -552,7 +549,7 @@
     --accent-on-field: var(--text-on-field);
   }
 }
-@scope (.quartz [data-kind="key"]) {
+@scope (:root [data-kind="key"]) {
   :scope[data-kind],
   :scope [data-surface] {
     --accent-mark: var(--hue-2-mark);
@@ -564,7 +561,7 @@
     --accent-on-field: var(--text-on-field);
   }
 }
-@scope (.quartz [data-kind="run"]) {
+@scope (:root [data-kind="run"]) {
   :scope[data-kind],
   :scope [data-surface] {
     --accent-mark: var(--hue-3-mark);
@@ -576,7 +573,7 @@
     --accent-on-field: var(--text-on-field);
   }
 }
-@scope (.quartz [data-kind="deploy"]) {
+@scope (:root [data-kind="deploy"]) {
   :scope[data-kind],
   :scope [data-surface] {
     --accent-mark: var(--hue-4-mark);
@@ -588,7 +585,7 @@
     --accent-on-field: var(--text-on-field);
   }
 }
-@scope (.quartz [data-kind="model"]) {
+@scope (:root [data-kind="model"]) {
   :scope[data-kind],
   :scope [data-surface] {
     --accent-mark: var(--hue-5-mark);
@@ -600,7 +597,7 @@
     --accent-on-field: var(--text-on-field);
   }
 }
-@scope (.quartz [data-status="warn"]) {
+@scope (:root [data-status="warn"]) {
   :scope[data-status],
   :scope [data-surface] {
     --accent-mark: var(--warn-mark);
@@ -612,7 +609,7 @@
     --accent-on-field: var(--text-on-field);
   }
 }
-@scope (.quartz [data-status="fail"]) {
+@scope (:root [data-status="fail"]) {
   :scope[data-status],
   :scope [data-surface] {
     --accent-mark: var(--fail-mark);
@@ -624,7 +621,7 @@
     --accent-on-field: var(--text-on-field);
   }
 }
-@scope (.quartz :is([aria-invalid="true"], :is([data-slot="input"], [data-slot="combobox-input-group"], [data-slot="combobox-chips"], [data-slot="time-field"]):has([data-control]:is([aria-invalid="true"], [data-invalid])))) {
+@scope (:root :is([aria-invalid="true"], :is([data-slot="input"], [data-slot="combobox-input-group"], [data-slot="combobox-chips"], [data-slot="time-field"]):has([data-control]:is([aria-invalid="true"], [data-invalid])))) {
   :scope,
   :scope [data-surface] {
     --accent-mark: var(--fail-mark);
@@ -638,7 +635,7 @@
 }
 
 /* Surfaces. data-surface names what an element is painted as, and the derived tokens recompute on it.
-   - card: a grey well; secondary fills and inline code inside it flip to paper. No Quartz component sets it: Card is a paper frame
+   - card: a grey well; secondary fills and inline code inside it flip to paper. No the design system component sets it: Card is a paper frame
      with no surface, so nothing inside a Card flips, and a skeleton, an avatar or a time in it reads as on the page.
    - raised: a paper container inside a card, such as a menu or a command list. It declares no flip of its
      own, so the derived block resets the card flip and fields inside read grey again.
@@ -648,7 +645,7 @@
    - inverse: the opposite of the page. Ink on a light page, paper in the dark theme and inside an ink
      section. Tooltips, the chart tooltip and the bulk action bar use it. Toasts are paper with a frame and an overlay shadow, not inverse.
    - page: the page's own channels, as a marker for in-data-[surface=page] styling. */
-.quartz [data-surface="card"] {
+:root [data-surface="card"] {
   --surface-raised: var(--paper);
   --button-secondary: var(--paper);
   --button-secondary-hover: color-mix(in oklch, oklch(var(--paper-c)), oklch(var(--ink-c)) 4%);
@@ -656,7 +653,7 @@
 /* An overlay popup that renders inside a card, a portal that was not lifted out or a menu in a story, would
    inherit the card flip and paint its secondary fills paper on a paper panel. These slots reset those tokens to the
    page's own values, whether or not the popup was portalled. Fields are paper everywhere, so they need no flip. */
-.quartz
+:root
   [data-surface="card"]
   :is(
     [data-slot="popover-content"],
@@ -681,9 +678,9 @@
    values, so text on them stays --text-on-field; washes become deep tints of the same hue and lines take
    the marks, which clear 3:1 on the dark page and the dark card. [data-surface="ink"] is the same swap
    for one always-dark section, and [data-surface="paper"] swaps back inside it.
-   The theme comes from .quartz[data-theme="dark"] or from an ancestor, [data-theme="dark"] or .dark as most apps
-   set it on <html>; .quartz[data-theme="light"] opts out of a dark ancestor. The ancestor sits in :where(), so
-   each selector weighs the same as its .quartz[data-theme="dark"] twin and the paper block below still wins.
+   The theme comes from :root[data-theme="dark"] or from an ancestor, [data-theme="dark"] or .dark as most apps
+   set it on <html>; :root[data-theme="light"] opts out of a dark ancestor. The ancestor sits in :where(), so
+   each selector weighs the same as its :root[data-theme="dark"] twin and the paper block below still wins.
    color-scheme follows each block, so native scrollbars, date fields and autofill match the surface.
    [data-surface="inverse"] takes the dark channels on a light page and the light channels in the dark
    theme or inside ink, so it is always the opposite of what surrounds it. The second block is more
@@ -693,16 +690,16 @@
    code-comment sit further from code-text than the light pair: against the dark card the three steps are
    1.8:1 and 2.8:1 apart, close to the light theme's 1.8:1 and 2.9:1, and the comment is 5.3:1 on its field.
    Keep this block free of semicolons in comments, lib/tokens.ts reads it with a regex. */
-.quartz[data-theme="dark"],
-.quartz [data-surface="ink"],
-.quartz [data-surface="inverse"],
-:where([data-theme="dark"], .dark) .quartz:not([data-theme="light"]),
+:root[data-theme="dark"],
+:root [data-surface="ink"],
+:root [data-surface="inverse"],
+:root:where([data-theme="dark"], .dark):not([data-theme="light"]),
 :where([data-theme="dark"], .dark)
-  .quartz:not([data-theme="light"])
+  :root:not([data-theme="light"])
   [data-surface="paper"]
   [data-surface="inverse"],
-.quartz[data-theme="dark"] [data-surface="paper"] [data-surface="inverse"],
-.quartz [data-surface="ink"] [data-surface="paper"] [data-surface="inverse"] {
+:root[data-theme="dark"] [data-surface="paper"] [data-surface="inverse"],
+:root [data-surface="ink"] [data-surface="paper"] [data-surface="inverse"] {
   color-scheme: dark;
   --ink-c: 96.5% 0.006 250;
   --paper-c: 18.5% 0.016 262;
@@ -747,12 +744,12 @@
   --thumb-lift: 20%;
   --thumb-ring-alpha: 0.16;
 }
-:where([data-theme="dark"], .dark) .quartz:not([data-theme="light"]) [data-surface="paper"],
-:where([data-theme="dark"], .dark) .quartz:not([data-theme="light"]) [data-surface="inverse"],
-.quartz[data-theme="dark"] [data-surface="paper"],
-.quartz [data-surface="ink"] [data-surface="paper"],
-.quartz[data-theme="dark"] [data-surface="inverse"],
-.quartz [data-surface="ink"] [data-surface="inverse"] {
+:root:where([data-theme="dark"], .dark):not([data-theme="light"]) [data-surface="paper"],
+:root:where([data-theme="dark"], .dark):not([data-theme="light"]) [data-surface="inverse"],
+:root[data-theme="dark"] [data-surface="paper"],
+:root [data-surface="ink"] [data-surface="paper"],
+:root[data-theme="dark"] [data-surface="inverse"],
+:root [data-surface="ink"] [data-surface="inverse"] {
   color-scheme: light;
   --ink-c: 20% 0.024 262;
   --paper-c: 99.7% 0.001 250;
@@ -797,14 +794,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .quartz {
+  :root {
     --dur-base: 0ms;
     --dur-slow: 0ms;
     --sheet-shift: 0px;
   }
 }
 /* A wrapper that sets data-force-reduced-motion (styles.css) gets the same values. */
-.quartz [data-force-reduced-motion] {
+:root [data-force-reduced-motion] {
   --dur-base: 0ms;
   --dur-slow: 0ms;
   --sheet-shift: 0px;

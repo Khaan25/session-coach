@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import * as React from "react";
 
-// Quartz's card is the frame: paper, one 1px grey edge, the 10px frame corner. Inside it only row rules: a 40px
+// The design system's card is the frame: paper, one 1px grey edge, the 10px frame corner. Inside it only row rules: a 40px
 // header over a rule, the body, a footer under a rule. Never a Card inside a Card; a well inside it (code, output)
 // is grey on its own. The edge darkens on hover with the zip's short shadow transition.
 // Size sets --card-spacing (12, 16, 24px), which pads the header, body and footer alike, and lg also

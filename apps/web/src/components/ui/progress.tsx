@@ -3,7 +3,7 @@
 import { Progress as ProgressPrimitive } from "@base-ui/react/progress";
 import { cn } from "cn";
 
-// Quartz's bar: a 4px neutral track with one fill from the start edge, drawn in the line step so it reads as
+// The design system's bar: a 4px neutral track with one fill from the start edge, drawn in the line step so it reads as
 // a line at 3:1, like a chart's. Set data-kind or data-status="warn" | "fail" on the root to recolour the fill.
 // The fill eases to its new width (the zip's timing).
 function Progress({ className, children, value, ...props }: ProgressPrimitive.Root.Props) {

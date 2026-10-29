@@ -5,7 +5,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-// Quartz's button group: joins related buttons into one control. Secondary and ghost members share one control
+// The design system's button group: joins related buttons into one control. Secondary and ghost members share one control
 // line (frame-shared: each cell draws its start, top and bottom edges and the last one its end), so every line is
 // one pixel, the outer corners round and the shared edges stay straight. Ink members (variant default) split on
 // a 1px paper line instead. Members are cells edge to edge, so their focus ring sits inside them, paper on ink.

@@ -6,8 +6,8 @@ import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
 
-// Quartz's copy button: copies a value and confirms in place. The icon cuts from Copy to Check for
-// 1.6s (no tween, Quartz swaps state as a cut), and a visually hidden status region says "Copied" so
+// The design system's copy button: copies a value and confirms in place. The icon cuts from Copy to Check for
+// 1.6s (no tween, the design system swaps state as a cut), and a visually hidden status region says "Copied" so
 // screen readers hear it too. With a visible label, "Copy" and "Copied" share one grid cell, so the box
 // never changes width. If the clipboard is refused, it shows a warning glyph (in ink; the
 // shape carries the meaning) and says so instead. A value fetched on demand (a function returning a

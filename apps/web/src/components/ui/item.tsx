@@ -5,9 +5,9 @@ import { cn } from "cn";
 import * as React from "react";
 
 import { Separator } from "@/components/ui/separator";
-import type { Kind } from "@/lib/quartz/kind";
+import type { Kind } from "@/lib/ui/kind";
 
-// Quartz's list row: media, a title and a description, then meta and actions on one line. Rows live in an
+// The design system's list row: media, a title and a description, then meta and actions on one line. Rows live in an
 // ItemGroup, the one frame, split by row rules. Rendered as a link or a button a row takes the hover wash;
 // selected takes the kind's wash. The row gives up its meta first as it narrows (a container query on the row),
 // and the name truncates last.
@@ -24,7 +24,7 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="item-group"
       className={cn(
         "group/item-group frame relative flex w-full flex-col overflow-hidden bg-page",
-        // In a card, the list is Quartz's panel inset: a white panel 4px inside the grey card, its
+        // In a card, the list is the design system's panel inset: a white panel 4px inside the grey card, its
         // corners nested in the card's (10px less the 4px gap).
         "has-[>[data-variant=outline]]:gap-2 has-[>[data-variant=outline]]:overflow-visible has-[>[data-variant=outline]]:bg-transparent has-[>[data-variant=outline]]:before:hidden",
         "in-data-[slot=card]:mx-1 in-data-[slot=card]:mb-1 in-data-[slot=card]:w-auto in-data-[slot=card]:[--frame-radius:calc(var(--radius-frame)-4px)]",

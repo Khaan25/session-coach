@@ -21,9 +21,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarIcon } from "@phosphor-icons/react";
 
-// shadcn's sidebar (sidebar-08) in Quartz's skin: the page surface with a hairline edge, rows on the 4px
+// shadcn's sidebar (sidebar-08) in the design system's skin: the page surface with a hairline edge, rows on the 4px
 // inner corner at the 14px label role, the hover wash under the pointer and the selected wash on the
-// current page, Quartz's focus ring drawn inside each row. Floating and inset take the frame instead of a
+// current page, the design system's focus ring drawn inside each row. Floating and inset take the frame instead of a
 // shadow. The width, collapse and offcanvas transitions are shadcn's, unchanged.
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
@@ -462,7 +462,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 
 const sidebarMenuButtonVariants = cva(
   [
-    // Quartz's menu row: 8px from its edges, an 8px gap, 16px icons in text-2, the label role in text-1.
+    // The design system's menu row: 8px from its edges, an 8px gap, 16px icons in text-2, the label role in text-1.
     "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-inner p-2 text-start type-label text-text-1 outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2!",
     "hover:bg-hover focus-visible:focus-ring-inset active:bg-pressed data-open:hover:bg-hover",
     "disabled:pointer-events-none disabled:text-text-disabled aria-disabled:pointer-events-none aria-disabled:text-text-disabled",

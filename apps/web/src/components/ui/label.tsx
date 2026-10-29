@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "cn";
 
-// Quartz's label: the 14/16 label role in text-1, its icons a step quieter. A disabled control (peer or the
+// The design system's label: the 14/16 label role in text-1, its icons a step quieter. A disabled control (peer or the
 // field around it) greys the label to the disabled text, so the pair reads as one off thing.
 const labelClasses = [
   "inline-flex w-fit max-w-full min-w-0 items-center gap-2 type-label text-text-1 select-none [overflow-wrap:anywhere]",

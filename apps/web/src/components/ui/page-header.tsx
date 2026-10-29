@@ -13,8 +13,8 @@ import {
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import type { Kind } from "@/lib/quartz/kind";
-import { mergeRefs } from "@/lib/quartz/utils";
+import type { Kind } from "@/lib/ui/kind";
+import { mergeRefs } from "@/lib/ui/utils";
 
 // The top of a page: the title (with an optional kind label after it), one line of description, the page's actions, and a row of stats.
 // The header is a container (@container), and its parts respond to the header's own width, not the
@@ -25,7 +25,7 @@ import { mergeRefs } from "@/lib/quartz/utils";
 // in at the top of the scroll area holding the same title and the same actions, so "Create key" is
 // never more than one reach away on a long page. The bar takes no space in the flow (a zero-height
 // sticky), so nothing below it moves when it appears, and it is inert while hidden.
-// shortcut: Quartz shrinks the bar's buttons to sm through a ButtonSize context; this repo's Button has none, so
+// shortcut: The design system shrinks the bar's buttons to sm through a ButtonSize context; this repo's Button has none, so
 // the actions keep the size the caller gave them. Add a size context to Button if the bar needs smaller ones.
 
 type Registry = { setTitle: (n: ReactNode) => void; setActions: (n: ReactNode) => void } | null;

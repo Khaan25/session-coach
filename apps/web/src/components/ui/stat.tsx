@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import { Sparkline } from "@/components/ui/sparkline";
-import type { Kind } from "@/lib/quartz/kind";
+import type { Kind } from "@/lib/ui/kind";
 
 // A number worth reading from across the room, with what it is and how it moved. The value is plain
 // sans in tabular figures: 32px in the app, 40px for the one hero number on an app page, and 48px

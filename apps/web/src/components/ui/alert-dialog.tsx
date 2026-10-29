@@ -5,10 +5,10 @@ import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
-import { overlayShellSurface, useOverlayOpen } from "@/lib/quartz/overlay";
-import { useQuartzModal, useQuartzPortal } from "@/lib/quartz/portal";
+import { overlayShellSurface, useOverlayOpen } from "@/lib/ui/overlay";
+import { useModalLock, usePortalContainer } from "@/lib/ui/portal";
 
-// Quartz's dialog shell for one question: the header alone is the white card, the actions sit on the grey. The
+// The design system's dialog shell for one question: the header alone is the white card, the actions sit on the grey. The
 // motion is the zip's: a 95% scale-in, and a parent that recedes and dims under a nested dialog.
 
 // An alert dialog is always modal, so the page behind is inert while it is open.
@@ -43,7 +43,7 @@ function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {
 }
 
 function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
   return (
     <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" container={container} {...props} />
   );
@@ -69,7 +69,7 @@ function AlertDialogContent({
 }: AlertDialogPrimitive.Popup.Props & {
   size?: "default" | "sm";
 }) {
-  useQuartzModal(React.useContext(AlertDialogOpenContext));
+  useModalLock(React.useContext(AlertDialogOpenContext));
 
   return (
     <AlertDialogPortal>

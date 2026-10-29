@@ -1,4 +1,4 @@
-import { EMPTY_VALUE } from "@/lib/quartz/format";
+import { EMPTY_VALUE } from "@/lib/ui/format";
 import {
   Stat,
   StatDescription,

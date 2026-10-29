@@ -1,8 +1,8 @@
 import { cn } from "cn";
 import * as React from "react";
 
-// Long-form text from Markdown (legal pages, docs): Quartz type roles on the elements Markdown emits,
-// at the reading measure. data-prose turns on Quartz's prose link underline (base.css).
+// Long-form text from Markdown (legal pages, docs): the design system type roles on the elements Markdown emits,
+// at the reading measure. data-prose turns on the design system's prose link underline (base.css).
 function Prose({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

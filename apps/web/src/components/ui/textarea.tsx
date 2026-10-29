@@ -3,7 +3,7 @@ import { cn } from "cn";
 
 import { fieldControlVariants } from "@/components/ui/field";
 
-// Quartz's textarea: the same paper field with a control edge as Input, on a 20px line. field-sizing grows it
+// The design system's textarea: the same paper field with a control edge as Input, on a 20px line. field-sizing grows it
 // with its content; the width is pinned to the container so only the height follows the text.
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (

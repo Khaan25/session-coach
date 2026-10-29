@@ -70,7 +70,7 @@ import {
   StatValue,
 } from "@/components/ui/stat";
 import { InkSlot, Status, StatusArc, statuses } from "@/components/ui/status";
-import { kinds } from "@/lib/quartz/kind";
+import { kinds } from "@/lib/ui/kind";
 
 import { GallerySection, Specimen } from "./gallery-section";
 import { cards, session } from "./sample";

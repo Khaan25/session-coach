@@ -4,8 +4,8 @@ import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-// Panels of one view. Quartz's skin on the zip's motion. Two looks:
-//   default  a grey track with the active tab as a lifted paper thumb (Quartz's segmented look)
+// Panels of one view. The design system's skin on the zip's motion. Two looks:
+//   default  a grey track with the active tab as a lifted paper thumb (the design system's segmented look)
 //   line     text on the page over a row rule, with a 2px ink line under the active tab
 
 /*
@@ -97,7 +97,7 @@ function TabsIndicator({ className, ...props }: TabsPrimitive.Indicator.Props) {
       data-slot="tabs-indicator"
       className={cn(
         "pointer-events-none absolute top-0 left-0 z-0 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) translate-y-(--active-tab-top) transition-[translate,width,height] duration-200 ease-in-out-quint motion-reduce:transition-none",
-        // default: Quartz's segmented thumb, a lifted paper box on the grey track.
+        // default: the design system's segmented thumb, a lifted paper box on the grey track.
         "rounded-inner bg-(--surface-thumb) shadow-(--elev-thumb) forced-colors:bg-[Highlight]",
         // The line variant draws a 2px ink line under the tab instead of a thumb behind it.
         "group-data-[variant=line]/tabs-list:rounded-none group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:shadow-none group-data-[variant=line]/tabs-list:after:absolute group-data-[variant=line]/tabs-list:after:bg-ink group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:after:inset-x-0 group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:after:bottom-0 group-data-horizontal/tabs:group-data-[variant=line]/tabs-list:after:h-(--line-accent) group-data-vertical/tabs:group-data-[variant=line]/tabs-list:after:inset-y-0 group-data-vertical/tabs:group-data-[variant=line]/tabs-list:after:end-0 group-data-vertical/tabs:group-data-[variant=line]/tabs-list:after:w-(--line-accent) forced-colors:group-data-[variant=line]/tabs-list:after:bg-[Highlight]",

@@ -4,7 +4,7 @@ import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
 import { cn } from "cn";
 
 /*
- * Quartz's switch skin: a fully rounded track with a round thumb. Off: a paper track with a 1px control edge
+ * The design system's switch skin: a fully rounded track with a round thumb. Off: a paper track with a 1px control edge
  * at --border-control, ink on hover, and a grey thumb at the start. On: an ink track and a paper thumb at the
  * end. The state reads from the thumb's position and the fill, never from hue. 36x20 with a 16px thumb, 28x16
  * with a 12px thumb at sm: a 2px inset all round in both sizes.

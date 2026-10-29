@@ -1,9 +1,8 @@
 import type * as React from "react";
 import { cn } from "cn";
 
-// From design.how/r/quartz/utils.json (checked 2026-10-29). Quartz merges classes with clsx and an
-// extended tailwind-merge; Session Coach uses the `cn` package, imported from its source by each caller.
-// shortcut: Quartz's type-* conflict group is not registered, so a caller's type-* role is appended
+// Helpers for the design system's components. Classes merge with the `cn` package, imported from its source.
+// shortcut: the type-* conflict group is not registered with cn, so a caller's type-* role is appended
 // rather than replacing the component's; register it with cn's engine if a call site needs that.
 
 type ClassValue = Parameters<typeof cn>[number];
@@ -21,8 +20,8 @@ export const controlHeight = {
 } as const;
 
 /**
- * Quartz's classes and the caller's, for a Base UI part whose className may be a function of its state
- * (data-checked, open, disabled ...). A function is composed, not passed through, so Quartz's classes stay either way.
+ * The design system's classes and the caller's, for a Base UI part whose className may be a function of its state
+ * (data-checked, open, disabled ...). A function is composed, not passed through, so the design system's classes stay either way.
  * Pass several base parts as an array: mergeClass([variants({size}), 'gap-2'], className).
  */
 export function mergeClass<State>(

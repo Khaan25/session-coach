@@ -7,7 +7,7 @@ import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
 
-// Quartz's field box around a bare control plus slots: the box draws the paper, the 1px control edge, its
+// The design system's field box around a bare control plus slots: the box draws the paper, the 1px control edge, its
 // darker hover, the ink focus edge with its halo and the fail edge, so an icon, unit or button in an addon
 // sits inside the edge and a click on it focuses the text.
 function InputGroup({ className, ...props }: React.ComponentProps<"div">) {

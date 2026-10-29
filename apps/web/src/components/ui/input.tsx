@@ -6,7 +6,7 @@ import { cn } from "cn";
 
 import { fieldControlVariants } from "@/components/ui/field";
 
-// Quartz's input: one line of text in the paper field box, 32px tall, the 6px soft corner, a 1px control
+// The design system's input: one line of text in the paper field box, 32px tall, the 6px soft corner, a 1px control
 // edge that darkens on hover and turns ink with a soft halo on focus.
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (

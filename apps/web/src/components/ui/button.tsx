@@ -2,9 +2,9 @@ import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import { controlHeight } from "@/lib/quartz/utils";
+import { controlHeight } from "@/lib/ui/utils";
 
-// Quartz's button skin: 32px tall (28 at sm, 44 at lg), the 6px control corner, a 14/16 label. Default is the one
+// The design system's button skin: 32px tall (28 at sm, 44 at lg), the 6px control corner, a 14/16 label. Default is the one
 // lit ink key in a view; outline and secondary are the paper key with the 1px control edge. Destructive is written,
 // not painted: paper, a fail edge and fail text, never a red fill. Focus is base.css's 2px ring on every variant.
 // Height is max(--control, one line plus padding), so a label at 200% text zoom grows the box instead of spilling.
@@ -29,7 +29,7 @@ const buttonVariants = cva(
         // key-*: a lit body, a lip and a base, a hover light and a sheen (utilities.css).
         default:
           "key key-primary text-text-inverse data-disabled:text-text-inverse data-disabled:opacity-(--dim-opacity) data-disabled:shadow-none",
-        // No outline variant: Quartz has one quiet key, and outline drew the same as secondary.
+        // No outline variant: the design system has one quiet key, and outline drew the same as secondary.
         secondary:
           "key text-text-1 key-secondary [--frame-color:var(--line-control-hover)] hover:not-data-disabled:[--frame-color:var(--ink)] aria-expanded:[--frame-color:var(--ink)] data-disabled:[--frame-color:var(--text-disabled)]",
         ghost:

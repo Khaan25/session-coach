@@ -1,4 +1,4 @@
-// The chart's tick arithmetic, apart from React. Ported from Quartz's chart-scale.ts.
+// The chart's tick arithmetic, apart from React. Ported from the design system's chart-scale.ts.
 // shortcut: only niceScale is ported (Timeline needs it); port formatCompact, unitFormat and the path helpers when a chart needs them.
 
 /** Ticks at 1, 2, 2.5 or 5 times a power of ten, covering [min, max]. A reversed extent is read the right way round. */

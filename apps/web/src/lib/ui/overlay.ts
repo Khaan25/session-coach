@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import type { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { coarsePointer, cycleTab } from "@/lib/quartz/portal";
+import { coarsePointer, cycleTab } from "@/lib/ui/portal";
 import { cn } from "cn";
-import { mergeRefs } from "@/lib/quartz/utils";
+import { mergeRefs } from "@/lib/ui/utils";
 
 // What Dialog and Sheet share: the open state that waits for a running action, the footer's default
 // action on Enter, the backdrop, and the edge fade on a
@@ -82,7 +82,7 @@ const messageOf = (e: unknown) =>
 function ownDetails<D extends ChangeDetails>(): D {
   const details = {
     reason: "imperative-action",
-    event: new Event("quartz-overlay"),
+    event: new Event("overlay"),
     trigger: undefined,
     isCanceled: false,
     isPropagationAllowed: false,

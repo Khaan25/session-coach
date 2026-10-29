@@ -4,11 +4,11 @@ import * as React from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { cn } from "cn";
 
-import { overlaySurface } from "@/lib/quartz/overlay";
-import { useQuartzPortal } from "@/lib/quartz/portal";
+import { overlaySurface } from "@/lib/ui/overlay";
+import { usePortalContainer } from "@/lib/ui/portal";
 
-// Quartz's popover look (paper, the frame corner, the overlay edge and shadow, 16px in, 288px wide) with the
-// zip's motion: it grows from the trigger's side out of --transform-origin, not Quartz's opacity-only fade.
+// The design system's popover look (paper, the frame corner, the overlay edge and shadow, 16px in, 288px wide) with the
+// zip's motion: it grows from the trigger's side out of --transform-origin, not the design system's opacity-only fade.
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
@@ -35,7 +35,7 @@ function PopoverContent({
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "collisionPadding"
   >) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
 
   return (
     <PopoverPrimitive.Portal container={container}>

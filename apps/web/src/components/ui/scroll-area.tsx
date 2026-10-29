@@ -4,8 +4,8 @@ import * as React from "react";
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { cn } from "cn";
 
-// Quartz has no scroll area; this is the zip's, skinned with Quartz's scrollbar thumb role (--scrollbar-thumb, the
-// same colour native scrollbars take in .quartz), its inset focus ring and its edge fade.
+// The design system has no scroll area; this is the zip's, skinned with the design system's scrollbar thumb role (--scrollbar-thumb, the
+// same colour native scrollbars take in the page root), its inset focus ring and its edge fade.
 
 function ScrollArea({
   className,

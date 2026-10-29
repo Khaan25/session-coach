@@ -3,7 +3,7 @@
 import { SpinnerIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
 
-// The small turning arc Quartz uses for a running state, in the current text colour. Size it like an icon
+// The small turning arc the design system uses for a running state, in the current text colour. Size it like an icon
 // (size-3 in text, size-4 in controls and rows). The output element names it "Loading" for screen readers.
 function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
   return (

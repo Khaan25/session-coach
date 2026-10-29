@@ -79,7 +79,7 @@ function ReviewPrefsBlock() {
   );
 }
 
-// The zip's activity list, rebuilt as Item rows: its icon tiles are an anti-slop pattern in Quartz, and its
+// The zip's activity list, rebuilt as Item rows: its icon tiles are an anti-slop pattern in the design system, and its
 // tile colour is a token now (the zip's one raw value is gone with the tile).
 const ACTIVITY = [
   { title: session.title, detail: `Session ended, ${session.duration_min} min`, time: "Oct 27" },

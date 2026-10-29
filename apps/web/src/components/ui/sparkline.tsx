@@ -1,12 +1,12 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import { CHART_EMPTY, EMPTY_VALUE } from "@/lib/quartz/format";
-import type { Kind } from "@/lib/quartz/kind";
+import { CHART_EMPTY, EMPTY_VALUE } from "@/lib/ui/format";
+import type { Kind } from "@/lib/ui/kind";
 
-// Quartz's sparkline: the small line or bars beside a number. Reads right to left under dir="rtl": the
+// The design system's sparkline: the small line or bars beside a number. Reads right to left under dir="rtl": the
 // drawing mirrors. A screen reader gets a hidden table of the values, captioned with one sentence of trend.
-// shortcut: Quartz's `interactive` mode (focusable points with a tooltip) is not ported, since it needs Quartz's
+// shortcut: The design system's `interactive` mode (focusable points with a tooltip) is not ported, since it needs the design system's
 // chart tooltip and roving-focus parts; port them with it when a sparkline needs hover values.
 
 const sparklineVariants = cva("relative inline-block min-w-0 align-middle", {

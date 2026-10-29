@@ -3,8 +3,8 @@
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator";
 import { cn } from "cn";
 
-// Quartz's row rule: a 1px line in the row step. Prefer a grey field between containers; use this only
-// where a field cannot (quartz-fields-not-lines).
+// The design system's row rule: a 1px line in the row step. Prefer a grey field between containers; use this only
+// where a field cannot.
 function Separator({ className, orientation = "horizontal", ...props }: SeparatorPrimitive.Props) {
   return (
     <SeparatorPrimitive

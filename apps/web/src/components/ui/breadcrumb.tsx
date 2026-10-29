@@ -4,7 +4,7 @@ import { useRender } from "@base-ui/react/use-render";
 import { DotsThreeIcon } from "@phosphor-icons/react/ssr";
 import { cn } from "cn";
 
-// Quartz's breadcrumb, kept server-safe (no hooks, the SSR icon entry). Ancestors are text-2 links that go to ink
+// The design system's breadcrumb, kept server-safe (no hooks, the SSR icon entry). Ancestors are text-2 links that go to ink
 // on hover; the current page is ink and not a link; the separator is a text-3 slash. IDs (run_8f2a…) take
 // BreadcrumbId, which sets them in mono and cuts the middle while keeping the type prefix.
 

@@ -6,13 +6,13 @@ import { XIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
-import { overlayShellSurface, useOverlayOpen } from "@/lib/quartz/overlay";
-import { useQuartzModal, useQuartzPortal } from "@/lib/quartz/portal";
+import { overlayShellSurface, useOverlayOpen } from "@/lib/ui/overlay";
+import { useModalLock, usePortalContainer } from "@/lib/ui/portal";
 
-// Quartz's look (the grey shell holding one white card: header on top, DialogBody under it, the actions back on
+// The design system's look (the grey shell holding one white card: header on top, DialogBody under it, the actions back on
 // the grey) with the zip's motion: a 95% scale-in on open, and nested dialogs that recede and dim their parent.
 
-// Open and modal: the page behind is inert while it is true (useQuartzModal).
+// Open and modal: the page behind is inert while it is true (useModalLock).
 const DialogLockContext = React.createContext(false);
 
 function Dialog({
@@ -46,7 +46,7 @@ function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
   return <DialogPrimitive.Portal data-slot="dialog-portal" container={container} {...props} />;
 }
 
@@ -82,7 +82,7 @@ function DialogContent({
   /** sm 400px, default 480px, lg 640px. */
   size?: "sm" | "default" | "lg";
 }) {
-  useQuartzModal(React.useContext(DialogLockContext));
+  useModalLock(React.useContext(DialogLockContext));
 
   return (
     <DialogPortal>

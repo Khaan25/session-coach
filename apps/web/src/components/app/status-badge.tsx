@@ -2,7 +2,7 @@ import type { SessionStatus } from "@session-coach/shared/session";
 
 import { Status, type StatusValue } from "@/components/ui/status";
 
-// A session's status as Quartz's status word: queued and running in ink (running with the turning arc), ready in
+// A session's status as the design system's status word: queued and running in ink (running with the turning arc), ready in
 // secondary text, failed in fail text. The word carries the status, never the hue alone.
 const statusOf: Record<SessionStatus, { status: StatusValue; label: string }> = {
   pending: { status: "queued", label: "Queued" },

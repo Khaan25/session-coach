@@ -13,12 +13,12 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-// Where Quartz's overlays portal to. Base UI portals to document.body by default, which sits outside
-// .quartz, so the tokens, the theme and the font never reach a popup. QuartzPortalProvider renders an
-// empty [data-quartz-portal] element as the last child of .quartz and hands it down; every overlay
+// Where the design system's overlays portal to. Base UI portals to document.body by default, which sits outside
+// the page root, so the tokens, the theme and the font never reach a popup. PortalProvider renders an
+// empty [data-portal] element as the last child of the page root and hands it down; every overlay
 // passes it to its Base UI Portal:
 //
-//   const container = useQuartzPortal();
+//   const container = usePortalContainer();
 //   <PopoverPrimitive.Portal container={container}>...</PopoverPrimitive.Portal>
 //
 // The hook returns null until the element mounts (Base UI waits on null rather than falling back to
@@ -27,9 +27,9 @@ import { createPortal } from "react-dom";
 // A provider plays one of three parts, from where it sits:
 //
 //   root   the first provider in the tree (components/docs-kit/system-routes.tsx). Its container is the last
-//          child of .quartz, a sibling of the page, so a modal can make the page inert without making
+//          child of the page root, a sibling of the page, so a modal can make the page inert without making
 //          itself inert.
-//   dir    a provider given `dir` inside another, which QuartzDirection renders for a subtree that
+//   dir    a provider given `dir` inside another, which DirectionScope renders for a subtree that
 //          flips. Its container carries the dir attribute and is portalled into the root's container,
 //          so a popup opened from a right-to-left specimen lays out right to left and still sits
 //          outside the page.
@@ -37,8 +37,8 @@ import { createPortal } from "react-dom";
 //          place after its children, so an overlay shown open in a specimen stays in its frame. A
 //          stage is part of the page, so a modal inside it does not lock the page.
 //
-// Modal overlays call useQuartzModal(open). While any is open, every element outside the root's
-// container, from .quartz up to body, is inert: Tab, Shift+Tab, a click and a screen reader's virtual
+// Modal overlays call useModalLock(open). While any is open, every element outside the root's
+// container, from the page root up to body, is inert: Tab, Shift+Tab, a click and a screen reader's virtual
 // cursor cannot reach the page behind. Base UI's own aria-hidden is not enough here: it keeps every
 // ancestor of an aria-live region visible, and the docs have live regions on most pages.
 
@@ -50,7 +50,7 @@ type PortalScope = {
   lock: () => () => void;
 };
 
-const QuartzPortalContext = createContext<PortalScope | undefined>(undefined);
+const PortalContext = createContext<PortalScope | undefined>(undefined);
 
 const noLock = () => () => {};
 
@@ -79,8 +79,8 @@ function inertOutside(keep: HTMLElement) {
   };
 }
 
-export function QuartzPortalProvider({ children, dir }: { children: ReactNode; dir?: Direction }) {
-  const parent = useContext(QuartzPortalContext);
+export function PortalProvider({ children, dir }: { children: ReactNode; dir?: Direction }) {
+  const parent = useContext(PortalContext);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const count = useRef(0);
   const undo = useRef<(() => void) | null>(null);
@@ -108,16 +108,16 @@ export function QuartzPortalProvider({ children, dir }: { children: ReactNode; d
     };
   }, [role, container, parent]);
 
-  // `dir` with no provider above: QuartzDirection at the root, before the root provider. Pass through.
+  // `dir` with no provider above: DirectionScope at the root, before the root provider. Pass through.
   if (!parent && dir) return createElement(Fragment, null, children);
 
   const element = createElement("div", {
     ref: setContainer,
-    "data-quartz-portal": role,
+    "data-portal": role,
     dir: role === "dir" ? dir : undefined,
   });
   return createElement(
-    QuartzPortalContext.Provider,
+    PortalContext.Provider,
     { value: scope },
     children,
     role === "dir"
@@ -128,8 +128,8 @@ export function QuartzPortalProvider({ children, dir }: { children: ReactNode; d
   );
 }
 
-export function useQuartzPortal() {
-  return useContext(QuartzPortalContext)?.container;
+export function usePortalContainer() {
+  return useContext(PortalContext)?.container;
 }
 
 /**
@@ -137,8 +137,8 @@ export function useQuartzPortal() {
  * open state, not its mounted state: the lock lifts in the same commit that closes it, before Base UI
  * returns focus to the trigger on the page.
  */
-export function useQuartzModal(active: boolean) {
-  const scope = useContext(QuartzPortalContext);
+export function useModalLock(active: boolean) {
+  const scope = useContext(PortalContext);
   const lock = scope?.lock;
   const ready = !!scope?.container;
   useLayoutEffect(() => {

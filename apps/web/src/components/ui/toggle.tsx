@@ -4,9 +4,9 @@ import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import { controlHeight } from "@/lib/quartz/utils";
+import { controlHeight } from "@/lib/ui/utils";
 
-// Quartz's pressed button (its Button in toggle mode): ghost at rest, and pressed is an ink fill, the person's
+// The design system's pressed button (its Button in toggle mode): ghost at rest, and pressed is an ink fill, the person's
 // hand on it. Hue never fills a toggle. Outline adds the paper body and 1px control edge of the secondary key.
 const toggleVariants = cva(
   [

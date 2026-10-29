@@ -1,4 +1,4 @@
-// Reads a Quartz token off an element at runtime, for the few timings and lengths that JavaScript has to
+// Reads a token off an element at runtime, for the few timings and lengths that JavaScript has to
 // do arithmetic with (toast reading time, skeleton delay, chart layout, a fixed-position menu's height).
 // tokens.css stays the one source; the fallback is the token's value and only covers a missing element
 // or a server render.

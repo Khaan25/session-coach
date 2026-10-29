@@ -4,7 +4,7 @@ import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar";
 import { cn } from "cn";
 import * as React from "react";
 
-// Who or what did something. Quartz's shapes: a person is round (the only round thing besides the radio),
+// Who or what did something. The design system's shapes: a person is round (the only round thing besides the radio),
 // initials on paper inside the control edge; an agent is a soft-cornered square on the agent tint, so a person
 // and an agent never read alike; a source (a cited page, a connected tool) is a soft-cornered square.
 // Built on Base UI's Avatar, so the fallback shows while an image loads and stays if it fails.

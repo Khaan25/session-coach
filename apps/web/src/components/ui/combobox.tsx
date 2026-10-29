@@ -11,13 +11,13 @@ import {
   popupMotionClass,
 } from "@/components/ui/dropdown-menu";
 import { listItemClass } from "@/components/ui/select";
-import { overlaySurface } from "@/lib/quartz/overlay";
-import { useQuartzPortal } from "@/lib/quartz/portal";
-import { mergeClass } from "@/lib/quartz/utils";
+import { overlaySurface } from "@/lib/ui/overlay";
+import { usePortalContainer } from "@/lib/ui/portal";
+import { mergeClass } from "@/lib/ui/utils";
 
-// Quartz's combobox skin on the zip's motion. The field is Quartz's field box (paper, the 1px control edge, the ink edge
+// The design system's combobox skin on the zip's motion. The field is the design system's field box (paper, the 1px control edge, the ink edge
 // and halo on focus); the popup is the same paper list as Select, with the dropdown menu's motion. A ComboboxInput
-// rendered inside ComboboxContent becomes Quartz's search row (icon, bare field, a rule under it) instead of a field box.
+// rendered inside ComboboxContent becomes the design system's search row (icon, bare field, a rule under it) instead of a field box.
 
 type ControlSize = "sm" | "default" | "lg";
 
@@ -98,7 +98,7 @@ function ComboboxInput({
 }) {
   const inPopup = React.useContext(InPopupContext);
   if (inPopup) {
-    // Inside the popup the input is Quartz's search row: no box of its own, the field's ink edge drawn inside the row on
+    // Inside the popup the input is the design system's search row: no box of its own, the field's ink edge drawn inside the row on
     // focus, and the rule under it parting it from the list.
     return (
       <ComboboxPrimitive.InputGroup
@@ -164,7 +164,7 @@ function ComboboxContent({
     ComboboxPrimitive.Positioner.Props,
     "side" | "align" | "sideOffset" | "alignOffset" | "anchor"
   >) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
   return (
     <ComboboxPrimitive.Portal container={container}>
       <ComboboxPrimitive.Positioner

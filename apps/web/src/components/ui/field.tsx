@@ -3,7 +3,7 @@ import { cn } from "cn";
 
 import { Label } from "@/components/ui/label";
 
-// Quartz's field look on the shadcn Field API. Hue only enters through the fail slot: an invalid control's
+// The design system's field look on the shadcn Field API. Hue only enters through the fail slot: an invalid control's
 // edge turns the fail line and the error text takes the fail text step. No wash: trouble is marked on the
 // edge, not painted across the field.
 

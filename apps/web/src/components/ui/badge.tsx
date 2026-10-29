@@ -3,9 +3,9 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import type { Kind } from "@/lib/quartz/kind";
+import type { Kind } from "@/lib/ui/kind";
 
-// Quartz's badge: a static label, one shape per meaning, so a reader can tell them apart in grayscale.
+// The design system's badge: a static label, one shape per meaning, so a reader can tell them apart in grayscale.
 // - Tint, no line: a kind (`<Badge kind="run"/>`), the one place hue fills. With no kind the tint is the neutral wash.
 // - Paper, a 1px line, ink text: trouble ("Over budget", "Revoked") or a plain outlined tag. The line carries the
 //   colour (the warn or fail line step) and the word stays ink.
@@ -37,7 +37,7 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        // No badge takes ink: the default is the quiet tint, Quartz's own default.
+        // No badge takes ink: the default is the quiet tint, the design system's own default.
         default: "bg-accent-tint text-accent-label [a]:hover:bg-hover",
         secondary: "bg-accent-tint text-accent-label [a]:hover:bg-hover",
         outline:

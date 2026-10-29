@@ -7,9 +7,9 @@ import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
-import type { Kind } from "@/lib/quartz/kind";
+import type { Kind } from "@/lib/ui/kind";
 
-// Quartz's code: three forms of one thing (was Code block, Snippet and Inline code).
+// The design system's code: three forms of one thing (was Code block, Snippet and Inline code).
 // - CodeBlock: one white frame with a 40px header (filename or language, wrap, copy) over a row rule and the code in a well. Line
 //   numbers, highlighted lines (the wash, with the number in ink), and lines that scroll sideways
 //   or wrap. kind sets data-kind on the frame, for the rare file that belongs to a kind (a prompt release's config); it draws no mark.

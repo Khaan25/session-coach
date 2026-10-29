@@ -7,7 +7,7 @@ import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from "re
 
 import { Button, buttonVariants } from "@/components/ui/button";
 
-// A month grid on react-day-picker, in Quartz's date-picker look: 32px days on the soft corner, edge to edge,
+// A month grid on react-day-picker, in the design system's date-picker look: 32px days on the soft corner, edge to edge,
 // numbers in tabular figures. The selected day (or a range's ends) is ink with paper text; the band between
 // a range's ends is the selected wash with straight inner edges; today carries a short bar under its number;
 // outside days are text-3 and disabled days are struck through.

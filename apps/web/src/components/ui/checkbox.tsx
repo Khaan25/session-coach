@@ -5,7 +5,7 @@ import { CheckboxGroup as CheckboxGroupPrimitive } from "@base-ui/react/checkbox
 import { CheckIcon, MinusIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
 
-// Quartz's checkbox: a 16px square with the soft corner. Unticked is paper with a 1px control edge at
+// The design system's checkbox: a 16px square with the soft corner. Unticked is paper with a 1px control edge at
 // --border-control (the 3:1 edge a tick box needs) that turns ink on hover. Ticked and mixed are solid ink
 // with a paper glyph, so the state reads from the fill. Invalid turns the edge to the fail line; the fill stays ink.
 // The box stops its click from bubbling, so ticking a checkbox inside a clickable row never opens the row.

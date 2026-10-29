@@ -10,11 +10,11 @@ import {
   menuSeparatorClass,
   popupMotionClass,
 } from "@/components/ui/dropdown-menu";
-import { overlaySurface } from "@/lib/quartz/overlay";
-import { useQuartzPortal } from "@/lib/quartz/portal";
-import { controlHeight, mergeClass } from "@/lib/quartz/utils";
+import { overlaySurface } from "@/lib/ui/overlay";
+import { usePortalContainer } from "@/lib/ui/portal";
+import { controlHeight, mergeClass } from "@/lib/ui/utils";
 
-// Quartz's select skin on the zip's motion. The trigger is a field box: paper with a 1px control edge, the 6px soft
+// The design system's select skin on the zip's motion. The trigger is a field box: paper with a 1px control edge, the 6px soft
 // corner and an up-down caret. The popup is the overlay surface around menu-item rows; the highlighted row takes the
 // hover wash and the chosen one the selected wash and a check. The popup is never narrower than the trigger.
 // Motion is the dropdown menu's (grow from the trigger, fade, zoom, slide), except when the popup is laid over the
@@ -114,7 +114,7 @@ function SelectContent({
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
   >) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
   return (
     <SelectPrimitive.Portal container={container}>
       <SelectPrimitive.Positioner

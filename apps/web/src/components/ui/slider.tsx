@@ -5,9 +5,9 @@ import { Slider as SliderPrimitive } from "@base-ui/react/slider";
 import { useRef } from "react";
 import { cn } from "cn";
 
-import { useDomDirection } from "@/lib/quartz/direction";
+import { useDomDirection } from "@/lib/ui/direction";
 
-// Quartz's slider: a 4px track in the row rule, an ink range, and a soft-cornered ink thumb (16px) with a paper
+// The design system's slider: a 4px track in the row rule, an ink range, and a soft-cornered ink thumb (16px) with a paper
 // ring so it reads where it overlaps the range. Hover and drag step the thumb to the primary hover ink and grow
 // a soft ring around it. Focus lands on the thumb's hidden input, so the thumb draws the outline with
 // has-focus-visible. Direction comes from the page, so the range fills from the right under dir="rtl".

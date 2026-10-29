@@ -13,7 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // The landing's sections under the hero. Copy comes only from docs/plans/pages-and-dashboard.md and
-// docs/ARCHITECTURE.md; anything they don't say is a TODO(zia). No scroll reveals (Quartz bans them).
+// docs/ARCHITECTURE.md; anything they don't say is a TODO(zia). No scroll reveals (the design system bans them).
 
 function SectionHeading({ id, eyebrow, title }: { id: string; eyebrow: string; title: string }) {
   return (

@@ -6,11 +6,11 @@ import { cn } from "cn";
 import type { ReactNode } from "react";
 
 // Shows and hides one region. The trigger stays unstyled so it can render as another part (the sidebar
-// renders it as a SidebarMenuAction); CollapsibleRow is Quartz's styled trigger, with the caret that turns a
+// renders it as a SidebarMenuAction); CollapsibleRow is the design system's styled trigger, with the caret that turns a
 // quarter when open and an optional summary of what the closed region holds ("1 of 6 failed").
 //
 // The panel animates its height off Base UI's --collapsible-panel-height, so the content below slides
-// instead of jumping. Quartz cuts the panel; here the motion wins, and it stops under reduced motion.
+// instead of jumping. The design system cuts the panel; here the motion wins, and it stops under reduced motion.
 
 function Collapsible({ className, ...props }: CollapsiblePrimitive.Root.Props) {
   return <CollapsiblePrimitive.Root data-slot="collapsible" className={className} {...props} />;

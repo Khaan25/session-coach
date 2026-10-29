@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import { EMPTY_VALUE } from "@/lib/quartz/format";
+import { EMPTY_VALUE } from "@/lib/ui/format";
 
 // Label and value pairs for a detail view: an eval run, a key, a prompt release. A real <dl> with each pair in a
 // <div>, which HTML allows, inside a frame that measures the width. className goes on the frame (it

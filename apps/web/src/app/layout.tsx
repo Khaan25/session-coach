@@ -3,7 +3,7 @@ import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { themeScript } from "@/components/theme/theme-script";
-import { QuartzPortalProvider } from "@/lib/quartz/portal";
+import { PortalProvider } from "@/lib/ui/portal";
 
 import "./globals.css";
 
@@ -41,9 +41,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="quartz flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col">
         <ThemeProvider>
-          <QuartzPortalProvider>{children}</QuartzPortalProvider>
+          <PortalProvider>{children}</PortalProvider>
         </ThemeProvider>
       </body>
     </html>

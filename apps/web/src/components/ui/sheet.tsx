@@ -6,15 +6,15 @@ import { XIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
-import { fadeClass, useOverlayOpen, useScrollFade } from "@/lib/quartz/overlay";
-import { useQuartzModal, useQuartzPortal } from "@/lib/quartz/portal";
-import { mergeRefs } from "@/lib/quartz/utils";
+import { fadeClass, useOverlayOpen, useScrollFade } from "@/lib/ui/overlay";
+import { useModalLock, usePortalContainer } from "@/lib/ui/portal";
+import { mergeRefs } from "@/lib/ui/utils";
 
-// A panel from an edge. Quartz's shell (the panel grey holding one white card: the header, then SheetBody under it,
+// A panel from an edge. The design system's shell (the panel grey holding one white card: the header, then SheetBody under it,
 // the actions back on the grey) with the zip's slide. The slide is a `translate` in the starting and ending states;
 // globals.css resets it under reduced motion through [data-slot="sheet-content"], so keep that slot name.
 
-// Open and modal: the page behind is inert while it is true (useQuartzModal).
+// Open and modal: the page behind is inert while it is true (useModalLock).
 const SheetLockContext = React.createContext(false);
 
 function Sheet({
@@ -52,7 +52,7 @@ function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
 }
 
 function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
   return <SheetPrimitive.Portal data-slot="sheet-portal" container={container} {...props} />;
 }
 
@@ -79,7 +79,7 @@ function SheetContent({
   side?: "top" | "right" | "bottom" | "left";
   showCloseButton?: boolean;
 }) {
-  useQuartzModal(React.useContext(SheetLockContext));
+  useModalLock(React.useContext(SheetLockContext));
 
   return (
     <SheetPortal>
@@ -89,7 +89,7 @@ function SheetContent({
         data-side={side}
         data-show-close={showCloseButton || undefined}
         className={cn(
-          // Quartz's panel: the shell grey, the overlay edge and shadow; 480px, with 40px of page showing on phones.
+          // The design system's panel: the shell grey, the overlay edge and shadow; 480px, with 40px of page showing on phones.
           "group/sheet fixed z-(--z-overlay) flex min-h-0 flex-col bg-(--surface-frame) text-text-1 shadow-overlay outline-none forced-colors:outline-1 forced-colors:outline-[CanvasText] forced-colors:outline-solid",
           "data-[side=left]:w-[calc(100%-var(--space-10))] data-[side=right]:w-[calc(100%-var(--space-10))] data-[side=left]:sm:w-overlay data-[side=right]:sm:w-overlay",
           "data-[side=bottom]:max-h-[calc(100dvh-var(--space-10))] data-[side=bottom]:rounded-t-frame data-[side=bottom]:pb-[env(safe-area-inset-bottom)] data-[side=top]:max-h-[calc(100dvh-var(--space-10))] data-[side=top]:rounded-b-frame",

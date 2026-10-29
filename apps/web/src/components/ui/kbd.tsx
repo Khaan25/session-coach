@@ -1,6 +1,6 @@
 import { cn } from "cn";
 
-// Quartz's key cap: 20px tall, at least 20px wide, on the inner corner, in type-tag. Paper with a 1px control edge,
+// The design system's key cap: 20px tall, at least 20px wide, on the inner corner, in type-tag. Paper with a 1px control edge,
 // so it reads as a key and not as a smaller grey chip. Inside a tooltip (an inverse surface) the channels have
 // already flipped, so paper and the edge work as is and only the text steps up to text-1.
 function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {

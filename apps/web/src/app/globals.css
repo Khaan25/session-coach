@@ -2,35 +2,32 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Quartz (design.how) is the skin: its tokens, its scoped base and its utilities, with its mapping of
-   the shadcn semantic names (background, primary, muted, border...) onto Quartz roles. Everything
-   reads inside <body class="quartz">. See docs/DECISIONS.md, 2026-10-29 · Design system. */
-@import "../components/quartz/tokens.css";
-@import "../components/quartz/base.css";
-@import "../components/quartz/utilities.css";
+/* The design system: tokens, base and utilities, with the shadcn semantic names (background, primary,
+   muted, border...) mapped onto its roles. They apply to the whole page. See docs/DECISIONS.md,
+   2026-10-29 · Design system. */
+@import "../styles/tokens.css";
+@import "../styles/base.css";
+@import "../styles/utilities.css";
 
-/* Session Coach on Quartz. Quartz draws in its own sans and mono where a licence declares them;
-   the app uses Geist and Geist Mono from next/font. Declared after tokens.css, so these win. */
-.quartz {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+/* Marketing headlines only (font-display); the UI is Geist, set in tokens.css. */
+:root {
   --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
 }
 
 /* A secondary key sits beside a primary one in every footer, so it takes the primary's two drops at
    half strength: both keys then end at the same line under them and read as one height. Declared
-   on the same selector as Quartz's derived tokens so overlays ([data-surface]) keep it. */
-.quartz,
-.quartz [data-surface] {
+   on the same selector as the design system's derived tokens so overlays ([data-surface]) keep it. */
+:root,
+:root [data-surface] {
   --key-secondary-edge:
     0 1px 1px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.55)),
     0 2px 5px -2px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.75));
 }
 
-/* The shadcn names Quartz's mapping leaves out, plus the app's own roles.
-   - success: score 2 and "mastered". Quartz keeps warm hues for trouble, so success takes the mint
-     kind (hue 5), not green-on-warm. warning: flagged cards, Quartz's amber.
-   - overlay: the dialog and sheet backdrop, Quartz's ink at 24%. */
+/* The shadcn names the design system's mapping leaves out, plus the app's own roles.
+   - success: score 2 and "mastered". The design system keeps warm hues for trouble, so success takes the mint
+     kind (hue 5), not green-on-warm. warning: flagged cards, the design system's amber.
+   - overlay: the dialog and sheet backdrop, the design system's ink at 24%. */
 @theme inline reference {
   --color-sidebar-primary: var(--button-primary);
   --color-sidebar-primary-foreground: var(--text-inverse);
@@ -57,7 +54,7 @@
  * Not `inline`: these must survive as real variables so a hand-written `transition` shorthand can
  * reference them (Toast's stacking transition does). Something entering or
  * leaving takes the out curve, so it commits at once; something moving between two on-screen
- * positions takes the in-out curve. Quartz's --dur-* and --ease-step stay available beside them.
+ * positions takes the in-out curve. The design system's --dur-* and --ease-step stay available beside them.
  */
 @theme {
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);

@@ -14,9 +14,9 @@ import { cn } from "cn";
 
 import { Button } from "@/components/ui/button";
 import { tooltipPopupClass } from "@/components/ui/tooltip";
-import { useQuartzPortal } from "@/lib/quartz/portal";
+import { usePortalContainer } from "@/lib/ui/portal";
 
-// Quartz's toast look (paper, the frame corner, the overlay edge and shadow, a label title over a body-sm line,
+// The design system's toast look (paper, the frame corner, the overlay edge and shadow, a label title over a body-sm line,
 // the title in the warn or fail text colour) on the zip's stack: toasts pile up behind the newest, fan out on
 // hover, swipe away, and pulse when they update in place.
 
@@ -27,7 +27,7 @@ function ToastProvider({ ...props }: ToastPrimitive.Provider.Props) {
 }
 
 function ToastPortal({ ...props }: ToastPrimitive.Portal.Props) {
-  const container = useQuartzPortal();
+  const container = usePortalContainer();
   return <ToastPrimitive.Portal data-slot="toast-portal" container={container} {...props} />;
 }
 
@@ -216,7 +216,7 @@ function AnchoredToast({ className, ...props }: ToastPrimitive.Root.Props) {
   );
 }
 
-/* Quartz's tooltip has no arrow, so the anchored toast list leaves this out; it stays for callers that want one. */
+/* The design system's tooltip has no arrow, so the anchored toast list leaves this out; it stays for callers that want one. */
 function ToastArrow({ className, ...props }: ToastPrimitive.Arrow.Props) {
   return (
     <ToastPrimitive.Arrow

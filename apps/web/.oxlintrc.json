@@ -145,7 +145,7 @@
       }
     },
     {
-      "files": ["src/lib/quartz/**"],
+      "files": ["src/lib/ui/**"],
       "rules": {
         "react/refs": "off",
         "react/no-children-prop": "off"

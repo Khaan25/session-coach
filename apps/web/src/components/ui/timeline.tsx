@@ -2,15 +2,15 @@
 
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { Kind } from "@/lib/quartz/kind";
-import { durationUnitFor, formatDurations } from "@/lib/quartz/format";
-import { useOffscreen } from "@/lib/quartz/use-offscreen";
+import type { Kind } from "@/lib/ui/kind";
+import { durationUnitFor, formatDurations } from "@/lib/ui/format";
+import { useOffscreen } from "@/lib/ui/use-offscreen";
 import { cn } from "cn";
 
 import { niceScale } from "@/components/ui/chart-scale";
 import { Status, statusLabels } from "@/components/ui/status";
 
-// Quartz's timeline: when each step of a run started and how long it took, with the slow and failed ones marked. It
+// The design system's timeline: when each step of a run started and how long it took, with the slow and failed ones marked. It
 // answers the question every agent product gets asked: where did the 12.6s go, and which step broke? It shows what
 // happened, never a plan.
 //

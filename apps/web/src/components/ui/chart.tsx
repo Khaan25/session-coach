@@ -4,7 +4,7 @@ import { cn } from "cn";
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 
-// recharts in Quartz's chart look: axis ticks in text-3 at label-sm with tabular figures, grid and reference
+// recharts in the design system's chart look: axis ticks in text-3 at label-sm with tabular figures, grid and reference
 // lines in the row rule, the cursor in the hover wash, and a tooltip on the overlay surface (paper, the
 // overlay shadow, no glass). Series colours come from the config; point them at tokens, as
 // `{ sessions: { label: "Sessions", color: "var(--color-chart-1)" } }`, and read them in the chart as
@@ -69,7 +69,7 @@ function ChartContainer({
         data-chart={chartId}
         className={cn(
           "flex aspect-video justify-center type-label-sm data text-text-2",
-          // recharts paints its own greys on these parts; each is pointed at a Quartz role instead.
+          // recharts paints its own greys on these parts; each is pointed at a role instead.
           "[&_.recharts-cartesian-axis-line]:stroke-line-row [&_.recharts-cartesian-axis-tick_text]:fill-text-3 [&_.recharts-cartesian-axis-tick-line]:stroke-line-row",
           "[&_.recharts-cartesian-grid_line]:stroke-line-row [&_.recharts-polar-grid_line]:stroke-line-row [&_.recharts-polar-grid_path]:stroke-line-row [&_.recharts-reference-line_line]:stroke-line-row",
           "[&_.recharts-curve.recharts-tooltip-cursor]:stroke-strong [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-hover",
@@ -92,7 +92,7 @@ function ChartContainer({
 
 /**
  * The config's colours as --color-<key> on the container. A themed entry becomes light-dark(), which follows
- * the color-scheme Quartz sets on each theme, so no stylesheet has to be injected.
+ * the color-scheme the design system sets on each theme, so no stylesheet has to be injected.
  */
 function chartVars(config: ChartConfig) {
   const vars: Record<string, string> = {};
