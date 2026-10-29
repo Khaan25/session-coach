@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+# Runs CI's fast gates before a push spends a CI run and a round of bot reviews.
+# The production build and the manual rule pass live in the local-review skill.
+# Use `git push --no-verify` only for a check that can genuinely run only in CI.
+echo "pre-push: format, typecheck, lint, test"
+fail=0
+for gate in format:check typecheck lint test; do
+  if ! out=$(pnpm run "$gate" 2>&1); then
+    echo "  ✗ $gate"
+    printf '%s\n' "$out" | tail -25
+    fail=1
+  fi
+done
+if [ "$fail" -ne 0 ]; then
+  echo "Push blocked. Fix the above (formatting: pnpm format), then push again."
+  exit 1
+fi
+echo "pre-push: passed"

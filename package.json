@@ -2,11 +2,23 @@
   "name": "session-coach",
   "private": true,
   "packageManager": "pnpm@12.16.1",
-  "engines": { "node": "^22.22.2 || ^24.15.0" },
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0"
+  },
   "scripts": {
     "dev": "pnpm --filter web dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:secrets": "node scripts/check-secrets.mjs --all",
+    "check:commits": "node scripts/check-commit-message.mjs --range origin/main..HEAD",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.8.1"
   }
 }

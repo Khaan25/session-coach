@@ -8,7 +8,27 @@ on:
 permissions:
   contents: read
 
+# A new push to the same branch cancels the run it supersedes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # The commit-msg hook checks each commit as it is made; this re-checks every commit on the
+  # PR, so one made with --no-verify, or before the hook was installed, still fails.
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-commit-message.mjs --range origin/${{ github.base_ref }}..HEAD
+
   check:
     runs-on: ubuntu-latest
     steps:
@@ -21,7 +41,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The pre-commit hook scans staged files; this rescans every tracked file.
+      - run: pnpm check:secrets
+      - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm --filter @session-coach/shared test
+      - run: pnpm test
       - run: pnpm build
