@@ -26,7 +26,7 @@ const settleIn = (ms: number, shouldReject = false) =>
 function UndoExample() {
   return (
     <Button
-      variant="outline"
+      variant="secondary"
       className="w-full"
       onClick={() => {
         // `add` returns the id before the action can fire, so the handler can close the toast it undoes.
@@ -58,7 +58,7 @@ function PromiseExample() {
   return (
     <div className="flex gap-2">
       <Button
-        variant="outline"
+        variant="secondary"
         className="flex-1"
         onClick={() =>
           toast.promise(settleIn(2000), {
@@ -75,7 +75,7 @@ function PromiseExample() {
         Promise
       </Button>
       <Button
-        variant="outline"
+        variant="secondary"
         className="flex-1"
         onClick={() =>
           toast
@@ -103,7 +103,7 @@ function DeduplicatedExample() {
   const seen = useRef(0);
   return (
     <Button
-      variant="outline"
+      variant="secondary"
       className="w-full"
       onClick={() => {
         seen.current += 1;
@@ -124,7 +124,7 @@ function DeduplicatedExample() {
 function VaryingHeightExample() {
   return (
     <Button
-      variant="outline"
+      variant="secondary"
       className="w-full"
       onClick={() => {
         toast.add({ title: "Answer saved" });
@@ -151,7 +151,7 @@ function AnchoredExample() {
   return (
     <Button
       ref={setAnchor}
-      variant="outline"
+      variant="secondary"
       className="w-full"
       onClick={() =>
         anchoredToasts.add({
@@ -170,7 +170,7 @@ function AnchoredExample() {
 function BottomStartExample() {
   return (
     <Button
-      variant="outline"
+      variant="secondary"
       className="w-full"
       onClick={() =>
         bottomStart.add({

@@ -38,7 +38,7 @@ export function SiteNav() {
         </ul>
         <div className="flex items-center gap-2">
           <SiteNavMenu links={links} />
-          <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+          <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
             Sign in
           </Link>
         </div>

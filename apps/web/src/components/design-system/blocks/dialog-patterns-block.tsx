@@ -61,7 +61,7 @@ function CloseConfirmationDialog() {
         setDialogOpen(open);
       }}
     >
-      <DialogTrigger render={<Button variant="outline" className="w-full" />}>
+      <DialogTrigger render={<Button variant="secondary" className="w-full" />}>
         Close confirmation
       </DialogTrigger>
       <DialogContent>
@@ -85,7 +85,7 @@ function CloseConfirmationDialog() {
           </FieldGroup>
         </DialogBody>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+          <DialogClose render={<Button variant="secondary" />}>Cancel</DialogClose>
           <Button onClick={discard}>Submit answer</Button>
         </DialogFooter>
       </DialogContent>
@@ -112,7 +112,7 @@ function CloseConfirmationDialog() {
 function NestedDialogExample() {
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant="outline" className="w-full" />}>
+      <DialogTrigger render={<Button variant="secondary" className="w-full" />}>
         Nested dialog
       </DialogTrigger>
       <DialogContent>
@@ -140,13 +140,13 @@ function NestedDialogExample() {
                 <DialogDescription>TODO(zia): the reason for this spacing.</DialogDescription>
               </DialogHeader>
               <DialogFooter>
-                <DialogClose render={<Button variant="outline" />}>Back</DialogClose>
+                <DialogClose render={<Button variant="secondary" />}>Back</DialogClose>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </DialogBody>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+          <DialogClose render={<Button variant="secondary" />}>Cancel</DialogClose>
           <Button>Schedule</Button>
         </DialogFooter>
       </DialogContent>
@@ -164,7 +164,7 @@ const LONG_LIST = Array.from({ length: 24 }, (_, index) => ({
 function InsideScrollDialog() {
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant="outline" className="w-full" />}>
+      <DialogTrigger render={<Button variant="secondary" className="w-full" />}>
         Inside scroll
       </DialogTrigger>
       <DialogContent>
@@ -191,7 +191,7 @@ function InsideScrollDialog() {
           </ItemGroup>
         </ScrollArea>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
+          <DialogClose render={<Button variant="secondary" />}>Cancel</DialogClose>
           <Button>Start review</Button>
         </DialogFooter>
       </DialogContent>

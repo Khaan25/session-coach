@@ -30,7 +30,7 @@ export function ThemeToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="outline" size="icon" />}
+        render={<Button variant="secondary" size="icon" />}
         aria-label={`Theme: ${theme}`}
       >
         <span className="relative size-4">

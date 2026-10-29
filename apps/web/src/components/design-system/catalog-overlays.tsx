@@ -95,7 +95,7 @@ function Dialogs() {
       <Specimen label="Dialog sizes (scale in)">
         {(["sm", "default", "lg"] as const).map((size) => (
           <Dialog key={size}>
-            <DialogTrigger render={<Button variant="outline" />}>Dialog {size}</DialogTrigger>
+            <DialogTrigger render={<Button variant="secondary" />}>Dialog {size}</DialogTrigger>
             <DialogContent size={size}>
               <DialogHeader>
                 <DialogTitle>{cards[0].question}</DialogTitle>
@@ -111,7 +111,7 @@ function Dialogs() {
           </Dialog>
         ))}
         <Dialog>
-          <DialogTrigger render={<Button variant="outline" />}>No close button</DialogTrigger>
+          <DialogTrigger render={<Button variant="secondary" />}>No close button</DialogTrigger>
           <DialogContent showCloseButton={false}>
             <DialogHeader>
               <DialogTitle>Card written</DialogTitle>
@@ -154,7 +154,7 @@ function Dialogs() {
       <Specimen label="Sheet sides (slide in)">
         {SIDES.map((side) => (
           <Sheet key={side}>
-            <SheetTrigger render={<Button variant="outline" />}>Sheet {side}</SheetTrigger>
+            <SheetTrigger render={<Button variant="secondary" />}>Sheet {side}</SheetTrigger>
             <SheetContent side={side} showCloseButton={side !== "bottom"}>
               <SheetHeader>
                 <SheetTitle>{session.title}</SheetTitle>
@@ -170,7 +170,7 @@ function Dialogs() {
                 ))}
               </SheetBody>
               <SheetFooter>
-                <SheetClose render={<Button variant="outline" />}>Close</SheetClose>
+                <SheetClose render={<Button variant="secondary" />}>Close</SheetClose>
               </SheetFooter>
             </SheetContent>
           </Sheet>
@@ -180,20 +180,22 @@ function Dialogs() {
       <Specimen label="Drawer swipe directions, handle, snap points and nesting (follows the finger)">
         {SWIPES.map((direction) => (
           <Drawer key={direction} swipeDirection={direction} showSwipeHandle>
-            <DrawerTrigger render={<Button variant="outline" />}>Drawer {direction}</DrawerTrigger>
+            <DrawerTrigger render={<Button variant="secondary" />}>
+              Drawer {direction}
+            </DrawerTrigger>
             <DrawerContent>
               <DrawerHeader>
                 <DrawerTitle>{cards[1].question}</DrawerTitle>
                 <DrawerDescription>Swipe {direction} to close.</DrawerDescription>
               </DrawerHeader>
               <DrawerFooter>
-                <DrawerClose render={<Button variant="outline" />}>Close</DrawerClose>
+                <DrawerClose render={<Button variant="secondary" />}>Close</DrawerClose>
               </DrawerFooter>
             </DrawerContent>
           </Drawer>
         ))}
         <Drawer snapPoints={[0.5, 1]} showSwipeHandle>
-          <DrawerTrigger render={<Button variant="outline" />}>Snap points</DrawerTrigger>
+          <DrawerTrigger render={<Button variant="secondary" />}>Snap points</DrawerTrigger>
           <DrawerContent>
             <DrawerHeader>
               <DrawerTitle>Half, then full</DrawerTitle>
@@ -208,7 +210,7 @@ function Dialogs() {
                     <DrawerDescription>The one behind steps back.</DrawerDescription>
                   </DrawerHeader>
                   <DrawerFooter>
-                    <DrawerClose render={<Button variant="outline" />}>Back</DrawerClose>
+                    <DrawerClose render={<Button variant="secondary" />}>Back</DrawerClose>
                   </DrawerFooter>
                 </DrawerContent>
               </Drawer>
@@ -222,7 +224,7 @@ function Dialogs() {
               <DrawerTitle>The page stays usable</DrawerTitle>
             </DrawerHeader>
             <DrawerFooter>
-              <DrawerClose render={<Button variant="outline" />}>Close</DrawerClose>
+              <DrawerClose render={<Button variant="secondary" />}>Close</DrawerClose>
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
@@ -236,7 +238,7 @@ function Anchored() {
     <Specimen label="Popover, tooltip and dropdown menu (grow from the trigger)">
       {SIDES.map((side) => (
         <Popover key={side}>
-          <PopoverTrigger render={<Button variant="outline" />}>Popover {side}</PopoverTrigger>
+          <PopoverTrigger render={<Button variant="secondary" />}>Popover {side}</PopoverTrigger>
           <PopoverContent side={side}>
             <PopoverHeader>
               <PopoverTitle>Why is this card flagged?</PopoverTitle>
@@ -244,7 +246,7 @@ function Anchored() {
                 One of its evidence quotes did not match the transcript.
               </PopoverDescription>
             </PopoverHeader>
-            <PopoverClose render={<Button size="sm" variant="outline" />}>Got it</PopoverClose>
+            <PopoverClose render={<Button size="sm" variant="secondary" />}>Got it</PopoverClose>
           </PopoverContent>
         </Popover>
       ))}
@@ -262,7 +264,7 @@ function Anchored() {
       ))}
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="outline" size="icon" aria-label="Card actions" />}
+          render={<Button variant="secondary" size="icon" aria-label="Card actions" />}
         >
           <DotsThreeIcon />
         </DropdownMenuTrigger>

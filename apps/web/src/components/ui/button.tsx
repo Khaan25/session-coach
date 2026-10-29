@@ -29,8 +29,7 @@ const buttonVariants = cva(
         // key-*: a lit body, a lip and a base, a hover light and a sheen (utilities.css).
         default:
           "key key-primary text-text-inverse data-disabled:text-text-inverse data-disabled:opacity-(--dim-opacity) data-disabled:shadow-none",
-        outline:
-          "key text-text-1 key-secondary [--frame-color:var(--line-control-hover)] hover:not-data-disabled:[--frame-color:var(--ink)] aria-expanded:[--frame-color:var(--ink)] data-disabled:[--frame-color:var(--text-disabled)]",
+        // No outline variant: Quartz has one quiet key, and outline drew the same as secondary.
         secondary:
           "key text-text-1 key-secondary [--frame-color:var(--line-control-hover)] hover:not-data-disabled:[--frame-color:var(--ink)] aria-expanded:[--frame-color:var(--ink)] data-disabled:[--frame-color:var(--text-disabled)]",
         ghost:

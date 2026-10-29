@@ -20,7 +20,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { GallerySection, Specimen } from "./gallery-section";
 import { session } from "./sample";
 
-const VARIANTS = ["default", "outline", "secondary", "ghost", "destructive", "link"] as const;
+const VARIANTS = ["default", "secondary", "ghost", "destructive", "link"] as const;
 const SIZES = ["xs", "sm", "default", "lg"] as const;
 const ICON_SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
 const TOGGLE_SIZES = ["sm", "default", "lg"] as const;
@@ -53,7 +53,7 @@ function ActionsCatalog() {
       ))}
       <Specimen label="Button icon sizes">
         {ICON_SIZES.map((size) => (
-          <Button key={size} variant="outline" size={size} aria-label="Add card">
+          <Button key={size} variant="secondary" size={size} aria-label="Add card">
             <PlusIcon />
           </Button>
         ))}
@@ -63,7 +63,7 @@ function ActionsCatalog() {
           <PlusIcon data-icon="inline-start" />
           New session
         </Button>
-        <Button variant="outline">
+        <Button variant="secondary">
           Next card
           <ArrowRightIcon data-icon="inline-end" />
         </Button>
@@ -78,9 +78,9 @@ function ActionsCatalog() {
 
       <Specimen label="Button group">
         <ButtonGroup>
-          <Button variant="outline">Day 1</Button>
-          <Button variant="outline">Day 3</Button>
-          <Button variant="outline">Day 7</Button>
+          <Button variant="secondary">Day 1</Button>
+          <Button variant="secondary">Day 3</Button>
+          <Button variant="secondary">Day 7</Button>
         </ButtonGroup>
         <ButtonGroup>
           <Button>Explain back</Button>
@@ -90,21 +90,21 @@ function ActionsCatalog() {
         </ButtonGroup>
         <ButtonGroup>
           <ButtonGroupText>Repo</ButtonGroupText>
-          <Button variant="outline">{session.repo}</Button>
+          <Button variant="secondary">{session.repo}</Button>
           <ButtonGroupSeparator />
           <Button variant="ghost">{session.branch}</Button>
         </ButtonGroup>
         <ButtonGroup orientation="vertical">
-          <Button variant="outline">Stated</Button>
-          <Button variant="outline">Inferred</Button>
+          <Button variant="secondary">Stated</Button>
+          <Button variant="secondary">Inferred</Button>
         </ButtonGroup>
         <ButtonGroup>
           <ButtonGroup>
-            <Button variant="outline">Previous</Button>
-            <Button variant="outline">Next</Button>
+            <Button variant="secondary">Previous</Button>
+            <Button variant="secondary">Next</Button>
           </ButtonGroup>
           <ButtonGroup>
-            <Button variant="outline" disabled>
+            <Button variant="secondary" disabled>
               Skip
             </Button>
           </ButtonGroup>
@@ -169,7 +169,7 @@ function ActionsCatalog() {
       <Specimen label="Copy button">
         <CopyButton value={session.id} label="session ID" />
         <CopyButton value={session.id} label="session ID" showLabel />
-        <CopyButton value={session.id} label="session ID" variant="outline" showLabel />
+        <CopyButton value={session.id} label="session ID" variant="secondary" showLabel />
         <CopyButton value={fetchSessionId} label="fetched session ID" showLabel />
         <CopyButton value={session.id} label="session ID" forceState="copied" showLabel />
         <CopyButton value={session.id} label="session ID" forceState="failed" showLabel />

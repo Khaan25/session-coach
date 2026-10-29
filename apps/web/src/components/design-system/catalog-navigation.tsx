@@ -173,7 +173,7 @@ function NavigationCatalog() {
               <SegmentedControlItem value="a">First</SegmentedControlItem>
               <SegmentedControlItem value="b">Second</SegmentedControlItem>
             </SegmentedControl>
-            <Button variant="outline">Button</Button>
+            <Button variant="secondary">Button</Button>
           </div>
         </DirectionProvider>
       </Specimen>
