@@ -1,16 +1,16 @@
 "use client";
 
-import { GoogleLogoIcon } from "@phosphor-icons/react";
 import { useFormStatus } from "react-dom";
 
 import { signInWithGoogle } from "@/app/(auth)/actions";
+import { GoogleIcon } from "@/components/auth/google-icon";
 import { Button } from "@/components/ui/button";
 
 function GoogleButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" variant="secondary" size="lg" disabled={pending}>
-      <GoogleLogoIcon weight="bold" data-icon="inline-start" aria-hidden />
+      <GoogleIcon />
       Continue with Google
     </Button>
   );
