@@ -9,6 +9,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { formatRelativeTime } from "@/lib/relative-time";
+import { sessionName } from "@/lib/sessions/name";
 
 import { StatusBadge } from "./status-badge";
 
@@ -18,17 +19,15 @@ type SessionRowProps = {
   cardCount?: number;
   /** The clock the relative time is measured from, passed in so render never reads it. */
   now: Date;
-  /** Announce the status word when it settles (a row updated by Realtime). */
-  live?: boolean;
 };
 
 /**
  * One session in the dashboard list, for an ItemGroup: title (or repo and branch), repo, when, card count and the
  * status word. A ready row links to its cards; a failed row shows the pipeline's learner-readable error.
  */
-export function SessionRow({ session, cardCount, now, live }: SessionRowProps) {
+export function SessionRow({ session, cardCount, now }: SessionRowProps) {
   const { id, title, repo, branch, status, error, created_at } = session;
-  const name = title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session";
+  const name = sessionName({ title, repo, branch });
   const when = formatRelativeTime(created_at, now);
   // shortcut: ItemLink is a plain <a> (no client-side navigation); give ItemLink a render prop to take next/link.
   return (
@@ -60,7 +59,7 @@ export function SessionRow({ session, cardCount, now, live }: SessionRowProps) {
           <time dateTime={created_at}>{when}</time>
         </ItemMeta>
       )}
-      <StatusBadge status={status} live={live} />
+      <StatusBadge status={status} />
     </Item>
   );
 }

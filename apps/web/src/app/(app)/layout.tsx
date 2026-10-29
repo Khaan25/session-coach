@@ -4,21 +4,11 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { initialsOf } from "@/lib/auth/initials";
 import { recentSessions } from "@/lib/sessions/queries";
 import { getSettingsProfile } from "@/lib/settings/profile";
 
 import { AppBreadcrumb } from "./app-breadcrumb";
-
-/** Up to two initials from the display name, else the email's first letter. */
-function initialsOf(name: string | null, email: string | null) {
-  const words = (name ?? "").trim().split(/\s+/).filter(Boolean);
-  if (words.length > 0)
-    return words
-      .slice(0, 2)
-      .map((word) => word[0]!.toUpperCase())
-      .join("");
-  return (email?.[0] ?? "?").toUpperCase();
-}
 
 // Reads the signed-in learner, so it renders inside Suspense (cacheComponents); the fallback is the same sidebar empty.
 async function SignedInSidebar() {
@@ -34,7 +24,7 @@ async function SignedInSidebar() {
       user={{
         name,
         detail: email ?? "",
-        initials: initialsOf(profile?.display_name ?? null, email),
+        initials: initialsOf(profile?.display_name, email),
       }}
     />
   );

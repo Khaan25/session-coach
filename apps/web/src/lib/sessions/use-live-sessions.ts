@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 
+import { sessionName } from "@/lib/sessions/name";
 import { toast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 
@@ -61,7 +62,7 @@ export function useLiveSessions(
           const key = `${row.id}:${row.status}`;
           if ((row.status === "ready" || row.status === "failed") && !announced.has(key)) {
             announced.add(key);
-            const name = row.title || row.repo || "Your session";
+            const name = sessionName(row);
             toast.add(
               row.status === "ready"
                 ? { type: "success", title: "Cards ready", description: name }
