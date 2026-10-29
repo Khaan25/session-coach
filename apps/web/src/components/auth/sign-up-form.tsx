@@ -21,11 +21,12 @@ import { MIN_PASSWORD, validateSignUp } from "@/lib/auth/validate";
 
 /**
  * The sign-up form (docs/plans/auth.md): the signUp Server Action, then "check your email" whether or not the address
- * already has an account (#3). Only problems with the password or the rate limit come back to this form.
+ * already has an account (#3). Only field errors, the rate limit and unexpected failures come back to this form;
+ * a taken address never does.
  */
 export function SignUpForm() {
   const id = useId();
-  const { action, handleSubmit, pending, errors, result, email } = useAuthForm(
+  const { action, handleSubmit, pending, errors, result, email, name } = useAuthForm(
     signUp,
     validateSignUp,
   );
@@ -48,6 +49,7 @@ export function SignUpForm() {
                   type="text"
                   autoComplete="name"
                   maxLength={100}
+                  defaultValue={name}
                 />
               </Field>
               <Field data-invalid={errors.email ? true : undefined}>

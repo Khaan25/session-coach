@@ -39,9 +39,11 @@ export function useAuthForm(
     pending,
     /** The message under each field: the browser's check, else the server's. */
     errors: clientErrors ?? state.fields ?? {},
-    /** The server's answer, or undefined while browser-side errors show. */
-    result: clientErrors ? undefined : state,
+    /** The server's answer, or undefined while browser-side errors show or a new submit is on its way. */
+    result: clientErrors || pending ? undefined : state,
     /** The address last sent, to keep it in the field after React resets the form. */
     email: state.email,
+    /** The sign-up name last sent, kept the same way. */
+    name: state.name,
   };
 }
