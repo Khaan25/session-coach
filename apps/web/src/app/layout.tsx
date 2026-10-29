@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+
+import { ThemeProvider, themeScript } from "@/components/theme/theme-provider";
+import { QuartzPortalProvider } from "@/lib/quartz/portal";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,6 +16,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Display face for marketing headlines only (`font-display`); the UI stays on Geist.
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
   title: "Session Coach",
   description: "Explain back the decisions your coding agent made.",
@@ -19,8 +31,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+    // The theme script adds the theme class before paint, so <html> differs from the server render.
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className="quartz flex min-h-full flex-col">
+        <ThemeProvider>
+          <QuartzPortalProvider>{children}</QuartzPortalProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
