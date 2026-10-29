@@ -298,10 +298,12 @@ function TokenLine({
 }) {
   if (!tokens.length) return <>{"\n"}</>;
   // Each token's offset into the line, worked out before render rather than mutated inside it.
-  const starts = tokens.reduce<number[]>(
-    (acc, _t, i) => [...acc, i ? acc[i - 1] + tokens[i - 1].value.length : 0],
-    [],
-  );
+  let offset = 0;
+  const starts = tokens.map((t) => {
+    const start = offset;
+    offset += t.value.length;
+    return start;
+  });
   return (
     <>
       {tokens.map((token, i) => {
@@ -425,18 +427,28 @@ function CopyCodeButton({
 
 type CommandLine = { kind: "command" | "output"; text: string };
 
-/** Splits a command block: lines that start with the prompt are commands; the rest is output. */
+/**
+ * Splits a command block: lines that start with the prompt are commands, and so is a line continuing a command
+ * that ends in a backslash; the rest is output.
+ */
 function commandLines(code: string, prompt: string): CommandLine[] {
   const lines = code.replace(/\n$/, "").split("\n");
   const marker = prompt ? `${prompt} ` : "";
   const anyPrompt = !!marker && lines.some((l) => l.startsWith(marker));
-  return lines.map((l) =>
-    !anyPrompt
-      ? { kind: "command", text: l }
-      : l.startsWith(marker)
-        ? { kind: "command", text: l.slice(marker.length) }
-        : { kind: "output", text: l },
-  );
+  const out: CommandLine[] = [];
+  for (const l of lines) {
+    const prev = out.at(-1);
+    out.push(
+      !anyPrompt
+        ? { kind: "command", text: l }
+        : l.startsWith(marker)
+          ? { kind: "command", text: l.slice(marker.length) }
+          : prev?.kind === "command" && prev.text.endsWith("\\")
+            ? { kind: "command", text: l }
+            : { kind: "output", text: l },
+    );
+  }
+  return out;
 }
 
 /** A mask split around its dots, so the dots can take text-3 while the prefix and the tail stay ink. */
