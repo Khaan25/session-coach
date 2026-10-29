@@ -41,12 +41,13 @@ const isTheme = (value: unknown): value is Theme => THEMES.includes(value as The
 
 // Where storage is blocked, the choice lives here for this page view. Null while storage works, so a key
 // cleared in another tab falls back to the default, not to this tab's last choice.
+// A failed write (quota) sets it even though reads still work, so it wins over the stale stored value.
 let memoryTheme: Theme | null = null;
 
 const readStoredTheme = (): Theme | null => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    return isTheme(stored) ? stored : memoryTheme;
+    return memoryTheme ?? (isTheme(stored) ? stored : null);
   } catch {
     return memoryTheme;
   }
