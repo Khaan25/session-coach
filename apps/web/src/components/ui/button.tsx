@@ -30,9 +30,9 @@ const buttonVariants = cva(
         default:
           "key key-primary text-text-inverse data-disabled:text-text-inverse data-disabled:opacity-(--dim-opacity) data-disabled:shadow-none",
         outline:
-          "key text-text-1 key-secondary hover:not-data-disabled:[--frame-color:var(--line-control-hover)] aria-expanded:bg-hover data-disabled:[--frame-color:var(--text-disabled)]",
+          "key text-text-1 key-secondary hover:not-data-disabled:[--frame-color:var(--line-control-hover)] aria-expanded:[--frame-color:var(--line-control-hover)] data-disabled:[--frame-color:var(--text-disabled)]",
         secondary:
-          "key text-text-1 key-secondary hover:not-data-disabled:[--frame-color:var(--line-control-hover)] aria-expanded:bg-hover data-disabled:[--frame-color:var(--text-disabled)]",
+          "key text-text-1 key-secondary hover:not-data-disabled:[--frame-color:var(--line-control-hover)] aria-expanded:[--frame-color:var(--line-control-hover)] data-disabled:[--frame-color:var(--text-disabled)]",
         ghost:
           "touch-target bg-ghost text-text-1 hover:not-data-disabled:bg-ghost-hover active:not-data-disabled:bg-pressed aria-expanded:bg-ghost-hover",
         destructive:
