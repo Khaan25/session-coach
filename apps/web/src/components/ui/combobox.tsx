@@ -59,6 +59,8 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
   return (
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
+      // Icon-only, it needs a name; with a value inside, the value names it.
+      aria-label={children == null ? "Show options" : undefined}
       className={mergeClass(fieldActionClass, className)}
       {...props}
     >
