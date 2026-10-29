@@ -1,3 +1,4 @@
+import { withContentCollections } from "@content-collections/next";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -14,4 +15,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// withContentCollections builds content/ into .content-collections before Next compiles.
+export default withContentCollections(nextConfig);
