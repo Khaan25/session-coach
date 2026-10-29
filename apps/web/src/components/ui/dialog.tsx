@@ -12,16 +12,16 @@ import { useModalLock, usePortalContainer } from "@/lib/ui/portal";
 // The design system's look (the grey shell holding one white card: header on top, DialogBody under it, the actions back on
 // the grey) with the zip's motion: a 95% scale-in on open, and nested dialogs that recede and dim their parent.
 
-// Open and modal: the page behind is inert while it is true (useModalLock).
+// Open: the page behind is inert while it is true (useModalLock). Always modal: the overlay and the viewport
+// cover the page, so a non-modal one would still block it; no caller needs one.
 const DialogLockContext = React.createContext(false);
 
 function Dialog({
   open: openProp,
   defaultOpen = false,
   onOpenChange,
-  modal = true,
   ...props
-}: DialogPrimitive.Root.Props) {
+}: Omit<DialogPrimitive.Root.Props, "modal">) {
   const { open, setOpen } = useOverlayOpen<DialogPrimitive.Root.ChangeEventDetails>({
     open: openProp,
     defaultOpen,
@@ -29,12 +29,12 @@ function Dialog({
   });
 
   return (
-    <DialogLockContext.Provider value={open && modal === true}>
+    <DialogLockContext.Provider value={open}>
       <DialogPrimitive.Root
         data-slot="dialog"
         open={open}
         onOpenChange={setOpen}
-        modal={modal}
+        modal
         {...props}
       />
     </DialogLockContext.Provider>
