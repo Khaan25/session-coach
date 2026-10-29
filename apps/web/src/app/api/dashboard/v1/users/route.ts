@@ -117,8 +117,9 @@ async function lastSeenByUser(supabase: ReturnType<typeof createAdminClient>, id
   ]);
   for (const row of [...uploads, ...answers]) {
     const current = latest.get(row.user_id);
-    // Postgres returns these as UTC ISO strings, so string order is time order.
-    if (!current || row.created_at > current) latest.set(row.user_id, row.created_at);
+    // PostgREST may format timestamptz with an offset, so compare parsed times, not strings.
+    if (!current || Date.parse(row.created_at) > Date.parse(current))
+      latest.set(row.user_id, row.created_at);
   }
   return latest;
 }
