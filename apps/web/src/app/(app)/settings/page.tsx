@@ -23,14 +23,6 @@ export default function SettingsPage() {
       <Suspense fallback={<SettingsLoading />}>
         <AccountSettings />
       </Suspense>
-      <SettingsCard
-        title="CLI tokens"
-        description="Create and revoke the tokens the CLI signs in with."
-      >
-        <Link href="/setup" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-          Manage tokens
-        </Link>
-      </SettingsCard>
     </Container>
   );
 }
@@ -53,6 +45,15 @@ async function AccountSettings() {
         </form>
       </SettingsCard>
       <SettingsCard
+        title="CLI tokens"
+        description="Create and revoke the tokens the CLI signs in with."
+      >
+        <Link href="/setup" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+          Manage tokens
+        </Link>
+      </SettingsCard>
+      {/* Last on purpose: the destructive action ends the page. */}
+      <SettingsCard
         title="Delete account"
         description="Deletes your sessions, cards, answers and tokens. It can't be undone."
       >
@@ -67,6 +68,7 @@ function SettingsLoading() {
     <div className="flex flex-col gap-6">
       <output className="sr-only">Loading your settings</output>
       <Skeleton aria-hidden className="h-96" />
+      <Skeleton aria-hidden className="h-24" />
       <Skeleton aria-hidden className="h-24" />
       <Skeleton aria-hidden className="h-24" />
     </div>
