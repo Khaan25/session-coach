@@ -29,7 +29,6 @@ import type { SessionListItem } from "@/lib/sessions/rows";
 // Routes from docs/plans/pages-and-dashboard.md. Only /dashboard exists so far; the rest land in later phases.
 export const navMain = [
   { title: "Dashboard", url: "/dashboard", icon: <SquaresFourIcon /> },
-  // TODO(zia): due count from Phase 6 as a SidebarMenuBadge.
   { title: "Review", url: "/review", icon: <ExamIcon /> },
   { title: "Progress", url: "/progress", icon: <ChartLineUpIcon /> },
   { title: "Setup", url: "/setup", icon: <TerminalWindowIcon /> },
@@ -38,11 +37,14 @@ export const navMain = [
 
 export function AppSidebar({
   sessions,
+  dueCount,
   userId,
   user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
   sessions: SessionListItem[];
+  /** Cards due today, shown on the Review row; 0 hides the badge. */
+  dueCount: number;
   /** Turns on live status updates for the sessions; null while signed out or loading. */
   userId: string | null;
   /** Null while signed out or loading: the footer then shows only the theme toggle. */
@@ -61,7 +63,11 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} />
+        <NavMain
+          items={navMain.map((item) =>
+            item.url === "/review" ? { ...item, badge: dueCount } : item,
+          )}
+        />
         <NavSessions sessions={sessions} userId={userId} />
       </SidebarContent>
       <SidebarFooter>
