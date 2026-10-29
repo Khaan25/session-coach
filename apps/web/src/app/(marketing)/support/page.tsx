@@ -20,12 +20,12 @@ const faq = [
   {
     question: "What does Session Coach send from my laptop?",
     answer:
-      "When a Claude Code session ends, a hook sends that session's log. Secrets are removed on your laptop before anything leaves it.",
+      "When a Claude Code session ends, a hook sends that session's log. We try to remove secrets on your laptop before anything leaves it.",
   },
   {
     question: "Are my secrets stored?",
     answer:
-      "No. Secrets are removed on your laptop before the log is sent, and again on the server before it is stored.",
+      "We try not to. Secrets are removed on your laptop before the log is sent, and again on the server before it is stored, but removal is not a guarantee: check what your sessions contain.",
   },
   {
     question: "What happens if I'm offline when a session ends?",

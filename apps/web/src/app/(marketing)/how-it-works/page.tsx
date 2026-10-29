@@ -63,8 +63,8 @@ const storage = [
   },
   {
     icon: LockKeyIcon,
-    title: "What is never stored",
-    body: "Secrets. They are removed on your laptop before the log is sent, and again on the server before it is stored.",
+    title: "What we try not to store",
+    body: "Secrets. We try to remove them on your laptop before the log is sent, and again on the server before it is stored. Removal is not a guarantee, so check what your sessions contain.",
   },
 ] as const;
 

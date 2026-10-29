@@ -34,7 +34,7 @@ Your data is stored in Supabase, in the ap-south-1 region (Mumbai). The app runs
 - **Supabase** stores your account, sessions, cards and answers.
 - **Vercel** runs the web app and the daily reminder job.
 - **A language model provider** reads a session log to write its cards, and reads your answer to score it. Model names are configured on the server.
-- **Google Gemini (free tier), if used:** Google may use what is sent to it to improve its products. This is why secrets are removed before anything leaves your laptop.
+- **Google Gemini (free tier), if used:** Google may use what is sent to it to improve its products. This is why we try to remove secrets before anything leaves your laptop; removal is not a guarantee.
 - **An email provider** sends the daily reminder, if you turned reminders on.
 
 TODO(zia): name the model providers and the email provider once they are chosen.
