@@ -596,6 +596,7 @@ const localDate = (date, timeZone) => new Intl.DateTimeFormat("en-CA", { timeZon
 const addDays = (ymd, days) =>
   new Date(Date.parse(`${ymd}T00:00:00Z`) + days * DAY).toISOString().slice(0, 10);
 
+/** A decision_cards row for a demo card. Ids derive from the learner, session key and position, so reruns match. */
 function cardRow(userId, session, card, position, createdAt) {
   return {
     id: uuidv5(`${userId}:card:${session.key}:${position}`),
@@ -613,6 +614,7 @@ function cardRow(userId, session, card, position, createdAt) {
   };
 }
 
+/** A plausible learner answer for a score: the model answer for 2, half of it for 1, a guess for 0. */
 function learnerAnswer(card, score) {
   if (score === 2) return { answer: card.model_answer, missing: null };
   if (score === 1) {
@@ -731,6 +733,7 @@ function selfCheck(rows, today) {
   assert.equal(new Set(ids).size, ids.length, "duplicate deterministic id");
 }
 
+/** The counts printed after a seed or a dry run, so the person running it sees what the pages will show. */
 function summarize(rows, today) {
   const cards = rows.decision_cards;
   const hidden = cards.filter((card) => !card.evidence.some((item) => item.verified));
@@ -749,6 +752,7 @@ function summarize(rows, today) {
 
 // Database ---------------------------------------------------------------------------------------
 
+/** A service-role client: demo rows include answers, reviews and cards, which learners can't write. */
 async function connect() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -778,6 +782,7 @@ async function preflight(db) {
   );
 }
 
+/** The existing auth user for an address. Pages through every user, since the admin API has no lookup by email. */
 async function findUser(db, email) {
   const wanted = email.trim().toLowerCase();
   const perPage = 1000;
@@ -791,6 +796,7 @@ async function findUser(db, email) {
   fail(`No account for ${email}. Sign up in the app with that address first, then run this again.`);
 }
 
+/** The learner's profile; its time zone decides which day is "today" for due dates. */
 async function loadProfile(db, userId) {
   const { data, error } = await db
     .from("profiles")
@@ -802,6 +808,7 @@ async function loadProfile(db, userId) {
   return data;
 }
 
+/** Stops the run on a failed query, naming the step. */
 function check({ error }, what) {
   if (error) fail(`${what}: ${error.message}`);
 }
@@ -820,6 +827,7 @@ async function deleteRows(db, userId, ids) {
   }
 }
 
+/** Every id a seed writes, by table, as the manifest stores them. Reviews are keyed by card id. */
 function idsOf(rows) {
   return {
     sessions: rows.sessions.map((row) => row.id),
@@ -831,6 +839,7 @@ function idsOf(rows) {
 
 const manifestPath = (userId) => join(MANIFEST_DIR, `${userId}.json`);
 
+/** The ids the last seed wrote for this learner, or null when there is no manifest. */
 function readManifest(userId) {
   const path = manifestPath(userId);
   return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")).ids : null;
@@ -843,6 +852,7 @@ function mergeIds(a, b) {
   return out;
 }
 
+/** Replaces the learner's demo rows: deletes old and current ids, inserts parents first, then writes the manifest. */
 async function seed(db, userId, rows) {
   await deleteRows(db, userId, mergeIds(readManifest(userId), idsOf(rows)));
   check(await db.from("sessions").insert(rows.sessions), "insert sessions");
@@ -857,6 +867,7 @@ async function seed(db, userId, rows) {
   console.log(`seeded          manifest at ${manifestPath(userId)}`);
 }
 
+/** Deletes exactly the rows the manifest lists, then the manifest. */
 async function reset(db, userId) {
   const ids = readManifest(userId);
   if (!ids) {
@@ -870,6 +881,10 @@ async function reset(db, userId) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Walks two demo sessions through the pipeline's statuses with pauses, so the dashboard's Realtime badges and toasts
+ * can be watched without the CLI or the pipeline. Leaves them changed; seeding again restores them.
+ */
 async function simulate(db, userId, rows) {
   const pending = rows.sessions.find((session) => session.status === "pending");
   const processing = rows.sessions.find((session) => session.status === "processing");
@@ -919,6 +934,7 @@ async function simulate(db, userId, rows) {
   console.log("Done. Run the seed again to put both sessions back.");
 }
 
+/** Prints the message and exits 1. */
 function fail(message) {
   console.error(message);
   process.exit(1);

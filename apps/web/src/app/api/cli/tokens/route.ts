@@ -34,6 +34,12 @@ async function signedInUser() {
   return { supabase, user };
 }
 
+/**
+ * Creates a token. The raw value goes back once and is never stored or logged, so a database leak can't be replayed
+ * against the upload API; a learner who loses it creates another.
+ *
+ * @param request - JSON body `{ label?: string }`.
+ */
 export async function POST(request: NextRequest) {
   const { user } = await signedInUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
@@ -66,6 +72,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * Revokes a token. Another learner's id answers 404, the same as a missing one, so ids can't be probed.
+ *
+ * @param request - Carries `?id=<uuid>`.
+ */
 export async function DELETE(request: NextRequest) {
   const { supabase, user } = await signedInUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });

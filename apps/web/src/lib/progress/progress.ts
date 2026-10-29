@@ -7,6 +7,7 @@ import { localDate } from "../sessions/rows.ts";
 /** Where a card sits in the review schedule: never reviewed, next due on day 1, 3 or 7, or mastered. */
 export type ReviewStep = "new" | "day-1" | "day-3" | "day-7" | "mastered";
 
+/** What the progress page calls each step. Its key order is the schedule's order, which `REVIEW_STEPS` relies on. */
 export const stepLabels: Record<ReviewStep, string> = {
   new: "New",
   "day-1": "Day 1",
@@ -15,6 +16,7 @@ export const stepLabels: Record<ReviewStep, string> = {
   mastered: "Mastered",
 };
 
+/** The steps in schedule order; index n is `reviews.step` n, so `REVIEW_STEPS[step]` maps a row to its step. */
 export const REVIEW_STEPS = Object.keys(stepLabels) as ReviewStep[];
 
 /** Days in the answers chart and the score mix. */
@@ -22,6 +24,7 @@ export const CHART_DAYS = 30;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** The learner's rows, read by `getProgress()`. */
 export type ProgressInput = {
   /** The learner's visible cards (RLS drops hidden ones). Reviews and answers of other cards are ignored. */
   cards: { id: string; session_id: string }[];
@@ -33,20 +36,27 @@ export type ProgressInput = {
   sessions: { id: string; title: string | null; repo: string | null; branch: string | null }[];
   /** The learner's IANA time zone, so a day is their day. */
   timeZone: string;
+  /** The current time, passed in so tests can pin it and the page never reads the clock in render. */
   now: Date;
 };
 
+/** Everything /progress shows. */
 export type Progress = {
+  /** The headline: mastered cards plus cards scored 2 in the last 7 days, each counted once. */
   canStillExplain: number;
+  /** Visible cards, the headline's denominator. */
   totalCards: number;
+  /** How many cards sit at each step. */
   steps: Record<ReviewStep, number>;
   /** One entry per day, oldest first, ending today: "Oct 29". */
   answersPerDay: { day: string; answers: number }[];
   /** Answers by score over the same days. */
   scoreMix: Record<Score, number>;
+  /** Mastered and total visible cards per ready session; sessions with no visible cards are left out. */
   bySession: { id: string; title: string; mastered: number; total: number }[];
 };
 
+/** A card's step from its `reviews` row; no row means it was never answered. */
 function stepOf(review: { step: number; mastered: boolean } | undefined): ReviewStep {
   if (!review) return "new";
   if (review.mastered) return "mastered";
@@ -68,6 +78,17 @@ const dayLabel = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+/**
+ * Turns the learner's rows into the numbers /progress shows. Pure, so the headline definition is pinned by a test
+ * rather than by whatever a query happens to return.
+ *
+ * - Only visible cards count: reviews and answers of a hidden or unknown card are dropped first.
+ * - The headline is a set of card ids, so a mastered card that was also scored 2 this week counts once.
+ * - Days are the learner's local days, so an answer at 23:30 in Karachi lands on that day, not the UTC one.
+ *
+ * @param input - The learner's cards, reviews, recent answers, ready sessions, time zone and the current time.
+ * @returns The page's numbers; see `Progress`.
+ */
 export function computeProgress({
   cards,
   reviews,

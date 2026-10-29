@@ -14,7 +14,14 @@ import type { Step } from "./schedule";
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type SessionName = Pick<Session, "title" | "repo" | "branch">;
 
-/** The learner's today (YYYY-MM-DD) in their `profiles.timezone`. */
+/**
+ * The learner's today (YYYY-MM-DD) in their `profiles.timezone`, so a card due "tomorrow" turns up at their midnight,
+ * not the server's.
+ *
+ * @param supabase - The learner's RLS client.
+ * @param userId - The signed-in learner.
+ * @param now - The current time.
+ */
 async function learnerToday(supabase: Supabase, userId: string, now: Date) {
   const { data, error } = await supabase
     .from("profiles")
@@ -25,7 +32,11 @@ async function learnerToday(supabase: Supabase, userId: string, now: Date) {
   return localDate(data?.timezone ?? "UTC", now);
 }
 
-/** A session's name as the app shows it: title, else repo on branch. */
+/**
+ * A session's name as the app shows it: title, else repo on branch.
+ *
+ * @param session - The embedded session, or null when the embed came back empty.
+ */
 export function sessionName(session: SessionName | null) {
   return (
     session?.title ||
@@ -37,6 +48,8 @@ export function sessionName(session: SessionName | null) {
 /**
  * Cards due today: `reviews.due_on <= today` in the learner's `profiles.timezone`, not mastered.
  *
+ * @param userId - The signed-in learner.
+ * @param now - The current time; defaults to now.
  * @returns The count, 0 until reviews exist.
  */
 export async function dueTodayCount(userId: string, now = new Date()): Promise<number> {
@@ -68,6 +81,14 @@ const CARD_COLUMNS = "id, decision, session_id, session:sessions(title, repo, br
 /**
  * The review queue (plan, Phase 6 step 4): cards due today, oldest due first, then cards from the last 7 days that
  * were never answered, oldest first.
+ *
+ * - Two queries in parallel: due `reviews` with their card embedded, and recent `decision_cards` with their review.
+ * - A card has no `reviews` row until its first answer, so new cards come from the second query, not the first.
+ * - New cards older than 7 days are left out, so a learner back from a break isn't handed the whole backlog.
+ *
+ * @param userId - The signed-in learner.
+ * @param now - The current time, from the page.
+ * @returns Due cards first, then new ones.
  */
 export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[]> {
   const supabase = await createClient();
@@ -123,7 +144,13 @@ export type QuizCard = {
   sessionName: string;
 };
 
-/** One visible card of the learner's, or null (another learner's, hidden, or missing). `cardId` must be a UUID. */
+/**
+ * One visible card of the learner's, or null (another learner's, hidden, or missing). `cardId` must be a UUID.
+ * Selects the question but not the why: showing the reason before the learner explains it would give the answer away.
+ *
+ * @param userId - The signed-in learner.
+ * @param cardId - The `[cardId]` route segment.
+ */
 export async function getQuizCard(userId: string, cardId: string): Promise<QuizCard | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

@@ -14,6 +14,12 @@ const PLANS = ["free", "premium", "trial", "granted", "promo", "sandbox"];
 // No billing and no checkout yet: `purchase` truthfully lists nobody; `checkout` isn't tracked.
 const STAGES = ["purchase"];
 
+/**
+ * One page of the roster, oldest account first. The cursor is a page number: the roster only grows at the end, so
+ * offset paging stays stable for the dashboard's walk through it.
+ *
+ * @param req - Must carry the dashboard bearer key; `?limit=`, `?cursor=`, `?plan=` and `?stage=` are optional.
+ */
 export async function GET(req: NextRequest) {
   const denied = requireDashboardKey(req);
   if (denied) return denied;

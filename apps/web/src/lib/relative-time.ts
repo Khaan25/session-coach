@@ -13,6 +13,9 @@ const format = new Intl.RelativeTimeFormat("en-US", { numeric: "auto" });
 /**
  * "3 hours ago", "yesterday", "now". `now` comes from the caller, so a component never reads the clock in render
  * (cacheComponents prerenders it). Unparseable input returns null.
+ *
+ * @param iso - The timestamp to describe.
+ * @param now - The time to measure from.
  */
 export function formatRelativeTime(iso: string, now: Date): string | null {
   const then = Date.parse(iso);

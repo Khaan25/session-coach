@@ -16,6 +16,7 @@ const OTP_TYPES: readonly EmailOtpType[] = [
   "email",
 ];
 
+/** Whether a form value is an OTP type Supabase accepts; the field comes from the email link, so it is untrusted. */
 function isOtpType(value: unknown): value is EmailOtpType {
   return OTP_TYPES.includes(value as EmailOtpType);
 }
@@ -23,6 +24,9 @@ function isOtpType(value: unknown): value is EmailOtpType {
 /**
  * Spends the email link's one-time token (`verifyOtp`), which signs the learner in, then goes to `next` when it stays
  * on this origin. A POST from the confirm page's button, so link scanners that open the GET can't spend it (#8).
+ * `token_hash` needs no PKCE cookie, so a link opened in another browser or on a phone still works (#9).
+ *
+ * @param formData - Hidden fields `token_hash`, `type` and `next`, copied from the email link's query.
  */
 export async function confirmEmail(formData: FormData): Promise<void> {
   const tokenHash = formData.get("token_hash");

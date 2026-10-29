@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 /** The token columns the setup page and the create route return, by name. Never token_hash. */
 export const TOKEN_COLUMNS = "id, label, created_at, last_used_at";
 
+/** One token as the setup page lists it. */
 export type TokenRow = {
   id: string;
   label: string | null;
@@ -12,7 +13,11 @@ export type TokenRow = {
   last_used_at: string | null;
 };
 
-/** The learner's CLI tokens, newest first, through the RLS client. */
+/**
+ * The learner's CLI tokens, newest first, through the RLS client.
+ *
+ * @param userId - The signed-in learner.
+ */
 export async function listTokens(userId: string): Promise<TokenRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

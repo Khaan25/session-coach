@@ -18,6 +18,8 @@ const announced = new Set<string>();
  *
  * @param userId - The signed-in learner; null skips the subscription.
  * @param initial - The server-rendered rows.
+ * @param options.prepend - Whether new sessions join this list (page 1 and the sidebar, not older pages).
+ * @param options.limit - The most rows the list keeps: a page's size, or the sidebar's 5.
  * @returns The live rows and the time of the last change, to measure relative times from.
  */
 export function useLiveSessions(
@@ -44,6 +46,7 @@ export function useLiveSessions(
       if (cancelled) return;
       if (data.session) supabase.realtime.setAuth(data.session.access_token);
       channel = supabase
+        // One channel per mounted list (useId): the dashboard and the sidebar subscribe side by side.
         .channel(`sessions:${userId}:${channelId}`)
         .on(
           "postgres_changes",

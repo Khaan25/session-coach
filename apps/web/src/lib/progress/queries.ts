@@ -8,6 +8,11 @@ import { CHART_DAYS, computeProgress, type Progress, type ProgressInput } from "
 /**
  * The learner's progress from their visible cards, reviews, answers of the last CHART_DAYS days and ready sessions.
  * Learner reads through RLS, columns by name (never model_answer); the user_id filters decide ownership in code too.
+ * Each list is read with `fetchAll`, so a learner with more than 1000 answers isn't silently cut short.
+ *
+ * @param userId - The signed-in learner.
+ * @param now - The current time, from the page.
+ * @returns The computed progress (see `computeProgress`).
  */
 export async function getProgress(userId: string, now: Date): Promise<Progress> {
   const supabase = await createClient();

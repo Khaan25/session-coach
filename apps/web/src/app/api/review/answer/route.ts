@@ -21,6 +21,20 @@ type GradedCard = {
   model_answer: string;
 };
 
+/**
+ * Grades one answer. Learners can't write `answers` or `reviews` (RLS), so a learner can't fake progress; this route
+ * writes both with the service role after checking the card is theirs.
+ *
+ * - Validates the body before any query or model call, so bad input costs nothing.
+ * - `getUser()` checks the session with the auth server, since grading writes data.
+ * - Reads the card (with its answer key), its review row and the learner's time zone in parallel.
+ * - Grades with `callModel("grade")`, retrying once when the output doesn't fit `{ score, missing }`.
+ * - Moves `reviews` with a compare-and-set on `updated_at`, then inserts the `answers` row.
+ *
+ * @param request - JSON body `{ cardId, answer }`.
+ * @returns 200 `{ score, missing, modelAnswer, evidence, nextDue }`; 400 bad body; 401 signed out; 404 not the
+ *   learner's card or hidden; 409 answered twice at once; 502 the model failed; 503 grading not configured; 500 else.
+ */
 export async function POST(request: Request) {
   const body: unknown = await request.json().catch(() => null);
   const parsed = answerRequestSchema.safeParse(body);
