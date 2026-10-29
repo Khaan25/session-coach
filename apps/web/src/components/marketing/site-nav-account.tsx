@@ -35,9 +35,12 @@ export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
       {/* Sign-out is a POST, never a GET link (docs/plans/auth.md #26). The form sits outside the menu popup, which
       unmounts on close; the menu item is a submit button tied to it by `form`. */}
       <form id="header-sign-out" action={signOut} hidden />
-      <Link href="/dashboard" className={buttonVariants()}>
-        Dashboard
-      </Link>
+      {/* Hidden on phones, where the brand and two icon buttons fill the row; the avatar menu links there too. */}
+      <span className="flex max-sm:hidden">
+        <Link href="/dashboard" className={buttonVariants()}>
+          Dashboard
+        </Link>
+      </span>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={<Button variant="ghost" size="icon-round" />}
