@@ -10,5 +10,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Design system
 
-- Run `pnpm lint` after UI changes. `@shadcn/lint` errors say which variant, token or layout class to use instead; follow them.
+- Components are shadcn/ui `base-nova` on Base UI (`@base-ui/react`), not Radix. Add new ones with `pnpm dlx shadcn@4.23.0 add <name>`.
+- Run `pnpm lint` after UI changes. It runs oxlint with `@shadcn/lint` as a JS plugin (`.oxlintrc.json`). Its errors say which variant, token or layout class to use instead; follow them.
 - New looks for a shadcn component go in as a variant in `src/components/ui/<name>.tsx`, not as `className` overrides at the call site.

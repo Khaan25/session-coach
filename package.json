@@ -11,14 +11,13 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "check:secrets": "node scripts/check-secrets.mjs --all",
     "check:commits": "node scripts/check-commit-message.mjs --range origin/main..HEAD",
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
-    "prettier": "^3.9.10",
-    "prettier-plugin-tailwindcss": "^0.8.1"
+    "oxfmt": "^0.75.0"
   }
 }

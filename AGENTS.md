@@ -4,8 +4,8 @@ pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (Decision +
 
 ## Commands
 
-- `pnpm typecheck` and `pnpm lint` after every change; fix all errors before saying you're done
-- `pnpm format` before committing; `pnpm format:check` runs in the pre-push hook and CI
+- `pnpm typecheck` and `pnpm lint` (oxlint) after every change; fix all errors before saying you're done
+- `pnpm format` (oxfmt) before committing; `pnpm format:check` runs in the pre-push hook and CI
 - `pnpm check:secrets` scans tracked files for credentials (the pre-commit hook scans staged ones)
 - `pnpm test` runs every package's tests; `pnpm --filter @session-coach/shared test` after touching `packages/shared`
 - `pnpm dev` runs the web app on :3000
@@ -13,7 +13,7 @@ pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (Decision +
 ## Rules
 
 - Next.js 16 differs from training data. Read `apps/web/AGENTS.md` and `apps/web/node_modules/next/dist/docs/` before writing Next.js code.
-- UI uses shadcn/ui components in `apps/web/src/components/ui`. Don't restyle them with `className`; add a variant in the component file instead. `@shadcn/lint` enforces this, so read its error, it says what to use.
+- UI uses shadcn/ui components (Base UI primitives, not Radix) in `apps/web/src/components/ui`. Don't restyle them with `className`; add a variant in the component file instead. `@shadcn/lint` (an oxlint JS plugin, configured in `apps/web/.oxlintrc.json`) enforces this, so read its error, it says what to use.
 - Theme tokens only: no raw colors (`bg-pink-500`), no arbitrary values (`p-[13px]`) outside `src/components/ui/`, no inline styles.
 - No barrel files. Import from the file that defines the symbol. `packages/shared` exposes one entry per file in its `exports`.
 - Model names live in env vars, read through `callModel(task, input)`. Never hard-code a model or provider.

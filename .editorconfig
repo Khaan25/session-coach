@@ -1,6 +1,6 @@
 root = true
 
-# Matches .prettierrc.json so an editor and `pnpm format` never disagree.
+# Matches .oxfmtrc.json so an editor and `pnpm format` never disagree.
 [*]
 charset = utf-8
 end_of_line = lf

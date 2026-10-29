@@ -19,14 +19,14 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Repo layout
 
-| Path                  | What                                                                     | Owner                          |
-| --------------------- | ------------------------------------------------------------------------ | ------------------------------ |
-| `apps/web`            | Next.js app: pages, API routes, pipeline                                 | both                           |
-| `packages/cli`        | stub; `init`, `login`, `push`, hook and worker planned                   | Kasam                          |
-| `packages/shared`     | Decision and Session types + zod schemas, sample fixture                 | shared, change after agreement |
-| `supabase/migrations` | every schema change as a migration file                                  | shared, change after agreement |
-| `docs/`               | architecture, decisions, rules, plans, Play Stats API                    | both                           |
-| `.claude/`            | agent hooks, skills, settings; `.claude-logs/` holds session transcripts | both                           |
+| Path                  | What                                                             | Owner                          |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------ |
+| `apps/web`            | Next.js app: pages, API routes, pipeline                         | both                           |
+| `packages/cli`        | stub; `init`, `login`, `push`, hook and worker planned           | Kasam                          |
+| `packages/shared`     | Decision and Session types + zod schemas, sample fixture         | shared, change after agreement |
+| `supabase/migrations` | every schema change as a migration file                          | shared, change after agreement |
+| `docs/`               | architecture, decisions, rules, plans, Play Stats API            | both                           |
+| `.claude/`            | agent hooks, settings; `.claude-logs/` holds session transcripts | both                           |
 
 ## Run it locally
 
@@ -44,9 +44,9 @@ pnpm dev                              # http://localhost:3000
 | -------------------- | ------------------------------------------- |
 | `pnpm dev`           | start the web app                           |
 | `pnpm typecheck`     | TypeScript in every package                 |
-| `pnpm lint`          | ESLint + `@shadcn/lint` design-system rules |
+| `pnpm lint`          | oxlint + `@shadcn/lint` design-system rules |
 | `pnpm test`          | every package's tests                       |
-| `pnpm format`        | Prettier, with the Tailwind class sorter    |
+| `pnpm format`        | oxfmt, with the Tailwind class sorter       |
 | `pnpm check:secrets` | scan tracked files for credentials          |
 | `pnpm build`         | production build                            |
 
