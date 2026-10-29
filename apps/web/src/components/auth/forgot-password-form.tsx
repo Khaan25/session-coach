@@ -1,14 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useId } from "react";
 
 import { requestReset } from "@/app/(auth)/actions";
 import { AuthNotice } from "@/components/auth/auth-notice";
+import { AuthCard, AuthStatus, AuthSwitch } from "@/components/auth/auth-parts";
 import { GoogleForm } from "@/components/auth/google-form";
 import { useAuthForm } from "@/components/auth/use-auth-form";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { validateResetRequest } from "@/lib/auth/validate";
@@ -27,40 +26,36 @@ export function ForgotPasswordForm() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card size="lg">
-        <CardContent>
-          <FieldGroup>
-            <form noValidate action={action} onSubmit={handleSubmit}>
-              <FieldGroup>
-                <Field data-invalid={error ? true : undefined}>
-                  <FieldLabel htmlFor={`${id}-email`}>Email</FieldLabel>
-                  <Input
-                    id={`${id}-email`}
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    inputMode="email"
-                    spellCheck={false}
-                    defaultValue={email}
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? `${id}-email-error` : undefined}
-                  />
-                  <FieldError id={`${id}-email-error`}>{error}</FieldError>
-                </Field>
-                <Button type="submit" size="lg" disabled={pending}>
-                  Send reset link
-                </Button>
-              </FieldGroup>
-            </form>
-            <FieldSeparator>or, if you signed up with Google</FieldSeparator>
-            <GoogleForm />
-          </FieldGroup>
-        </CardContent>
-      </Card>
+      <AuthCard>
+        <FieldGroup>
+          <form noValidate action={action} onSubmit={handleSubmit}>
+            <FieldGroup>
+              <Field data-invalid={error ? true : undefined}>
+                <FieldLabel htmlFor={`${id}-email`}>Email</FieldLabel>
+                <Input
+                  id={`${id}-email`}
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  spellCheck={false}
+                  defaultValue={email}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? `${id}-email-error` : undefined}
+                />
+                <FieldError id={`${id}-email-error`}>{error}</FieldError>
+              </Field>
+              <Button type="submit" size="lg" disabled={pending}>
+                Send reset link
+              </Button>
+            </FieldGroup>
+          </form>
+          <FieldSeparator>or, if you signed up with Google</FieldSeparator>
+          <GoogleForm />
+        </FieldGroup>
+      </AuthCard>
 
-      {/* A live region that exists before it has content, so the notice is read out when it appears. */}
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-      <div role="status">
+      <AuthStatus>
         {result?.status === "sent" && (
           <AuthNotice title="Check your email">
             If an account exists for that address, we sent a link to reset the password. Open it on
@@ -72,14 +67,11 @@ export function ForgotPasswordForm() {
             {result.message}
           </AuthNotice>
         )}
-      </div>
+      </AuthStatus>
 
-      <p className="type-body-sm text-text-2">
-        Remembered it?{" "}
-        <Link href="/login" className={buttonVariants({ variant: "link" })}>
-          Sign in
-        </Link>
-      </p>
+      <AuthSwitch prompt="Remembered it?" href="/login">
+        Sign in
+      </AuthSwitch>
     </div>
   );
 }
