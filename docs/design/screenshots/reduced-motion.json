@@ -1,0 +1,46 @@
+{
+  "dialog no-preference": {
+    "transform": "matrix3d(0.979856, 0, 0, 0, 0, 0.979856, 0, 0, 0, 0, 0.979856, 0, 0, 0, 0, 1)",
+    "scale": "1",
+    "translate": "0px",
+    "opacity": "0.597111"
+  },
+  "sheet no-preference": {
+    "transform": "none",
+    "scale": "none",
+    "translate": "40px",
+    "opacity": "0"
+  },
+  "drawer no-preference": {
+    "transform": "matrix(1, 0, 0, 1, 0, 160)",
+    "scale": "none",
+    "translate": "none",
+    "opacity": "1"
+  },
+  "switch thumb no-preference": {
+    "transitionProperty": "translate, scale, border-radius",
+    "transitionDuration": "0.15s"
+  },
+  "dialog reduce": {
+    "transform": "matrix(1, 0, 0, 1, 0, 0)",
+    "scale": "1",
+    "translate": "0px",
+    "opacity": "0.343855"
+  },
+  "sheet reduce": {
+    "transform": "none",
+    "scale": "none",
+    "translate": "none",
+    "opacity": "0"
+  },
+  "drawer reduce": {
+    "transform": "matrix(1, 0, 0, 1, 0, 0)",
+    "scale": "none",
+    "translate": "none",
+    "opacity": "0"
+  },
+  "switch thumb reduce": {
+    "transitionProperty": "translate",
+    "transitionDuration": "0.15s"
+  }
+}
