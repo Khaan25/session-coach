@@ -1,6 +1,13 @@
 import { withContentCollections } from "@content-collections/next";
 import type { NextConfig } from "next";
 
+import { productionEnvProblems } from "./src/lib/production-env";
+
+// A production deploy fails here rather than ship localhost in sitemap.xml or a support inbox no one reads.
+const problems = productionEnvProblems(process.env);
+if (problems.length > 0)
+  throw new Error(`Production build is missing settings:\n- ${problems.join("\n- ")}`);
+
 const nextConfig: NextConfig = {
   cacheComponents: true,
   poweredByHeader: false,

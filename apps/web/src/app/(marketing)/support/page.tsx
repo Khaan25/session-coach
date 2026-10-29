@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { Faq } from "@/components/marketing/faq";
 import { MarketingPageHeader } from "@/components/marketing/marketing-page-header";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supportEmail } from "@/lib/site";
 
 // Answers come only from docs/ARCHITECTURE.md and docs/plans/pages-and-dashboard.md.
 
@@ -11,10 +12,6 @@ export const metadata: Metadata = {
   title: "Support | Session Coach",
   description: "Answers about uploads, secrets, decision cards and scoring, and how to reach us.",
 };
-
-// Inlined at build time, so the page stays static. The fallback is a reserved example address that reaches no one:
-// set NEXT_PUBLIC_SUPPORT_EMAIL to the real inbox before launch.
-const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@example.com";
 
 const faq = [
   {
