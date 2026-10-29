@@ -67,8 +67,8 @@ function ActionsCatalog() {
           Next card
           <ArrowRightIcon data-icon="inline-end" />
         </Button>
-        <Button disabled>
-          <Spinner data-icon="inline-start" />
+        <Button disabled aria-busy>
+          <Spinner label="" data-icon="inline-start" />
           Scoring answer
         </Button>
         <Button variant="secondary" data-static>
