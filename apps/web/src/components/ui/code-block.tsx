@@ -298,12 +298,9 @@ function TokenLine({
 }) {
   if (!tokens.length) return <>{"\n"}</>;
   // Each token's offset into the line, worked out before render rather than mutated inside it.
-  let offset = 0;
-  const starts = tokens.map((t) => {
-    const start = offset;
-    offset += t.value.length;
-    return start;
-  });
+  const starts: number[] = [];
+  for (let i = 0, offset = 0; i < tokens.length; offset += tokens[i].value.length, i++)
+    starts.push(offset);
   return (
     <>
       {tokens.map((token, i) => {
