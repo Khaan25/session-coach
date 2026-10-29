@@ -24,6 +24,10 @@ export function requireDashboardKey(req: NextRequest): NextResponse | null {
   return null;
 }
 
+/**
+ * Compares two secrets without leaking how many leading characters match through timing.
+ * The length check comes first because timingSafeEqual throws on buffers of different sizes.
+ */
 function constantTimeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);

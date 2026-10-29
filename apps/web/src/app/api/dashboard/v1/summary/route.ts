@@ -9,6 +9,7 @@ import { buildRetentionCohorts } from "@/lib/play-stats";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
+/** Which play this deployment reports as on the stats dashboard. */
 const PLAY = process.env.PLAY_SLUG ?? "session-coach";
 const DAY_MS = 86_400_000;
 /** Cohorts and activity are read for this many days; every window of these cohorts falls inside it. */
