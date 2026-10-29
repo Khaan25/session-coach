@@ -11,14 +11,22 @@ import { getSettingsProfile } from "@/lib/settings/profile";
 
 import { AppBreadcrumb } from "./app-breadcrumb";
 
+function logAndReturn<T>(read: string, fallback: T) {
+  return (error: unknown): T => {
+    console.error(`(app)/layout: ${read}`, error);
+    return fallback;
+  };
+}
+
 // Reads the signed-in learner, so it renders inside Suspense (cacheComponents); the fallback is the same sidebar empty.
 async function SignedInSidebar() {
   const user = await getCurrentUser();
   if (!user) return <AppSidebar sessions={[]} dueCount={0} userId={null} user={null} />;
+  // Each read falls back on its own, so one failure leaves the shell and the page standing.
   const [sessions, profile, dueCount] = await Promise.all([
-    recentSessions(user.id),
-    getSettingsProfile(),
-    dueTodayCount(user.id),
+    recentSessions(user.id).catch(logAndReturn("recentSessions", [])),
+    getSettingsProfile().catch(logAndReturn("getSettingsProfile", null)),
+    dueTodayCount(user.id).catch(logAndReturn("dueTodayCount", 0)),
   ]);
   const email = profile?.email ?? user.email;
   const name = profile?.display_name || email || "Learner";
