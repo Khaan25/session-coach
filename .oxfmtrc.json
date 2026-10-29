@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "semi": true,
+  "singleQuote": false,
+  "sortPackageJson": false,
+  "sortTailwindcss": {
+    "stylesheet": "./apps/web/src/app/globals.css",
+    "functions": ["cn", "cva"]
+  },
+  "ignorePatterns": [
+    ".claude-logs/",
+    "pnpm-lock.yaml",
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+    "supabase/migrations/",
+    ".next/",
+    "node_modules/",
+    "progress.md",
+    "checks.md",
+    "sources/",
+    "evals/",
+    "*.html"
+  ]
+}

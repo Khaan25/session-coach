@@ -8,20 +8,45 @@ on:
 permissions:
   contents: read
 
+# A new push to the same branch cancels the run it supersedes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # The commit-msg hook checks each commit as it is made; this re-checks every commit on the
+  # PR, so one made with --no-verify, or before the hook was installed, still fails.
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: node scripts/check-commit-message.mjs --range "origin/$BASE_REF..HEAD"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The pre-commit hook scans staged files; this rescans every tracked file.
+      - run: pnpm check:secrets
+      - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm lint
-      - run: pnpm --filter @session-coach/shared test
+      - run: pnpm test
       - run: pnpm build

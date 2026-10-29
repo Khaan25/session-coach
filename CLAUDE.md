@@ -1,29 +1,29 @@
-# Session Coach
+@AGENTS.md
 
-pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (Decision + Session zod schemas), `packages/cli` (empty stub; hook and worker planned), `supabase/migrations`.
+Everything above applies to every coding agent in this repo, so it lives in `AGENTS.md`. Put new rules there, not here. This file holds only what is specific to Claude Code.
 
-## Commands
+## Pull requests
 
-- `pnpm typecheck` and `pnpm lint` after every change; fix all errors before saying you're done
-- `pnpm --filter @session-coach/shared test` after touching `packages/shared`
-- `pnpm dev` runs the web app on :3000
+An agent merges a PR only when a person explicitly tells it to merge that PR.
 
-## Rules
+## Hooks
 
-- Next.js 16 differs from training data. Read `apps/web/AGENTS.md` and `apps/web/node_modules/next/dist/docs/` before writing Next.js code.
-- UI uses shadcn/ui components in `apps/web/src/components/ui`. Don't restyle them with `className`; add a variant in the component file instead. `@shadcn/lint` enforces this, so read its error, it says what to use.
-- Theme tokens only: no raw colors (`bg-pink-500`), no arbitrary values (`p-[13px]`) outside `src/components/ui/`, no inline styles.
-- No barrel files. Import from the file that defines the symbol. `packages/shared` exposes one entry per file in its `exports`.
-- Model names live in env vars, read through `callModel(task, input)`. Never hard-code a model or provider.
-- `packages/shared` and `supabase/migrations` are shared contracts: change them only after the team agrees, then in one place.
-- Every schema change is a new migration file. Never edit a merged migration.
-- Server-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, model keys) never reach client components.
+`.claude/settings.json` configures:
 
-## Gotchas
+- **`SessionStart`** runs `.claude/session-brief.py`, which puts the standing rules into context.
+- **`SessionEnd`** runs `.claude/log-session.py` (30 s timeout), which writes the session's transcript to `.claude-logs/`.
+- **Denied reads** of real env files (`.env`, `.env.local`, `.env.*.local` and the per-environment names). `.env.example` stays readable. The deny list binds Claude Code's `Read` tool only, not the shell (`cat`, `grep`) or other tools: never read a real env file by any means.
+- **Denied pushes:** only the listed forms: a plain push to `main`, `--force` and `-f`. Other forms, such as `--force-with-lease` or a `+refspec`, are not denied. Branch protection is the real guard.
 
-- `main` is protected. Work on a branch (`zia/…`, `kasam/…`) and open a PR; direct pushes fail.
-- Learners can only read their own rows (RLS). Scores, cards and schedules are written by the server with the service role.
-- `decision_cards.hidden = true` rows are invisible to learners by policy; query them only with the service role.
-- `decision_cards.flagged` and `hidden` are generated from `evidence` by Postgres. Never write them.
-- Learners can't read `decision_cards.model_answer` (the answer key). Select card columns by name; `select *` fails with the anon key.
-- Log your reasoning for real choices in `docs/DECISIONS.md`.
+## Session logs
+
+`.claude-logs/` is tracked: the transcript of the session that produced a change ships on the branch with it. Commit it separately from the code, right before `git push`.
+
+**Transcripts are written verbatim and committed.** Before you stage `.claude-logs/`, read each new log and redact:
+
+- secrets (keys, tokens, passwords, connection strings);
+- personal or private information: learner data, names or emails that aren't the authors', anything from a client.
+
+The pre-commit hook scans transcripts for credential patterns only; it does not catch personal data. If a real secret scrolled past, redact it, never allowlist it. If you are unsure a log is safe, don't commit it. See [docs/rules/secrets.md](docs/rules/secrets.md).
+
+The current session's log is written only when the session ends, so it lands in the next push. `python3 .claude/log-session.py --backfill` writes earlier sessions.
