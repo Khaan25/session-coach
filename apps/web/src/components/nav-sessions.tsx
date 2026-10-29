@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import type { Session, SessionStatus } from "@session-coach/shared/session";
+import type { Session } from "@session-coach/shared/session";
 import { CaretRightIcon } from "@phosphor-icons/react";
 
+import { StatusBadge } from "@/components/app/status-badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
@@ -13,14 +14,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Status, type StatusValue } from "@/components/ui/status";
-
-const statusOf: Record<SessionStatus, { status: StatusValue; label: string }> = {
-  pending: { status: "queued", label: "Pending" },
-  processing: { status: "running", label: "Processing" },
-  ready: { status: "ok", label: "Ready" },
-  failed: { status: "fail", label: "Failed" },
-};
 
 export function NavSessions({ sessions }: { sessions: Session[] }) {
   return (
@@ -42,7 +35,7 @@ export function NavSessions({ sessions }: { sessions: Session[] }) {
                     <span className="truncate">{session.title ?? "Untitled session"}</span>
                     <div className="flex min-w-0 items-center gap-2 type-label-sm text-text-2">
                       {session.repo && <span className="truncate">{session.repo}</span>}
-                      <Status {...statusOf[session.status]} />
+                      <StatusBadge status={session.status} />
                     </div>
                   </div>
                 </SidebarMenuButton>
