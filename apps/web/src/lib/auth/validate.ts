@@ -3,7 +3,8 @@
 /** The dashboard minimum (docs/plans/auth.md #23). Character rules come back from Supabase as WeakPasswordError reasons. */
 export const MIN_PASSWORD = 10;
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Only catches typos; Supabase decides what a valid address is. */
+export const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** A message per field, keyed by the input's `name`. An empty object means the form can go to the server. */
 export type AuthFieldErrors = { email?: string; password?: string };
