@@ -70,7 +70,9 @@ function InputGroupAddon({
         }
 
         event.preventDefault();
-        event.currentTarget.parentElement?.querySelector("input")?.focus();
+        event.currentTarget.parentElement
+          ?.querySelector<HTMLElement>("[data-slot=input-group-control]")
+          ?.focus();
       }}
       {...props}
     />

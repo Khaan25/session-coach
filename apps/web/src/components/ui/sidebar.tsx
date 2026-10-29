@@ -250,11 +250,12 @@ function Sidebar({
 }
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, isMobile, open, openMobile } = useSidebar();
 
   return (
     <Button
       data-sidebar="trigger"
+      aria-expanded={isMobile ? openMobile : open}
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon-sm"
@@ -502,12 +503,18 @@ function SidebarMenuButton({
     isActive?: boolean;
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
   } & VariantProps<typeof sidebarMenuButtonVariants>) {
-  const { isMobile, state } = useSidebar();
+  const { isMobile, state, setOpenMobile } = useSidebar();
   const comp = useRender({
     defaultTagName: "button",
     props: mergeProps<"button">(
       {
         className: cn(sidebarMenuButtonVariants({ variant, size }), className),
+        "aria-current": isActive ? "page" : undefined,
+        // On a phone the sidebar is a modal sheet, and the layout stays mounted across client
+        // navigations, so a link closes it. A button (a menu trigger) leaves it open.
+        onClick: (event) => {
+          if (isMobile && event.currentTarget instanceof HTMLAnchorElement) setOpenMobile(false);
+        },
       },
       props,
     ),

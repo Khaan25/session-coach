@@ -39,7 +39,8 @@ function Calendar({
       captionLayout={captionLayout}
       locale={locale}
       formatters={{
-        formatMonthDropdown: (date) => date.toLocaleString(locale?.code, { month: "short" }),
+        formatMonthDropdown: (date) =>
+          date.toLocaleString(locale?.code ?? "en-US", { month: "short" }),
         ...formatters,
       }}
       classNames={{
@@ -164,7 +165,7 @@ function CalendarDayButton({
     <button
       ref={ref}
       type="button"
-      data-day={day.date.toLocaleDateString(locale?.code)}
+      data-day={day.date.toLocaleDateString(locale?.code ?? "en-US")}
       data-today={(modifiers.today && !modifiers.outside) || undefined}
       data-selected-single={
         modifiers.selected &&

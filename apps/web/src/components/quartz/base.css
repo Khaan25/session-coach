@@ -122,11 +122,12 @@
    Two classes of specificity beat an app's global a:focus-visible. Where the ring must sit elsewhere, the focus-ring
    and focus-ring-inset utilities (styles.css) draw the same ring. */
 /* Session Coach: list rows (menu items, options) draw no ring; the highlighted row's wash is the focus
-   indicator, as Quartz's menu-item recipe says. In :where(), so the rule keeps Quartz's weight and the
-   [data-control] opt-out below still wins. */
+   indicator, as Quartz's menu-item recipe says. An element with a focus-ring utility draws that ring
+   instead: this rule is unlayered and would otherwise beat the layered utility. In :where(), so the
+   rule keeps Quartz's weight and the [data-control] opt-out below still wins. */
 .quartz
   :where(*):is(:focus-visible, [data-force-focus-visible]):where(
-    :not([role^="menuitem"], [role="option"])
+    :not([role^="menuitem"], [role="option"], [class*="focus-ring"])
   ) {
   outline: var(--line-focus) solid var(--border-focus);
   outline-offset: var(--focus-offset);
