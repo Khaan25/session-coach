@@ -8,7 +8,7 @@ function niceScale(min: number, max: number, count = 4) {
     max = 1;
   }
   if (min > max) [min, max] = [max, min];
-  count = Math.max(1, Math.round(count) || 1);
+  count = Math.min(1000, Math.max(1, Math.round(count) || 1));
   if (min === max) {
     max = min === 0 ? 1 : min + Math.abs(min);
   }
@@ -21,7 +21,9 @@ function niceScale(min: number, max: number, count = 4) {
   // By index, not `t += step`: past 2^53 a small step stops advancing t and the loop never ends.
   const last = Math.min(Math.round((hi - lo) / step), 1000);
   const ticks: number[] = [];
-  for (let i = 0; i <= last; i++) ticks.push(Number((lo + i * step).toPrecision(12)));
+  // Rounded to the step's own decimals, so float noise goes but ticks on a large base stay distinct.
+  const dp = Math.min(100, Math.max(0, -Math.floor(Math.log10(step)) + 1));
+  for (let i = 0; i <= last; i++) ticks.push(Number((lo + i * step).toFixed(dp)));
   return { min: lo, max: hi, ticks };
 }
 
