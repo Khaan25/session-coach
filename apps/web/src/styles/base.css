@@ -128,8 +128,9 @@ body {
 /* Session Coach: list rows (menu items, options) draw no ring; the highlighted row's wash is the focus
    indicator, as the design system's menu-item recipe says. Popup containers (dialog, alert dialog, menu,
    listbox) draw none either: they take focus programmatically, e.g. when the focused control inside unmounts,
-   and Base UI already traps focus inside them. An element with a focus-ring utility draws that ring
-   instead: this rule is unlayered and would otherwise beat the layered utility. In :where(), so the
+   and Base UI already traps focus inside them. An element with a focus-ring utility, or one that sets
+   focus-visible:outline-none to draw its own indicator (field and select halos), keeps that treatment:
+   this rule is unlayered and would otherwise beat the layered utility. In :where(), so the
    rule keeps the design system's weight and the [data-control] opt-out below still wins. */
 :root
   :where(*):is(:focus-visible, [data-force-focus-visible]):where(
@@ -140,7 +141,8 @@ body {
       [role="alertdialog"],
       [role="menu"],
       [role="listbox"],
-      [class*="focus-ring"]
+      [class*="focus-ring"],
+      [class*="focus-visible:outline-none"]
     )
   ) {
   outline: var(--line-focus) solid var(--border-focus);
