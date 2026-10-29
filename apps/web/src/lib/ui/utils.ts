@@ -36,26 +36,25 @@ export function mergeClass<State>(
 /**
  * One callback ref that sets every ref it is given, for a component that keeps its own ref and forwards the caller's.
  * Wrap it in useMemo or useCallback when the element should not be detached and attached again on every render.
+ * It returns React 19's cleanup, which runs each ref's own cleanup, or clears the ref when it has none.
  */
 export function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]): React.RefCallback<T> {
   return (node) => {
-    for (const ref of refs) {
-      if (typeof ref === "function") ref(node);
-      else if (ref) (ref as React.RefObject<T | null>).current = node;
-    }
+    const cleanups = refs.map((ref) => {
+      if (typeof ref === "function") {
+        const cleanup = ref(node);
+        return typeof cleanup === "function" ? cleanup : () => ref(null);
+      }
+      if (ref) {
+        (ref as React.RefObject<T | null>).current = node;
+        return () => {
+          (ref as React.RefObject<T | null>).current = null;
+        };
+      }
+      return undefined;
+    });
+    return () => {
+      for (const cleanup of cleanups) cleanup?.();
+    };
   };
-}
-
-/**
- * A component's words: its defaults with the caller's on top. A key the caller left undefined keeps the
- * default, so `labels={{send: maybeTranslated}}` never blanks a button when a translation is missing.
- */
-export function withDefaults<T extends object, G extends object = Partial<T>>(
-  defaults: T,
-  given?: G,
-): T & Omit<G, keyof T> {
-  const out = { ...defaults } as Record<string, unknown>;
-  if (given)
-    for (const [key, value] of Object.entries(given)) if (value !== undefined) out[key] = value;
-  return out as T & Omit<G, keyof T>;
 }
