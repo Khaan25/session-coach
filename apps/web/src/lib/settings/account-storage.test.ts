@@ -19,3 +19,10 @@ test("accountStoragePaths joins session paths and listed files, once each, witho
 test("accountStoragePaths returns nothing for a learner with no uploads", () => {
   assert.deepEqual(accountStoragePaths("u1", [], []), []);
 });
+
+test("accountStoragePaths drops raw paths outside the learner's folder", () => {
+  assert.deepEqual(
+    accountStoragePaths("u1", ["u2/s9.jsonl.gz", "u1/s1.jsonl.gz", "s3.jsonl.gz"], []),
+    ["u1/s1.jsonl.gz"],
+  );
+});

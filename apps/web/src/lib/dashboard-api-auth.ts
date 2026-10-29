@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
@@ -25,11 +25,10 @@ export function requireDashboardKey(req: NextRequest): NextResponse | null {
 }
 
 /**
- * Compares two secrets without leaking how many leading characters match through timing.
- * The length check comes first because timingSafeEqual throws on buffers of different sizes.
+ * Compares two secrets without leaking, through timing, how many leading characters match or how long the key is.
+ * Both sides are hashed first so timingSafeEqual always compares two 32-byte digests.
  */
 function constantTimeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(a), digest(b));
 }
