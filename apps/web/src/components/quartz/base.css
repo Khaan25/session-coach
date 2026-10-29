@@ -123,7 +123,11 @@
    and focus-ring-inset utilities (styles.css) draw the same ring. */
 /* Session Coach: list rows (menu items, options) draw no ring; the highlighted row's wash is the focus
    indicator, as Quartz's menu-item recipe says. Every other element keeps the ring. */
-.quartz :where(*):is(:focus-visible, [data-force-focus-visible]):not([role^="menuitem"], [role="option"]) {
+.quartz
+  :where(*):is(:focus-visible, [data-force-focus-visible]):not(
+    [role^="menuitem"],
+    [role="option"]
+  ) {
   outline: var(--line-focus) solid var(--border-focus);
   outline-offset: var(--focus-offset);
 }
