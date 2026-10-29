@@ -28,7 +28,12 @@ import { mergeRefs } from "@/lib/ui/utils";
 // shortcut: The design system shrinks the bar's buttons to sm through a ButtonSize context; this repo's Button has none, so
 // the actions keep the size the caller gave them. Add a size context to Button if the bar needs smaller ones.
 
-type Registry = { setTitle: (n: ReactNode) => void; setActions: (n: ReactNode) => void } | null;
+type Registry = {
+  setTitle: (n: ReactNode) => void;
+  setActions: (n: ReactNode) => void;
+  /** The condensed bar is showing; its copy of the actions is the live one. */
+  stuck: boolean;
+} | null;
 const RegistryContext = createContext<Registry>(null);
 
 const pageHeaderVariants = cva("group/page-header @container flex w-full flex-col", {
@@ -102,10 +107,16 @@ function PageHeader({
       { root, rootMargin: `-${top + 1}px 0px 0px 0px` },
     );
     io.observe(target);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      setStuck(false);
+    };
   }, [condense, condenseTop]);
 
-  const registry = useMemo(() => (condense ? { setTitle, setActions } : null), [condense]);
+  const registry = useMemo(
+    () => (condense ? { setTitle, setActions, stuck } : null),
+    [condense, stuck],
+  );
   return (
     <RegistryContext.Provider value={registry}>
       <header
@@ -143,7 +154,10 @@ function PageHeader({
               "forced-colors:border-b forced-colors:border-[CanvasText]",
             )}
           >
-            <p className="min-w-0 truncate type-label">{title}</p>
+            {/* An echo of the h1, which stays in the accessibility tree; only the actions move here. */}
+            <p aria-hidden className="min-w-0 truncate type-label">
+              {title}
+            </p>
             <div className="flex shrink-0 items-center gap-2">{actions}</div>
           </div>
         </div>
@@ -217,6 +231,8 @@ function PageHeaderActions({ className, children, ...props }: React.ComponentPro
   return (
     <div
       data-slot="page-header-actions"
+      // While the condensed bar shows its copy of the actions, this one is off screen: Tab and AT reach one.
+      inert={registry?.stuck || undefined}
       className={cn("flex shrink-0 flex-wrap items-center gap-2", className)}
       {...props}
     >
