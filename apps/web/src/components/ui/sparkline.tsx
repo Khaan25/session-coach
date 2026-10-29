@@ -119,7 +119,7 @@ function Sparkline({
               data.map((v, i) => (
                 <tr key={i}>
                   <th scope="row">{nameAt(i)}</th>
-                  <td>{v === null ? EMPTY_VALUE : valueFormat(v)}</td>
+                  <td>{v === null || !Number.isFinite(v) ? EMPTY_VALUE : valueFormat(v)}</td>
                 </tr>
               ))
             )}
