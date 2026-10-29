@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AppCatalog } from "@/components/design-system/catalog-app";
 import { ActionsCatalog } from "@/components/design-system/catalog-actions";
 import { DataCatalog } from "@/components/design-system/catalog-data";
 import { DisplayCatalog } from "@/components/design-system/catalog-display";
@@ -36,6 +37,7 @@ const SECTIONS = [
   { id: "overlays", label: "Overlays and motion" },
   { id: "navigation", label: "Navigation" },
   { id: "blocks", label: "Blocks" },
+  { id: "app", label: "App blocks" },
 ];
 
 // Every file in components/ui, in every variant, size and state, on example data from the shared sample session.
@@ -84,6 +86,7 @@ export default function DesignSystemPage() {
           <OverlaysCatalog />
           <NavigationCatalog />
           <BlocksGallery />
+          <AppCatalog />
         </main>
       </Toaster>
     </TooltipProvider>
