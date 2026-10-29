@@ -15,6 +15,7 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { FeatureCard } from "@/components/marketing/feature-card";
 import { MarketingPageHeader } from "@/components/marketing/marketing-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -109,6 +110,7 @@ export default function Page() {
       <section aria-labelledby="pipeline-title" className="flex flex-col gap-8">
         <SectionTitle id="pipeline-title">From session to cards</SectionTitle>
         <ol className="flex flex-col gap-4">
+          {/* Not a FeatureCard: the step number sits before the icon. */}
           {pipeline.map(({ icon: Icon, title, body }, index) => (
             <li key={title}>
               <Card>
@@ -136,20 +138,10 @@ export default function Page() {
       <section aria-labelledby="storage-title" className="flex flex-col gap-8">
         <SectionTitle id="storage-title">What happens to your sessions</SectionTitle>
         <div className="grid gap-4 md:grid-cols-2">
-          {storage.map(({ icon: Icon, title, body }) => (
-            <Card key={title}>
-              <CardHeader>
-                <CardTitle>
-                  <span className="flex items-center gap-3">
-                    <Icon weight="duotone" className="size-5" aria-hidden />
-                    {title}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="type-body text-text-2">{body}</p>
-              </CardContent>
-            </Card>
+          {storage.map(({ icon, title, body }) => (
+            <FeatureCard key={title} icon={icon} title={title}>
+              <p className="type-body text-text-2">{body}</p>
+            </FeatureCard>
           ))}
         </div>
         <p className="type-body text-text-2">
@@ -168,54 +160,34 @@ export default function Page() {
           show it, the files it touched and one question for you.
         </p>
         <div className="grid gap-4 md:grid-cols-2">
-          {cardKinds.map(({ icon: Icon, title, body }) => (
-            <Card key={title}>
-              <CardHeader>
-                <CardTitle>
-                  <span className="flex items-center gap-3">
-                    <Icon weight="duotone" className="size-5" aria-hidden />
-                    {title}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="type-body text-text-2">{body}</p>
-              </CardContent>
-            </Card>
+          {cardKinds.map(({ icon, title, body }) => (
+            <FeatureCard key={title} icon={icon} title={title}>
+              <p className="type-body text-text-2">{body}</p>
+            </FeatureCard>
           ))}
         </div>
       </section>
 
       <section aria-labelledby="review-title" className="flex flex-col gap-8">
         <SectionTitle id="review-title">The review</SectionTitle>
-        <Card size="lg">
-          <CardHeader>
-            <CardTitle>
-              <span className="flex items-center gap-3">
-                <ChatTextIcon weight="duotone" className="size-6" aria-hidden />
-                Explain it back on day 1, 3 and 7
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex max-w-3xl list-disc flex-col gap-3 ps-5 type-body text-text-2">
-              <li>
-                You answer each card&apos;s question in your own words. A model scores the answer 0,
-                1 or 2 against the card&apos;s reason, its quotes and a model answer, and tells you
-                what was missing.
-              </li>
-              <li>
-                A 2 moves the card to the next gap: day 1, then day 3, then day 7. A 0 or 1 starts
-                it again at day 1.
-              </li>
-              <li>Passing day 7 marks the card mastered, and it stops coming back.</li>
-              <li>
-                Your progress counts the decisions you can still explain: mastered cards plus cards
-                you scored 2 on in the last 7 days.
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
+        <FeatureCard size="lg" icon={ChatTextIcon} title="Explain it back on day 1, 3 and 7">
+          <ul className="flex max-w-3xl list-disc flex-col gap-3 ps-5 type-body text-text-2">
+            <li>
+              You answer each card&apos;s question in your own words. A model scores the answer 0, 1
+              or 2 against the card&apos;s reason, its quotes and a model answer, and tells you what
+              was missing.
+            </li>
+            <li>
+              A 2 moves the card to the next gap: day 1, then day 3, then day 7. A 0 or 1 starts it
+              again at day 1.
+            </li>
+            <li>Passing day 7 marks the card mastered, and it stops coming back.</li>
+            <li>
+              Your progress counts the decisions you can still explain: mastered cards plus cards
+              you scored 2 on in the last 7 days.
+            </li>
+          </ul>
+        </FeatureCard>
       </section>
     </div>
   );

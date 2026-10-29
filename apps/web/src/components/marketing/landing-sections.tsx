@@ -9,8 +9,9 @@ import {
 } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 
+import { FeatureCard } from "@/components/marketing/feature-card";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // The landing's sections under the hero. Copy comes only from docs/plans/pages-and-dashboard.md and
 // docs/ARCHITECTURE.md; anything they don't say is a TODO(zia). No scroll reveals (the design system bans them).
@@ -62,24 +63,20 @@ export function LoopSection() {
         title="One session in, three reviews out."
       />
       <ol className="grid gap-4 md:grid-cols-3">
-        {loop.map(({ step, icon: Icon, title, body }) => (
+        {loop.map(({ step, icon, title, body }) => (
           <li key={step} className="flex">
-            <Card size="lg" className="w-full">
-              <CardHeader>
-                <CardTitle>
-                  <span className="flex items-center gap-3">
-                    <Icon weight="duotone" className="size-6" aria-hidden />
-                    <span>
-                      <span className="sr-only">Step {step}: </span>
-                      {title}
-                    </span>
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="type-body text-text-2">{body}</p>
-              </CardContent>
-            </Card>
+            <FeatureCard
+              size="lg"
+              icon={icon}
+              title={
+                <span>
+                  <span className="sr-only">Step {step}: </span>
+                  {title}
+                </span>
+              }
+            >
+              <p className="type-body text-text-2">{body}</p>
+            </FeatureCard>
           </li>
         ))}
       </ol>
@@ -110,20 +107,10 @@ export function CardSection() {
           title="Built from what the session shows."
         />
         <div className="grid gap-4 md:grid-cols-2">
-          {cardFacts.map(({ icon: Icon, title, body }) => (
-            <Card key={title}>
-              <CardHeader>
-                <CardTitle>
-                  <span className="flex items-center gap-3">
-                    <Icon weight="duotone" className="size-5" aria-hidden />
-                    {title}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="type-body text-text-2">{body}</p>
-              </CardContent>
-            </Card>
+          {cardFacts.map(({ icon, title, body }) => (
+            <FeatureCard key={title} icon={icon} title={title}>
+              <p className="type-body text-text-2">{body}</p>
+            </FeatureCard>
           ))}
         </div>
       </div>
@@ -152,6 +139,7 @@ export function TrustSection() {
     >
       <SectionHeading id="trust-title" eyebrow="Your code" title="What happens to your sessions." />
       <div className="grid gap-4 md:grid-cols-2">
+        {/* Not a FeatureCard: the body sits in the header as a description, a denser card. */}
         {trust.map(({ icon: Icon, title, body }) => (
           <Card key={title}>
             <CardHeader>
