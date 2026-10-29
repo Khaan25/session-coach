@@ -5,7 +5,9 @@ pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (Decision +
 ## Commands
 
 - `pnpm typecheck` and `pnpm lint` after every change; fix all errors before saying you're done
-- `pnpm --filter @session-coach/shared test` after touching `packages/shared`
+- `pnpm format` before committing; `pnpm format:check` runs in the pre-push hook and CI
+- `pnpm check:secrets` scans tracked files for credentials (the pre-commit hook scans staged ones)
+- `pnpm test` runs every package's tests; `pnpm --filter @session-coach/shared test` after touching `packages/shared`
 - `pnpm dev` runs the web app on :3000
 
 ## Rules
@@ -18,6 +20,19 @@ pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (Decision +
 - `packages/shared` and `supabase/migrations` are shared contracts: change them only after the team agrees, then in one place.
 - Every schema change is a new migration file. Never edit a merged migration.
 - Server-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, model keys) never reach client components.
+
+- Commits follow Conventional Commits: `type(scope): summary`. Scopes are listed in `scripts/check-commit-message.mjs`. See [docs/rules/commits.md](docs/rules/commits.md).
+- The Play Stats API in `apps/web/src/app/api/dashboard/v1/` follows [docs/PLAY_API.md](docs/PLAY_API.md). Get the current contract from the stats dashboard before changing its shape; never change it from memory.
+- Never read, print or paste a real env file by any means, including shell `cat` or `grep`. See [docs/rules/secrets.md](docs/rules/secrets.md).
+
+## Rule files
+
+- [docs/rules/commits.md](docs/rules/commits.md): commit messages and what goes in one commit
+- [docs/rules/pull-requests.md](docs/rules/pull-requests.md): branches, PRs, review bots, merging
+- [docs/rules/secrets.md](docs/rules/secrets.md): env files, keys, session transcripts
+- [docs/rules/migrations.md](docs/rules/migrations.md): schema changes and the live database
+- [docs/rules/authorization.md](docs/rules/authorization.md): RLS, service role, API route guards
+- [docs/rules/error-handling.md](docs/rules/error-handling.md): failures in routes, the pipeline and crons
 
 ## Gotchas
 

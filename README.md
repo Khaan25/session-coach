@@ -19,13 +19,14 @@ More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Repo layout
 
-| Path | What | Owner |
-|---|---|---|
-| `apps/web` | Next.js app: pages, API routes, pipeline | both |
-| `packages/cli` | stub; `init`, `login`, `push`, hook and worker planned | Kasam |
-| `packages/shared` | Decision and Session types + zod schemas, sample fixture | shared, change after agreement |
-| `supabase/migrations` | every schema change as a migration file | shared, change after agreement |
-| `docs/` | architecture and team decisions | both |
+| Path                  | What                                                                     | Owner                          |
+| --------------------- | ------------------------------------------------------------------------ | ------------------------------ |
+| `apps/web`            | Next.js app: pages, API routes, pipeline                                 | both                           |
+| `packages/cli`        | stub; `init`, `login`, `push`, hook and worker planned                   | Kasam                          |
+| `packages/shared`     | Decision and Session types + zod schemas, sample fixture                 | shared, change after agreement |
+| `supabase/migrations` | every schema change as a migration file                                  | shared, change after agreement |
+| `docs/`               | architecture, decisions, rules, plans, Play Stats API                    | both                           |
+| `.claude/`            | agent hooks, skills, settings; `.claude-logs/` holds session transcripts | both                           |
 
 ## Run it locally
 
@@ -34,30 +35,32 @@ Needs Node 22.22.2+ or 24.15+ (the LTS lines current Corepack supports). pnpm co
 ```bash
 npm install -g corepack@latest
 corepack enable pnpm
-pnpm install
+pnpm install                          # also installs the git hooks in .githooks/
 cp .env.example apps/web/.env.local   # fill in values
 pnpm dev                              # http://localhost:3000
 ```
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | start the web app |
-| `pnpm typecheck` | TypeScript in every package |
-| `pnpm lint` | ESLint + `@shadcn/lint` design-system rules |
-| `pnpm --filter @session-coach/shared test` | schema and fixture tests |
-| `pnpm build` | production build |
+| Command              | What it does                                |
+| -------------------- | ------------------------------------------- |
+| `pnpm dev`           | start the web app                           |
+| `pnpm typecheck`     | TypeScript in every package                 |
+| `pnpm lint`          | ESLint + `@shadcn/lint` design-system rules |
+| `pnpm test`          | every package's tests                       |
+| `pnpm format`        | Prettier, with the Tailwind class sorter    |
+| `pnpm check:secrets` | scan tracked files for credentials          |
+| `pnpm build`         | production build                            |
 
 ## Agreed before the repo
 
-| Topic | Decision |
-|---|---|
-| Track | Coding, saved on the 8x dashboard (theme locked) |
-| Stack | Next.js 16 + TypeScript (strict), Tailwind v4, shadcn/ui, Supabase, Vercel |
-| Package manager | pnpm |
-| AI | `callModel(task, input)`; provider and model names only in env vars. Plan: Gemini free tier, OpenRouter then Groq as fallback |
-| Secrets | `.env.example` committed, real keys never. Service-role key only on the server |
-| Daily sync | Written standup in the team channel. Kasam NPT (UTC+5:45), Zia PKT (UTC+5) |
-| Definition of done | works on a real session, typecheck + lint pass, reviewed by the other person, merged, demo-able |
+| Topic              | Decision                                                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| Track              | Coding, saved on the 8x dashboard (theme locked)                                                                              |
+| Stack              | Next.js 16 + TypeScript (strict), Tailwind v4, shadcn/ui, Supabase, Vercel                                                    |
+| Package manager    | pnpm                                                                                                                          |
+| AI                 | `callModel(task, input)`; provider and model names only in env vars. Plan: Gemini free tier, OpenRouter then Groq as fallback |
+| Secrets            | `.env.example` committed, real keys never. Service-role key only on the server                                                |
+| Daily sync         | Written standup in the team channel. Kasam NPT (UTC+5:45), Zia PKT (UTC+5)                                                    |
+| Definition of done | works on a real session, typecheck + lint pass, reviewed by the other person, merged, demo-able                               |
 
 ## Working together
 

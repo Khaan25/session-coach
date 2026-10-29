@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-10-29 · Agent tooling, Play Stats API, live backend
+
+- **Decision:** adopt the 8x template's agent setup: AGENTS.md holds the rules, a SessionStart brief, SessionEnd transcripts in `.claude-logs/`, git hooks (secrets, commit messages, pre-push gates), repo skills `spec`/`local-review`/`ship`, and `docs/rules/`. Add the Play Stats API per `docs/PLAY_API.md`.
+- **Backend:** one Supabase project in ap-south-1, the closest region to both of us; migrations go live with `supabase db push`. A Vercel project with root `apps/web`, connected to this repo, so every PR gets a preview.
+- **Commits carry no co-author trailers**; the commit-msg check rejects them. History on `main` was reworded once (2026-10-29) to remove them.
+- **Deferred:** PostHog analytics. Pages and dashboard are planned in `docs/plans/pages-and-dashboard.md`, built after the design system.
+
 ## 2026-10-28 · `flagged` and `hidden` on decision cards
 
 - **Decision:** `flagged = true` when any evidence item has `verified: false`. `hidden = true` when no evidence item is verified; the row is kept and learners never see it.
