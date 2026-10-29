@@ -1,22 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useId, useRef, useState } from "react";
+import { useId } from "react";
 
-import { type AuthState, updatePassword } from "@/app/(auth)/actions";
+import { updatePassword } from "@/app/(auth)/actions";
 import { AuthNotice } from "@/components/auth/auth-notice";
+import { useAuthForm } from "@/components/auth/use-auth-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-
-// The dashboard minimum (docs/plans/auth.md #23).
-const MIN_PASSWORD = 10;
-
-function validate(password: string): string | undefined {
-  if (!password) return "Enter a new password.";
-  if (password.length < MIN_PASSWORD) return `Use at least ${MIN_PASSWORD} characters.`;
-}
+import { MIN_PASSWORD, validateNewPassword } from "@/lib/auth/validate";
 
 /**
  * Sets a new password for the learner the reset link signed in, through the updatePassword Server Action, then goes
@@ -24,19 +18,11 @@ function validate(password: string): string | undefined {
  */
 export function UpdatePasswordForm() {
   const id = useId();
-  const passwordRef = useRef<HTMLInputElement>(null);
-  const [state, action, pending] = useActionState<AuthState, FormData>(updatePassword, {});
-  // Set when the browser-side check fails; cleared when a submit goes through, so the server's answer shows.
-  const [clientError, setClientError] = useState<string>();
-  const error = clientError ?? state.fields?.password;
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    const found = validate(passwordRef.current?.value ?? "");
-    setClientError(found);
-    if (!found) return;
-    event.preventDefault();
-    passwordRef.current?.focus();
-  }
+  const { action, handleSubmit, pending, errors, result } = useAuthForm(
+    updatePassword,
+    validateNewPassword,
+  );
+  const error = errors.password;
 
   const describedBy = `${id}-password-hint${error ? ` ${id}-password-error` : ""}`;
 
@@ -49,7 +35,6 @@ export function UpdatePasswordForm() {
               <Field data-invalid={error ? true : undefined}>
                 <FieldLabel htmlFor={`${id}-password`}>New password</FieldLabel>
                 <Input
-                  ref={passwordRef}
                   id={`${id}-password`}
                   name="password"
                   type="password"
@@ -73,9 +58,9 @@ export function UpdatePasswordForm() {
       {/* A live region that exists before it has content, so the notice is read out when it appears. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <div role="status">
-        {!clientError && state.status === "error" && state.message && (
+        {result?.status === "error" && result.message && (
           <AuthNotice title="Couldn't save the password" fail>
-            {state.message}
+            {result.message}
           </AuthNotice>
         )}
       </div>
