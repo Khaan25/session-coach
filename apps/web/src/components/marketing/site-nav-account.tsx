@@ -2,7 +2,6 @@
 
 import { GearIcon, SignOutIcon, SquaresFourIcon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useRef } from "react";
 
 import { signOut } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -24,7 +23,6 @@ export type SiteNavUser = { name: string; email: string; initials: string };
  * The header's account corner: signed in, the dashboard and an avatar menu; signed out, sign in.
  */
 export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
-  const signOutRef = useRef<HTMLFormElement>(null);
   if (!user)
     return (
       <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
@@ -35,8 +33,8 @@ export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
   return (
     <div className="flex items-center gap-2">
       {/* Sign-out is a POST, never a GET link (docs/plans/auth.md #26). The form sits outside the menu popup, which
-      unmounts on close; the menu item submits it. */}
-      <form ref={signOutRef} action={signOut} hidden />
+      unmounts on close; the menu item is a submit button tied to it by `form`. */}
+      <form id="header-sign-out" action={signOut} hidden />
       <Link href="/dashboard" className={buttonVariants()}>
         Dashboard
       </Link>
@@ -67,7 +65,7 @@ export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
             Settings
           </DropdownMenuLinkItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => signOutRef.current?.requestSubmit()}>
+          <DropdownMenuItem render={<button type="submit" form="header-sign-out" />}>
             <SignOutIcon />
             Sign out
           </DropdownMenuItem>
