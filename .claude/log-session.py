@@ -306,7 +306,10 @@ def encoded_project_dir(cwd):
     return os.path.join(os.path.expanduser("~/.claude/projects"), enc)
 
 def backfill(cwd, force=False):
-    """Log every stored transcript for this project, oldest first; returns the paths written."""
+    """Attempt to write logs for this project's stored transcripts, oldest first.
+
+    Existing logs are skipped unless force is true; returns paths successfully written.
+    """
     proj = encoded_project_dir(cwd)
     made = []
     for tp in sorted(glob.glob(os.path.join(proj, "*.jsonl")), key=os.path.getmtime):
@@ -347,7 +350,7 @@ def is_template_repo():
 
 
 def main():
-    """Hook mode by default, --backfill for past sessions. Always exits 0 so it never blocks Claude Code."""
+    """Hook mode by default, --backfill for past sessions. Exits 0 on normal paths so it never blocks Claude Code."""
     if is_template_repo():
         print(
             f"log-session: not writing a session log: this is the template repository "

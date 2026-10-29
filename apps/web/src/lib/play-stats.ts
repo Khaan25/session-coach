@@ -73,7 +73,7 @@ export function buildRetentionCohorts(
   return [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, row]) => {
-      // Strictly greater: day N is only complete once day N itself is over.
+      // Strictly greater: the window is day N+k, so it is complete only once day N+k is over (k = 1, 7, 30).
       const age = (today - Date.parse(date)) / DAY_MS;
       const cohort: RetentionCohort = { date, signups: row.signups };
       if (age > 1) cohort.d1 = row.d1;

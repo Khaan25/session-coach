@@ -183,7 +183,7 @@ const REFERENCE_MARKERS = [
 ];
 
 // True when a captured value is a template, a fake or too plain to be a real
-// credential. Every rule's validator leans on this to stay quiet on docs and tests.
+// credential. Every rule with a `validate` callback leans on this to stay quiet on docs and tests.
 function isPlaceholderValue(raw) {
   if (raw == null) return true;
   const value = String(raw)
@@ -415,7 +415,7 @@ const RULES = [
   },
 ];
 
-// Enough of the value to find it in the file, never enough to reuse it from CI logs.
+// A partial preview: enough to locate the value in the file, but it still reveals a few of its characters.
 function maskSecret(secret) {
   if (secret.length <= 8) return `${secret[0] ?? ""}***`;
   return `${secret.slice(0, 4)}…${secret.slice(-2)} (${secret.length} chars)`;
@@ -534,7 +534,7 @@ function collect(mode, paths) {
 }
 
 /**
- * Scans the selected files and returns every finding, without printing or exiting.
+ * Scans eligible selected files and returns their findings, without printing or exiting.
  *
  * @param {{ mode: "staged" | "all" | "paths", paths?: string[] }} options - Which files to read.
  * @returns {Array<{ path: string, line: number, column: number, ruleId: string, description: string, preview: string }>}
