@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { SessionStatus } from "@session-coach/shared/session";
 import { CaretRightIcon, FolderSimpleIcon } from "@phosphor-icons/react";
 
@@ -37,6 +38,7 @@ export function NavSessions({
   sessions: SessionListItem[];
   userId?: string | null;
 }) {
+  const pathname = usePathname();
   const { rows } = useLiveSessions(userId, sessions, { limit: 5 });
   if (rows.length === 0) return null;
   return (
@@ -58,6 +60,7 @@ export function NavSessions({
                 <SidebarMenuItem key={session.id}>
                   <SidebarMenuButton
                     size="lg"
+                    isActive={pathname === `/s/${session.id}`}
                     render={<Link href={`/s/${session.id}`} />}
                     // Native tooltip: the full title (it truncates) and what the second line means.
                     title={[name, session.repo && `Repository: ${session.repo}`, badge.label]
