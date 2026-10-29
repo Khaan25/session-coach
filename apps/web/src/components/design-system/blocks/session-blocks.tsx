@@ -99,7 +99,7 @@ function RecentActivityBlock() {
         {ACTIVITY.map(({ title, detail, time }, index) => (
           <Fragment key={title}>
             {index > 0 && <ItemSeparator />}
-            <Item>
+            <Item role="listitem">
               <ItemContent>
                 <ItemTitle>{title}</ItemTitle>
                 <ItemDescription>{detail}</ItemDescription>
@@ -140,6 +140,7 @@ function ReviewProgressBlock() {
         <Progress value={30} data-status="fail">
           <ProgressLabel>{cards[2].decision}</ProgressLabel>
           <ProgressValue />
+          <Status status="fail" />
         </Progress>
         <Badge status="fail" label="Unverified quote" />
       </CardContent>
