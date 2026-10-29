@@ -6,7 +6,7 @@
    the shadcn semantic names (background, primary, muted, border...) onto Quartz roles. Everything
    reads inside <body class="quartz">. See docs/DECISIONS.md, 2026-10-29 · Design system. */
 @import "../components/quartz/tokens.css";
-@import "../components/quartz/base.css" layer(base);
+@import "../components/quartz/base.css";
 @import "../components/quartz/utilities.css";
 
 /* Session Coach on Quartz. Quartz draws in its own sans and mono where a licence declares them;
