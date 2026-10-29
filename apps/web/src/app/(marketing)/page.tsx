@@ -1,9 +1,9 @@
-import { Cards } from "@phosphor-icons/react/ssr";
+import { CardsIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 
 import { DecisionCardPreview } from "@/components/marketing/decision-card-preview";
 import { HandUnderline } from "@/components/marketing/hand-underline";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 // The hero follows docs/design/landing-hero.md: headline with one hand-drawn underline, subhead, CTA with a note,
 // the product object, then the trust strip. Load order: nav 0ms, headline 100ms, underline 600ms, subhead 300ms,
@@ -46,10 +46,10 @@ export default function Home() {
         <div
           className={`${enter} mt-8 flex flex-col items-center gap-3 delay-500 duration-700 slide-in-from-bottom-4`}
         >
-          <Button size="lg" nativeButton={false} render={<Link href="/how-it-works" />}>
-            <Cards weight="duotone" data-icon="inline-start" aria-hidden />
+          <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
+            <CardsIcon weight="duotone" data-icon="inline-start" aria-hidden />
             See how it works
-          </Button>
+          </Link>
           {/* TODO(zia): the reassurance note (price, trial, setup time) once those are decided. */}
           <p className="type-body-sm text-text-2">Built for Claude Code sessions.</p>
         </div>

@@ -25,7 +25,7 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
   const { isMobile } = useSidebar();
   const who = (
     <>
-      <Avatar>
+      <Avatar aria-hidden>
         <AvatarFallback>{user.initials}</AvatarFallback>
       </Avatar>
       <div className="grid min-w-0 flex-1 text-start">

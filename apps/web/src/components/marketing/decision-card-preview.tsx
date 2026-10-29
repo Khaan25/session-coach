@@ -13,7 +13,9 @@ import {
 
 // The hero's product object: card 0 of the shared sample session, built from the real components. The answer key
 // (model_answer) stays off the page, as it does for learners. Two blank cards behind it make the stack a deck.
-const card = sample.cards[0];
+// Hidden cards never reach a learner, so they are not counted or shown.
+const cards = sample.cards.filter((visible) => !visible.hidden);
+const card = cards[0];
 const { session } = sample;
 const reviewDays = [1, 3, 7];
 
@@ -37,9 +39,7 @@ export function DecisionCardPreview() {
               </span>
             </CardDescription>
             <CardAction>
-              <Badge>
-                Card {card.position + 1} of {sample.cards.length}
-              </Badge>
+              <Badge>Card 1 of {cards.length}</Badge>
             </CardAction>
           </CardHeader>
           <CardContent>

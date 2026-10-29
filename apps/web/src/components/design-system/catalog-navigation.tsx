@@ -1,6 +1,5 @@
 "use client";
 
-import { Suspense } from "react";
 import {
   BookOpenIcon,
   CardsIcon,
@@ -111,10 +110,7 @@ function SidebarDemo() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    {/* SidebarMenuSkeleton picks its width with Math.random(), which cacheComponents only allows behind Suspense. */}
-                    <Suspense fallback={null}>
-                      <SidebarMenuSkeleton showIcon />
-                    </Suspense>
+                    <SidebarMenuSkeleton showIcon />
                   </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { TerminalWindowIcon } from "@phosphor-icons/react/ssr";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Empty,
   EmptyContent,
@@ -43,9 +43,9 @@ export default function DashboardPage() {
           </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
-          <Button nativeButton={false} render={<Link href="/setup" />}>
+          <Link href="/setup" className={buttonVariants()}>
             Set up the CLI
-          </Button>
+          </Link>
         </EmptyContent>
       </Empty>
     </div>

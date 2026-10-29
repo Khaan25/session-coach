@@ -6,7 +6,6 @@ import type { Session } from "@session-coach/shared/session";
 import {
   CardsIcon,
   ChartLineUpIcon,
-  ChatsCircleIcon,
   GearIcon,
   GraduationCapIcon,
   ShieldCheckIcon,
@@ -40,8 +39,7 @@ export const navMain = [
 
 const navSecondary = [
   { title: "Privacy", url: "/privacy", icon: <ShieldCheckIcon /> },
-  // TODO(zia): where feedback goes.
-  { title: "Feedback", url: "#", icon: <ChatsCircleIcon /> },
+  // TODO(zia): a Feedback item, once there is somewhere for feedback to go (a "#" link was a dead tab stop).
 ];
 
 // TODO(zia): the signed-in profile (display_name, email, avatar_url) once auth lands.

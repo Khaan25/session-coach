@@ -13,7 +13,7 @@ function GallerySection({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} aria-labelledby={`${id}-title`} className="flex scroll-mt-6 flex-col gap-6">
+    <section id={id} aria-labelledby={`${id}-title`} className="flex scroll-mt-20 flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h2 id={`${id}-title`} className="type-heading text-text-1">
           {title}

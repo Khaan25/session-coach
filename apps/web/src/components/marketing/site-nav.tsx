@@ -1,7 +1,9 @@
-import { Cards } from "@phosphor-icons/react/ssr";
+import { CardsIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+
+import { SiteNavMenu } from "./site-nav-menu";
 
 // TODO(zia): /how-it-works, /pricing, /support and /login are planned pages; they 404 until they land.
 const links = [
@@ -19,7 +21,7 @@ export function SiteNav() {
         className="mx-auto flex h-18 w-full max-w-(--container) items-center justify-between gap-6 px-(--gutter-sm) sm:h-20 sm:px-(--gutter)"
       >
         <Link href="/" className="flex items-center gap-2 type-label text-text-1">
-          <Cards weight="duotone" className="size-6" aria-hidden />
+          <CardsIcon weight="duotone" className="size-6" aria-hidden />
           Session Coach
         </Link>
         <ul className="hidden items-center gap-8 md:flex">
@@ -34,9 +36,12 @@ export function SiteNav() {
             </li>
           ))}
         </ul>
-        <Button variant="outline" nativeButton={false} render={<Link href="/login" />}>
-          Sign in
-        </Button>
+        <div className="flex items-center gap-2">
+          <SiteNavMenu links={links} />
+          <Link href="/login" className={buttonVariants({ variant: "outline" })}>
+            Sign in
+          </Link>
+        </div>
       </nav>
     </header>
   );

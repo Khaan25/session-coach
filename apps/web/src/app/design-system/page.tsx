@@ -9,7 +9,7 @@ import { OverlaysCatalog } from "@/components/design-system/catalog-overlays";
 import { BlocksGallery } from "@/components/design-system/blocks-gallery";
 import { cards, session } from "@/components/design-system/sample";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   PageHeader,
   PageHeaderActions,
@@ -44,7 +44,7 @@ export default function DesignSystemPage() {
   return (
     <TooltipProvider>
       <Toaster>
-        <div className="mx-auto flex w-full max-w-(--container) flex-col gap-12 px-(--gutter-sm) py-6 sm:px-(--gutter)">
+        <main className="mx-auto flex w-full max-w-(--container) flex-col gap-12 px-(--gutter-sm) py-6 sm:px-(--gutter)">
           <PageHeader kind="agent" condense>
             <PageHeaderRow>
               <PageHeaderContent>
@@ -67,15 +67,13 @@ export default function DesignSystemPage() {
 
           <nav aria-label="Sections" className="flex flex-wrap gap-2">
             {SECTIONS.map((section) => (
-              <Button
+              <a
                 key={section.id}
-                variant="ghost"
-                size="sm"
-                render={<a href={`#${section.id}`} />}
-                nativeButton={false}
+                href={`#${section.id}`}
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
               >
                 {section.label}
-              </Button>
+              </a>
             ))}
           </nav>
 
@@ -86,7 +84,7 @@ export default function DesignSystemPage() {
           <OverlaysCatalog />
           <NavigationCatalog />
           <BlocksGallery />
-        </div>
+        </main>
       </Toaster>
     </TooltipProvider>
   );
