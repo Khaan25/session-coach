@@ -35,9 +35,7 @@ export default function Home() {
         </div>
 
         <div className="mx-auto flex w-full max-w-(--container) flex-col items-center px-(--gutter-sm) pt-20 pb-20 text-center sm:px-(--gutter) sm:pt-30 sm:pb-30">
-          <h1
-            className="max-w-4xl font-display text-5xl leading-none tracking-tight text-balance text-text-1 sm:text-7xl lg:text-8xl"
-          >
+          <h1 className="max-w-4xl font-display text-5xl leading-none tracking-tight text-balance text-text-1 sm:text-7xl lg:text-8xl">
             <span className="relative inline-block italic">
               Explain
               <HandUnderline className="absolute inset-x-0 top-full -mt-1 h-3 w-full text-accent-line sm:h-4" />
@@ -45,16 +43,12 @@ export default function Home() {
             the code your agent wrote.
           </h1>
 
-          <p
-            className="mt-8 max-w-lg type-body-lg text-pretty text-text-2 sm:mt-10"
-          >
+          <p className="mt-8 max-w-lg type-body-lg text-pretty text-text-2 sm:mt-10">
             Explain back the decisions your coding agent made. Each session becomes 3 to 5 decision
             cards, due again on day 1, 3 and 7.
           </p>
 
-          <div
-            className="mt-8 flex flex-col items-center gap-3"
-          >
+          <div className="mt-8 flex flex-col items-center gap-3">
             <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
               <CardsIcon weight="duotone" data-icon="inline-start" aria-hidden />
               See how it works
