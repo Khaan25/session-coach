@@ -23,7 +23,11 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
       role="list"
       data-slot="item-group"
       className={cn(
-        "group/item-group frame relative flex w-full flex-col overflow-hidden bg-page in-[.frame]:rounded-none in-[.frame]:before:hidden",
+        "group/item-group frame relative flex w-full flex-col overflow-hidden bg-page",
+        // In a card, the list is Quartz's panel inset: a white panel 4px inside the grey card, its
+        // corners nested in the card's (10px less the 4px gap).
+        "has-[>[data-variant=outline]]:gap-2 has-[>[data-variant=outline]]:overflow-visible has-[>[data-variant=outline]]:bg-transparent has-[>[data-variant=outline]]:before:hidden",
+        "in-data-[slot=card]:mx-1 in-data-[slot=card]:mb-1 in-data-[slot=card]:w-auto in-data-[slot=card]:[--frame-radius:calc(var(--radius-frame)-4px)]",
         className,
       )}
       {...props}
@@ -36,7 +40,8 @@ function ItemSeparator({ className, ...props }: React.ComponentProps<typeof Sepa
     <Separator
       data-slot="item-separator"
       orientation="horizontal"
-      className={className}
+      // Rows in a group already draw their own rule; a separator there would double it.
+      className={cn("in-data-[slot=item-group]:hidden", className)}
       {...props}
     />
   );
@@ -59,16 +64,18 @@ const itemVariants = cva(
     variants: {
       variant: {
         default: "rounded-soft bg-transparent",
-        outline: "frame",
-        // A grey row would be a box in a box, so muted renders as default.
-        muted: "rounded-soft bg-transparent",
+        // In a group, outline rows stand apart as framed rows (the group drops its own frame), so no edge doubles.
+        outline:
+          "frame in-data-[slot=item-group]:rounded-soft! in-data-[slot=item-group]:shadow-none!",
+        // The grey well: quieter rows that read as a set, inside a group too.
+        muted: "rounded-soft bg-well",
       },
       // --row (40px) for one line, --row-lg (56px) with a description, --row-sm (32px) and 28px for dense lists.
       size: {
         default:
           "min-h-(--row) gap-x-3 gap-y-1 px-4 py-2 has-data-[slot=item-description]:min-h-(--row-lg)",
         sm: "min-h-(--row-sm) gap-x-3 gap-y-1 px-4 py-1.5",
-        xs: "min-h-(--control-sm) gap-x-2 px-4 py-1 in-data-[slot=dropdown-menu-content]:p-0",
+        xs: "min-h-(--control-sm) gap-x-3 px-4 py-1 in-data-[slot=dropdown-menu-content]:p-0",
       },
     },
     defaultVariants: { variant: "default", size: "default" },
@@ -99,6 +106,7 @@ function Item({
       {
         "data-slot": "item",
         "data-size": size,
+        "data-variant": variant,
         "data-kind": kind,
         "data-selected": selected ? "" : undefined,
         "aria-current": selected && render ? "true" : undefined,
@@ -116,7 +124,7 @@ const itemMediaVariants = cva(
     variants: {
       variant: {
         default: "rounded-soft bg-transparent",
-        icon: "size-8 text-text-2 group-data-[size=xs]/item:size-6 [&_svg:not([class*='size-'])]:size-4",
+        icon: "size-8 text-text-2 group-data-[size=xs]/item:h-6 [&_svg:not([class*='size-'])]:size-4",
         image:
           "size-10 overflow-hidden rounded-soft group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_img]:size-full [&_img]:object-cover",
       },

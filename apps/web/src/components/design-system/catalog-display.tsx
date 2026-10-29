@@ -370,7 +370,7 @@ function Surfaces() {
               <ItemDescription>{cards[0].question}</ItemDescription>
             </ItemContent>
             <ItemActions>
-              <Button variant="outline" size="sm">
+              <Button variant="secondary" size="sm">
                 Explain back
               </Button>
             </ItemActions>
