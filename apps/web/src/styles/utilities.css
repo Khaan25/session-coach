@@ -878,16 +878,6 @@
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-/* Toast (ui/toast.tsx): the drain line shrinks to nothing over the toast's timeout. */
-@keyframes toast-drain {
-  from {
-    scale: 1 1;
-  }
-  to {
-    scale: 0 1;
-  }
-}
-
 /* fade-y and fade-x: a scroller fades to nothing over --fade-edge at each edge that has more behind it, as its data-fade says
    (start, end or both). Something that measures the scroll position sets data-fade (lib/overlay's useScrollFade for a
    vertical list, the tab list for a sideways one). fade-x reads the sides from --fade-from and --fade-to (left and right
