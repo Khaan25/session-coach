@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { sessionName } from "@/lib/sessions/name";
 import type { SessionListItem } from "@/lib/sessions/rows";
 import { useLiveSessions } from "@/lib/sessions/use-live-sessions";
 
@@ -51,10 +52,7 @@ export function NavSessions({
         <SidebarGroupContent>
           <SidebarMenu>
             {rows.map((session) => {
-              const name =
-                session.title ||
-                [session.repo, session.branch].filter(Boolean).join(" on ") ||
-                "Untitled session";
+              const name = sessionName(session);
               const badge = statusBadge[session.status];
               return (
                 <SidebarMenuItem key={session.id}>
