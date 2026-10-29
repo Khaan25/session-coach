@@ -182,6 +182,8 @@ const REFERENCE_MARKERS = [
   "placeholder",
 ];
 
+// True when a captured value is a template, a fake or too plain to be a real
+// credential. Every rule with a `validate` callback leans on this to stay quiet on docs and tests.
 function isPlaceholderValue(raw) {
   if (raw == null) return true;
   const value = String(raw)
@@ -254,6 +256,8 @@ function isLiveSecret(value, { minLen = 12, minEntropy = 3.6 } = {}) {
   return shannon(value) >= minEntropy;
 }
 
+// Value test for the sensitive-assignment rule: token-shaped, mixes letters and
+// digits, and random enough. Public-by-design keys are excluded first.
 function looksLikeSecretValue(value) {
   if (!/^[A-Za-z0-9._+/=~-]{20,}$/.test(value)) return false;
   // Supabase's publishable key is public by design (it ships in the browser
@@ -411,6 +415,7 @@ const RULES = [
   },
 ];
 
+// A partial preview: enough to locate the value in the file, but it still reveals a few of its characters.
 function maskSecret(secret) {
   if (secret.length <= 8) return `${secret[0] ?? ""}***`;
   return `${secret.slice(0, 4)}…${secret.slice(-2)} (${secret.length} chars)`;
@@ -463,6 +468,8 @@ function extensionOf(path) {
   return dot > 0 ? base.slice(dot + 1).toLowerCase() : "";
 }
 
+// .secretsallow globs: `**` crosses folders, `*` stays inside one. `**` is parked
+// as a space first so the single-`*` pass doesn't rewrite it.
 function globToRegExp(glob) {
   const escaped = glob
     .trim()
@@ -519,12 +526,20 @@ function readDisk(path) {
   }
 }
 
+// [path, text] pairs for the chosen mode; text is null when the file can't be read.
 function collect(mode, paths) {
   if (mode === "staged") return stagedFiles().map((path) => [path, readStaged(path)]);
   if (mode === "all") return trackedFiles().map((path) => [path, readDisk(path)]);
   return paths.map((path) => [path, readDisk(path)]);
 }
 
+/**
+ * Scans eligible selected files and returns their findings, without printing or exiting.
+ *
+ * @param {{ mode: "staged" | "all" | "paths", paths?: string[] }} options - Which files to read.
+ * @returns {Array<{ path: string, line: number, column: number, ruleId: string, description: string, preview: string }>}
+ *   One entry per suspected secret, with a masked preview.
+ */
 export function run({ mode, paths = [] }) {
   const allowlist = loadAllowlist();
   const findings = [];
