@@ -32,6 +32,8 @@ import sys, os, re, json, glob, subprocess
 from datetime import datetime, timezone
 
 LONG_WORDS = 100  # a prompt longer than this counts as "long content"
+# One pattern for the frontmatter count and the per-entry flag: a file name or a path.
+PATH_RE = re.compile(r"\b[\w./-]+\.(tsx?|jsx?|py|json|md|s?css|html|sql|sh|ya?ml|toml)\b|\b\w[\w-]*/[\w./-]+")
 
 
 def project_root():
@@ -141,8 +143,8 @@ def read_exchanges(path):
                 txt = text_from_content(m.get("content") if isinstance(m, dict) else None)
                 if txt and txt.strip():
                     current["resp"].append(txt.strip())
-                    if current["rts"] is None:
-                        current["rts"] = o.get("timestamp")
+                    # Last reply time, so duration and the filename cover the assistant's work.
+                    current["rts"] = o.get("timestamp") or current["rts"]
     return exchanges
 
 
@@ -152,7 +154,7 @@ def build_log(exchanges, session_id, cwd):
         return None, None
 
     id8 = session_id[:8]
-    project = os.path.basename(cwd.rstrip("/")) or "unknown"
+    project = os.path.basename(project_root().rstrip("/")) or "unknown"
     author = author_for(cwd)
 
     def words(s):
@@ -170,14 +172,16 @@ def build_log(exchanges, session_id, cwd):
     n = len(prompts)
 
     code = sum(1 for p in prompts if "```" in p)
-    paths = sum(1 for p in prompts if re.search(r"\b[\w./-]+\.(tsx?|jsx?|py|json|md|css|s?css|html|sql|sh|ya?ml|toml)\b", p) or re.search(r"\b\w[\w-]*/[\w./-]+", p))
+    paths = sum(1 for p in prompts if PATH_RE.search(p))
     urls = sum(1 for p in prompts if re.search(r"https?://", p))
     long_c = sum(1 for p in prompts if words(p) > LONG_WORDS)
     pasted = sum(1 for p in prompts if words(p) > LONG_WORDS and "\n" in p)
 
     first_pts, last_pts = exchanges[0]["prts"], exchanges[-1]["prts"]
     fdt, ldt = parse_ts(first_pts), parse_ts(last_pts)
-    dur = round((ldt - fdt).total_seconds() / 60.0, 1) if (fdt and ldt) else 0.0
+    end_ts = exchanges[-1]["rts"] or last_pts
+    edt = parse_ts(end_ts) or ldt
+    dur = round((edt - fdt).total_seconds() / 60.0, 1) if (fdt and edt) else 0.0
     last_type = "assistant" if exchanges[-1]["resp"] else "user"
 
     # filename / date come from the session's last local activity
@@ -221,7 +225,7 @@ def build_log(exchanges, session_id, cwd):
     out += ["---", "", f"# Claude Session Log - {date_str}", "",
             f"Session: `{id8}` | Project: `{project}` | Author: `{author}`", "", "---", ""]
 
-    path_re = re.compile(r"\b\w[\w-]*/[\w./-]+")
+    path_re = PATH_RE
     url_re = re.compile(r"https?://")
     for i, e in enumerate(exchanges, 1):
         p = e["prompt"]

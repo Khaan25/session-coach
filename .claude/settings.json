@@ -37,7 +37,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/log-session.py\""
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/log-session.py\"",
+            "timeout": 30
           }
         ]
       }

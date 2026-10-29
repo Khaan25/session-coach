@@ -10,10 +10,22 @@ You do two things:
 
 1. **Approve the hook once.** The first time you open Claude Code in this repo it
    asks you to trust the project hook. Approve it, and from then on it writes a
-   log silently at the end of every session.
-2. **Keep this folder committed and push it.** The logs land on GitHub next to
-   the changes they describe, so any teammate can trace how the build was made
-   and pick it up cold.
+   log at the end of every session. The current session's log is written only
+   when the session ends, so it lands in your next push.
+2. **Review each new log, then commit it** in its own commit, right before
+   `git push`. The log ships on the branch next to the change it describes.
+
+## Before you commit a log
+
+Transcripts are written verbatim. Read each new log and redact:
+
+- secrets (keys, tokens, passwords, connection strings);
+- personal or private information: learner data, names or emails that aren't
+  the authors', anything from a client.
+
+The secret scanner catches credential patterns only, not personal data. If you
+are unsure a log is safe, don't commit it. See
+[docs/rules/secrets.md](../docs/rules/secrets.md).
 
 ## Author attribution
 
@@ -28,7 +40,7 @@ automatically — nothing to edit.
 
 ## Backfilling
 
-To generate logs for past sessions that don't have one yet:
+To write logs for earlier sessions that don't have one yet:
 
 ```bash
 python3 .claude/log-session.py --backfill          # skips sessions already logged
