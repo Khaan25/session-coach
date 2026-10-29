@@ -347,7 +347,7 @@ function Timeline({
                 {durations[index]}
               </span>
               {s.status === "waiting" && (
-                <Status status="waiting" className="type-label-sm @xl/timeline:hidden">
+                <Status status="waiting" size="sm" className="@xl/timeline:hidden">
                   {statusWord(s)}
                 </Status>
               )}
@@ -356,7 +356,7 @@ function Timeline({
         </span>
         <span aria-hidden className="flex justify-end pe-4 empty:hidden @max-xl/timeline:hidden">
           {s.status === "waiting" ? (
-            <Status status="waiting" className="type-label-sm">
+            <Status status="waiting" size="sm">
               {statusWord(s)}
             </Status>
           ) : (
