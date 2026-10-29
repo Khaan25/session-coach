@@ -121,8 +121,8 @@ export function CardSection() {
 const trust = [
   {
     icon: LockKeyIcon,
-    title: "Secrets removed twice",
-    body: "On your laptop before the log is sent, and again on the server before it is stored.",
+    title: "Secrets filtered twice",
+    body: "We try to remove them on your laptop before the log is sent, and again on the server before it is stored.",
   },
   {
     icon: MapPinIcon,

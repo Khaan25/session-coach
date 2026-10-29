@@ -31,7 +31,7 @@ const pipeline = [
   {
     icon: TerminalWindowIcon,
     title: "The hook",
-    body: "When a Claude Code session ends, a SessionEnd hook starts a small background worker and exits. The worker removes secrets from the session's log on your laptop, then compresses it.",
+    body: "When a Claude Code session ends, a SessionEnd hook starts a small background worker and exits. The worker tries to remove secrets from the session's log on your laptop, then compresses it.",
   },
   {
     icon: CloudArrowUpIcon,
@@ -41,7 +41,7 @@ const pipeline = [
   {
     icon: CardsIcon,
     title: "Extraction",
-    body: "The server keeps your prompts, the agent's text, file edit summaries and shell commands, drops thinking blocks and attachments, and removes secrets again. One model call turns what is left into 3 to 5 decision cards.",
+    body: "The server keeps your prompts, the agent's text, file edit summaries and shell commands, drops thinking blocks and attachments, and tries to remove secrets again. One model call turns what is left into 3 to 5 decision cards.",
   },
   {
     icon: MagnifyingGlassIcon,
