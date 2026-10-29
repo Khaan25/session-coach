@@ -11,6 +11,8 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Why:** a second compile overrides every `globals.css` utility silently, and `@shadcn/lint` reads only the `globals.css` import graph, so it would flag every Quartz class as unknown.
 - **Name clashes:** Quartz declares `--sidebar` (248px), `--popover` (288px) and `--font-sans`/`--font-mono` on `.quartz`. The shadcn colour variables `--sidebar`, `--popover` and friends are gone; the semantic colour names map straight to Quartz roles in `@theme`. `--font-sans`/`--font-mono` are set to Geist and Geist Mono on `.quartz`.
 - **Motion tokens** stay the zip's: `--ease-out-quint`, `--ease-in-out-quint`, `--animate-toast-pulse-even/odd` and the reduced-motion reset on `[data-slot]`. Raw `cubic-bezier(0.22, 1, 0.36, 1)` copies in drawer and toast became `ease-out-quint`. Quartz's `--dur-*` and `--ease-step` stay available beside them.
+- **Menu rows:** a keyboard-highlighted row (highlighted, not under the pointer) draws a 2px inset ink ring; a mouse-highlighted row shows only the wash, and no row gets Quartz's outer focus ring. The wash alone is about 1.1:1 (WCAG 1.4.11).
+- **Menus animate:** dropdown, select and combobox popups fade, zoom and slide in 100ms, although the zip's carried `animate-none!`. Zia chose the animation.
 - **Toasts:** the zip's Base UI toast, not `sonner` as `docs/plans/pages-and-dashboard.md` lists, to keep its stacking, swipe and pulse.
 - **Style:** `base-nova` (what `components.json` and the installed components use), not `radix-nova` as the plan says.
 - **Colours for scores and flags:** `success` is Quartz's mint kind (hue 5), `warning` is Quartz's amber. Quartz keeps warm hues for trouble, so success is not green-on-warm.

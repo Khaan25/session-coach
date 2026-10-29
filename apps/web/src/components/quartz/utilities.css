@@ -744,6 +744,12 @@
   &[data-highlighted] {
     background-color: var(--surface-hover);
   }
+  /* Session Coach: a highlighted row not under the pointer got there by keyboard, so it also takes an
+     inset ink ring; the 5% wash alone is about 1.1:1 (WCAG 1.4.11). Mouse highlight stays the wash. */
+  &[data-highlighted]:not(:hover) {
+    outline: var(--line-focus) solid var(--border-focus);
+    outline-offset: calc(var(--line-focus) * -1);
+  }
   &[data-variant="destructive"] {
     color: var(--fail-text);
   }
