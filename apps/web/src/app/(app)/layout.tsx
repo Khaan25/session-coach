@@ -18,7 +18,7 @@ async function SignedInSidebar() {
   const [sessions, profile, dueCount] = await Promise.all([
     recentSessions(user.id),
     getSettingsProfile(),
-    dueTodayCount(user.id, new Date()),
+    dueTodayCount(user.id),
   ]);
   const email = profile?.email ?? user.email;
   const name = profile?.display_name || email || "Learner";

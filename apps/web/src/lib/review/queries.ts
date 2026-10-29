@@ -39,7 +39,7 @@ export function sessionName(session: SessionName | null) {
  *
  * @returns The count, 0 until reviews exist.
  */
-export async function dueTodayCount(userId: string, now: Date): Promise<number> {
+export async function dueTodayCount(userId: string, now = new Date()): Promise<number> {
   const supabase = await createClient();
   const today = await learnerToday(supabase, userId, now);
   const { count, error } = await supabase
