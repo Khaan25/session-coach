@@ -180,7 +180,9 @@ function deltaOf(from: number, to: number) {
         : "down";
   const change = !Number.isFinite(pct)
     ? "new"
-    : `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${Math.abs(pct).toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
+    : trend === "flat"
+      ? "0%"
+      : `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${Math.abs(pct).toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
   return { trend, change };
 }
 
