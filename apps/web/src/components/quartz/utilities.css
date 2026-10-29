@@ -597,8 +597,9 @@
       inset 0 0 0 1px var(--frame-color, var(--line-control)),
       var(--key-secondary-edge-press);
   }
-  /* A toggle that is on is an ink key held down. */
-  &[data-pressed]:not([data-disabled]) {
+  /* A toggle that is on is an ink key held down. Session Coach: not a menu trigger, which Base UI also
+     marks data-pressed while its popup is open; it keeps the secondary look (the open edge is the button's). */
+  &[data-pressed]:not([data-disabled], [data-popup-open]) {
     background: var(--key-primary-body);
     box-shadow: var(--key-primary-edge-press);
   }
@@ -725,7 +726,8 @@
     gap: var(--space-2);
     min-height: var(--row-sm);
     padding: calc(var(--space-1) * 1.5) var(--space-2);
-    border-radius: var(--radius-inner);
+    /* Session Coach: 6px, so the row nests in the 10px popup inside its 4px padding (Quartz: --radius-inner). */
+    border-radius: var(--radius-soft);
     font: var(--type-label);
     letter-spacing: var(--tracking-text);
     font-variation-settings: var(--width-normal);
