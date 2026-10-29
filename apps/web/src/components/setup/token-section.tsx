@@ -39,22 +39,23 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@/components/ui/item";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 
 /** A token row with its times already written as words by the server. */
 export type TokenListRow = { id: string; label: string; created: string; lastUsed: string | null };
 
+/** The error message a failed route returns, or a generic one when there is no answer at all. */
+async function errorOf(response: Response | null) {
+  const body: { error?: string } | null = await response?.json().catch(() => null);
+  return body?.error ?? "Check your connection and try again.";
+}
+
 /**
- * CLI tokens: "Create token" shows the new token once, and each row revokes after a confirm. Both are mocks on
- * local state. TODO(zia): POST and DELETE /api/cli/tokens (Kasam), once the response shape is agreed.
+ * CLI tokens: "Create token" calls POST /api/cli/tokens and shows the raw token once; each row revokes through
+ * DELETE /api/cli/tokens?id= after a confirm.
  */
-export function TokenSection({
-  initialTokens,
-  sampleToken,
-}: {
-  initialTokens: TokenListRow[];
-  /** SAMPLE: an obviously fake token, shown in place of the one the API returns. */
-  sampleToken: string;
-}) {
+export function TokenSection({ initialTokens }: { initialTokens: TokenListRow[] }) {
   const [tokens, setTokens] = useState(initialTokens);
   return (
     <Card>
@@ -67,13 +68,9 @@ export function TokenSection({
         </CardDescription>
         <CardAction>
           <CreateTokenDialog
-            sampleToken={sampleToken}
-            onCreate={(label) => {
-              setTokens((rows) => [
-                { id: crypto.randomUUID(), label, created: "now", lastUsed: null },
-                ...rows,
-              ]);
-              toast.add({ type: "success", title: "Token created", description: label });
+            onCreate={(row) => {
+              setTokens((rows) => [row, ...rows]);
+              toast.add({ type: "success", title: "Token created", description: row.label });
             }}
           />
         </CardAction>
@@ -95,14 +92,9 @@ export function TokenSection({
               </ItemContent>
               <ItemActions>
                 <RevokeTokenDialog
+                  id={token.id}
                   label={token.label}
-                  onRevoke={() => {
-                    setTokens((rows) => rows.filter(({ id }) => id !== token.id));
-                    toast.add({
-                      title: "Token revoked",
-                      description: `${token.label} is signed out.`,
-                    });
-                  }}
+                  onRevoke={() => setTokens((rows) => rows.filter(({ id }) => id !== token.id))}
                 />
               </ItemActions>
             </Item>
@@ -119,30 +111,81 @@ export function TokenSection({
   );
 }
 
-function CreateTokenDialog({
-  sampleToken,
-  onCreate,
-}: {
-  sampleToken: string;
-  onCreate: (label: string) => void;
-}) {
+/** The token card while the list loads: its header and two rows. */
+export function TokenSectionLoading() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>CLI tokens</h2>
+        </CardTitle>
+        <CardDescription>
+          Each laptop signs in with its own token. Revoke one to sign it out.
+        </CardDescription>
+      </CardHeader>
+      <output className="sr-only">Loading your tokens</output>
+      <ItemGroup aria-hidden>
+        {[0, 1].map((row) => (
+          <Item key={row}>
+            <ItemContent>
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-48" />
+            </ItemContent>
+            <Skeleton className="h-4 w-14" />
+          </Item>
+        ))}
+      </ItemGroup>
+    </Card>
+  );
+}
+
+function CreateTokenDialog({ onCreate }: { onCreate: (row: TokenListRow) => void }) {
   const id = useId();
   const [label, setLabel] = useState("");
-  const [created, setCreated] = useState(false);
+  const [pending, setPending] = useState(false);
+  // The raw token, held only while the dialog is open.
+  const [token, setToken] = useState<string | null>(null);
+
+  async function create() {
+    setPending(true);
+    const response = await fetch("/api/cli/tokens", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: label.trim() }),
+    }).catch(() => null);
+    if (!response?.ok) {
+      setPending(false);
+      toast.add({
+        type: "error",
+        title: "Your token wasn't created",
+        description: await errorOf(response),
+      });
+      return;
+    }
+    const created: { id: string; label: string | null; token: string } = await response.json();
+    setPending(false);
+    setToken(created.token);
+    onCreate({
+      id: created.id,
+      label: created.label ?? "Untitled token",
+      created: "now",
+      lastUsed: null,
+    });
+  }
 
   return (
     <Dialog
       onOpenChange={(open) => {
         // The token is gone once the dialog closes; the next open starts a new one.
         if (!open) {
-          setCreated(false);
+          setToken(null);
           setLabel("");
         }
       }}
     >
       <DialogTrigger render={<Button size="sm" />}>Create token</DialogTrigger>
       <DialogContent>
-        {created ? (
+        {token ? (
           <>
             <DialogHeader>
               <DialogTitle>Copy your token</DialogTitle>
@@ -152,7 +195,7 @@ function CreateTokenDialog({
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
-              <CodeBlock variant="command" command={sampleToken} prompt="" copyLabel="Copy token" />
+              <CodeBlock variant="command" command={token} prompt="" copyLabel="Copy token" />
             </DialogBody>
             <DialogFooter>
               <DialogClose render={<Button />}>Done</DialogClose>
@@ -163,9 +206,7 @@ function CreateTokenDialog({
             className="contents"
             onSubmit={(event) => {
               event.preventDefault();
-              // TODO(zia): mock. POST /api/cli/tokens returns the raw token once; show that instead of the sample.
-              onCreate(label.trim() || "Untitled token");
-              setCreated(true);
+              void create();
             }}
           >
             <DialogHeader>
@@ -179,6 +220,7 @@ function CreateTokenDialog({
                   id={`${id}-label`}
                   value={label}
                   maxLength={100}
+                  disabled={pending}
                   onChange={(event) => setLabel(event.target.value)}
                 />
                 <FieldDescription>
@@ -187,8 +229,13 @@ function CreateTokenDialog({
               </Field>
             </DialogBody>
             <DialogFooter>
-              <DialogClose render={<Button variant="secondary" />}>Cancel</DialogClose>
-              <Button type="submit">Create token</Button>
+              <DialogClose render={<Button variant="secondary" />} disabled={pending}>
+                Cancel
+              </DialogClose>
+              <Button type="submit" disabled={pending}>
+                {pending && <Spinner />}
+                Create token
+              </Button>
             </DialogFooter>
           </form>
         )}
@@ -197,10 +244,40 @@ function CreateTokenDialog({
   );
 }
 
-function RevokeTokenDialog({ label, onRevoke }: { label: string; onRevoke: () => void }) {
+function RevokeTokenDialog({
+  id,
+  label,
+  onRevoke,
+}: {
+  id: string;
+  label: string;
+  onRevoke: () => void;
+}) {
+  const [pending, setPending] = useState(false);
+
+  async function revoke() {
+    setPending(true);
+    const response = await fetch(`/api/cli/tokens?id=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch(() => null);
+    setPending(false);
+    // 404: already gone (revoked in another tab), so the row goes either way.
+    if (response?.ok || response?.status === 404) {
+      onRevoke();
+      toast.add({ title: "Token revoked", description: `${label} is signed out.` });
+      return;
+    }
+    toast.add({
+      type: "error",
+      title: `${label} wasn't revoked`,
+      description: await errorOf(response),
+    });
+  }
+
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={<Button variant="ghost" size="sm" />}>
+      <AlertDialogTrigger render={<Button variant="ghost" size="sm" disabled={pending} />}>
+        {pending && <Spinner />}
         Revoke<span className="sr-only"> {label}</span>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -213,8 +290,7 @@ function RevokeTokenDialog({ label, onRevoke }: { label: string; onRevoke: () =>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Keep token</AlertDialogCancel>
-          {/* TODO(zia): mock. DELETE /api/cli/tokens?id= (404 for another learner's token). */}
-          <AlertDialogAction variant="destructive" onClick={onRevoke}>
+          <AlertDialogAction variant="destructive" onClick={() => void revoke()}>
             Revoke token
           </AlertDialogAction>
         </AlertDialogFooter>
