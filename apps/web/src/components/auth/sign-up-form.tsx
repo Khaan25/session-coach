@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useId, useRef, useState } from "react";
+import { useId } from "react";
 
-import { type AuthState, signUp } from "@/app/(auth)/actions";
+import { signUp } from "@/app/(auth)/actions";
 import { AuthNotice } from "@/components/auth/auth-notice";
 import { GoogleForm } from "@/components/auth/google-form";
+import { useAuthForm } from "@/components/auth/use-auth-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -17,22 +18,7 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-
-type Errors = { email?: string; password?: string };
-
-// The dashboard minimum (docs/plans/auth.md #23). Character rules come back from Supabase as WeakPasswordError reasons.
-const MIN_PASSWORD = 10;
-
-function validate(email: string, password: string): Errors {
-  const errors: Errors = {};
-  if (!email) errors.email = "Enter your email address.";
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    errors.email = "Enter an email address like name@example.com.";
-  if (!password) errors.password = "Enter a password.";
-  else if (password.length < MIN_PASSWORD)
-    errors.password = `Use at least ${MIN_PASSWORD} characters.`;
-  return errors;
-}
+import { MIN_PASSWORD, validateSignUp } from "@/lib/auth/validate";
 
 /**
  * The sign-up form (docs/plans/auth.md): the signUp Server Action, then "check your email" whether or not the address
@@ -40,23 +26,10 @@ function validate(email: string, password: string): Errors {
  */
 export function SignUpForm() {
   const id = useId();
-  const emailRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
-  const [state, action, pending] = useActionState<AuthState, FormData>(signUp, {});
-  // Set when the browser-side check fails; cleared when a submit goes through, so the server's answer shows.
-  const [clientErrors, setClientErrors] = useState<Errors>();
-  const errors = clientErrors ?? state.fields ?? {};
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    const email = emailRef.current?.value.trim() ?? "";
-    const password = passwordRef.current?.value ?? "";
-    const found = validate(email, password);
-    if (!found.email && !found.password) return setClientErrors(undefined);
-    event.preventDefault();
-    setClientErrors(found);
-    if (found.email) emailRef.current?.focus();
-    else passwordRef.current?.focus();
-  }
+  const { action, handleSubmit, pending, errors, result, email } = useAuthForm(
+    signUp,
+    validateSignUp,
+  );
 
   const passwordDescribedBy = `${id}-password-hint${errors.password ? ` ${id}-password-error` : ""}`;
 
@@ -82,14 +55,13 @@ export function SignUpForm() {
                 <Field data-invalid={errors.email ? true : undefined}>
                   <FieldLabel htmlFor={`${id}-email`}>Email</FieldLabel>
                   <Input
-                    ref={emailRef}
                     id={`${id}-email`}
                     name="email"
                     type="email"
                     autoComplete="email"
                     inputMode="email"
                     spellCheck={false}
-                    defaultValue={state.email}
+                    defaultValue={email}
                     aria-invalid={errors.email ? true : undefined}
                     aria-describedby={errors.email ? `${id}-email-error` : undefined}
                   />
@@ -98,7 +70,6 @@ export function SignUpForm() {
                 <Field data-invalid={errors.password ? true : undefined}>
                   <FieldLabel htmlFor={`${id}-password`}>Password</FieldLabel>
                   <Input
-                    ref={passwordRef}
                     id={`${id}-password`}
                     name="password"
                     type="password"
@@ -123,9 +94,9 @@ export function SignUpForm() {
       {/* A live region that exists before it has content, so the notice is read out when it appears. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <div role="status">
-        {!clientErrors && state.status === "error" && state.message && (
+        {result?.status === "error" && result.message && (
           <AuthNotice title="Couldn't create the account" fail>
-            {state.message}
+            {result.message}
           </AuthNotice>
         )}
       </div>
