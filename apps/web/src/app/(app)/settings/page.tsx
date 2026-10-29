@@ -1,22 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { Container } from "@/components/app/container";
 import { AppPageHeader } from "@/components/app/page-header";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ProfileForm } from "@/components/settings/profile-form";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { sampleProfile, sampleTimezones } from "@/lib/sample/account";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getSettingsProfile, timeZoneOptions } from "@/lib/settings/profile";
+
+import { signOutEverywhere } from "@/app/(auth)/actions";
 
 export const metadata: Metadata = { title: "Settings" };
 
-// SAMPLE profile until Phase 2 and 8. TODO(zia): the signed-in learner's profile row.
 export default function SettingsPage() {
   return (
     <Container>
       <AppPageHeader title="Settings" description="Your profile, reminders and account." />
-      <ProfileForm profile={sampleProfile} timezones={sampleTimezones} />
+      {/* cacheComponents: the profile read uses cookies, so it streams inside Suspense. */}
+      <Suspense fallback={<SettingsLoading />}>
+        <AccountSettings />
+      </Suspense>
       <Card>
         <CardHeader>
           <CardTitle>
@@ -30,6 +36,34 @@ export default function SettingsPage() {
           </CardAction>
         </CardHeader>
       </Card>
+    </Container>
+  );
+}
+
+async function AccountSettings() {
+  const profile = await getSettingsProfile();
+  // Signed out: proxy.ts redirects to sign-in, so show nothing here.
+  if (!profile) return null;
+  return (
+    <>
+      <ProfileForm profile={profile} timezones={timeZoneOptions(profile.timezone)} />
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Sign out everywhere</h2>
+          </CardTitle>
+          <CardDescription>
+            Signs you out on every browser and device, including this one.
+          </CardDescription>
+          <CardAction>
+            <form action={signOutEverywhere}>
+              <Button type="submit" variant="secondary" size="sm">
+                Sign out everywhere
+              </Button>
+            </form>
+          </CardAction>
+        </CardHeader>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>
@@ -39,10 +73,21 @@ export default function SettingsPage() {
             Deletes your sessions, cards, answers and tokens. It can&apos;t be undone.
           </CardDescription>
           <CardAction>
-            <DeleteAccountDialog email={sampleProfile.email} />
+            <DeleteAccountDialog email={profile.email ?? ""} />
           </CardAction>
         </CardHeader>
       </Card>
-    </Container>
+    </>
+  );
+}
+
+function SettingsLoading() {
+  return (
+    <div className="flex flex-col gap-6">
+      <output className="sr-only">Loading your settings</output>
+      <Skeleton aria-hidden className="h-96" />
+      <Skeleton aria-hidden className="h-24" />
+      <Skeleton aria-hidden className="h-24" />
+    </div>
   );
 }

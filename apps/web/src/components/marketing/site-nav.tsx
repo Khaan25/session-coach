@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { BrandMark } from "@/components/brand-mark";
-import { sampleUser } from "@/lib/sample/account";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { getProfile } from "@/lib/auth/profile";
 
-import { SiteNavAccount } from "./site-nav-account";
+import { type SiteNavUser, SiteNavAccount } from "./site-nav-account";
 import { SiteNavMenu } from "./site-nav-menu";
 
 const links = [
@@ -11,6 +14,32 @@ const links = [
   { href: "/pricing", label: "Pricing" },
   { href: "/support", label: "Support" },
 ] as const;
+
+function initials(name: string) {
+  const words = name.split(/[\s@._-]+/).filter(Boolean);
+  const letters = (words[0]?.[0] ?? "") + (words.length > 1 ? (words.at(-1)?.[0] ?? "") : "");
+  return letters.toUpperCase() || "?";
+}
+
+/**
+ * The signed-in learner for the header, or null. It reads cookies, so it renders inside <Suspense> and only per
+ * request: never prerendered or cached, so one learner's name can't reach another visitor (docs/plans/auth.md #20).
+ */
+async function SiteNavSession() {
+  const claims = await getCurrentUser();
+  let user: SiteNavUser | null = null;
+  if (claims) {
+    // A failed profile read still shows the account, by its email, rather than "Sign in".
+    const profile = await getProfile().catch((error: unknown) => {
+      console.error("SiteNav: getProfile", error);
+      return null;
+    });
+    const email = profile?.email ?? claims.email ?? "";
+    const name = profile?.display_name ?? (email.split("@")[0] || "Your account");
+    user = { name, email, initials: initials(name) };
+  }
+  return <SiteNavAccount user={user} />;
+}
 
 export function SiteNav() {
   return (
@@ -37,8 +66,9 @@ export function SiteNav() {
         </ul>
         <div className="flex items-center gap-2">
           <SiteNavMenu links={links} />
-          {/* SAMPLE: shown signed in. TODO(zia): the Supabase session's user, or null when signed out (Phase 2). */}
-          <SiteNavAccount user={sampleUser} />
+          <Suspense fallback={<Skeleton className="h-(--control) w-24" />}>
+            <SiteNavSession />
+          </Suspense>
         </div>
       </nav>
     </header>

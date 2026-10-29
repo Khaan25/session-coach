@@ -1,14 +1,15 @@
 "use client";
 
-import { GoogleLogoIcon, InfoIcon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useId, useRef, useState } from "react";
+import { useActionState, useId, useRef, useState } from "react";
 
+import { type AuthState, requestReset } from "@/app/(auth)/actions";
+import { AuthNotice } from "@/components/auth/auth-notice";
+import { GoogleForm } from "@/components/auth/google-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 
 function validate(email: string): string | undefined {
   if (!email) return "Enter your email address.";
@@ -17,30 +18,23 @@ function validate(email: string): string | undefined {
 }
 
 /**
- * The reset request from docs/plans/auth.md, as a UI mock: it validates, then shows the same notice for every address
- * (no account enumeration, #4). Nothing is sent or stored, and there is no form action.
+ * The reset request (docs/plans/auth.md): the requestReset Server Action, then the same notice for every address, so
+ * the page never says whether an account exists (#4). Google-only accounts can sign in with Google instead (#16).
  */
 export function ForgotPasswordForm() {
   const id = useId();
   const emailRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string>();
-  const [notice, setNotice] = useState<"reset" | "google">();
+  const [state, action, pending] = useActionState<AuthState, FormData>(requestReset, {});
+  // Set when the browser-side check fails; cleared when a submit goes through, so the server's answer shows.
+  const [clientError, setClientError] = useState<string>();
+  const error = clientError ?? state.fields?.email;
 
-  // TODO(zia): call the requestReset Server Action (auth.resetPasswordForEmail, redirectTo
-  // <origin>/auth/confirm?next=/update-password). Show the same notice whatever it returns.
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const found = validate(emailRef.current?.value.trim() ?? "");
+    setClientError(found);
+    if (!found) return;
     event.preventDefault();
-    const next = validate(emailRef.current?.value.trim() ?? "");
-    setError(next);
-    if (next) emailRef.current?.focus();
-    setNotice(next ? undefined : "reset");
-  }
-
-  // Google-only accounts have no password to reset (docs/plans/auth.md #16).
-  // TODO(zia): call the signInWithGoogle Server Action (auth.signInWithOAuth, redirectTo from the request origin).
-  function handleGoogle() {
-    setError(undefined);
-    setNotice("google");
+    emailRef.current?.focus();
   }
 
   return (
@@ -48,7 +42,7 @@ export function ForgotPasswordForm() {
       <Card size="lg">
         <CardContent>
           <FieldGroup>
-            <form noValidate onSubmit={handleSubmit}>
+            <form noValidate action={action} onSubmit={handleSubmit}>
               <FieldGroup>
                 <Field data-invalid={error ? true : undefined}>
                   <FieldLabel htmlFor={`${id}-email`}>Email</FieldLabel>
@@ -60,21 +54,19 @@ export function ForgotPasswordForm() {
                     autoComplete="email"
                     inputMode="email"
                     spellCheck={false}
+                    defaultValue={state.email}
                     aria-invalid={error ? true : undefined}
                     aria-describedby={error ? `${id}-email-error` : undefined}
                   />
                   <FieldError id={`${id}-email-error`}>{error}</FieldError>
                 </Field>
-                <Button type="submit" size="lg">
+                <Button type="submit" size="lg" disabled={pending}>
                   Send reset link
                 </Button>
               </FieldGroup>
             </form>
             <FieldSeparator>or, if you signed up with Google</FieldSeparator>
-            <Button type="button" variant="secondary" size="lg" onClick={handleGoogle}>
-              <GoogleLogoIcon weight="bold" data-icon="inline-start" aria-hidden />
-              Continue with Google
-            </Button>
+            <GoogleForm />
           </FieldGroup>
         </CardContent>
       </Card>
@@ -82,30 +74,16 @@ export function ForgotPasswordForm() {
       {/* A live region that exists before it has content, so the notice is read out when it appears. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <div role="status">
-        {notice && (
-          <Item variant="outline">
-            <ItemMedia variant="icon">
-              <InfoIcon weight="duotone" aria-hidden />
-            </ItemMedia>
-            <ItemContent>
-              {notice === "reset" ? (
-                <>
-                  <ItemTitle>Check your email</ItemTitle>
-                  <ItemDescription>
-                    If an account exists for that address, we sent a link to reset the password.
-                    Accounts arrive with the next release, so nothing was sent yet.
-                  </ItemDescription>
-                </>
-              ) : (
-                <>
-                  <ItemTitle>Sign-in isn&apos;t open yet</ItemTitle>
-                  <ItemDescription>
-                    Accounts arrive with the next release. Nothing you typed was sent or saved.
-                  </ItemDescription>
-                </>
-              )}
-            </ItemContent>
-          </Item>
+        {!clientError && state.status === "sent" && (
+          <AuthNotice title="Check your email">
+            If an account exists for that address, we sent a link to reset the password. Open it on
+            this device.
+          </AuthNotice>
+        )}
+        {!clientError && state.status === "error" && state.message && (
+          <AuthNotice title="Couldn't send the link" fail>
+            {state.message}
+          </AuthNotice>
         )}
       </div>
 

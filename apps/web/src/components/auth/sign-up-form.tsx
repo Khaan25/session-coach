@@ -1,10 +1,11 @@
 "use client";
 
-import { GoogleLogoIcon, InfoIcon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useActionState, useId, useRef, useState } from "react";
 
+import { type AuthState, signUp } from "@/app/(auth)/actions";
+import { AuthNotice } from "@/components/auth/auth-notice";
+import { GoogleForm } from "@/components/auth/google-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -16,7 +17,6 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 
 type Errors = { email?: string; password?: string };
 
@@ -35,36 +35,27 @@ function validate(email: string, password: string): Errors {
 }
 
 /**
- * The sign-up form from docs/plans/auth.md, as a UI mock: it validates, then moves to "check your email". Nothing is
- * sent or stored, and there is no form action, so the browser never posts the fields anywhere.
+ * The sign-up form (docs/plans/auth.md): the signUp Server Action, then "check your email" whether or not the address
+ * already has an account (#3). Only problems with the password or the rate limit come back to this form.
  */
 export function SignUpForm() {
   const id = useId();
-  const router = useRouter();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const [errors, setErrors] = useState<Errors>({});
-  const [notice, setNotice] = useState(false);
+  const [state, action, pending] = useActionState<AuthState, FormData>(signUp, {});
+  // Set when the browser-side check fails; cleared when a submit goes through, so the server's answer shows.
+  const [clientErrors, setClientErrors] = useState<Errors>();
+  const errors = clientErrors ?? state.fields ?? {};
 
-  // TODO(zia): call the signUp Server Action (auth.signUp, emailRedirectTo <origin>/auth/confirm?next=/dashboard,
-  // data.full_name from the name field, or null when blank). Land on "check your email" whatever it returns (#3).
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
     const email = emailRef.current?.value.trim() ?? "";
     const password = passwordRef.current?.value ?? "";
-    const next = validate(email, password);
-    setErrors(next);
-    setNotice(false);
-    if (next.email) emailRef.current?.focus();
-    else if (next.password) passwordRef.current?.focus();
-    // A page change, not a request: nothing typed goes with it.
-    else router.push("/sign-up/check-email");
-  }
-
-  // TODO(zia): call the signInWithGoogle Server Action (auth.signInWithOAuth, redirectTo from the request origin).
-  function handleGoogle() {
-    setErrors({});
-    setNotice(true);
+    const found = validate(email, password);
+    if (!found.email && !found.password) return setClientErrors(undefined);
+    event.preventDefault();
+    setClientErrors(found);
+    if (found.email) emailRef.current?.focus();
+    else passwordRef.current?.focus();
   }
 
   const passwordDescribedBy = `${id}-password-hint${errors.password ? ` ${id}-password-error` : ""}`;
@@ -74,16 +65,19 @@ export function SignUpForm() {
       <Card size="lg">
         <CardContent>
           <FieldGroup>
-            <Button type="button" variant="secondary" size="lg" onClick={handleGoogle}>
-              <GoogleLogoIcon weight="bold" data-icon="inline-start" aria-hidden />
-              Continue with Google
-            </Button>
+            <GoogleForm />
             <FieldSeparator>or</FieldSeparator>
-            <form noValidate onSubmit={handleSubmit}>
+            <form noValidate action={action} onSubmit={handleSubmit}>
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor={`${id}-name`}>Name (optional)</FieldLabel>
-                  <Input id={`${id}-name`} name="name" type="text" autoComplete="name" />
+                  <Input
+                    id={`${id}-name`}
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    maxLength={100}
+                  />
                 </Field>
                 <Field data-invalid={errors.email ? true : undefined}>
                   <FieldLabel htmlFor={`${id}-email`}>Email</FieldLabel>
@@ -95,6 +89,7 @@ export function SignUpForm() {
                     autoComplete="email"
                     inputMode="email"
                     spellCheck={false}
+                    defaultValue={state.email}
                     aria-invalid={errors.email ? true : undefined}
                     aria-describedby={errors.email ? `${id}-email-error` : undefined}
                   />
@@ -116,7 +111,7 @@ export function SignUpForm() {
                   </FieldDescription>
                   <FieldError id={`${id}-password-error`}>{errors.password}</FieldError>
                 </Field>
-                <Button type="submit" size="lg">
+                <Button type="submit" size="lg" disabled={pending}>
                   Create account
                 </Button>
               </FieldGroup>
@@ -128,18 +123,10 @@ export function SignUpForm() {
       {/* A live region that exists before it has content, so the notice is read out when it appears. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <div role="status">
-        {notice && (
-          <Item variant="outline">
-            <ItemMedia variant="icon">
-              <InfoIcon weight="duotone" aria-hidden />
-            </ItemMedia>
-            <ItemContent>
-              <ItemTitle>Sign-up isn&apos;t open yet</ItemTitle>
-              <ItemDescription>
-                Accounts arrive with the next release. Nothing you typed was sent or saved.
-              </ItemDescription>
-            </ItemContent>
-          </Item>
+        {!clientErrors && state.status === "error" && state.message && (
+          <AuthNotice title="Couldn't create the account" fail>
+            {state.message}
+          </AuthNotice>
         )}
       </div>
 

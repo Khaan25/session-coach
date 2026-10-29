@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { CaretUpDownIcon, GearIcon, SignOutIcon } from "@phosphor-icons/react";
+import { useRef } from "react";
 
+import { signOut } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -23,6 +25,7 @@ import {
 
 export function NavUser({ user }: { user: { name: string; detail: string; initials: string } }) {
   const { isMobile } = useSidebar();
+  const signOutRef = useRef<HTMLFormElement>(null);
   const who = (
     <>
       <Avatar aria-hidden>
@@ -37,6 +40,9 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
   return (
     <SidebarMenu>
       <SidebarMenuItem>
+        {/* Sign-out is a POST, never a GET link (docs/plans/auth.md #26). The form sits outside the menu popup, which
+        unmounts on close; the menu item submits it. */}
+        <form ref={signOutRef} action={signOut} hidden />
         <DropdownMenu>
           <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
             {who}
@@ -59,8 +65,7 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
               Settings
             </DropdownMenuLinkItem>
             <DropdownMenuSeparator />
-            {/* TODO(zia): sign out through Supabase Auth (docs/plans/auth.md). */}
-            <DropdownMenuItem disabled>
+            <DropdownMenuItem onClick={() => signOutRef.current?.requestSubmit()}>
               <SignOutIcon />
               Sign out
             </DropdownMenuItem>
