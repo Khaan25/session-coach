@@ -24,6 +24,12 @@ test("falls back to /dashboard when dot segments normalise to a protocol-relativ
   }
 });
 
+test("falls back to /dashboard when tabs or newlines hide a protocol-relative path", () => {
+  for (const next of ["/\t/evil.com", "\t//evil.com", "/\n/evil.com", "/\r\n/evil.com"]) {
+    assert.equal(safeNext(next, origin), "/dashboard", JSON.stringify(next));
+  }
+});
+
 test("falls back to /dashboard when next is missing", () => {
   assert.equal(safeNext("", origin), "/dashboard");
   assert.equal(safeNext(null, origin), "/dashboard");
