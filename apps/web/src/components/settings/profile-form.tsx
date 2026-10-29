@@ -94,7 +94,8 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
                 aria-describedby={`${id}-email-hint`}
               />
               <FieldDescription id={`${id}-email-hint`}>
-                Comes from how you sign in. TODO(zia): how to change it.
+                Comes from how you sign in.
+                {/* TODO(zia): say how to change it. */}
               </FieldDescription>
             </Field>
             <Field>
@@ -128,9 +129,16 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
             <Field orientation="horizontal">
               <FieldContent>
                 <FieldLabel htmlFor={`${id}-notify`}>Email reminders</FieldLabel>
-                <FieldDescription>An email on days when cards are due.</FieldDescription>
+                <FieldDescription id={`${id}-notify-hint`}>
+                  An email on days when cards are due.
+                </FieldDescription>
               </FieldContent>
-              <Switch id={`${id}-notify`} checked={notify} onCheckedChange={setNotify} />
+              <Switch
+                id={`${id}-notify`}
+                aria-describedby={`${id}-notify-hint`}
+                checked={notify}
+                onCheckedChange={setNotify}
+              />
             </Field>
           </FieldGroup>
         </CardContent>
