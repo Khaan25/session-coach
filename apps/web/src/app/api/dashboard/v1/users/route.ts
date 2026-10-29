@@ -5,6 +5,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireDashboardKey } from "@/lib/dashboard-api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
@@ -17,11 +18,17 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
 
   const params = req.nextUrl.searchParams;
-  const limit = Math.min(
-    MAX_LIMIT,
-    Math.max(1, Number.parseInt(params.get("limit") ?? "", 10) || DEFAULT_LIMIT),
-  );
-  const page = Math.max(1, Number.parseInt(params.get("cursor") ?? "", 10) || 1);
+  const limit = parsePositiveInt(params.get("limit"), DEFAULT_LIMIT);
+  const page = parsePositiveInt(params.get("cursor"), 1);
+  if (limit === null || limit > MAX_LIMIT) {
+    return NextResponse.json(
+      { error: `limit must be an integer from 1 to ${MAX_LIMIT}` },
+      { status: 400 },
+    );
+  }
+  if (page === null) {
+    return NextResponse.json({ error: "cursor must be a positive integer" }, { status: 400 });
+  }
   const plan = params.get("plan");
   const stage = params.get("stage");
 
@@ -49,6 +56,7 @@ export async function GET(req: NextRequest) {
       .from("profiles")
       .select("id, email, display_name, created_at")
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, from + limit - 1);
     if (profiles.error) throw profiles.error;
 
@@ -81,15 +89,35 @@ export async function GET(req: NextRequest) {
 async function lastSeenByUser(supabase: ReturnType<typeof createAdminClient>, ids: string[]) {
   const latest = new Map<string, string>();
   if (ids.length === 0) return latest;
+  // shortcut: reads every activity row for the page's users; move to a max(created_at) view when it gets slow.
   const [uploads, answers] = await Promise.all([
-    supabase.from("sessions").select("user_id, created_at").in("user_id", ids),
-    supabase.from("answers").select("user_id, created_at").in("user_id", ids),
+    fetchAll<{ user_id: string; created_at: string }>((from, to) =>
+      supabase
+        .from("sessions")
+        .select("user_id, created_at")
+        .in("user_id", ids)
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAll<{ user_id: string; created_at: string }>((from, to) =>
+      supabase
+        .from("answers")
+        .select("user_id, created_at")
+        .in("user_id", ids)
+        .order("id")
+        .range(from, to),
+    ),
   ]);
-  if (uploads.error) throw uploads.error;
-  if (answers.error) throw answers.error;
-  for (const row of [...uploads.data, ...answers.data]) {
+  for (const row of [...uploads, ...answers]) {
     const current = latest.get(row.user_id);
     if (!current || row.created_at > current) latest.set(row.user_id, row.created_at);
   }
   return latest;
+}
+
+/** A query value as a positive integer: the fallback when absent, null when malformed. */
+function parsePositiveInt(value: string | null, fallback: number): number | null {
+  if (value === null || value === "") return fallback;
+  if (!/^[1-9]\d*$/.test(value)) return null;
+  return Number(value);
 }

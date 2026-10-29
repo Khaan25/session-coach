@@ -18,14 +18,10 @@ export function utcDay(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-export function countNewUsers(createdAt: readonly string[], now: Date, days: number): number {
-  const since = now.getTime() - days * DAY_MS;
-  return createdAt.filter((iso) => Date.parse(iso) >= since).length;
-}
-
 /**
  * For each signup day, how many of that day's accounts were active EXACTLY 1, 7 and 30 UTC days
- * later. A window the cohort hasn't lived through yet is omitted, never sent as 0.
+ * later. A window is reported only once its whole UTC day has passed; until then it is omitted,
+ * never sent as 0. Callers pass only cohorts whose windows fall inside the activity they read.
  */
 export function buildRetentionCohorts(
   profiles: readonly { id: string; created_at: string }[],
@@ -62,9 +58,9 @@ export function buildRetentionCohorts(
     .map(([date, row]) => {
       const age = (today - Date.parse(date)) / DAY_MS;
       const cohort: RetentionCohort = { date, signups: row.signups };
-      if (age >= 1) cohort.d1 = row.d1;
-      if (age >= 7) cohort.d7 = row.d7;
-      if (age >= 30) cohort.d30 = row.d30;
+      if (age > 1) cohort.d1 = row.d1;
+      if (age > 7) cohort.d7 = row.d7;
+      if (age > 30) cohort.d30 = row.d30;
       return cohort;
     });
 }

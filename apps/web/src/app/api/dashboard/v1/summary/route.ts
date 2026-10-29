@@ -5,10 +5,14 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 import { requireDashboardKey } from "@/lib/dashboard-api-auth";
-import { buildRetentionCohorts, countNewUsers } from "@/lib/play-stats";
+import { buildRetentionCohorts } from "@/lib/play-stats";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 
 const PLAY = process.env.PLAY_SLUG ?? "session-coach";
+const DAY_MS = 86_400_000;
+/** Cohorts and activity are read for this many days; every window of these cohorts falls inside it. */
+const RETENTION_DAYS = 120;
 
 export async function GET(req: NextRequest) {
   const denied = requireDashboardKey(req);
@@ -17,32 +21,60 @@ export async function GET(req: NextRequest) {
   try {
     const now = new Date();
     const supabase = createAdminClient();
-    // shortcut: reads every profile and activity row; move to SQL aggregates past ~10k users.
-    const profiles = await supabase.from("profiles").select("id, created_at");
-    if (profiles.error) throw profiles.error;
-    const rows = profiles.data;
-    const createdAt = rows.map((p) => p.created_at);
+    const daysAgo = (days: number) => new Date(now.getTime() - days * DAY_MS).toISOString();
+    // Exact counts in Postgres: no row limit applies to them.
+    const countProfiles = (since?: string) => {
+      const query = supabase.from("profiles").select("id", { count: "exact", head: true });
+      return since ? query.gte("created_at", since) : query;
+    };
+    const [total, last7, last30] = await Promise.all([
+      countProfiles(),
+      countProfiles(daysAgo(7)),
+      countProfiles(daysAgo(30)),
+    ]);
+    for (const result of [total, last7, last30]) if (result.error) throw result.error;
+    const usersTotal = total.count ?? 0;
 
     const body: Record<string, unknown> = {
       play: PLAY,
-      users_total: rows.length,
-      users_by_plan: { free: rows.length },
-      new_users_7d: countNewUsers(createdAt, now, 7),
-      new_users_30d: countNewUsers(createdAt, now, 30),
+      users_total: usersTotal,
+      users_by_plan: { free: usersTotal },
+      new_users_7d: last7.count ?? 0,
+      new_users_30d: last30.count ?? 0,
       generated_at: now.toISOString(),
     };
 
     // Retention is the expensive, optional part: a failure omits it instead of failing the summary.
     try {
-      const since = new Date(now.getTime() - 120 * 86_400_000).toISOString();
-      const [uploads, answers] = await Promise.all([
-        supabase.from("sessions").select("user_id, created_at").gte("created_at", since),
-        supabase.from("answers").select("user_id, created_at").gte("created_at", since),
+      const since = daysAgo(RETENTION_DAYS);
+      const [cohorts, uploads, answers] = await Promise.all([
+        fetchAll<{ id: string; created_at: string }>((from, to) =>
+          supabase
+            .from("profiles")
+            .select("id, created_at")
+            .gte("created_at", since)
+            .order("id")
+            .range(from, to),
+        ),
+        fetchAll<{ user_id: string; created_at: string }>((from, to) =>
+          supabase
+            .from("sessions")
+            .select("user_id, created_at")
+            .gte("created_at", since)
+            .order("id")
+            .range(from, to),
+        ),
+        fetchAll<{ user_id: string; created_at: string }>((from, to) =>
+          supabase
+            .from("answers")
+            .select("user_id, created_at")
+            .gte("created_at", since)
+            .order("id")
+            .range(from, to),
+        ),
       ]);
-      if (uploads.error) throw uploads.error;
-      if (answers.error) throw answers.error;
-      const cohorts = buildRetentionCohorts(rows, [...uploads.data, ...answers.data], now);
-      if (cohorts.length > 0) body.retention = { cohorts };
+      const retention = buildRetentionCohorts(cohorts, [...uploads, ...answers], now);
+      if (retention.length > 0) body.retention = { cohorts: retention };
     } catch (err) {
       console.error("[api/dashboard/v1/summary] retention omitted", err);
     }
