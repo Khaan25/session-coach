@@ -14,7 +14,7 @@ import { Code } from "@/components/ui/code-block";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Item, ItemContent, ItemDescription, ItemGroup } from "@/components/ui/item";
 import { Status } from "@/components/ui/status";
-import type { CardView } from "@/lib/sample/cards";
+import type { CardView } from "@/lib/cards/columns";
 
 /**
  * One decision card on /s/[id]: the decision, why, where the reason came from, the files, the evidence quotes and
