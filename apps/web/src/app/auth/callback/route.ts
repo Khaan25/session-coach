@@ -24,5 +24,10 @@ export async function GET(request: NextRequest) {
     console.error("auth/callback", error);
     return NextResponse.redirect(new URL("/auth/error?code=oauth_failed", origin));
   }
-  return NextResponse.redirect(new URL(safeNext(searchParams.get("next"), origin), origin));
+  const response = NextResponse.redirect(
+    new URL(safeNext(searchParams.get("next"), origin), origin),
+  );
+  // It sets the session cookies, so no cache may keep it (docs/plans/auth.md #20).
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
 }
