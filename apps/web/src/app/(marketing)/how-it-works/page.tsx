@@ -117,7 +117,9 @@ export default function Page() {
                 <CardHeader>
                   <CardTitle>
                     <span className="flex items-center gap-3">
-                      <span className="type-label text-text-3 tabular-nums">{index + 1}</span>
+                      <span aria-hidden className="type-label text-text-3 tabular-nums">
+                        {index + 1}
+                      </span>
                       <Icon weight="duotone" className="size-5" aria-hidden />
                       <span>
                         <span className="sr-only">Step {index + 1}: </span>
