@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 const COPY = {
   link_expired: {
     title: "This link has expired",
-    body: "Links in our emails work once and expire after a while. Ask for a new one below.",
+    body: "Links in our emails work once and expire after a while. Sign in to get a new confirmation link, or reset your password for a new reset link.",
   },
   invalid_link: {
     title: "This link is incomplete",
@@ -75,7 +75,7 @@ export default function AuthErrorPage({ searchParams }: PageProps<"/auth/error">
           href="/forgot-password"
           className={buttonVariants({ variant: "secondary", size: "lg" })}
         >
-          Get a new link
+          Reset password
         </Link>
       </div>
     </>

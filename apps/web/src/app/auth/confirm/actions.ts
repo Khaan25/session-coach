@@ -1,25 +1,11 @@
 "use server";
 
-import type { EmailOtpType } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { isOtpType } from "@/lib/auth/otp";
 import { safeNext } from "@/lib/auth/safe-next";
 import { createClient } from "@/lib/supabase/server";
-
-const OTP_TYPES: readonly EmailOtpType[] = [
-  "signup",
-  "invite",
-  "magiclink",
-  "recovery",
-  "email_change",
-  "email",
-];
-
-/** Whether a form value is an OTP type Supabase accepts; the field comes from the email link, so it is untrusted. */
-function isOtpType(value: unknown): value is EmailOtpType {
-  return OTP_TYPES.includes(value as EmailOtpType);
-}
 
 /**
  * Spends the email link's one-time token (`verifyOtp`), which signs the learner in, then goes to `next` when it stays
@@ -34,6 +20,13 @@ export async function confirmEmail(formData: FormData): Promise<void> {
   if (typeof tokenHash !== "string" || !tokenHash || !isOtpType(type))
     redirect("/auth/error?code=invalid_link");
 
+  // Checked before the token is spent, like the other auth actions: without it `next` can't be checked.
+  const origin = (await headers()).get("origin");
+  if (!origin) {
+    console.error("auth/confirmEmail", "missing Origin header");
+    redirect("/auth/error?code=confirm_failed");
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
   if (error) {
@@ -43,8 +36,6 @@ export async function confirmEmail(formData: FormData): Promise<void> {
     );
   }
 
-  // Next.js runs a Server Action only when Origin matches the host, so this is this deployment's origin.
-  const origin = (await headers()).get("origin");
   const next = formData.get("next");
-  redirect(origin ? safeNext(typeof next === "string" ? next : null, origin) : "/dashboard");
+  redirect(safeNext(typeof next === "string" ? next : null, origin));
 }

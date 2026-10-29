@@ -3,7 +3,8 @@ import { Suspense } from "react";
 
 import { AuthCard, AuthHeading, AuthSwitch } from "@/components/auth/auth-parts";
 import { AuthNotice } from "@/components/auth/auth-notice";
-import { Button } from "@/components/ui/button";
+import { ConfirmButton } from "@/components/auth/confirm-button";
+import { isOtpType } from "@/lib/auth/otp";
 
 import { confirmEmail } from "./actions";
 
@@ -21,7 +22,7 @@ async function ConfirmForm({ searchParams }: Pick<PageProps<"/auth/confirm">, "s
   const params = await searchParams;
   const tokenHash = first(params.token_hash);
   const type = first(params.type);
-  if (!tokenHash || !type)
+  if (!tokenHash || !isOtpType(type))
     return (
       <AuthNotice title="This link is incomplete" fail>
         Open the link from the email again, or copy the whole address into the browser.
@@ -35,9 +36,9 @@ async function ConfirmForm({ searchParams }: Pick<PageProps<"/auth/confirm">, "s
         <input type="hidden" name="token_hash" value={tokenHash} />
         <input type="hidden" name="type" value={type} />
         <input type="hidden" name="next" value={first(params.next) ?? ""} />
-        <Button type="submit" size="lg">
+        <ConfirmButton>
           {recovery ? "Continue to set a password" : "Confirm and sign in"}
-        </Button>
+        </ConfirmButton>
       </form>
     </AuthCard>
   );
