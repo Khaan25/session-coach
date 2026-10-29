@@ -18,8 +18,10 @@ function niceScale(min: number, max: number, count = 4) {
   const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * magnitude;
   const lo = Math.floor(min / step) * step;
   const hi = Math.ceil(max / step) * step;
+  // By index, not `t += step`: past 2^53 a small step stops advancing t and the loop never ends.
+  const last = Math.min(Math.round((hi - lo) / step), 1000);
   const ticks: number[] = [];
-  for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Number(t.toPrecision(12)));
+  for (let i = 0; i <= last; i++) ticks.push(Number((lo + i * step).toPrecision(12)));
   return { min: lo, max: hi, ticks };
 }
 

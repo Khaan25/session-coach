@@ -26,8 +26,6 @@ import { SidebarIcon } from "@phosphor-icons/react";
 // current page, the design system's focus ring drawn inside each row. Floating and inset take the frame instead of a
 // shadow. The width, collapse and offcanvas transitions are shadcn's, unchanged.
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
@@ -82,9 +80,6 @@ function SidebarProvider({
       } else {
         _setOpen(openState);
       }
-
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
     },
     [setOpenProp, open],
   );
@@ -360,7 +355,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "no-scrollbar flex min-h-0 flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex min-h-0 flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
         className,
       )}
       {...props}
@@ -663,10 +658,16 @@ function SidebarMenuSubButton({
     size?: "sm" | "md";
     isActive?: boolean;
   }) {
+  const { isMobile, setOpenMobile } = useSidebar();
   return useRender({
     defaultTagName: "a",
     props: mergeProps<"a">(
       {
+        "aria-current": isActive ? "page" : undefined,
+        // A link closes the mobile sheet, as in SidebarMenuButton.
+        onClick: (event) => {
+          if (isMobile && event.currentTarget instanceof HTMLAnchorElement) setOpenMobile(false);
+        },
         className: cn(
           "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-inner px-2 text-text-2 outline-hidden group-data-[collapsible=icon]:hidden hover:bg-hover hover:text-text-1 focus-visible:focus-ring-inset active:bg-pressed disabled:pointer-events-none disabled:text-text-disabled aria-disabled:pointer-events-none aria-disabled:text-text-disabled data-[size=md]:type-label data-[size=sm]:type-label-sm data-active:bg-selected data-active:text-text-1 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-text-2",
           className,

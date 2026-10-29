@@ -70,7 +70,7 @@ export function TokenSection({
             sampleToken={sampleToken}
             onCreate={(label) =>
               setTokens((rows) => [
-                { id: `new-${rows.length}`, label, created: "now", lastUsed: null },
+                { id: crypto.randomUUID(), label, created: "now", lastUsed: null },
                 ...rows,
               ])
             }

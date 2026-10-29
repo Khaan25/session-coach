@@ -100,6 +100,7 @@ function CopyButton({
 
   const copy = async () => {
     clearTimeout(timer.current);
+    let copied: string | undefined;
     try {
       let text: string;
       const result = typeof value === "function" ? value() : value;
@@ -111,9 +112,9 @@ function CopyButton({
         setState("fetching");
         text = await writing;
       }
+      copied = text;
       setState("copied");
       announce(label ? `${label} copied` : "Copied");
-      onCopy?.(text);
     } catch {
       setState("failed");
       announce("Could not copy. Select the text and copy it by hand.");
@@ -122,6 +123,8 @@ function CopyButton({
       setState("idle");
       setAnnouncement("");
     }, timeout);
+    // Outside the try: a throwing callback is the caller's error, not a failed copy.
+    if (copied !== undefined) onCopy?.(copied);
   };
 
   const fetching = state === "fetching";

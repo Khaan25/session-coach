@@ -61,7 +61,7 @@ function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
-        "group/toast pointer-events-auto absolute end-0 bottom-0 z-[calc(1000-var(--toast-index))] w-full origin-bottom rounded-frame bg-page text-text-1 shadow-overlay will-change-transform outline-none select-none focus-visible:focus-ring data-[pulse=even]:animate-toast-pulse-even data-[pulse=odd]:animate-toast-pulse-odd forced-colors:outline-1 forced-colors:outline-solid",
+        "group/toast pointer-events-auto absolute end-0 bottom-0 z-[calc(1000-var(--toast-index))] w-full origin-bottom rounded-frame bg-page text-text-1 shadow-overlay will-change-transform outline-none select-none focus-visible:focus-ring motion-safe:data-[pulse=even]:animate-toast-pulse-even motion-safe:data-[pulse=odd]:animate-toast-pulse-odd forced-colors:outline-1 forced-colors:outline-solid",
         "[--gap:0.75rem] [--height:var(--toast-frontmost-height,var(--toast-height))] [--offset-y:calc(var(--toast-offset-y)*-1+calc(var(--toast-index)*var(--gap)*-1)+var(--toast-swipe-movement-y))] [--peek:0.75rem] [--scale:calc(max(0,1-(var(--toast-index)*0.1)))] [--shrink:calc(1-var(--scale))]",
         "h-(--height) transform-[translateX(var(--toast-swipe-movement-x))_translateY(calc(var(--toast-swipe-movement-y)-(var(--toast-index)*var(--peek))-(var(--shrink)*var(--height))))_scale(var(--scale))] [transition:transform_500ms_var(--ease-out-quint),opacity_500ms,height_150ms]",
         "after:absolute after:start-0 after:top-full after:h-[calc(var(--gap)+1px)] after:w-full after:content-['']",
@@ -178,7 +178,12 @@ function ToastIcon({ type }: { type: string | undefined }) {
   }
 
   if (type === "loading") {
-    icon = <SpinnerIcon className="animate-spin" aria-hidden="true" />;
+    icon = (
+      <SpinnerIcon
+        className="animate-spin motion-reduce:[animation-duration:3s]"
+        aria-hidden="true"
+      />
+    );
   }
 
   if (!icon) {

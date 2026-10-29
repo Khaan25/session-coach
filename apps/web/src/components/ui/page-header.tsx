@@ -21,7 +21,7 @@ import { mergeRefs } from "@/lib/ui/utils";
 // viewport: title and actions share a row from 768px of header (@3xl), and below that the actions drop
 // under the description.
 //
-// The considered detail is condense. With it on, when the title scrolls out of view a bar the height of the top bar slides
+// The considered detail is condense. With it on, when the header scrolls out of view a bar the height of the top bar slides
 // in at the top of the scroll area holding the same title and the same actions, so "Create key" is
 // never more than one reach away on a long page. The bar takes no space in the flow (a zero-height
 // sticky), so nothing below it moves when it appears, and it is inert while hidden.
@@ -84,25 +84,26 @@ function PageHeader({
   const [stuck, setStuck] = useState(false);
 
   useEffect(() => {
-    if (!condense) return;
-    const target = header.current?.querySelector("[data-slot=page-header-title]");
-    if (!target) return;
+    const target = anchor.current;
+    if (!condense || !target) return;
     const root = scrollParent(header.current);
     // The anchor's computed top resolves condenseTop (a var() or calc()) to px.
-    const top = anchor.current ? parseFloat(getComputedStyle(anchor.current).top) || 0 : 0;
+    const top = parseFloat(getComputedStyle(target).top) || 0;
+    // Watch the anchor, not the title: the bar hangs off the anchor, so it shows only once the anchor has
+    // reached its sticky edge, never over the stats or content below the header. The anchor follows the
+    // header, so the title is already out of view by then. The extra 1px lets the stuck, zero-height anchor
+    // leave the root box.
     const io = new IntersectionObserver(
       ([entry]) => {
-        // Stuck once the title is fully above the top edge of the scroll area.
         setStuck(
-          !entry.isIntersecting &&
-            entry.boundingClientRect.top < (entry.rootBounds?.top ?? 0) + top,
+          !entry.isIntersecting && entry.boundingClientRect.top < (entry.rootBounds?.top ?? 0),
         );
       },
-      { root, rootMargin: `-${top}px 0px 0px 0px` },
+      { root, rootMargin: `-${top + 1}px 0px 0px 0px` },
     );
     io.observe(target);
     return () => io.disconnect();
-  }, [condense]);
+  }, [condense, condenseTop]);
 
   const registry = useMemo(() => (condense ? { setTitle, setActions } : null), [condense]);
   return (

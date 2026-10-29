@@ -99,7 +99,8 @@ function Timeline({
   className,
   ...props
 }: TimelineProps) {
-  const ends = spans.map((s) => s.end ?? now ?? s.start);
+  // A queued span has not started running, so it has no elapsed time: no bar and no duration yet.
+  const ends = spans.map((s) => s.end ?? (s.status === "queued" ? s.start : (now ?? s.start)));
   const total = Math.max(1, ...ends, now ?? 0);
   // Ticks fall on whole steps of the timeline's one unit: 0, 1, 2, 3 min, never 0.8 min.
   const { unit, size: unitSize } = durationUnitFor([total]);

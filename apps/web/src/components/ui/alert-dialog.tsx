@@ -78,7 +78,9 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed inset-s-1/2 top-1/2 z-(--z-overlay) flex w-[calc(100%-var(--gutter-sm)*2)] -translate-x-1/2 -translate-y-1/2 flex-col data-[size=default]:max-w-overlay-sm data-[size=sm]:max-w-popover rtl:translate-x-1/2",
+          "group/alert-dialog-content fixed inset-s-1/2 top-1/2 z-(--z-overlay) flex max-h-[calc(100%-var(--gutter-sm)*2)] w-[calc(100%-var(--gutter-sm)*2)] -translate-x-1/2 -translate-y-1/2 flex-col data-[size=default]:max-w-overlay-sm data-[size=sm]:max-w-popover rtl:translate-x-1/2",
+          // A tall alert on a short screen scrolls instead of running past the viewport edges.
+          "overflow-y-auto overscroll-contain",
           overlayShellSurface,
           "duration-200 ease-out-quint data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:duration-150 data-closed:fade-out-0 data-closed:zoom-out-95",
           "top-[calc(50%+1.25rem*var(--nested-dialogs))] scale-[calc(1-0.1*var(--nested-dialogs))] transition-[top,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-200 data-nested-dialog-open:after:opacity-100",
@@ -171,13 +173,23 @@ function AlertDialogDescription({
  * yourself when the action can reject. (CLI ships a bare `Button` here; `add`
  * will revert this.)
  *
- * @example Awaited confirm - stay open until the server agrees
- * <AlertDialog open={open} onOpenChange={setOpen}>
+ * @example Awaited confirm - stay open until the server agrees, and show why it did not
+ * <AlertDialog open={open} onOpenChange={(next) => !pending && setOpen(next)}>
+ *     {error && <AlertDialogDescription>{error}</AlertDialogDescription>}
+ *     <AlertDialogCancel disabled={pending}>Keep it</AlertDialogCancel>
  *     <AlertDialogAction
+ *         disabled={pending}
  *         onClick={async (event) => {
  *             event.preventBaseUIHandler();
- *             await cancelContract(id);
- *             setOpen(false);
+ *             setPending(true);
+ *             try {
+ *                 await cancelContract(id);
+ *                 setOpen(false);
+ *             } catch {
+ *                 setError("Could not cancel the contract. Try again.");
+ *             } finally {
+ *                 setPending(false);
+ *             }
  *         }}
  *     >
  *         Cancel contract

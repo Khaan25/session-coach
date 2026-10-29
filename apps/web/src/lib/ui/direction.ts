@@ -1,33 +1,12 @@
 "use client";
 
-import { createElement, useLayoutEffect, useState, type ReactNode, type RefObject } from "react";
-import { DirectionProvider } from "@base-ui/react/direction-provider";
-import { PortalProvider } from "@/lib/ui/portal";
+import { useLayoutEffect, useState, type RefObject } from "react";
 
-// The design system's reading direction, for Base UI and for portalled popups. CSS follows the dir attribute on
-// its own, but Base UI computes some things in JavaScript (which side a submenu opens on, which arrow
-// key moves forward in a menu, slider and tabs), and it reads those from DirectionProvider, not from
-// the DOM. Render this wherever dir is set, with the same value: on the page root root
-// (components/docs-kit/system-routes.tsx) and on any subtree that flips, such as the docs' right-to-left edge
-// specimens.
-//
-// Popups portal out of the subtree, so they would lose a dir set on a wrapper. Inside the root portal
-// provider, DirectionScope also opens a portal scope of its own: a container with the same dir,
-// portalled into the root container (lib/portal.ts). A dialog, menu, popover or tooltip opened from a
-// right-to-left subtree then lays out right to left, while it still sits outside the page.
-//
-// The design system's own components read the direction from the DOM with useDomDirection, so a component under a
-// plain dir="rtl" mirrors whether or not a DirectionScope says so.
+// The design system's own components read the reading direction from the DOM with useDomDirection, so a
+// component under a plain dir="rtl" mirrors with no provider. Base UI's own direction-aware parts read
+// DirectionProvider (components/ui/direction.tsx) instead.
 
 export type Direction = "ltr" | "rtl";
-
-export function DirectionScope({ dir, children }: { dir: Direction; children: ReactNode }) {
-  return createElement(
-    DirectionProvider,
-    { direction: dir },
-    createElement(PortalProvider, { dir, children }),
-  );
-}
 
 type DirectionTarget = RefObject<Element | null> | Element | null | undefined;
 

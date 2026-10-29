@@ -39,7 +39,8 @@ const ThemeProviderContext = createContext<ThemeProviderState | null>(null);
 
 const isTheme = (value: unknown): value is Theme => THEMES.includes(value as Theme);
 
-// Where storage is blocked, the choice lives here for this page view.
+// Where storage is blocked, the choice lives here for this page view. Null while storage works, so a key
+// cleared in another tab falls back to the default, not to this tab's last choice.
 let memoryTheme: Theme | null = null;
 
 const readStoredTheme = (): Theme | null => {
@@ -55,11 +56,12 @@ const readStoredTheme = (): Theme | null => {
 const storageListeners = new Set<() => void>();
 
 const writeStoredTheme = (theme: Theme) => {
-  memoryTheme = theme;
   try {
     localStorage.setItem(STORAGE_KEY, theme);
+    memoryTheme = null;
   } catch {
     // Storage denied: the choice lasts for this page view only.
+    memoryTheme = theme;
   }
   storageListeners.forEach((listener) => listener());
 };

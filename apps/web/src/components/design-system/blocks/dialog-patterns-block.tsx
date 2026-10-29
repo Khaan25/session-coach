@@ -86,6 +86,7 @@ function CloseConfirmationDialog() {
         </DialogBody>
         <DialogFooter>
           <DialogClose render={<Button variant="secondary" />}>Cancel</DialogClose>
+          {/* TODO(zia): mock. Nothing is sent; submit closes and clears the draft, as a sent answer would. */}
           <Button onClick={discard}>Submit answer</Button>
         </DialogFooter>
       </DialogContent>
@@ -121,7 +122,8 @@ function NestedDialogExample() {
           <DialogDescription>{cards[1].decision}</DialogDescription>
         </DialogHeader>
         <DialogBody>
-          <ItemGroup>
+          {/* Button rows: a group of choices, not a list. */}
+          <ItemGroup role="group" aria-label="Review days">
             {REVIEW_DAYS.map((day) => (
               <Item key={day} size="sm" render={<button type="button" />}>
                 <ItemContent>
@@ -178,7 +180,7 @@ function InsideScrollDialog() {
         >
           <ItemGroup>
             {LONG_LIST.map(({ key, card }) => (
-              <Item key={key}>
+              <Item key={key} role="listitem">
                 <ItemContent>
                   <ItemTitle>{card.decision}</ItemTitle>
                   <ItemDescription>{card.question}</ItemDescription>

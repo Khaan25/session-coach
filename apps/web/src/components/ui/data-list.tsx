@@ -104,11 +104,13 @@ function DataListLabel({ className, ...props }: React.ComponentProps<"dt">) {
   );
 }
 
-const isEmpty = (node: React.ReactNode) =>
+// An array (a `.map()` result) is empty when every element is.
+const isEmpty = (node: React.ReactNode): boolean =>
   node === null ||
   node === undefined ||
   node === false ||
-  (typeof node === "string" && node.trim() === "");
+  (typeof node === "string" && node.trim() === "") ||
+  (Array.isArray(node) && node.every(isEmpty));
 
 function DataListValue({
   className,

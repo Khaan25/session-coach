@@ -40,7 +40,7 @@ export default async function SessionPage({ params }: PageProps<"/s/[id]">) {
   return (
     <Container>
       <AppPageHeader
-        title={title ?? ([repo, branch].filter(Boolean).join(" on ") || "Untitled session")}
+        title={title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session"}
         description={
           <span className="flex flex-wrap items-center gap-2">
             {repo && <Code>{repo}</Code>}

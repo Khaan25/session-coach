@@ -1,14 +1,10 @@
 "use client";
 
 import * as React from "react";
-import type { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { coarsePointer, cycleTab } from "@/lib/ui/portal";
 import { cn } from "cn";
-import { mergeRefs } from "@/lib/ui/utils";
 
-// What Dialog and Sheet share: the open state that waits for a running action, the footer's default
-// action on Enter, the backdrop, and the edge fade on a
-// scrolling body. Both overlays and Command import from here, so the behaviour is written once. Every
+// What Dialog and Sheet share: the open state that waits for a running action, the backdrop, and the
+// edge fade on a scrolling body. Every overlay (dialogs, sheet, drawer, popover, menus, select, combobox) imports from here, so the behaviour is written once. Every
 // overlay, anchored or modal, also takes its look from here: one surface and one way to appear.
 
 // ---------- Open state and the pending block ----------
@@ -199,108 +195,6 @@ function closesAfter({
   return close ?? (onAction !== undefined || (onClick === undefined && type !== "submit"));
 }
 
-// ---------- The footer's default action ----------
-
-type DefaultAction = "primary" | "dismiss" | "none";
-
-// A focused control already owns Enter, so the overlay never takes it from one of these.
-const CONTROL =
-  'button, a[href], textarea, select, summary, [role="button"], [role="link"], [role="menuitem"], [role="option"], [role="combobox"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="slider"], [contenteditable="true"]';
-// Text a person types into. Enter in one never dismisses, so typing is never thrown away.
-const FIELD =
-  'input:not([type="checkbox"],[type="radio"],[type="button"],[type="submit"],[type="reset"],[type="hidden"],[type="range"]):not(:disabled,[readonly]), textarea:not(:disabled,[readonly])';
-
-function footerOf(popup: HTMLElement) {
-  // Nested overlays portal elsewhere, so this query never reaches a child overlay's footer.
-  return popup.querySelector<HTMLElement>("[data-default-action]");
-}
-
-function modeOf(footer: HTMLElement): DefaultAction {
-  const declared = footer.dataset.defaultAction;
-  if (declared === "primary" || declared === "dismiss" || declared === "none") return declared;
-  // Undeclared: a destructive primary makes dismiss the default, so Enter fails safe.
-  return footer.querySelector('[data-dialog-action="primary"][data-variant="destructive"]')
-    ? "dismiss"
-    : "primary";
-}
-
-/** The footer's button for an action, or null when it is disabled. `busy` also accepts a pending button. */
-function actionOf(footer: HTMLElement, action: "primary" | "dismiss", busy = false) {
-  const el = footer.querySelector<HTMLElement>(`[data-dialog-action="${action}"]`);
-  if (!el) return null;
-  if (busy && el.matches('[aria-busy="true"]')) return el;
-  if (el.matches(':disabled, [aria-disabled="true"], [data-disabled]')) return null;
-  return el;
-}
-
-type InitialFocus = DialogPrimitive.Popup.Props["initialFocus"];
-
-/**
- * Wires a popup to its footer's default action. Enter outside a control presses the declared button;
- * opening focuses `[data-autofocus]`, else the dismiss button (dismiss) or the first field, else the
- * primary button (primary). Tab cycles inside the popup.
- */
-function useDefaultAction<E extends HTMLElement>({
-  ref,
-  onKeyDown,
-  initialFocus,
-}: {
-  ref?: React.Ref<E>;
-  onKeyDown?: React.KeyboardEventHandler<E>;
-  initialFocus?: InitialFocus;
-}) {
-  const popupRef = React.useRef<E | null>(null);
-  const setRef = React.useMemo(() => mergeRefs(popupRef, ref), [ref]);
-
-  const handleKeyDown = (event: React.KeyboardEvent<E>) => {
-    onKeyDown?.(event);
-    cycleTab(event);
-    if (
-      event.defaultPrevented ||
-      event.key !== "Enter" ||
-      event.nativeEvent.isComposing ||
-      event.repeat
-    )
-      return;
-    if (event.shiftKey || event.altKey || event.metaKey || event.ctrlKey) return;
-    const popup = event.currentTarget;
-    const target = event.target as HTMLElement;
-    if (!popup.contains(target)) return; // bubbled through the React tree from a nested overlay
-    if (target !== popup && target.closest(CONTROL)) return;
-    if (target instanceof HTMLInputElement && target.form) return; // the form submits itself
-    const footer = footerOf(popup);
-    if (!footer) return;
-    const mode = modeOf(footer);
-    if (mode === "none" || (mode === "dismiss" && target.matches(FIELD))) return;
-    const button = actionOf(footer, mode);
-    if (!button) return;
-    event.preventDefault();
-    button.click();
-  };
-
-  const focusOnOpen: InitialFocus =
-    initialFocus ??
-    (() => {
-      const popup = popupRef.current;
-      if (!popup) return true;
-      // A finger: a focused text field raises the keyboard before anyone asked for it, so the panel
-      // takes focus and the person taps the field.
-      if (coarsePointer()) return popup;
-      const auto = popup.querySelector<HTMLElement>("[data-autofocus]");
-      if (auto) return auto;
-      const footer = footerOf(popup);
-      if (!footer) return true;
-      const mode = modeOf(footer);
-      if (mode === "dismiss") return actionOf(footer, "dismiss") ?? true;
-      if (mode === "primary")
-        return popup.querySelector<HTMLElement>(FIELD) ?? actionOf(footer, "primary") ?? true;
-      // none: no button may hold focus on open, or Enter would press it. The first field, else the panel.
-      return popup.querySelector<HTMLElement>(FIELD) ?? popup;
-    });
-
-  return { ref: setRef, onKeyDown: handleKeyDown, initialFocus: focusOnOpen };
-}
-
 // ---------- Looks ----------
 
 /**
@@ -353,9 +247,16 @@ function useScrollFade<E extends HTMLElement>({ focusable = false }: { focusable
     el.addEventListener("scroll", update, { passive: true });
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    for (const child of Array.from(el.children)) ro.observe(child);
-    // Content that changes without resizing the scroller (a filtered list) changes what is behind it.
-    const mo = new MutationObserver(update);
+    const observeChildren = () => {
+      for (const child of Array.from(el.children)) ro.observe(child);
+    };
+    observeChildren();
+    // Content that changes without resizing the scroller (a filtered list) changes what is behind it, and
+    // children added later must reach the ResizeObserver too.
+    const mo = new MutationObserver(() => {
+      observeChildren();
+      update();
+    });
     mo.observe(el, { childList: true, subtree: true });
     return () => {
       el.removeEventListener("scroll", update);
@@ -377,12 +278,10 @@ export {
   overlayRunSettled,
   isThenable,
   closesAfter,
-  useDefaultAction,
   overlaySurface,
   overlayShellSurface,
   overlayMotion,
   backdropClass,
   useScrollFade,
   fadeClass,
-  type DefaultAction,
 };

@@ -31,6 +31,8 @@ TODO(zia): what happens to accounts and data if the service stops, and notice pe
 
 You can delete your account at any time from your settings page. We may close an account that misuses the service.
 
+TODO(zia): account deletion in settings is not built yet (Phase 8). Keep this until it ships, or remove it before this draft goes live.
+
 ## Contact
 
 TODO(zia): the contact email for questions about these terms.

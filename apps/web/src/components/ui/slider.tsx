@@ -13,7 +13,7 @@ import { useDomDirection } from "@/lib/ui/direction";
 // has-focus-visible. Direction comes from the page, so the range fills from the right under dir="rtl".
 //
 // The thumb is the focusable control, so the name has to land there, not on the
-// root. Single-thumb sliders inherit the root's `aria-label`; ranges need `thumbLabels`.
+// root. Single-thumb sliders inherit the root's `aria-label`; ranges should pass `thumbLabels`.
 function Slider({
   className,
   defaultValue,
@@ -24,19 +24,19 @@ function Slider({
   "aria-label": ariaLabel,
   ...props
 }: SliderPrimitive.Root.Props & {
-  /** Accessible name per thumb, by index. Required for range sliders. */
+  /** Accessible name per thumb, by index. Pass it for range sliders; the fallback is the root's `aria-label` plus a number. */
   thumbLabels?: string[];
 }) {
   const box = useRef<HTMLDivElement | null>(null);
   const dir = useDomDirection(box);
-  const _values = Array.isArray(value)
-    ? value
-    : Array.isArray(defaultValue)
-      ? defaultValue
-      : [min, max];
+  // Base UI takes a number for one thumb or an array for a range; with neither, it is a full range.
+  const initial = value ?? defaultValue;
+  const _values = initial === undefined ? [min, max] : Array.isArray(initial) ? initial : [initial];
 
+  // Without thumbLabels, a range numbers its thumbs off the root's name ("Price 1", "Price 2"), so none is unnamed.
   const thumbLabelAt = (index: number) =>
-    thumbLabels?.[index] ?? (_values.length === 1 ? ariaLabel : undefined);
+    thumbLabels?.[index] ??
+    (ariaLabel && _values.length > 1 ? `${ariaLabel} ${index + 1}` : ariaLabel);
 
   return (
     <DirectionProvider direction={dir}>

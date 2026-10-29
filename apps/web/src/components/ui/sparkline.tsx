@@ -66,7 +66,8 @@ function Sparkline({
   const values = data.filter((v): v is number => v !== null && Number.isFinite(v));
   const n = data.length;
   const lo = variant === "bar" ? Math.min(0, ...values) : Math.min(...values);
-  const hi = Math.max(...values, lo + 1);
+  // Bars grow from 0, so 0 sits inside the range at both ends: all-negative bars hang from the top.
+  const hi = variant === "bar" ? Math.max(0, ...values, lo + 1) : Math.max(...values, lo + 1);
   const viewW = Math.max(n - 1, 1) * 10;
   const y = (v: number) => PAD + (1 - (v - lo) / (hi - lo || 1)) * (VIEW_H - PAD * 2);
   const x = (i: number) =>

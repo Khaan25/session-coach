@@ -8,7 +8,7 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="skeleton"
       aria-hidden
       className={cn(
-        "relative shrink-0 animate-pulse overflow-hidden rounded-soft bg-(--surface-skeleton) forced-colors:bg-[GrayText]",
+        "relative shrink-0 animate-pulse overflow-hidden rounded-soft bg-(--surface-skeleton) motion-reduce:animate-none forced-colors:bg-[GrayText]",
         className,
       )}
       {...props}

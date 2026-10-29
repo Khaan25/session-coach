@@ -7,7 +7,7 @@ import * as RechartsPrimitive from "recharts";
 // recharts in the design system's chart look: axis ticks in text-3 at label-sm with tabular figures, grid and reference
 // lines in the row rule, the cursor in the hover wash, and a tooltip on the overlay surface (paper, the
 // overlay shadow, no glass). Series colours come from the config; point them at tokens, as
-// `{ sessions: { label: "Sessions", color: "var(--color-chart-1)" } }`, and read them in the chart as
+// `{ sessions: { label: "Sessions", color: "var(--hue-3-line)" } }`, and read them in the chart as
 // `var(--color-sessions)`.
 
 const THEMES = { light: "", dark: ".dark" } as const;

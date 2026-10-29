@@ -16,9 +16,12 @@ import { StatusBadge } from "./status-badge";
 
 function Loading({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div aria-busy="true" className="flex min-w-0 flex-col">
+    <div className="flex min-w-0 flex-col">
+      {/* Outside the busy subtree: a screen reader may hold back what changes inside it until busy clears. */}
       <output className="sr-only">{label}</output>
-      {children}
+      <div aria-busy="true" className="contents">
+        {children}
+      </div>
     </div>
   );
 }

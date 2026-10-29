@@ -42,7 +42,6 @@ const PREFERENCES = [
     description: "When a session's decision cards are written.",
     defaultChecked: true,
   },
-  { id: "notify-digest", label: "TODO(zia)", description: "TODO(zia)", defaultChecked: false },
 ];
 
 /** Preference list: label and description at the start, the switch at the end; the whole row toggles it. */
@@ -163,7 +162,7 @@ function ActivityLoadingBlock() {
       </CardHeader>
       <ItemGroup>
         {[0, 1, 2, 3].map((row) => (
-          <Item key={row}>
+          <Item role="listitem" key={row}>
             <ItemContent>
               <Skeleton className="h-3 w-40" />
               <Skeleton className="h-3 w-56" />

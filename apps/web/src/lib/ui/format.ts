@@ -126,11 +126,6 @@ export function formatElapsed(ms: number) {
   return `${Math.floor(hours / 24)}d ${pad(hours % 24)}h`;
 }
 
-/** A whole count with thousands separators: 1,284. For a single number in a sentence or a cell; a column of counts goes through formatCounts. */
-export function formatCount(n: number) {
-  return Number.isFinite(n) ? n.toLocaleString("en-US") : EMPTY_VALUE;
-}
-
 const byteUnits: readonly Unit[] = [
   { unit: "B", size: 1 },
   { unit: "KB", size: 1e3 },

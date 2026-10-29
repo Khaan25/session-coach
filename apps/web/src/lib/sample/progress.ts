@@ -36,7 +36,10 @@ export const sampleSessionProgress = [
     .filter(({ session }) => session.status === "ready")
     .map(({ session, cardCount = 0 }) => ({
       id: session.id,
-      title: session.title ?? "Untitled session",
+      title:
+        session.title ||
+        [session.repo, session.branch].filter(Boolean).join(" on ") ||
+        "Untitled session",
       mastered: 1,
       total: cardCount,
     })),

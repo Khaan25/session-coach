@@ -106,7 +106,7 @@ function Status({
   // The region is always in the DOM, so a change from empty to the word is what gets announced.
   const region = live ? (
     <span role="status" className="sr-only">
-      {settled(status) ? (typeof word === "string" ? word : statusLabels[status]) : ""}
+      {settled(status) ? word : ""}
     </span>
   ) : null;
   if (status === "waiting")

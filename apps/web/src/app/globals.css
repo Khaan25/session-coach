@@ -9,8 +9,14 @@
 @import "../styles/base.css";
 @import "../styles/utilities.css";
 
-/* Marketing headlines only (font-display); the UI is Geist, set in tokens.css. */
+/* Marketing headlines only (font-display); the UI is Geist, set in tokens.css. The chart series
+   colours are emitted here as real variables too, because chart configs read them with var(). */
 :root {
+  --color-chart-1: var(--hue-3-line);
+  --color-chart-2: var(--hue-1-line);
+  --color-chart-3: var(--hue-4-line);
+  --color-chart-4: var(--hue-5-line);
+  --color-chart-5: var(--hue-2-line);
   --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
 }
 

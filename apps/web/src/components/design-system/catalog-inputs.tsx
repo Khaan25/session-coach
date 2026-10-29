@@ -122,8 +122,14 @@ function TextFields() {
               </Field>
               <Field data-invalid>
                 <FieldLabel htmlFor="field-invalid">Short answer</FieldLabel>
-                <Input id="field-invalid" aria-invalid defaultValue="idk" />
+                <Input
+                  id="field-invalid"
+                  aria-invalid
+                  aria-describedby="field-invalid-error"
+                  defaultValue="idk"
+                />
                 <FieldError
+                  id="field-invalid-error"
                   errors={[
                     { message: "Write at least one sentence." },
                     { message: "Name the file." },

@@ -28,7 +28,7 @@ type SessionRowProps = {
  */
 export function SessionRow({ session, cardCount, now, live }: SessionRowProps) {
   const { id, title, repo, branch, status, error, created_at } = session;
-  const name = title ?? ([repo, branch].filter(Boolean).join(" on ") || "Untitled session");
+  const name = title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session";
   const when = formatRelativeTime(created_at, now);
   // shortcut: ItemLink is a plain <a> (no client-side navigation); give ItemLink a render prop to take next/link.
   return (

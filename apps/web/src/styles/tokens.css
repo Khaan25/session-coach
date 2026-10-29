@@ -694,8 +694,7 @@
 :root [data-surface="ink"],
 :root [data-surface="inverse"],
 :root:where([data-theme="dark"], .dark):not([data-theme="light"]),
-:where([data-theme="dark"], .dark)
-  :root:not([data-theme="light"])
+:root:where([data-theme="dark"], .dark):not([data-theme="light"])
   [data-surface="paper"]
   [data-surface="inverse"],
 :root[data-theme="dark"] [data-surface="paper"] [data-surface="inverse"],
@@ -797,6 +796,7 @@
   :root {
     --dur-base: 0ms;
     --dur-slow: 0ms;
+    --dur-spin: 2400ms; /* a pending ring still turns, so loading stays visible, at a third of the speed */
     --sheet-shift: 0px;
   }
 }
@@ -804,5 +804,6 @@
 :root [data-force-reduced-motion] {
   --dur-base: 0ms;
   --dur-slow: 0ms;
+  --dur-spin: 2400ms;
   --sheet-shift: 0px;
 }

@@ -32,7 +32,11 @@ export function NavSessions({ sessions }: { sessions: Session[] }) {
               <SidebarMenuItem key={session.id}>
                 <SidebarMenuButton size="lg" render={<Link href={`/s/${session.id}`} />}>
                   <div className="grid min-w-0 flex-1 gap-0.5">
-                    <span className="truncate">{session.title ?? "Untitled session"}</span>
+                    <span className="truncate">
+                      {session.title ||
+                        [session.repo, session.branch].filter(Boolean).join(" on ") ||
+                        "Untitled session"}
+                    </span>
                     <div className="flex min-w-0 items-center gap-2 type-label-sm text-text-2">
                       {session.repo && <span className="truncate">{session.repo}</span>}
                       <StatusBadge status={session.status} />

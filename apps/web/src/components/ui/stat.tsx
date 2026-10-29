@@ -211,7 +211,8 @@ function StatDelta({
   // A NaN or Infinity has no change to state: no arrow and no "NaN%".
   const known =
     from !== undefined && to !== undefined && Number.isFinite(from) && Number.isFinite(to);
-  if (!known && from !== undefined && to !== undefined && children === undefined) return null;
+  // Half a pair (only from, or only to) has no change either.
+  if (!known && (from !== undefined || to !== undefined) && children === undefined) return null;
   const computed = known ? deltaOf(from, to) : undefined;
   const trend = given ?? computed?.trend ?? "flat";
   // 0 to 0 says nothing: no arrow, no "0% vs 0".

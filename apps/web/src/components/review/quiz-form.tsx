@@ -107,8 +107,12 @@ export function QuizForm({
               maxLength={MAX_ANSWER}
               value={answer}
               aria-invalid={error ? true : undefined}
-              aria-describedby={`${id}-hint`}
-              onChange={(event) => setAnswer(event.target.value)}
+              aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
+              onChange={(event) => {
+                setAnswer(event.target.value);
+                // The error is about the old text; submit checks again.
+                setError(null);
+              }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                   event.preventDefault();
@@ -129,7 +133,7 @@ export function QuizForm({
               </KbdGroup>
               .
             </FieldDescription>
-            <FieldError>{error}</FieldError>
+            <FieldError id={`${id}-error`}>{error}</FieldError>
           </Field>
         </CardContent>
         <CardFooter>

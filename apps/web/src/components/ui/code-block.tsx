@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { ArrowElbowDownLeftIcon, EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
@@ -223,6 +223,8 @@ function markRefs(tokens: Token[], refs: CodeRef[] = [], detect = true): Token[]
     }
     const hits: { start: number; end: number; kind: Kind; href?: string }[] = [];
     for (const ref of refs) {
+      // indexOf("") never advances, so an empty ref would loop forever.
+      if (!ref.text) continue;
       let at = token.value.indexOf(ref.text);
       while (at >= 0) {
         hits.push({ start: at, end: at + ref.text.length, kind: ref.kind, href: ref.href });
@@ -576,7 +578,11 @@ function FileBlock({
 }: CodeBlockProps) {
   const [wrap, setWrap] = useState(defaultWrap);
   const source = code.replace(/\n$/, "");
-  const lines = tokenize(source, language, { refs, detectRefs });
+  // The wrap toggle re-renders; a long log should not be tokenized again for it.
+  const lines = useMemo(
+    () => tokenize(source, language, { refs, detectRefs }),
+    [source, language, refs, detectRefs],
+  );
   const marked = parseLines(highlight);
   const digits = String(startLine + lines.length - 1).length;
   const name = filename ?? languageLabels[language];

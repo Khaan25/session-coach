@@ -3,7 +3,6 @@
 import {
   createContext,
   createElement,
-  Fragment,
   useContext,
   useLayoutEffect,
   useMemo,
@@ -11,7 +10,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 
 // Where the design system's overlays portal to. Base UI portals to document.body by default, which sits outside
 // the page root, so the tokens, the theme and the font never reach a popup. PortalProvider renders an
@@ -24,16 +22,11 @@ import { createPortal } from "react-dom";
 // The hook returns null until the element mounts (Base UI waits on null rather than falling back to
 // body), and undefined outside the provider, where Base UI's own default applies.
 //
-// A provider plays one of three parts, from where it sits:
+// A provider plays one of two parts, from where it sits:
 //
-//   root   the first provider in the tree (components/docs-kit/system-routes.tsx). Its container is the last
-//          child of the page root, a sibling of the page, so a modal can make the page inert without making
-//          itself inert.
-//   dir    a provider given `dir` inside another, which DirectionScope renders for a subtree that
-//          flips. Its container carries the dir attribute and is portalled into the root's container,
-//          so a popup opened from a right-to-left specimen lays out right to left and still sits
-//          outside the page.
-//   stage  a provider without `dir` inside another, such as the docs' Stage. Its container sits in
+//   root   the first provider in the tree (app/layout.tsx). Its container is the last child of the page
+//          root, a sibling of the page, so a modal can make the page inert without making itself inert.
+//   stage  a provider inside another, such as the docs' Stage. Its container sits in
 //          place after its children, so an overlay shown open in a specimen stays in its frame. A
 //          stage is part of the page, so a modal inside it does not lock the page.
 //
@@ -41,8 +34,6 @@ import { createPortal } from "react-dom";
 // container, from the page root up to body, is inert: Tab, Shift+Tab, a click and a screen reader's virtual
 // cursor cannot reach the page behind. Base UI's own aria-hidden is not enough here: it keeps every
 // ancestor of an aria-live region visible, and the docs have live regions on most pages.
-
-type Direction = "ltr" | "rtl";
 
 type PortalScope = {
   container: HTMLElement | null;
@@ -79,15 +70,14 @@ function inertOutside(keep: HTMLElement) {
   };
 }
 
-export function PortalProvider({ children, dir }: { children: ReactNode; dir?: Direction }) {
+export function PortalProvider({ children }: { children: ReactNode }) {
   const parent = useContext(PortalContext);
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const count = useRef(0);
   const undo = useRef<(() => void) | null>(null);
-  const role = !parent ? "root" : dir ? "dir" : "stage";
+  const role = parent ? "stage" : "root";
 
   const scope = useMemo<PortalScope>(() => {
-    if (role === "dir") return { container, lock: parent!.lock };
     if (role === "stage") return { container, lock: noLock };
     return {
       container,
@@ -106,25 +96,13 @@ export function PortalProvider({ children, dir }: { children: ReactNode; dir?: D
         };
       },
     };
-  }, [role, container, parent]);
+  }, [role, container]);
 
-  // `dir` with no provider above: DirectionScope at the root, before the root provider. Pass through.
-  if (!parent && dir) return createElement(Fragment, null, children);
-
-  const element = createElement("div", {
-    ref: setContainer,
-    "data-portal": role,
-    dir: role === "dir" ? dir : undefined,
-  });
   return createElement(
     PortalContext.Provider,
     { value: scope },
     children,
-    role === "dir"
-      ? parent!.container
-        ? createPortal(element, parent!.container)
-        : null
-      : element,
+    createElement("div", { ref: setContainer, "data-portal": role }),
   );
 }
 
@@ -145,70 +123,4 @@ export function useModalLock(active: boolean) {
     if (!active || !lock || !ready) return;
     return lock();
   }, [active, lock, ready]);
-}
-
-const TABBABLE =
-  'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex], [contenteditable="true"]';
-
-/** The visible tabbable elements inside a popup, in DOM order, without Base UI's focus guards. */
-function tabbablesIn(popup: HTMLElement) {
-  return Array.from(popup.querySelectorAll<HTMLElement>(TABBABLE)).filter((el) => {
-    if (
-      el.matches(':disabled, [data-base-ui-focus-guard], [aria-hidden="true"]') ||
-      el.tabIndex < 0
-    )
-      return false;
-    if (el.closest("[inert]") || el.closest("[hidden]")) return false;
-    return el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
-  });
-}
-
-/**
- * Tab from the last control goes to the first, and Shift+Tab from the first goes to the last. Base UI's
- * focus guards sit at both ends of a popup and the browser stops on them (and on body) before focus
- * returns; handling the key here skips both stops. Call it from the popup's keydown. Keys that bubble
- * through the React tree from a nested overlay are ignored, since that overlay cycles itself.
- */
-export function cycleTab(event: {
-  key: string;
-  shiftKey: boolean;
-  altKey: boolean;
-  ctrlKey: boolean;
-  metaKey: boolean;
-  defaultPrevented: boolean;
-  currentTarget: HTMLElement;
-  target: EventTarget;
-  preventDefault: () => void;
-}) {
-  if (
-    event.key !== "Tab" ||
-    event.defaultPrevented ||
-    event.altKey ||
-    event.ctrlKey ||
-    event.metaKey
-  )
-    return;
-  const popup = event.currentTarget;
-  const target = event.target as HTMLElement;
-  if (!popup.contains(target)) return;
-  const stops = tabbablesIn(popup);
-  if (!stops.length) {
-    event.preventDefault();
-    popup.focus();
-    return;
-  }
-  const first = stops[0];
-  const last = stops[stops.length - 1];
-  if (event.shiftKey && (target === first || target === popup)) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && target === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
-/** True when the primary pointer is coarse: a finger, where focusing a text field raises the keyboard. */
-export function coarsePointer() {
-  return typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 }

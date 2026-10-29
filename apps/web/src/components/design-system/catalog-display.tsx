@@ -336,7 +336,7 @@ function Surfaces() {
           {(["default", "outline", "muted"] as const).map((variant) => (
             <ItemGroup key={variant}>
               {(["default", "sm", "xs"] as const).map((size, index) => (
-                <div key={size} className="contents">
+                <div key={size} role="listitem" className="contents">
                   {index > 0 && <ItemSeparator />}
                   <Item variant={variant} size={size} selected={index === 0} kind="run">
                     <ItemMedia variant="icon">
