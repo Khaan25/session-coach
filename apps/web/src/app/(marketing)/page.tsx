@@ -13,8 +13,9 @@ import { FooterScene } from "@/components/marketing/site-footer";
 import { buttonVariants } from "@/components/ui/button";
 
 // The hero follows docs/design/landing-hero.md: headline with one hand-drawn underline, subhead, CTA with a note,
-// the product object, then the trust strip. Load order: nav 0ms, headline 100ms, underline 600ms, subhead 300ms,
-// CTA 500ms, card 700ms, all on ease-out-quint; reduced motion drops every entrance.
+// the product object, then the trust strip. Headline, subhead and CTA are there on first paint (no entrance, and no
+// LCP delay); the underline draws in at 600ms and the card enters at 700ms, on ease-out-quint. Reduced motion drops
+// every entrance.
 const enter = "animate-in fade-in fill-mode-both ease-out-quint motion-reduce:animate-none";
 
 export default function Home() {
@@ -35,7 +36,7 @@ export default function Home() {
 
         <div className="mx-auto flex w-full max-w-(--container) flex-col items-center px-(--gutter-sm) pt-20 pb-20 text-center sm:px-(--gutter) sm:pt-30 sm:pb-30">
           <h1
-            className={`${enter} max-w-4xl font-display text-5xl leading-none tracking-tight text-balance text-text-1 delay-100 duration-700 slide-in-from-bottom-6 sm:text-7xl lg:text-8xl`}
+            className="max-w-4xl font-display text-5xl leading-none tracking-tight text-balance text-text-1 sm:text-7xl lg:text-8xl"
           >
             <span className="relative inline-block italic">
               Explain
@@ -45,14 +46,14 @@ export default function Home() {
           </h1>
 
           <p
-            className={`${enter} mt-8 max-w-lg type-body-lg text-pretty text-text-2 delay-300 duration-700 slide-in-from-bottom-4 sm:mt-10`}
+            className="mt-8 max-w-lg type-body-lg text-pretty text-text-2 sm:mt-10"
           >
             Explain back the decisions your coding agent made. Each session becomes 3 to 5 decision
             cards, due again on day 1, 3 and 7.
           </p>
 
           <div
-            className={`${enter} mt-8 flex flex-col items-center gap-3 delay-500 duration-700 slide-in-from-bottom-4`}
+            className="mt-8 flex flex-col items-center gap-3"
           >
             <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
               <CardsIcon weight="duotone" data-icon="inline-start" aria-hidden />
