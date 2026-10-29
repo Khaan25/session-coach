@@ -61,7 +61,8 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const text = await request(provider, model, key, input);
-      return JSON.parse(text);
+      // Some models wrap JSON in a markdown fence even when asked not to.
+      return JSON.parse(text.trim().replace(/^```(?:json)?\s*|\s*```$/g, ""));
     } catch (error) {
       lastError = error;
     }

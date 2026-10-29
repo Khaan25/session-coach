@@ -45,7 +45,11 @@ export async function POST(request: Request) {
         .select("user_id, hidden, question, why, evidence, model_answer")
         .eq("id", cardId)
         .maybeSingle<GradedCard>(),
-      admin.from("reviews").select("step").eq("card_id", cardId).maybeSingle<{ step: Step }>(),
+      admin
+        .from("reviews")
+        .select("step, updated_at")
+        .eq("card_id", cardId)
+        .maybeSingle<{ step: Step; updated_at: string }>(),
       admin
         .from("profiles")
         .select("timezone")
@@ -77,8 +81,36 @@ export async function POST(request: Request) {
       grade.score,
       localDate(profileResult.data?.timezone ?? "UTC", new Date()),
     );
-    // shortcut: two writes, not one transaction; a failed upsert leaves the answer recorded and the schedule unmoved,
-    // so the card stays due and the learner can answer again. Move to an RPC if that ever matters.
+    // Move the schedule first, and only from the state this request read: a second submit racing this one finds the
+    // row changed (or already inserted) and gets 409, so one answer can't advance a card twice.
+    const schedule = {
+      card_id: cardId,
+      user_id: user.id,
+      step: next.step,
+      due_on: next.due_on,
+      mastered: next.mastered,
+      last_score: grade.score,
+      updated_at: new Date().toISOString(),
+    };
+    const previous = reviewResult.data;
+    const moved = previous
+      ? await admin
+          .from("reviews")
+          .update(schedule)
+          .eq("card_id", cardId)
+          .eq("updated_at", previous.updated_at)
+          .select("card_id")
+      : await admin.from("reviews").insert(schedule).select("card_id");
+    if (moved.error?.code === "23505" || (!moved.error && moved.data.length === 0)) {
+      return NextResponse.json(
+        { error: "This card was just answered. Reload to see its next review." },
+        { status: 409 },
+      );
+    }
+    if (moved.error) throw moved.error;
+
+    // shortcut: two writes, not one transaction; if this insert fails the schedule has moved without its answer row.
+    // Move both into one RPC if the progress numbers ever need to be exact.
     const { error: answerError } = await admin.from("answers").insert({
       card_id: cardId,
       user_id: user.id,
@@ -88,16 +120,6 @@ export async function POST(request: Request) {
       missing: grade.missing || null,
     });
     if (answerError) throw answerError;
-    const { error: reviewError } = await admin.from("reviews").upsert({
-      card_id: cardId,
-      user_id: user.id,
-      step: next.step,
-      due_on: next.due_on,
-      mastered: next.mastered,
-      last_score: grade.score,
-      updated_at: new Date().toISOString(),
-    });
-    if (reviewError) throw reviewError;
 
     return NextResponse.json({
       score: grade.score,
