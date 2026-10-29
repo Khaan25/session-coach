@@ -60,7 +60,7 @@ const settled = (status: Status) =>
   status === "ok" || status === "warn" || status === "fail" || status === "waiting";
 
 const wordVariants = cva(
-  "relative inline-flex items-start gap-1.5 data type-state-word text-text-1",
+  "relative inline-flex shrink-0 items-start gap-1.5 data type-state-word text-text-1",
   {
     variants: {
       variant: {

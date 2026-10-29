@@ -23,7 +23,7 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
       role="list"
       data-slot="item-group"
       className={cn(
-        "group/item-group frame relative flex w-full flex-col overflow-hidden bg-page",
+        "group/item-group frame relative flex w-full flex-col overflow-hidden bg-page in-[.frame]:rounded-none in-[.frame]:before:hidden",
         className,
       )}
       {...props}

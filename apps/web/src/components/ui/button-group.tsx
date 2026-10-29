@@ -17,7 +17,7 @@ const buttonGroupVariants = cva(
     "*:focus-visible:focus-ring-inset *:data-pressed:focus-visible:focus-ring-ink *:data-[variant=default]:focus-visible:focus-ring-ink",
     "has-[>[data-variant=default]]:gap-px *:data-[variant=default]:rounded-none!",
     "has-[>[data-slot=button-group]]:gap-2",
-    "has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-e-soft [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1",
+    "[&>:not([data-variant=default])+[data-slot=button-group-separator]]:hidden has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-e-soft [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1",
   ],
   {
     variants: {

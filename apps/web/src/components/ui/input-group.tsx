@@ -126,6 +126,7 @@ function InputGroupInput({ className, ...props }: React.ComponentProps<"input">)
   return (
     <InputPrimitive
       data-slot="input-group-control"
+      data-control
       className={cn(bareControl, "h-full", className)}
       {...props}
     />
@@ -136,6 +137,7 @@ function InputGroupTextarea({ className, ...props }: React.ComponentProps<"texta
   return (
     <textarea
       data-slot="input-group-control"
+      data-control
       className={cn(
         bareControl,
         "flex field-sizing-content min-h-16 resize-none py-2 leading-5!",

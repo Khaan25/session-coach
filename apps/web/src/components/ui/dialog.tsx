@@ -98,7 +98,7 @@ function DialogContent({
           data-close={showCloseButton || undefined}
           className={cn(
             // `overflow-y-auto` is the fallback; a child with `flex-auto min-h-0` scrolls instead, so there is only ever one scrollbar.
-            "group/dialog relative flex max-h-full min-h-0 w-full flex-col overflow-y-auto overscroll-contain data-[size=default]:max-w-overlay data-[size=lg]:max-w-overlay-lg data-[size=sm]:max-w-overlay-sm",
+            "group/dialog relative flex max-h-full min-h-0 w-full flex-col overflow-y-auto overscroll-contain data-[size=default]:max-w-overlay data-[size=lg]:max-w-overlay-lg data-[size=sm]:max-w-overlay-sm *:data-[slot=scroll-area]:mx-1 *:data-[slot=scroll-area]:mt-1",
             overlayShellSurface,
             "duration-200 ease-out-quint data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:duration-150 data-closed:fade-out-0 data-closed:zoom-out-95",
             NESTED_STACK,
