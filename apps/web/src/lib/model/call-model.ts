@@ -39,6 +39,12 @@ const TIMEOUT_MS = 30_000;
  * shape with zod. The provider comes from `MODEL_PROVIDER` (gemini, openrouter, groq; `fake` in development and tests
  * only) and the model from `MODEL_<TASK>`, so switching either is config, not code. A failed call is retried once.
  *
+ * Free tiers fail and rate-limit often, and the providers disagree on request shape, so one function hides both: a
+ * route never names a provider, and a provider outage is a config change, not a deploy.
+ *
+ * @param task - The job, which picks the model env var (`grade` reads `MODEL_GRADE`).
+ * @param input - The system instructions and the data sent as the user message.
+ * @returns The model's reply parsed as JSON; its shape is unchecked.
  * @throws ModelConfigError when the env vars are unset or name an unknown provider.
  * @throws ModelCallError when both attempts fail or return non-JSON.
  */
@@ -70,7 +76,17 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
   throw new ModelCallError(`${provider} ${task} call failed twice`, { cause: lastError });
 }
 
-/** One HTTP call; returns the model's text. */
+/**
+ * One HTTP call, with a 30 s timeout so a hung provider can't hold the function to Vercel's limit. Gemini has its own
+ * API; OpenRouter and Groq share the OpenAI chat-completions shape. Both ask for JSON output.
+ *
+ * @param provider - Which API to call.
+ * @param model - The model name from `MODEL_<TASK>`.
+ * @param key - The provider's API key.
+ * @param input - Instructions and data, as for `callModel`.
+ * @returns The model's raw text, or "" when the reply has none.
+ * @throws When the provider answers with a non-2xx status or the request times out.
+ */
 async function request(provider: Provider, model: string, key: string, input: ModelInput) {
   const user = JSON.stringify(input.data);
   const signal = AbortSignal.timeout(TIMEOUT_MS);

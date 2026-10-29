@@ -17,7 +17,9 @@ export type AuthState = {
   email?: string;
 };
 
+/** Matches the dashboard and supabase/config.toml minimum (docs/plans/auth.md #23); checked here first for a fast error. */
 const MIN_PASSWORD = 10;
+// Only catches typos; Supabase decides what a valid address is.
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const GENERIC = "Something went wrong on our side. Try again in a minute.";
 const RATE_LIMITED = "Too many attempts. Wait a minute, then try again.";
@@ -31,16 +33,19 @@ async function requestOrigin() {
   return (await headers()).get("origin");
 }
 
+/** A form field as a string; a missing field or a file reads as "". */
 function text(formData: FormData, name: string) {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";
 }
 
+/** The field error for an email address, or undefined when it looks like one. */
 function checkEmail(email: string) {
   if (!email) return "Enter your email address.";
   if (!EMAIL.test(email)) return "Enter an email address like name@example.com.";
 }
 
+/** Turns Supabase's weak-password reasons into one sentence that says what to change (#23). */
 function weakPasswordMessage(error: AuthError) {
   if (!isAuthWeakPasswordError(error)) return `Use at least ${MIN_PASSWORD} characters.`;
   const reasons = new Set(error.reasons);
@@ -53,11 +58,20 @@ function isRateLimit(error: AuthError) {
   return error.code === "over_request_rate_limit" || error.code === "over_email_send_rate_limit";
 }
 
+/** Logs an unexpected error and shows generic copy: raw auth errors can name internals or hint whether an account exists. */
 function fail(action: string, error: unknown, email?: string): AuthState {
   console.error(`auth/${action}`, error);
   return { status: "error", message: GENERIC, email };
 }
 
+/**
+ * Signs in with email and password, then goes to `next` when it stays on this origin. An unconfirmed address gets the
+ * "unconfirmed" status, so the form can offer to resend the link (#1).
+ *
+ * @param _prev - The form's last state (useActionState); unused.
+ * @param formData - `email`, `password` and the hidden `next`.
+ * @returns The state to show, or no return: it redirects on success.
+ */
 export async function signIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
   const password = text(formData, "password");
@@ -86,6 +100,15 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   redirect(safeNext(text(formData, "next"), origin));
 }
 
+/**
+ * Creates an account and sends the confirmation email, whose link comes back to this deployment's /auth/confirm.
+ * Every outcome but a bad input lands on "check your email", so sign-up can't tell anyone which addresses have
+ * accounts (#3).
+ *
+ * @param _prev - The form's last state (useActionState); unused.
+ * @param formData - `email`, `password` and the optional `name`.
+ * @returns The state to show, or no return: it redirects to /sign-up/check-email.
+ */
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
   const password = text(formData, "password");
@@ -126,6 +149,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     return fail("signUp", error, email);
   }
 
+  // The check-email page reads this to offer a resend; a cookie keeps the address out of the URL and server logs.
   (await cookies()).set(SIGNUP_EMAIL_COOKIE, email, {
     httpOnly: true,
     sameSite: "lax",
@@ -136,6 +160,13 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   redirect("/sign-up/check-email");
 }
 
+/**
+ * Sends the sign-up confirmation link again. Supabase allows one per address per 60 s; the form adds its own cooldown.
+ *
+ * @param _prev - The form's last state (useActionState); unused.
+ * @param formData - `email`.
+ * @returns "sent" with the same message whether or not the address has an account, or a rate-limit error.
+ */
 export async function resendConfirmation(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
   if (checkEmail(email)) return { status: "error", message: "Enter your email address first." };
@@ -157,6 +188,14 @@ export async function resendConfirmation(_prev: AuthState, formData: FormData): 
   };
 }
 
+/**
+ * Emails a password reset link. The link goes to /auth/confirm, which signs the learner in and sends them on to
+ * /update-password. A Google-only learner can use it to add a password (#16).
+ *
+ * @param _prev - The form's last state (useActionState); unused.
+ * @param formData - `email`.
+ * @returns "sent" whether or not the address has an account, or a field or rate-limit error.
+ */
 export async function requestReset(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
   const emailError = checkEmail(email);
@@ -173,6 +212,14 @@ export async function requestReset(_prev: AuthState, formData: FormData): Promis
   return { status: "sent", email };
 }
 
+/**
+ * Sets a new password for the learner the reset link signed in. Without a session the link has expired, so the form
+ * says to request a new one rather than showing a generic error.
+ *
+ * @param _prev - The form's last state (useActionState); unused.
+ * @param formData - `password`.
+ * @returns The state to show, or no return: it redirects to /dashboard.
+ */
 export async function updatePassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const password = text(formData, "password");
   if (password.length < MIN_PASSWORD)
@@ -210,7 +257,12 @@ export async function updatePassword(_prev: AuthState, formData: FormData): Prom
   redirect("/dashboard");
 }
 
-/** Starts Google sign-in: Supabase sends the browser to Google, which comes back to /auth/callback on this origin. */
+/**
+ * Starts Google sign-in: Supabase sends the browser to Google, which comes back to /auth/callback on this origin.
+ * `next` is checked here and again in the callback, so neither hop can become an open redirect.
+ *
+ * @param formData - The hidden `next`.
+ */
 export async function signInWithGoogle(formData: FormData): Promise<void> {
   const origin = await requestOrigin();
   if (!origin) {
@@ -230,7 +282,7 @@ export async function signInWithGoogle(formData: FormData): Promise<void> {
   redirect(data.url);
 }
 
-/** Signs out this browser only. */
+/** Signs out this browser only. A POST action, never a GET link, so another site can't sign a learner out (#26). */
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut({ scope: "local" });

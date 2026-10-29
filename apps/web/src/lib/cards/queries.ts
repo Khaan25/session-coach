@@ -11,7 +11,11 @@ import { CARD_COLUMNS, type CardView } from "./columns";
  * One of the learner's sessions and, once it is ready, its visible cards in order. Learner reads through RLS: hidden
  * cards and other learners' rows never come back, and the user_id filter decides ownership in code too.
  *
- * @returns null when the id isn't a uuid or isn't one of the learner's sessions.
+ * @param userId - The signed-in learner, from `getCurrentUser()`.
+ * @param sessionId - The `[id]` route segment, unchecked.
+ * @returns null when the id isn't a uuid or isn't one of the learner's sessions; otherwise
+ *   - `session`: the summary columns, whatever its status;
+ *   - `cards`: its visible cards by `position`, empty until the session is ready.
  */
 export async function getSessionWithCards(
   userId: string,

@@ -16,6 +16,8 @@ import {
 /**
  * One page of the learner's sessions, newest first, with the visible card count of each ready session.
  *
+ * @param options.userId - The signed-in learner.
+ * @param options.page - The 1-based page from `?page=` (see `parsePage`).
  * @returns The page's rows and whether an older page exists.
  */
 export async function listSessions({
@@ -41,7 +43,12 @@ export async function listSessions({
   return { sessions: await withCardCounts(sessions), hasMore: data.length > PAGE_SIZE };
 }
 
-/** The learner's latest sessions for the sidebar, newest first, with card counts. */
+/**
+ * The learner's latest sessions for the sidebar, newest first, with card counts.
+ *
+ * @param userId - The signed-in learner.
+ * @param limit - How many to show.
+ */
 export async function recentSessions(userId: string, limit = 5): Promise<SessionListItem[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -56,7 +63,11 @@ export async function recentSessions(userId: string, limit = 5): Promise<Session
   return withCardCounts(data);
 }
 
-/** Visible cards per ready session. RLS hides `hidden` cards; only session_id is selected, never model_answer. */
+/**
+ * Visible cards per ready session. RLS hides `hidden` cards; only session_id is selected, never model_answer.
+ *
+ * @param sessions - The rows to annotate; only ready ones get a `cardCount`.
+ */
 async function withCardCounts(sessions: SessionSummary[]): Promise<SessionListItem[]> {
   const ready = sessions.filter(({ status }) => status === "ready").map(({ id }) => id);
   if (ready.length === 0) return sessions;
@@ -77,7 +88,10 @@ async function withCardCounts(sessions: SessionSummary[]): Promise<SessionListIt
 
 /**
  * Cards due today: `reviews.due_on <= today` in the learner's `profiles.timezone`, not mastered.
+ * The same rule as `dueTodayCount` in `lib/review/queries.ts`; change both together.
  *
+ * @param userId - The signed-in learner.
+ * @param now - The current time, from the page.
  * @returns The count, 0 until reviews exist.
  */
 export async function dueTodayCount(userId: string, now: Date): Promise<number> {

@@ -15,6 +15,12 @@ const DAY_MS = 86_400_000;
 /** Cohorts and activity are read for this many days; every window of these cohorts falls inside it. */
 const RETENTION_DAYS = 120;
 
+/**
+ * The headline counts, then retention. Counts run in Postgres (`count: "exact"`) so the 1000-row API limit can't cap
+ * them; retention reads rows and is computed by `buildRetentionCohorts`.
+ *
+ * @param req - Must carry the dashboard bearer key.
+ */
 export async function GET(req: NextRequest) {
   const denied = requireDashboardKey(req);
   if (denied) return denied;

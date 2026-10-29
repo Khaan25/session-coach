@@ -14,6 +14,12 @@ import { createClient } from "@/lib/supabase/server";
 /** Storage list and remove both take at most this many objects per call. */
 const BATCH = 1000;
 
+/**
+ * Deletes the signed-in learner. The auth user's cascade removes every table row, but not Storage objects (no foreign
+ * key reaches them), so the logs go first while `sessions.raw_path` still says where they are.
+ *
+ * @returns 200 `{ deleted: true }`, 401 signed out, 500 when a step failed (the account is still there).
+ */
 export async function DELETE() {
   const supabase = await createClient();
   // getUser(), not getClaims(): asks the auth server, so a deleted or banned user's live JWT is refused.
@@ -29,6 +35,7 @@ export async function DELETE() {
     const sessions = await fetchAll<{ raw_path: string }>((from, to) =>
       admin.from("sessions").select("raw_path").eq("user_id", user.id).order("id").range(from, to),
     );
+    // Also list the learner's folder: an upload whose session row was never written still has to go.
     const listed: { name: string; id: string | null }[] = [];
     for (;;) {
       const { data, error } = await storage.list(user.id, { limit: BATCH, offset: listed.length });
