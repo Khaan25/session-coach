@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
+import { Sprite } from "@/components/art/sprite";
 import { Container } from "@/components/app/container";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { SessionListLoading } from "@/components/app/loading-state";
@@ -9,7 +10,14 @@ import { AppPageHeader } from "@/components/app/page-header";
 import { SessionList } from "@/components/sessions/session-list";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { dueTodayCount, listSessions } from "@/lib/sessions/queries";
 import { PAGE_SIZE, parsePage } from "@/lib/sessions/rows";
@@ -46,6 +54,9 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
     <>
       {due > 0 && (
         <Item variant="outline">
+          <ItemMedia className="hidden sm:flex">
+            <Sprite name="cards" className="w-14" />
+          </ItemMedia>
           <ItemContent>
             <ItemTitle>
               {due} {due === 1 ? "card is" : "cards are"} due today

@@ -7,6 +7,7 @@ import {
   TerminalWindowIcon,
 } from "@phosphor-icons/react/ssr";
 
+import { Sprite, type SpriteName } from "@/components/art/sprite";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Empty,
@@ -29,6 +30,8 @@ type EmptyStateProps = {
   reason?: "empty" | "no-results";
   /** plain inside a Card, table or list frame; framed (default) when it stands alone. */
   variant?: "framed" | "plain";
+  /** A small watercolour object in the bottom-right corner, from lg up (the sidebar crowds it below). Decorative; the text never sits under it. */
+  sprite?: SpriteName;
 };
 
 /** A region with nothing to show yet: top-left where the first row would be, a title, one muted line, the action. */
@@ -39,9 +42,10 @@ export function EmptyState({
   action,
   reason = "empty",
   variant,
+  sprite,
 }: EmptyStateProps) {
   return (
-    <Empty reason={reason} variant={variant}>
+    <Empty reason={reason} variant={variant} className="relative">
       <EmptyHeader>
         {IconGlyph && (
           <EmptyMedia>
@@ -52,6 +56,9 @@ export function EmptyState({
         {description && <EmptyDescription>{description}</EmptyDescription>}
       </EmptyHeader>
       {action && <EmptyContent>{action}</EmptyContent>}
+      {sprite && (
+        <Sprite name={sprite} className="absolute right-4 bottom-4 hidden w-20 lg:block" />
+      )}
     </Empty>
   );
 }
@@ -64,6 +71,7 @@ export function NoSessionsEmpty({ variant }: PresetProps) {
     <EmptyState
       variant={variant}
       icon={TerminalWindowIcon}
+      sprite="pencil"
       title="No sessions yet"
       description="Your sessions appear here once the CLI is set up. Each session becomes 3 to 5 decision cards, and you explain them back on day 1, 3 and 7."
       action={
@@ -81,6 +89,7 @@ export function NoCardsDueEmpty({ variant }: PresetProps) {
     <EmptyState
       variant={variant}
       icon={CalendarCheckIcon}
+      sprite="tea"
       title="No cards due today"
       description="Each card comes back on day 1, 3 and 7 after its session. New cards arrive when your next session ends."
     />
@@ -93,6 +102,7 @@ export function NoReviewsEmpty({ variant }: PresetProps) {
     <EmptyState
       variant={variant}
       icon={ChartLineUpIcon}
+      sprite="plant"
       title="No reviews yet"
       description="Your progress shows here after you explain back your first card."
       action={
