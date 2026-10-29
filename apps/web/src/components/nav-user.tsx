@@ -42,7 +42,10 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
         unmounts on close; the menu item is a submit button tied to it by `form`. */}
         <form id="sidebar-sign-out" action={signOut} hidden />
         <DropdownMenu>
-          <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
+          <DropdownMenuTrigger
+            render={<SidebarMenuButton size="lg" />}
+            aria-label={`Account menu for ${user.name}`}
+          >
             {who}
             <CaretUpDownIcon className="ml-auto" />
           </DropdownMenuTrigger>
