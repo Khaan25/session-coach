@@ -1,0 +1,12 @@
+{
+  "name": "session-coach",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "engines": { "node": "^22.22.2 || ^24.15.0" },
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  }
+}

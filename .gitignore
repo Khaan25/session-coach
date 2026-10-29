@@ -1,0 +1,22 @@
+node_modules/
+.pnpm-store/
+
+# build output
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# env: only .env.example is committed
+.env*
+!.env.example
+
+# local tools
+.vercel/
+.DS_Store
+*.log
+coverage/
+supabase/.temp/
+.claude/settings.local.json

@@ -1,0 +1,21 @@
+{
+  "name": "@session-coach/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./decision": "./src/decision.ts",
+    "./session": "./src/session.ts",
+    "./fixtures/session.sample.json": "./fixtures/session.sample.json"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types src/*.test.ts"
+  },
+  "dependencies": {
+    "zod": "4.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}
