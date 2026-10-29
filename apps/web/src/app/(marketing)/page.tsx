@@ -9,6 +9,7 @@ import {
   LoopSection,
   TrustSection,
 } from "@/components/marketing/landing-sections";
+import { FooterScene } from "@/components/marketing/site-footer";
 import { buttonVariants } from "@/components/ui/button";
 
 // The hero follows docs/design/landing-hero.md: headline with one hand-drawn underline, subhead, CTA with a note,
@@ -74,6 +75,7 @@ export default function Home() {
       <CardSection />
       <TrustSection />
       <ClosingSection />
+      <FooterScene />
     </>
   );
 }
