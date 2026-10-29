@@ -232,8 +232,8 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: TokenListRow) => void
               <DialogClose render={<Button variant="secondary" />} disabled={pending}>
                 Cancel
               </DialogClose>
-              <Button type="submit" disabled={pending}>
-                {pending && <Spinner />}
+              <Button type="submit" disabled={pending} aria-busy={pending}>
+                {pending && <Spinner label="" />}
                 Create token
               </Button>
             </DialogFooter>
@@ -276,8 +276,10 @@ function RevokeTokenDialog({
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={<Button variant="ghost" size="sm" disabled={pending} />}>
-        {pending && <Spinner />}
+      <AlertDialogTrigger
+        render={<Button variant="ghost" size="sm" disabled={pending} aria-busy={pending} />}
+      >
+        {pending && <Spinner label="" />}
         Revoke<span className="sr-only"> {label}</span>
       </AlertDialogTrigger>
       <AlertDialogContent>

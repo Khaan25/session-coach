@@ -14,9 +14,10 @@ export function RefreshButton() {
     <Button
       variant="secondary"
       disabled={pending}
+      aria-busy={pending}
       onClick={() => startTransition(() => router.refresh())}
     >
-      {pending && <Spinner />}
+      {pending && <Spinner label="" />}
       Try again
     </Button>
   );
