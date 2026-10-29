@@ -47,7 +47,7 @@ built first so every screen shares one look.
   hidden): `packages/shared/fixtures/session.sample.json`. Import per file, e.g.
   `import { decisionCardSchema } from "@session-coach/shared/decision"`. No barrel files.
 - `supabase/migrations/20261028000000_init.sql` (live on project `cbmoddlxyrokahfodrme`):
-  - `profiles` (id = auth user, `github_login`, `email`, `timezone`, `notify_email`), created by a
+  - `profiles` (id = auth user, `email`, `display_name`, `avatar_url`, `timezone`, `notify_email`; see `20261029000000_auth_profiles.sql`), created by a
     trigger on sign-up. Learners may update only `timezone` and `notify_email`.
   - `cli_tokens` (learner can read and delete own), `sessions` (read own; **no learner delete**,
     the server deletes the Storage object first), Realtime publication on `sessions`.
@@ -105,7 +105,7 @@ built first so every screen shares one look.
 | ----- | ------------------------------------- | --------------------------- | ---------- | ---- |
 | 0     | Design system                         | Zia                         | none       | M    |
 | 1     | Public pages                          | Zia                         | 0          | M    |
-| 2     | Auth: GitHub sign-in, app shell       | Zia                         | 0          | M    |
+| 2     | Auth (email + Google), app shell      | Zia                         | 0          | M    |
 | 3     | Setup page: CLI token + install guide | Zia (UI), Kasam (token API) | 2          | S    |
 | 4     | Sessions list with Realtime status    | Zia                         | 2          | S    |
 | 5     | Session detail cards `/s/[id]`        | Kasam                       | 2          | M    |
@@ -156,7 +156,7 @@ Steps:
    cards. Source facts: `docs/ARCHITECTURE.md`. **Verify**: page renders; copy names no feature
    that isn't planned in this file.
 3. **Pricing** (`/pricing`): free during the trial; one plan card. No billing code.
-4. **Privacy** (`/privacy`): what is collected (GitHub login, email, redacted session logs, cards,
+4. **Privacy** (`/privacy`): what is collected (name, email, redacted session logs, cards,
    answers), where (Supabase, region ap-south-1), the model providers used and that free-tier
    Gemini may use inputs to improve Google's products (from `docs/ARCHITECTURE.md` "Limits"),
    retention, how to delete (link `/settings` account deletion, Phase 8). Mark the page
@@ -179,39 +179,7 @@ name): leave a visible `TODO(owner)` in the copy and list it in the PR instead o
 
 ### Phase 2: Auth and the app shell (Zia)
 
-**Decision needed before starting (ask the team, record in `docs/DECISIONS.md`)**: add
-`@supabase/ssr` for cookie-based Supabase Auth in Next (recommended; it is Supabase's documented
-package for App Router). Do not add any other auth library.
-
-**Scope (create):** `src/lib/supabase/server.ts` (server client from cookies, anon key),
-`src/lib/supabase/client.ts` (browser client), `src/proxy.ts` or `middleware.ts` (check the Next 16
-docs for which one this version uses) refreshing the session and redirecting signed-out users
-away from app routes, `src/app/(app)/layout.tsx` (sidebar/top nav, user menu with sign-out),
-`src/app/login/page.tsx`, `src/app/auth/callback/route.ts`.
-
-Steps:
-
-1. Enable the GitHub provider in the Supabase project (dashboard: Authentication → Providers),
-   with a GitHub OAuth app whose callback is the Supabase callback URL. Add the Vercel production
-   and preview URLs plus `http://localhost:3000` to Supabase Auth's redirect allow list. This is a
-   person's step: ask, don't do it with stored credentials.
-2. `/login`: one "Continue with GitHub" button (`signInWithOAuth`, provider `github`,
-   `redirectTo` = `/auth/callback`). **Verify**: clicking it on localhost reaches GitHub.
-3. `/auth/callback`: exchange the code for a session, redirect to `/dashboard`. **Verify**: after
-   sign-in, `select id, github_login from profiles` (service role, Supabase SQL editor) shows the
-   new row created by the `handle_new_user` trigger.
-4. Route protection: signed-out requests to `/dashboard`, `/s/*`, `/review`, `/progress`,
-   `/settings`, `/setup` redirect to `/login?next=<path>`.
-5. App shell with nav: Dashboard, Review (with due count, filled in Phase 6), Progress, Setup,
-   Settings.
-
-**Done criteria**: signing in with GitHub on the Vercel preview lands on `/dashboard`; signing out
-returns to `/`; a signed-out `curl -I <preview>/dashboard` returns a redirect to `/login`;
-`SUPABASE_SERVICE_ROLE_KEY` is not imported by any file under `src/app/**` that has
-`"use client"` (`rg -l '"use client"' apps/web/src | xargs rg -l SERVICE_ROLE` prints nothing).
-
-**STOP if** the sign-in trigger does not create a `profiles` row, or Next 16's docs describe a
-different session-refresh mechanism than this plan assumes.
+**Detailed in [auth.md](auth.md)**: email + password and Google sign-in with `@supabase/ssr`, `proxy.ts`, confirm/callback routes, 29 edge cases and the manual Supabase/Google setup. This phase also adds the app shell: `src/app/(app)/layout.tsx` with nav (Dashboard, Review with due count from Phase 6, Progress, Setup, Settings) and a user menu with sign-out.
 
 ---
 
@@ -258,7 +226,7 @@ status, error, created_at`, newest first, 20 per page; page in the URL with `nuq
 
 **Done criteria**: inserting a `sessions` row for the signed-in user from the Supabase SQL editor
 appears on the open dashboard within 5 s without a reload, and updating its `status` updates the
-badge; a second user's rows never appear (sign in as two GitHub accounts or insert a row with
+badge; a second user's rows never appear (sign in as two accounts or insert a row with
 another `user_id`).
 
 ---
@@ -351,11 +319,11 @@ public `src/app/(marketing)/delete-account/page.tsx` (instructions for people wh
 
 Steps:
 
-1. Profile: GitHub login and email (read-only), timezone (select, IANA names), email reminders
+1. Profile: display name (editable), email (read-only), timezone (select, IANA names), email reminders
    on/off (`notify_email`). Updates go straight through the anon client (the only learner writes
    the migration allows).
 2. CLI tokens: link to `/setup`.
-3. Delete account: `alert-dialog` requiring the learner to type their GitHub login; the route
+3. Delete account: `alert-dialog` requiring the learner to type their email; the route
    deletes every Storage object under the learner's sessions, then the auth user (cascades to all
    rows), then signs out.
 
@@ -382,7 +350,7 @@ console with the anon client fails (column grant); deleting a test account remov
 - [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm build` pass on `main`.
 - [ ] `rg -n "model_answer" apps/web/src --glob '!**/api/**'` matches nothing outside server code.
 - [ ] `rg -n "select\(\"\*\"\)|select\('\*'\)" apps/web/src` matches nothing in learner-facing code.
-- [ ] A new GitHub account can sign in, create a CLI token, see a session arrive, review a card
+- [ ] A new account (email or Google) can sign in, create a CLI token, see a session arrive, review a card
       and see progress, on the production URL.
 
 ## STOP conditions (any phase)

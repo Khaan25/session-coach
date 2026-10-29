@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-10-29 · Sign-in: email + password and Google; provider-neutral profiles
+
+- **Decision:** Supabase Auth with email + password and Google (GitHub later through the same callback). `profiles.github_login` becomes `display_name` + `avatar_url`, filled from any provider. `email` stays copied in `profiles` and a trigger keeps it in sync; linked logins live in `auth.identities`. Learners may also update `display_name`.
+- **Why:** learners can't read `auth.users`, and the Play Stats roster and learner pages need the email and name in one query. A copy table for identities would duplicate what Supabase already keeps.
+- **Rejected:** reading email from `auth.users` on every request (needs the service role everywhere); a `user_identities` table.
+- Plan and edge cases: `docs/plans/auth.md`.
+
 ## 2026-10-29 · Agent tooling, Play Stats API, live backend
 
 - **Decision:** adopt the 8x template's agent setup: AGENTS.md holds the rules, a SessionStart brief, SessionEnd transcripts in `.claude-logs/`, git hooks (secrets, commit messages, pre-push gates), repo skills `spec`/`local-review`/`ship`, and `docs/rules/`. Add the Play Stats API per `docs/PLAY_API.md`.
