@@ -14,7 +14,8 @@ export function safeNext(next: string | null | undefined, origin: string): strin
   try {
     const base = new URL(origin);
     const url = new URL(next, base);
-    if (url.origin !== base.origin) return DEFAULT_NEXT;
+    // Dot segments can normalise to a "//host" path ("/.//evil.com"), which a later redirect reads as another origin.
+    if (url.origin !== base.origin || url.pathname.startsWith("//")) return DEFAULT_NEXT;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return DEFAULT_NEXT;

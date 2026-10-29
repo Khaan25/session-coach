@@ -18,5 +18,7 @@ export function accountStoragePaths(
   listed: { name: string; id: string | null }[],
 ): string[] {
   const prefixed = listed.filter((entry) => entry.id !== null).map((e) => `${userId}/${e.name}`);
-  return [...new Set([...rawPaths, ...prefixed])];
+  // The service role deletes these, so a raw_path outside the learner's own folder is never trusted.
+  const own = rawPaths.filter((path) => path.startsWith(`${userId}/`));
+  return [...new Set([...own, ...prefixed])];
 }
