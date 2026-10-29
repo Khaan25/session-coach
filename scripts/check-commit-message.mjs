@@ -39,12 +39,19 @@ const SCOPES = [
   "deps",
 ];
 
+// Headers git or GitHub writes on their own; they can't follow the format, so they pass as-is.
 const EXEMPT_PATTERN = /^(Merge |Revert |fixup!|squash!|amend!|Initial commit)/;
 
 const HEADER_PATTERN = new RegExp(
   `^(${TYPES.join("|")})(\\([a-z0-9-]+(?:\\/[a-z0-9-]+)?\\))?!?: .+$`,
 );
 
+/**
+ * Checks one commit message against the repo's Conventional Commits rules.
+ *
+ * @param {string} message - The full message: header, optional blank line and body.
+ * @returns {{ valid: boolean, reason?: string }} `reason` explains the first rule broken, when invalid.
+ */
 export function validateCommitMessage(message) {
   const lines = message.split("\n");
   const header = lines[0] ?? "";
@@ -102,6 +109,7 @@ export function validateCommitMessage(message) {
   return { valid: true };
 }
 
+// CLI entry: validates a commit-msg file (hook) or a range of commits (CI); exits 1 on failure.
 async function main() {
   const args = process.argv.slice(2);
   let message;

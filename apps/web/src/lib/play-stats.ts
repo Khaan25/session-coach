@@ -5,11 +5,21 @@
 
 const DAY_MS = 86_400_000;
 
+/** One signup day's retention row, as the stats dashboard expects it. */
 export type RetentionCohort = {
+  /** Signup day, UTC `YYYY-MM-DD`. */
   date: string;
+
+  /** Accounts created that day. */
   signups: number;
+
+  /** Of those, how many were active exactly 1 day later. Omitted until that day has passed. */
   d1?: number;
+
+  /** Same for 7 days later. */
   d7?: number;
+
+  /** Same for 30 days later. */
   d30?: number;
 };
 
@@ -22,6 +32,11 @@ export function utcDay(iso: string): string {
  * For each signup day, how many of that day's accounts were active EXACTLY 1, 7 and 30 UTC days
  * later. A window is reported only once its whole UTC day has passed; until then it is omitted,
  * never sent as 0. Callers pass only cohorts whose windows fall inside the activity they read.
+ *
+ * @param profiles - Accounts to group into cohorts by their signup day.
+ * @param activity - Uploads and answers; any row counts as the learner being active that day.
+ * @param now - The current time, passed in so tests can pin "today".
+ * @returns One row per signup day, oldest first.
  */
 export function buildRetentionCohorts(
   profiles: readonly { id: string; created_at: string }[],
@@ -29,6 +44,7 @@ export function buildRetentionCohorts(
   now: Date,
 ): RetentionCohort[] {
   const cohortOf = new Map(profiles.map((p) => [p.id, utcDay(p.created_at)]));
+  // Per user, which of the 1/7/30-day windows saw any activity.
   const offsets = new Map<string, Set<number>>();
   for (const a of activity) {
     const cohort = cohortOf.get(a.user_id);
@@ -41,6 +57,7 @@ export function buildRetentionCohorts(
     }
   }
 
+  // Roll users up into their signup day.
   const byDay = new Map<string, { signups: number; d1: number; d7: number; d30: number }>();
   for (const [userId, day] of cohortOf) {
     const row = byDay.get(day) ?? { signups: 0, d1: 0, d7: 0, d30: 0 };
@@ -56,6 +73,7 @@ export function buildRetentionCohorts(
   return [...byDay.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, row]) => {
+      // Strictly greater: day N is only complete once day N itself is over.
       const age = (today - Date.parse(date)) / DAY_MS;
       const cohort: RetentionCohort = { date, signups: row.signups };
       if (age > 1) cohort.d1 = row.d1;

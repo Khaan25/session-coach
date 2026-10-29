@@ -53,6 +53,7 @@ def project_root():
 # ----------------------------- helpers -----------------------------
 
 def parse_ts(s):
+    """Transcript ISO timestamp to datetime; None when missing or malformed, so one bad line never kills the log."""
     if not s:
         return None
     try:
@@ -61,6 +62,7 @@ def parse_ts(s):
         return None
 
 def to_local(dt):
+    """Shift to the machine's time zone, so file names and times match the author's clock."""
     return dt.astimezone() if dt else None
 
 def text_from_content(content):
@@ -84,6 +86,7 @@ def text_from_content(content):
     return None
 
 def is_real_prompt(o):
+    """True for a prompt the human typed, not a tool result or subagent turn Claude Code also logs as 'user'."""
     if o.get("isSidechain") or o.get("type") != "user":
         return False
     m = o.get("message")
@@ -259,6 +262,11 @@ def build_log(exchanges, session_id, cwd):
 
 
 def write_session(transcript_path, cwd, session_id=None, force=False):
+    """Write one session's log into .claude-logs/ and return its path.
+
+    Returns None when the session has no prompts, or when a log exists and force is off.
+    With force, the new log replaces the old one even if its timestamped name changed.
+    """
     session_id = session_id or os.path.splitext(os.path.basename(transcript_path))[0]
     exchanges = read_exchanges(transcript_path)
     fname, text = build_log(exchanges, session_id, cwd)
@@ -298,6 +306,7 @@ def encoded_project_dir(cwd):
     return os.path.join(os.path.expanduser("~/.claude/projects"), enc)
 
 def backfill(cwd, force=False):
+    """Log every stored transcript for this project, oldest first; returns the paths written."""
     proj = encoded_project_dir(cwd)
     made = []
     for tp in sorted(glob.glob(os.path.join(proj, "*.jsonl")), key=os.path.getmtime):
@@ -338,6 +347,7 @@ def is_template_repo():
 
 
 def main():
+    """Hook mode by default, --backfill for past sessions. Always exits 0 so it never blocks Claude Code."""
     if is_template_repo():
         print(
             f"log-session: not writing a session log: this is the template repository "

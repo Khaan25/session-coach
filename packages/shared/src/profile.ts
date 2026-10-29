@@ -21,6 +21,7 @@ export const profileSchema = z.object({
   avatar_url: z.url({ protocol: /^https$/ }).nullable(),
   /** IANA time zone, so "due today" means the learner's today. */
   timezone: z.string().refine(isTimeZone, "must be an IANA time zone, e.g. Asia/Karachi"),
+  /** Whether to send lesson-ready and daily-review emails. */
   notify_email: z.boolean(),
   created_at: z.iso.datetime({ offset: true }),
 });

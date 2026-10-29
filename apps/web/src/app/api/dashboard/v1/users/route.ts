@@ -9,6 +9,7 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
+/** Every plan the dashboard may filter by; only `free` has users today. */
 const PLANS = ["free", "premium", "trial", "granted", "promo", "sandbox"];
 // No billing and no checkout yet: `purchase` truthfully lists nobody; `checkout` isn't tracked.
 const STAGES = ["purchase"];
@@ -85,7 +86,13 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** Latest upload or answer per user: the learner's last real activity. */
+/**
+ * Latest upload or answer per user: the learner's last real activity.
+ *
+ * @param supabase - Service-role client.
+ * @param ids - The users on the current roster page.
+ * @returns Map of user id to their latest activity timestamp; users with none are absent.
+ */
 async function lastSeenByUser(supabase: ReturnType<typeof createAdminClient>, ids: string[]) {
   const latest = new Map<string, string>();
   if (ids.length === 0) return latest;
@@ -110,6 +117,7 @@ async function lastSeenByUser(supabase: ReturnType<typeof createAdminClient>, id
   ]);
   for (const row of [...uploads, ...answers]) {
     const current = latest.get(row.user_id);
+    // Postgres returns these as UTC ISO strings, so string order is time order.
     if (!current || row.created_at > current) latest.set(row.user_id, row.created_at);
   }
   return latest;
