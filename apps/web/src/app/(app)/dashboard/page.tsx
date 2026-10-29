@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { Sprite } from "@/components/art/sprite";
@@ -51,6 +52,8 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
   if (!user) return <NoSessionsEmpty />;
   const page = parsePage((await searchParams).page);
   const { now, sessions, hasMore, due } = await load(user.id, page);
+  // Past the last page: go to the first rather than show "no sessions yet".
+  if (page > 1 && sessions.length === 0) redirect("/dashboard");
   return (
     <>
       {due > 0 && (
