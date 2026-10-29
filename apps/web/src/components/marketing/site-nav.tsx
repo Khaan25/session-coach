@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { BrandMark } from "@/components/brand-mark";
+import { BrandLink } from "@/components/auth/auth-parts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { initialsOf } from "@/lib/auth/initials";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -43,10 +43,7 @@ export function SiteNav() {
         aria-label="Main"
         className="mx-auto flex h-18 w-full max-w-(--container) items-center justify-between gap-6 px-(--gutter-sm) sm:h-20 sm:px-(--gutter)"
       >
-        <Link href="/" className="flex items-center gap-2 type-label text-text-1">
-          <BrandMark className="size-6" />
-          Session Coach
-        </Link>
+        <BrandLink />
         <ul className="hidden items-center gap-8 md:flex">
           {links.map((link) => (
             <li key={link.href}>

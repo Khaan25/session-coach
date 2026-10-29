@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 
+import { AuthCard, AuthHeading, AuthSwitch } from "@/components/auth/auth-parts";
 import { AuthNotice } from "@/components/auth/auth-notice";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 import { confirmEmail } from "./actions";
 
@@ -31,18 +30,16 @@ async function ConfirmForm({ searchParams }: Pick<PageProps<"/auth/confirm">, "s
 
   const recovery = type === "recovery";
   return (
-    <Card size="lg">
-      <CardContent>
-        <form action={confirmEmail} className="flex flex-col">
-          <input type="hidden" name="token_hash" value={tokenHash} />
-          <input type="hidden" name="type" value={type} />
-          <input type="hidden" name="next" value={first(params.next) ?? ""} />
-          <Button type="submit" size="lg">
-            {recovery ? "Continue to set a password" : "Confirm and sign in"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <AuthCard>
+      <form action={confirmEmail} className="flex flex-col">
+        <input type="hidden" name="token_hash" value={tokenHash} />
+        <input type="hidden" name="type" value={type} />
+        <input type="hidden" name="next" value={first(params.next) ?? ""} />
+        <Button type="submit" size="lg">
+          {recovery ? "Continue to set a password" : "Confirm and sign in"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 }
 
@@ -50,24 +47,22 @@ async function ConfirmForm({ searchParams }: Pick<PageProps<"/auth/confirm">, "s
 // one-time token (docs/plans/auth.md #8).
 export default function ConfirmPage({ searchParams }: PageProps<"/auth/confirm">) {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
-      <div className="flex flex-col gap-3">
-        <h1 className="font-display text-5xl leading-none tracking-tight text-text-1 sm:text-6xl">
-          One more <span className="italic">step</span>
-        </h1>
-        <p className="type-body text-pretty text-text-2">
-          Press the button to finish. The link works once.
-        </p>
-      </div>
+    <>
+      <AuthHeading
+        title={
+          <>
+            One more <span className="italic">step</span>
+          </>
+        }
+      >
+        Press the button to finish. The link works once.
+      </AuthHeading>
       <Suspense>
         <ConfirmForm searchParams={searchParams} />
       </Suspense>
-      <p className="type-body-sm text-text-2">
-        Didn&apos;t ask for this?{" "}
-        <Link href="/" className={buttonVariants({ variant: "link" })}>
-          Go home
-        </Link>
-      </p>
-    </div>
+      <AuthSwitch prompt="Didn't ask for this?" href="/">
+        Go home
+      </AuthSwitch>
+    </>
   );
 }
