@@ -50,3 +50,10 @@ test("profile update accepts only learner-writable fields", async () => {
   });
   assert.equal(profileUpdateSchema.safeParse({ display_name: "   " }).success, false);
 });
+
+test("profile update rejects unknown time zones", async () => {
+  const { profileUpdateSchema } = await import("./profile.ts");
+  assert.equal(profileUpdateSchema.safeParse({ timezone: "Asia/Karachi" }).success, true);
+  assert.equal(profileUpdateSchema.safeParse({ timezone: "Mars/Olympus" }).success, false);
+  assert.equal(profileUpdateSchema.safeParse({ timezone: "" }).success, false);
+});

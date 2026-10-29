@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+/** True for a time zone name the runtime knows (IANA), e.g. "Asia/Karachi" or "UTC". */
+function isTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return value.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** A learner's profile row. One per auth user, created by the `handle_new_user` trigger. */
 export const profileSchema = z.object({
   id: z.uuid(),
@@ -10,7 +20,7 @@ export const profileSchema = z.object({
   /** Provider avatar (Google, GitHub), https only. Server-managed. */
   avatar_url: z.url({ protocol: /^https$/ }).nullable(),
   /** IANA time zone, so "due today" means the learner's today. */
-  timezone: z.string().min(1),
+  timezone: z.string().refine(isTimeZone, "must be an IANA time zone, e.g. Asia/Karachi"),
   notify_email: z.boolean(),
   created_at: z.iso.datetime({ offset: true }),
 });

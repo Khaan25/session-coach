@@ -49,7 +49,7 @@ built first so every screen shares one look.
   `import { decisionCardSchema } from "@session-coach/shared/decision"`. No barrel files.
 - `supabase/migrations/20261028000000_init.sql` (live on project `cbmoddlxyrokahfodrme`):
   - `profiles` (id = auth user, `email`, `display_name`, `avatar_url`, `timezone`, `notify_email`; see `20261029000000_auth_profiles.sql`), created by a
-    trigger on sign-up. Learners may update only `timezone` and `notify_email`.
+    trigger on sign-up. Learners may update `display_name`, `timezone` and `notify_email`.
   - `cli_tokens` (learner can read and delete own), `sessions` (read own; **no learner delete**,
     the server deletes the Storage object first), Realtime publication on `sessions`.
   - `decision_cards`: learners read own rows where `not hidden`, **every column except

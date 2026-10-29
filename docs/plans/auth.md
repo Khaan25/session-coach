@@ -62,7 +62,7 @@ deploy, then `supabase db push`. Between those two steps only the Play Stats ros
 ## Flows (exact calls)
 
 - **Sign-up:** `auth.signUp({ email, password, options: { emailRedirectTo: <origin>/auth/confirm?next=/dashboard, data: { full_name } } })` → "check your email".
-- **Confirm:** email link `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next={{ .RedirectTo }}` → button → `verifyOtp`.
+- **Confirm:** `emailRedirectTo` already points at this deployment's `/auth/confirm?next=/dashboard`, so the email link is built on it: `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email` (reset: `type=recovery`, with `redirectTo` = `<origin>/auth/confirm?next=/update-password`). The page shows a button → `verifyOtp`, then redirects to `safeNext(next)`. No `{{ .SiteURL }}`, so preview sign-ups confirm on the preview and `next` is never nested.
 - **Sign-in:** `auth.signInWithPassword({ email, password })`. Error code `email_not_confirmed` shows a resend button (`auth.resend({ type: "signup", email })`).
 - **Google:** a Server Action calls `auth.signInWithOAuth({ provider: "google", options: { redirectTo: <request origin>/auth/callback?next=… } })`, then `redirect(data.url)`.
 - **Reset:** `auth.resetPasswordForEmail(email, { redirectTo })`; the email link goes to `/auth/confirm?…&type=recovery&next=/update-password`; that page calls `auth.updateUser({ password })`.
