@@ -49,7 +49,7 @@ TODO(zia): how long backups keep data after an account is deleted.
 
 You can delete your account from your settings page. This deletes your sessions, their stored logs, your cards, answers and reviews, your CLI tokens, the record of emails we sent you, and your account.
 
-TODO(zia): the settings page and a delete-account page for people who cannot sign in (Phase 8).
+If you can no longer sign in, the [delete account](/delete-account) page explains how to ask us to delete it.
 
 ## Contact
 
