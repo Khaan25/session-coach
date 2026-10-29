@@ -98,29 +98,33 @@ function Sparkline({
       className={cn(sparklineVariants({ size }), "w-24", className)}
       {...props}
     >
-      <table data-slot="chart-data-table" className="sr-only">
-        <caption>{`${label}: ${trendWords(values, valueFormat)}`}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Point</th>
-            <th scope="col">{label}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {n === 0 ? (
+      {/* sr-only sits on a wrapper: a table ignores width and overflow, so on the table itself it stays
+          as wide as its rows and pushes the page sideways. */}
+      <div className="sr-only">
+        <table data-slot="chart-data-table">
+          <caption>{`${label}: ${trendWords(values, valueFormat)}`}</caption>
+          <thead>
             <tr>
-              <td colSpan={2}>{CHART_EMPTY}</td>
+              <th scope="col">Point</th>
+              <th scope="col">{label}</th>
             </tr>
-          ) : (
-            data.map((v, i) => (
-              <tr key={i}>
-                <th scope="row">{nameAt(i)}</th>
-                <td>{v === null ? EMPTY_VALUE : valueFormat(v)}</td>
+          </thead>
+          <tbody>
+            {n === 0 ? (
+              <tr>
+                <td colSpan={2}>{CHART_EMPTY}</td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              data.map((v, i) => (
+                <tr key={i}>
+                  <th scope="row">{nameAt(i)}</th>
+                  <td>{v === null ? EMPTY_VALUE : valueFormat(v)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
       {/* Right to left mirrors the drawing, which has no text, so the first value sits at the right. */}
       <svg
         aria-hidden
