@@ -65,7 +65,8 @@ export function toSummary(record: Record<string, unknown>): SessionSummary {
 
 /**
  * Applies an inserted or updated row: an existing row is updated in place (keeping its card count), a new one is
- * prepended when `prepend` is set (page 1, the sidebar) and the list is cut to `limit`.
+ * prepended when `prepend` is set (page 1, the sidebar) and it is no older than the newest row, and the list is cut
+ * to `limit`. An update to an older session outside the list stays out of it.
  * Older pages pass `prepend: false`, so a new upload doesn't push rows off a page the learner is reading.
  *
  * @param rows - The list as rendered now.
@@ -81,5 +82,6 @@ export function applySessionChange(
 ): SessionListItem[] {
   const i = rows.findIndex(({ id }) => id === row.id);
   if (i >= 0) return rows.map((old, j) => (j === i ? { ...old, ...row } : old));
-  return prepend ? [row, ...rows].slice(0, limit) : rows;
+  const newest = rows[0] ? Date.parse(rows[0].created_at) : -Infinity;
+  return prepend && Date.parse(row.created_at) >= newest ? [row, ...rows].slice(0, limit) : rows;
 }

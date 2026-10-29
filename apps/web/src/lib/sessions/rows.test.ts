@@ -49,3 +49,13 @@ test("an insert is prepended and cut to the limit, or ignored off page 1", () =>
   );
   assert.equal(applySessionChange(rows, row("c"), { ...opts, prepend: false }), rows);
 });
+
+test("an update to an older session outside the list leaves the list alone", () => {
+  const rows = [row("a"), row("b")];
+  const older = { ...row("z", "ready"), created_at: "2026-10-28T09:00:00Z" };
+  assert.equal(applySessionChange(rows, older, { prepend: true, limit: 20 }), rows);
+  assert.deepEqual(
+    applySessionChange([], older, { prepend: true, limit: 20 }).map((r) => r.id),
+    ["z"],
+  );
+});
