@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-// TODO(zia): /privacy, /terms and /support are planned pages; they 404 until they land.
+// TODO(zia): /support is a planned page; it 404s until it lands.
 const links = [
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
