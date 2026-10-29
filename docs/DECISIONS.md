@@ -2,6 +2,12 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-10-29 · The browser key stays the anon key
+
+- **Decision:** the browser and server clients read `NEXT_PUBLIC_SUPABASE_ANON_KEY`, not the starter's newer `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- **Why:** the project already runs on the anon key in every environment, and `docs/plans/auth.md` lets us keep it; both keys get the same RLS. Renaming means changing every environment at once for no behaviour change.
+- **Rejected:** switching to the publishable key now. Revisit when Supabase retires the anon key.
+
 ## 2026-10-29 · Auth redirect origins come from the request
 
 - **Decision:** Server Actions build `emailRedirectTo` and the OAuth `redirectTo` from the request's `Origin` header; route handlers use `request.nextUrl.origin`. Never `NEXT_PUBLIC_SITE_URL`, never `x-forwarded-host`.
