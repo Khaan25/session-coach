@@ -61,7 +61,10 @@ type CopyButtonProps = Omit<
   /** How long the confirmation stays, in ms. */
   timeout?: number;
   onCopy?: (value: string) => void;
-  /** Shows one state without a press, for docs and visual tests. Presses still copy. */
+  /**
+   * Shows one state without a press, for docs and visual tests. Presses still copy, except in "fetching", which
+   * ignores presses as a real fetch does.
+   */
   forceState?: Exclude<CopyState, "idle">;
 };
 
