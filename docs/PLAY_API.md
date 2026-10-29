@@ -29,7 +29,7 @@ Retention: a cohort member counts for `d1`/`d7`/`d30` when they uploaded a sessi
 
 `{ users: [{ id, email, name, plan, granted, country, currency, created_at, last_seen_at }], next_cursor }`
 
-- `name` is the GitHub login; `plan` is always `free`; `country` and `currency` are `null`.
+- `name` is `profiles.display_name` (null when the provider gave no name); `plan` is always `free`; `country` and `currency` are `null`.
 - `last_seen_at` is the latest session upload or review answer.
 - Pagination: `?limit=` (1–100, default 50) and `?cursor=` from the previous `next_cursor`.
 - `?plan=`: `free` lists everyone; `premium`, `trial`, `granted`, `promo`, `sandbox` return an empty list (true: nobody pays). Anything else: 400.

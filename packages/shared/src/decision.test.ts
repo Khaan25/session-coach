@@ -42,3 +42,11 @@ test("schema rejects reversed line ranges", () => {
   const evidence = [{ ...card.evidence[0], file: "a.ts", lines: [9, 3] }];
   assert.equal(decisionCardSchema.safeParse({ ...card, evidence }).success, false);
 });
+
+test("profile update accepts only learner-writable fields", async () => {
+  const { profileUpdateSchema } = await import("./profile.ts");
+  assert.deepEqual(profileUpdateSchema.parse({ display_name: "  Ada  ", email: "x@evil.com" }), {
+    display_name: "Ada",
+  });
+  assert.equal(profileUpdateSchema.safeParse({ display_name: "   " }).success, false);
+});

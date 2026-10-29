@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     const from = (page - 1) * limit;
     const profiles = await supabase
       .from("profiles")
-      .select("id, email, github_login, created_at")
+      .select("id, email, display_name, created_at")
       .order("created_at", { ascending: true })
       .range(from, from + limit - 1);
     if (profiles.error) throw profiles.error;
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     const users = profiles.data.map((p) => ({
       id: p.id,
       email: p.email,
-      name: p.github_login,
+      name: p.display_name,
       plan: "free",
       granted: false,
       country: null,
