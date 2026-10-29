@@ -9,15 +9,20 @@
 @import "../styles/base.css";
 @import "../styles/utilities.css";
 
-/* Marketing headlines only (font-display); the UI is Geist, set in tokens.css. The chart series
-   colours are emitted here as real variables too, because chart configs read them with var(). */
+/* Marketing headlines only (font-display); the UI is Geist, set in tokens.css. */
 :root {
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+}
+
+/* The chart series colours are emitted as real variables too, because chart configs read them with var().
+   Declared again on every [data-surface], so a chart on a remapped surface takes that surface's hues. */
+:root,
+:root [data-surface] {
   --color-chart-1: var(--hue-3-line);
   --color-chart-2: var(--hue-1-line);
   --color-chart-3: var(--hue-4-line);
   --color-chart-4: var(--hue-5-line);
   --color-chart-5: var(--hue-2-line);
-  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
 }
 
 /* A secondary key sits beside a primary one in every footer, so it takes the primary's two drops at
@@ -119,4 +124,19 @@
   [data-slot="sheet-content"][data-ending-style] {
     translate: none;
   }
+}
+
+/* The same under a data-force-reduced-motion wrapper (utilities.css), for docs specimens. */
+[data-force-reduced-motion] [data-slot] {
+  --tw-enter-translate-x: 0;
+  --tw-enter-translate-y: 0;
+  --tw-enter-scale: 1;
+  --tw-exit-translate-x: 0;
+  --tw-exit-translate-y: 0;
+  --tw-exit-scale: 1;
+}
+
+[data-force-reduced-motion]
+  [data-slot="sheet-content"]:is([data-starting-style], [data-ending-style]) {
+  translate: none;
 }
