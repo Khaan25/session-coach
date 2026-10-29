@@ -263,23 +263,23 @@ open. `proxy.ts` skips these routes: they have no session. Retention maths is pu
 
 ## Where to change what
 
-| To change...                          | Edit                                                                                                                                                              |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Which pages need sign-in              | `PROTECTED` in [`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)                                                                                   |
-| Where sign-in sends people by default | `DEFAULT_NEXT` in [`lib/auth/safe-next.ts`](../apps/web/src/lib/auth/safe-next.ts)                                                                                |
-| Auth form copy and rules              | [`app/(auth)/actions.ts`](<../apps/web/src/app/(auth)/actions.ts>), [`components/auth/`](../apps/web/src/components/auth/)                                        |
-| Auth email wording                    | [`supabase/templates/`](../supabase/templates/) and the same templates in the Supabase dashboard                                                                  |
-| The review gaps (1, 3, 7 days)        | `GAP_DAYS` in [`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts), with its test, ARCHITECTURE.md and PLAY_API.md                                  |
-| The grading prompt or output shape    | [`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts) and its test                                                                                         |
-| Model provider or model               | Env vars only: `MODEL_PROVIDER`, `MODEL_<TASK>`, the provider key                                                                                                 |
-| A new model provider                  | `KEY_ENV` and `request()` in [`lib/model/call-model.ts`](../apps/web/src/lib/model/call-model.ts)                                                                 |
-| What "can still explain" means        | [`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts), its test and ARCHITECTURE.md                                                              |
-| "Due today"                           | `dueTodayCount` in both [`lib/review/queries.ts`](../apps/web/src/lib/review/queries.ts) and [`lib/sessions/queries.ts`](../apps/web/src/lib/sessions/queries.ts) |
-| What a session is called              | [`lib/sessions/name.ts`](../apps/web/src/lib/sessions/name.ts)                                                                                                    |
-| Session list columns or page size     | [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)                                                                                                    |
-| Card columns learners read            | [`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts) (never `model_answer`)                                                                             |
-| A table, column, policy or grant      | A new migration (team agreement first), `packages/shared`, and [DATA_MODEL.md](DATA_MODEL.md)                                                                     |
-| Colours, spacing, type, motion        | [`styles/tokens.css`](../apps/web/src/styles/tokens.css)                                                                                                          |
-| A component's look                    | A variant in its file under [`components/ui/`](../apps/web/src/components/ui/)                                                                                    |
-| Security headers                      | [`apps/web/next.config.ts`](../apps/web/next.config.ts)                                                                                                           |
-| Play Stats numbers                    | [PLAY_API.md](PLAY_API.md) first, then `app/api/dashboard/v1/` and `lib/play-stats.ts`                                                                            |
+| To change...                          | Edit                                                                                                                             |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Which pages need sign-in              | `PROTECTED` in [`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)                                                  |
+| Where sign-in sends people by default | `DEFAULT_NEXT` in [`lib/auth/safe-next.ts`](../apps/web/src/lib/auth/safe-next.ts)                                               |
+| Auth form copy and rules              | [`app/(auth)/actions.ts`](<../apps/web/src/app/(auth)/actions.ts>), [`components/auth/`](../apps/web/src/components/auth/)       |
+| Auth email wording                    | [`supabase/templates/`](../supabase/templates/) and the same templates in the Supabase dashboard                                 |
+| The review gaps (1, 3, 7 days)        | `GAP_DAYS` in [`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts), with its test, ARCHITECTURE.md and PLAY_API.md |
+| The grading prompt or output shape    | [`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts) and its test                                                        |
+| Model provider or model               | Env vars only: `MODEL_PROVIDER`, `MODEL_<TASK>`, the provider key                                                                |
+| A new model provider                  | `KEY_ENV` and `request()` in [`lib/model/call-model.ts`](../apps/web/src/lib/model/call-model.ts)                                |
+| What "can still explain" means        | [`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts), its test and ARCHITECTURE.md                             |
+| "Due today"                           | `dueTodayCount` in [`lib/review/queries.ts`](../apps/web/src/lib/review/queries.ts)                                              |
+| What a session is called              | [`lib/sessions/name.ts`](../apps/web/src/lib/sessions/name.ts)                                                                   |
+| Session list columns or page size     | [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)                                                                   |
+| Card columns learners read            | [`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts) (never `model_answer`)                                            |
+| A table, column, policy or grant      | A new migration (team agreement first), `packages/shared`, and [DATA_MODEL.md](DATA_MODEL.md)                                    |
+| Colours, spacing, type, motion        | [`styles/tokens.css`](../apps/web/src/styles/tokens.css)                                                                         |
+| A component's look                    | A variant in its file under [`components/ui/`](../apps/web/src/components/ui/)                                                   |
+| Security headers                      | [`apps/web/next.config.ts`](../apps/web/next.config.ts)                                                                          |
+| Play Stats numbers                    | [PLAY_API.md](PLAY_API.md) first, then `app/api/dashboard/v1/` and `lib/play-stats.ts`                                           |

@@ -2,13 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 
-import {
-  localDate,
-  PAGE_SIZE,
-  SESSION_COLUMNS,
-  type SessionListItem,
-  type SessionSummary,
-} from "./rows";
+import { PAGE_SIZE, SESSION_COLUMNS, type SessionListItem, type SessionSummary } from "./rows";
 
 // Learner reads through the RLS client. The caller passes the signed-in learner's id (from getCurrentUser), so access
 // is decided before the query; the user_id filter also uses the (user_id, created_at) index.
@@ -84,30 +78,4 @@ async function withCardCounts(sessions: SessionSummary[]): Promise<SessionListIt
   return sessions.map((s) =>
     s.status === "ready" ? { ...s, cardCount: counts.get(s.id) ?? 0 } : s,
   );
-}
-
-/**
- * Cards due today: `reviews.due_on <= today` in the learner's `profiles.timezone`, not mastered.
- * The same rule as `dueTodayCount` in `lib/review/queries.ts`; change both together.
- *
- * @param userId - The signed-in learner.
- * @param now - The current time, from the page.
- * @returns The count, 0 until reviews exist.
- */
-export async function dueTodayCount(userId: string, now: Date): Promise<number> {
-  const supabase = await createClient();
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("timezone")
-    .eq("id", userId)
-    .maybeSingle<{ timezone: string }>();
-  if (profileError) throw new Error(`dueTodayCount: ${profileError.message}`);
-  const { count, error } = await supabase
-    .from("reviews")
-    .select("card_id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("mastered", false)
-    .lte("due_on", localDate(profile?.timezone ?? "UTC", now));
-  if (error) throw new Error(`dueTodayCount: ${error.message}`);
-  return count ?? 0;
 }
