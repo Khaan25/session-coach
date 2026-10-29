@@ -17,6 +17,16 @@
   --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
 }
 
+/* A secondary key sits beside a primary one in every footer, so it takes the primary's two drops at
+   half strength: both keys then end at the same line under them and read as one height. Declared
+   on the same selector as Quartz's derived tokens so overlays ([data-surface]) keep it. */
+.quartz,
+.quartz [data-surface] {
+  --key-secondary-edge:
+    0 1px 1px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.55)),
+    0 2px 5px -2px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.75));
+}
+
 /* The shadcn names Quartz's mapping leaves out, plus the app's own roles.
    - success: score 2 and "mastered". Quartz keeps warm hues for trouble, so success takes the mint
      kind (hue 5), not green-on-warm. warning: flagged cards, Quartz's amber.
