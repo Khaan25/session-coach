@@ -4,7 +4,8 @@
 > Build after the design system. One PR, owner Zia. GitHub sign-in can be added later through the
 > same callback route with `provider: "github"`.
 >
-> **Drift check (run first)**: `git diff --stat 7cced98..HEAD -- apps/web/src supabase/migrations packages/shared`
+> **Drift check (run first)**: run `git log -1 --format=%h -- docs/plans/auth.md` to get the commit that
+> last changed this plan, then `git diff --stat <that>..HEAD -- apps/web/src supabase/migrations packages/shared`.
 
 ## Status
 
@@ -121,7 +122,7 @@ deploy, then `supabase db push`. Between those two steps only the Play Stats ros
 - [ ] On the preview: email sign-up → confirm → `/dashboard`; Google sign-in → `/dashboard`; reset → new password works; sign-out returns to `/`.
 - [ ] A Google sign-in with the email of an existing confirmed password account leaves one row in `profiles` and two in `auth.identities`.
 - [ ] `profiles` rows from Google and email sign-ups have `display_name` (Google) and `email` filled.
-- [ ] `rg -l '"use client"' apps/web/src | xargs rg -l SERVICE_ROLE` prints nothing.
+- [ ] `rg -l '"use client"' apps/web/src | xargs -r rg -l SERVICE_ROLE` prints nothing.
 - [ ] A signed-out `GET /dashboard` redirects to `/login?next=%2Fdashboard`.
 
 ## STOP conditions

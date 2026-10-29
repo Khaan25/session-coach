@@ -5,8 +5,9 @@
 > the steps in order and run every verification command before moving on. If anything in a
 > phase's STOP conditions happens, stop and report instead of improvising.
 >
-> **Drift check (run first, every phase)**:
-> `git diff --stat 0c975e3..HEAD -- apps/web/src packages/shared supabase/migrations`
+> **Drift check (run first, every phase)**: run
+> `git log -1 --format=%h -- docs/plans/pages-and-dashboard.md` to get the commit that last
+> changed this plan, then `git diff --stat <that>..HEAD -- apps/web/src packages/shared supabase/migrations`.
 > If a file this plan quotes has changed, compare the "Current state" facts below against the
 > live code; on a mismatch, treat it as a STOP condition.
 
@@ -17,7 +18,7 @@
 - **Risk**: MED (auth, RLS boundaries, model grading)
 - **Depends on**: the design system PR (Phase 0 below) merged first
 - **Category**: direction
-- **Planned at**: commit `0c975e3`, 2026-10-29
+- **Planned at**: the commit that added this file, 2026-10-29
 
 ## Why this matters
 
@@ -70,7 +71,7 @@ built first so every screen shares one look.
 | Purpose                | Command                                             | Expected on success                  |
 | ---------------------- | --------------------------------------------------- | ------------------------------------ |
 | Install                | `pnpm install`                                      | exit 0, hooks path set               |
-| Format                 | `pnpm format` then `pnpm format:check`              | "All matched files use Prettier..."  |
+| Format                 | `pnpm format` then `pnpm format:check`              | exit 0                               |
 | Typecheck              | `pnpm typecheck`                                    | exit 0                               |
 | Lint                   | `pnpm lint`                                         | exit 0                               |
 | Tests                  | `pnpm test`                                         | `# fail 0` for every package         |
@@ -84,8 +85,6 @@ built first so every screen shares one look.
 
 ## Suggested executor toolkit
 
-- Repo skills: `spec` (if a phase needs more detail), `local-review` before every push, `ship` to
-  open the PR.
 - If available: `shadcn` (adding components), `next-best-practices` and
   `vercel-react-best-practices` (RSC boundaries, data fetching), `better-accessibility`,
   `better-writing` (copy), `zia-review` (lanes: React/components, accessibility, behavior).
@@ -113,8 +112,9 @@ built first so every screen shares one look.
 | 7     | Progress view                         | Zia                         | 6          | S    |
 | 8     | Settings and account deletion         | Zia                         | 2          | S    |
 
-Phases 1, 2 and 8 can run in parallel after 0. Phase 3 needs 2 for the signed-in user. Phases 4
-and 5 can run in parallel after 2. Phase 6 needs 5's card component.
+Phases 1 and 2 can run in parallel after 0. Phase 3 needs 2 for the signed-in user. Phases 4, 5
+and 8 can run in parallel after 2 (Phase 8 lives in the app shell). Phase 6 needs 5's card
+component.
 
 ---
 
@@ -148,8 +148,8 @@ Steps:
 
 1. **Landing** (`/`): one-line promise ("Explain the code your agent wrote"), the 3-step loop
    (session ends → cards → explain back on day 1/3/7), one real example card rendered from
-   `packages/shared/fixtures/session.sample.json` card 0, CTA to `/setup` (sign-in redirect comes
-   in Phase 2; link anyway). **Verify**: `pnpm build` lists `○ /`.
+   `packages/shared/fixtures/session.sample.json` card 0, CTA to `/how-it-works` (a Phase 1 route); point it at
+   `/setup` once Phase 3 lands. **Verify**: `pnpm build` lists `○ /`.
 2. **How it works** (`/how-it-works`): the pipeline in plain words (hook → upload → extract →
    evidence check → review), what is stored (redacted log, cards), what is never stored
    (secrets: redacted on the laptop and again on the server), stated vs inferred cards, flagged
@@ -167,7 +167,8 @@ Steps:
 7. **SEO**: `metadata` per page (title, description), `robots.ts` disallows `/dashboard`, `/s/`,
    `/review`, `/settings`, `/setup`, `/design`; `sitemap.ts` lists the public pages only.
 
-**Done criteria**: `pnpm build` lists all seven public routes as static (`○`); `pnpm lint`,
+**Done criteria**: `pnpm build` lists the six public pages (`/`, `/how-it-works`, `/pricing`,
+`/privacy`, `/terms`, `/support`) as static (`○`), plus `robots.txt` and `sitemap.xml`; `pnpm lint`,
 `pnpm typecheck`, `pnpm format:check` pass; each page has loading-free static content and a
 working nav; Lighthouse accessibility ≥ 95 on `/` (run in Chrome DevTools, record the number in
 the PR).
@@ -187,7 +188,8 @@ name): leave a visible `TODO(owner)` in the copy and list it in the PR instead o
 
 **Scope:** `src/app/(app)/setup/page.tsx` (Zia), `src/app/api/cli/tokens/route.ts` (Kasam:
 `POST` creates a token, stores only its sha256 in `cli_tokens.token_hash`, returns the raw token
-once; `DELETE ?id=` revokes). Agree the response shape in the team channel first.
+once; `DELETE ?id=` revokes, deleting only a token whose `user_id` is the signed-in learner:
+filter on `user_id` or use the RLS-scoped client; another learner's token id returns 404). Agree the response shape in the team channel first.
 
 Steps:
 
@@ -200,7 +202,7 @@ Steps:
 3. Privacy note: what the hook uploads, that it redacts secrets locally, link `/privacy`.
 
 **Done criteria**: creating a token adds a `cli_tokens` row whose `token_hash` is 64 hex
-characters and never equals the shown token; revoking deletes the row; the raw token appears in
+characters and never equals the shown token; revoking deletes the row, and revoking another learner's token id returns 404; the raw token appears in
 no server log (`rg` the route for `console.` calls that print it: none).
 
 ---
@@ -213,7 +215,7 @@ no server log (`rg` the route for `console.` calls that print it: none).
 Steps:
 
 1. Server-render the learner's sessions (`id, title, repo, branch, started_at, duration_min,
-status, error, created_at`, newest first, 20 per page; page in the URL with `nuqs`).
+   status, error, created_at`, newest first, 20 per page; page in the URL with `nuqs`).
 2. Subscribe to `postgres_changes` on `sessions` filtered by `user_id=eq.<uid>`; update a row's
    status in place (`pending` → `processing` → `ready` | `failed`) and prepend new sessions.
    Unsubscribe on unmount.
@@ -270,7 +272,9 @@ Steps:
    step 3 passed → `mastered: true, due_on: null`. Score 0 or 1: step 1, due +1 day. Dates in the
    learner's timezone. **Verify**: `pnpm test` passes the new cases (each transition, a restart,
    mastery, a timezone edge at local midnight).
-2. **Grading route** `POST /api/review/answer` `{ cardId, answer }`: authenticate the learner
+2. **Grading route** `POST /api/review/answer` `{ cardId, answer }`: validate the body with zod first
+   (`cardId` a UUID, `answer` trimmed, 1–4000 characters; 400 on failure) before any query or
+   model call, authenticate the learner
    (server client), load the card with the **service role** including `model_answer`, check the
    card belongs to the learner and isn't hidden, call `callModel("grade", …)` with the card's
    why, evidence, model answer and the learner's answer, validate the output with zod
@@ -290,7 +294,7 @@ submitting (check the page's network responses); grading with the model env vars
 clear 503, not a crash.
 
 **STOP if** the grading model's output doesn't fit `{score, missing}` reliably in 5 manual tries:
-report the prompt and outputs; the grading eval (local `evals/grading/`) decides the prompt.
+report the prompt and outputs; Zia's local grading eval (kept out of the repo) decides the prompt.
 
 ---
 
@@ -349,9 +353,11 @@ console with the anon client fails (column grant); deleting a test account remov
 - [ ] All nine phases merged; each PR had green CI, resolved bot threads and a preview URL.
 - [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm build` pass on `main`.
 - [ ] `rg -n "model_answer" apps/web/src --glob '!**/api/**'` matches nothing outside server code.
-- [ ] `rg -n "select\(\"\*\"\)|select\('\*'\)" apps/web/src` matches nothing in learner-facing code.
+- [ ] ``rg -n 'select\(\s*\)|select\(\s*["\x27`]\*' apps/web/src`` matches nothing in learner-facing code
+      (catches `select("*")`, `select()` and template literals).
 - [ ] A new account (email or Google) can sign in, create a CLI token, see a session arrive, review a card
-      and see progress, on the production URL.
+      and see progress, on the production URL. Depends on Kasam's CLI, upload API and pipeline
+      (separate plan, owner Kasam) being live; without them no session arrives.
 
 ## STOP conditions (any phase)
 

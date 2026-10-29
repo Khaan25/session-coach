@@ -11,10 +11,17 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 
 ## 2026-10-29 · Agent tooling, Play Stats API, live backend
 
-- **Decision:** adopt the 8x template's agent setup: AGENTS.md holds the rules, a SessionStart brief, SessionEnd transcripts in `.claude-logs/`, git hooks (secrets, commit messages, pre-push gates), repo skills `spec`/`local-review`/`ship`, and `docs/rules/`. Add the Play Stats API per `docs/PLAY_API.md`.
-- **Backend:** one Supabase project in ap-south-1, the closest region to both of us; migrations go live with `supabase db push`. A Vercel project with root `apps/web`, connected to this repo, so every PR gets a preview.
-- **Commits carry no co-author trailers**; the commit-msg check rejects them. History on `main` was reworded once (2026-10-29) to remove them.
-- **Deferred:** PostHog analytics. Pages and dashboard are planned in `docs/plans/pages-and-dashboard.md`, built after the design system.
+- **Decision:** adopt the 8x template's agent setup: AGENTS.md holds the rules, a SessionStart brief, SessionEnd transcripts in `.claude-logs/`, git hooks (secrets, commit messages, pre-push gates) and `docs/rules/`.
+- **Why:** one rule file every agent reads; transcripts can be reviewed on the branch next to the change; the hooks catch secrets and bad commit messages before CI does.
+- **Decision:** add the Play Stats API per `docs/PLAY_API.md`.
+- **Why:** the 8x stats dashboard reads each play's numbers from it.
+- **Backend:** one Supabase project in ap-south-1; migrations go live with `supabase db push`. A Vercel project with root `apps/web`, connected to this repo, so every PR gets a preview.
+- **Why:** ap-south-1 is the closest region to Pakistan and Nepal.
+- **Commits carry no co-author trailers**; the commit-msg check rejects them.
+- **Why:** the authors want the commit history to show only the people who made the change.
+- **History rewrite:** `main` was reworded once, on 2026-10-29, to remove co-author trailers. Branch protection was removed for a few seconds to force-push the reworded commit (same tree, same author), then restored with identical settings. Anyone with an older clone (Kasam, if he has one) runs `git fetch && git reset --hard origin/main`.
+- **Rejected:** PostHog analytics, deferred: there is no personal PostHog project yet.
+- Pages and dashboard are planned in `docs/plans/pages-and-dashboard.md`, built after the design system.
 
 ## 2026-10-28 · `flagged` and `hidden` on decision cards
 

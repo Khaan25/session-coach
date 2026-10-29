@@ -1,6 +1,6 @@
 # Migrations
 
-- **Every schema change is a new file** in `supabase/migrations/` named `YYYYMMDDHHMMSS_what_changes.sql`. Never edit a migration that has been applied to the live project.
+- **Every schema change is a new file** in `supabase/migrations/` named `YYYYMMDDHHMMSS_what_changes.sql`. A migration is read-only once it is merged to `main`; change it with a new file.
 - **Shared contract:** agree in the team channel first; update `packages/shared` in the same PR so types and columns match.
 - **RLS on every new table**, with the narrowest policy that works. Learners read their own rows; the server writes with the service role. Prefer column grants over trusting the client (see `decision_cards.model_answer`).
 - **Integrity in the database:** ownership through composite foreign keys, derived values as generated columns, invariants as `check` constraints.
