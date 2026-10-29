@@ -1,15 +1,8 @@
 # Landing hero: reference capture
 
-Reference: linkletter.press (via vibrant.design), captured 2026-10-29 with REA (`capture_web_screenshot` over CDP on a
-headless Chrome) for the screenshots and the browser pane (computed styles, `document.getAnimations()`) for the
-numbers. Nothing on the page was gated; no form was touched. We take the structure, scale and timing only. Their copy,
-images and code stay theirs.
-
-Screenshots:
-
-- `docs/design/screenshots/reference/hero-1440.png`: 1440 x 813 viewport.
-- `docs/design/screenshots/reference/hero-500.png`: 500 x 725 viewport. Headless Chrome will not open a window under
-  500px, so the 375px numbers below come from the browser pane's mobile emulation.
+Reference: linkletter.press (via vibrant.design), measured 2026-10-29 in a browser (computed styles,
+`document.getAnimations()`) at 1440px and 375px. Nothing on the page was gated; no form was touched. We take the
+structure, scale and timing only. Their copy, images and code stay theirs.
 
 ## Structure, top to bottom
 
@@ -65,5 +58,5 @@ The jump is the point: a 60px serif headline over 16px sans body, nothing in bet
 - Same order: nav, headline with one underlined word, one subhead, CTA plus note, product object, trust strip.
 - The underline as the single hand-made mark, drawn in, on the ease-out-quint curve.
 - The big size jump between the display headline and everything else.
-- Not taken: the warm accent (Quartz keeps warm hues for trouble), the photographed object (our object is a decision
+- Not taken: the warm accent (warm hues are kept for trouble), the photographed object (our object is a decision
   card built from the real components), the logos (we have no customers to show yet).

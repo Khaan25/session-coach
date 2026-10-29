@@ -2,25 +2,25 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
-## 2026-10-29 · Design system: Quartz skin, zip motion
+## 2026-10-29 · Design system: one look, the zip's motion
 
-- **Decision:** the components in `apps/web/src/components/ui/` take Quartz's look (design.how/systems/quartz: classes, radii, frames, type roles, states) and keep the vennsol design-system zip's micro-interactions as they were (switch squash, tab indicator slide, toast stacking, swipe and pulse, drawer swipe, checkbox blur check, dialog scale-in). Components Quartz has and the zip lacks (segmented-control, status, stat, page-header, data-list, timeline, code-block, copy-button) are ported from Quartz.
-- **Why:** Zia wants Quartz's design and the zip's motion. Merging per component keeps one component per name and one API for the gallery and the app.
-- **Rejected:** zip components re-skinned by tokens alone (they would keep the zip's shapes, not Quartz's); every Quartz component installed beside the zip's (two buttons, two inputs, two charts).
-- **One Tailwind compile.** Quartz's `tokens.css` and `base.css` are vendored unchanged in `src/components/quartz/`. Its `styles.css` is a second, scoped compile (`--*: initial`, unlayered utilities under `.quartz`); it is vendored as `utilities.css` without that wrapper and imported from `globals.css`. `<body class="quartz">` holds the app, wrapped in `QuartzPortalProvider` (`src/lib/quartz/portal.ts`).
-- **Why:** a second compile overrides every `globals.css` utility silently, and `@shadcn/lint` reads only the `globals.css` import graph, so it would flag every Quartz class as unknown.
-- **Name clashes:** Quartz declares `--sidebar` (248px), `--popover` (288px) and `--font-sans`/`--font-mono` on `.quartz`. The shadcn colour variables `--sidebar`, `--popover` and friends are gone; the semantic colour names map straight to Quartz roles in `@theme`. `--font-sans`/`--font-mono` are set to Geist and Geist Mono on `.quartz`.
-- **Motion tokens** stay the zip's: `--ease-out-quint`, `--ease-in-out-quint`, `--animate-toast-pulse-even/odd` and the reduced-motion reset on `[data-slot]`. Raw `cubic-bezier(0.22, 1, 0.36, 1)` copies in drawer and toast became `ease-out-quint`. Quartz's `--dur-*` and `--ease-step` stay available beside them.
-- **Menu rows:** a keyboard-highlighted row (highlighted, not under the pointer) draws a 2px inset ink ring; a mouse-highlighted row shows only the wash, and no row gets Quartz's outer focus ring. The wash alone is about 1.1:1 (WCAG 1.4.11).
+- **Decision:** the components in `apps/web/src/components/ui/` are the app's design system and its default look: one shape language (radii, frames, type roles, states) on shadcn base-nova, with the micro-interactions of the zip we started from kept as they were (switch squash, tab indicator slide, toast stacking, swipe and pulse, drawer swipe, checkbox blur check, dialog scale-in). Segmented control, status, stat, page header, data list, timeline, code block and copy button sit beside them.
+- **Why:** one component per name and one API for the gallery and the app.
+- **Styles apply to the whole page.** `src/styles/tokens.css`, `base.css` and `utilities.css` are imported into `globals.css` as one Tailwind compile; tokens sit on `:root`, with no wrapper class. Overlays portal through `PortalProvider` (`src/lib/ui/portal.ts`), which also makes the page inert behind a modal.
+- **Why one compile:** a second compile would override every `globals.css` utility silently, and `@shadcn/lint` reads only the `globals.css` import graph.
+- **Semantic names:** the shadcn colour names (`background`, `primary`, `muted`, `border`, `sidebar-*`...) map straight to the design system's roles in `@theme`; the old shadcn colour variables are gone.
+- **Motion tokens** stay the zip's: `--ease-out-quint`, `--ease-in-out-quint`, `--animate-toast-pulse-even/odd` and the reduced-motion reset on `[data-slot]`. Raw `cubic-bezier(0.22, 1, 0.36, 1)` copies in drawer and toast became `ease-out-quint`. `--dur-*` and `--ease-step` stay available beside them.
+- **Menu rows:** a keyboard-highlighted row (highlighted, not under the pointer) draws a 2px inset ink ring; a mouse-highlighted row shows only the wash, and no row gets the outer focus ring. The wash alone is about 1.1:1 (WCAG 1.4.11).
 - **Menus animate:** dropdown, select and combobox popups fade, zoom and slide in 100ms, although the zip's carried `animate-none!`. Zia chose the animation.
 - **Toasts:** the zip's Base UI toast, not `sonner` as `docs/plans/pages-and-dashboard.md` lists, to keep its stacking, swipe and pulse.
 - **Style:** `base-nova` (what `components.json` and the installed components use), not `radix-nova` as the plan says.
-- **Colours for scores and flags:** `success` is Quartz's mint kind (hue 5), `warning` is Quartz's amber. Quartz keeps warm hues for trouble, so success is not green-on-warm.
+- **Colours for scores and flags:** `success` is the mint kind (hue 5), `warning` is amber. Warm hues are kept for trouble, so success is not green-on-warm.
 - **Icons:** Phosphor (`@phosphor-icons/react`), `iconLibrary: "phosphor"`. Files without `"use client"` import from `@phosphor-icons/react/ssr`, because the main entry calls `createContext` and breaks server components. `lucide-react` is removed.
 - **Fonts:** Geist for UI, Geist Mono for code, Instrument Serif for marketing headlines only (`font-display`), all through `next/font`.
-- **Lint gate:** `pnpm lint` (oxlint + `@shadcn/lint`) and `pnpm format` (oxfmt) only. Quartz's ESLint config is not installed. `src/lib/quartz/**` (vendored) turns off `react/refs`, whose two hits pass ref objects and callback refs without reading `.current` in render, and `react/no-children-prop`, because `createElement` in a `.ts` file has to pass `children` as a prop for its types.
+- **Lint gate:** `pnpm lint` (oxlint + `@shadcn/lint`) and `pnpm format` (oxfmt) only. `src/lib/ui/**` turns off `react/refs`, whose two hits pass ref objects and callback refs without reading `.current` in render, and `react/no-children-prop`, because `createElement` in a `.ts` file has to pass `children` as a prop for its types.
 - **URL state:** `nuqs` is approved for URL state, but not installed: the gallery uses plain `#anchor` sections, so nothing needs it yet. Add it with the first real consumer.
 - **Theme:** the zip's three-way theme provider and toggle (`src/components/theme/`), moved to `useSyncExternalStore` for server rendering, with a `<head>` script that sets the class before paint.
+- **Next:** refactor `components/ui` down to bare-minimum primitives (fewer variants, props and parts; composition over options) before the data phases build on it.
 
 ## 2026-10-29 · Sign-in: email + password and Google; provider-neutral profiles
 
