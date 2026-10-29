@@ -1,6 +1,8 @@
-/* Scoped base for the design system. Replaces Tailwind preflight inside :root only; imported before the utilities. */
+/* The design system's base: the page, a reset beside Tailwind's preflight, links, selection and the focus ring.
+   Imported before the utilities. */
 
-:root {
+/* The page: on body, not :root, so font: 14px never changes the root font size that rem resolves against. */
+body {
   min-height: 100dvh;
   background: var(--surface-canvas);
   color: var(--text-1);
@@ -10,7 +12,9 @@
   text-wrap: pretty;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Light here; tokens.css sets dark on the dark theme and ink surfaces, and light again on paper inside them. */
+}
+/* Light here; tokens.css sets dark on the dark theme and ink surfaces, and light again on paper inside them. */
+:root {
   color-scheme: light;
 }
 /* The reset sits in the base layer, beside Tailwind's own preflight, so a project's layered utilities (mx-auto,
