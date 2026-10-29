@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 import type { SessionSummary } from "@/lib/sessions/rows";
 import { useLiveSessions } from "@/lib/sessions/use-live-sessions";
@@ -12,7 +12,9 @@ import { useLiveSessions } from "@/lib/sessions/use-live-sessions";
  */
 export function RefreshOnSettle({ userId, session }: { userId: string; session: SessionSummary }) {
   const router = useRouter();
-  const { rows } = useLiveSessions(userId, [session], { prepend: false });
+  // Memoized: useLiveSessions starts again from new rows, so a fresh array each render would loop.
+  const initial = useMemo(() => [session], [session]);
+  const { rows } = useLiveSessions(userId, initial, { prepend: false });
   const status = rows[0]?.status;
   useEffect(() => {
     if (status && status !== session.status) router.refresh();

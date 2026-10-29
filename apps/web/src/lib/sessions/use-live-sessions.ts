@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { sessionName } from "@/lib/sessions/name";
 import { toast } from "@/components/ui/toast";
@@ -20,18 +21,29 @@ const announced = new Set<string>();
  * @param initial - The server-rendered rows.
  * @param options.prepend - Whether new sessions join this list (page 1 and the sidebar, not older pages).
  * @param options.limit - The most rows the list keeps: a page's size, or the sidebar's 5.
- * @returns The live rows and the time of the last change, to measure relative times from.
+ * @returns The live rows, and how long after the server's rows arrived the last change came (null before one), so
+ *   relative times can be measured on the server's clock.
  */
 export function useLiveSessions(
   userId: string | null | undefined,
   initial: SessionListItem[],
   { prepend = true, limit = Infinity }: { prepend?: boolean; limit?: number } = {},
 ) {
+  const router = useRouter();
   const [rows, setRows] = useState(initial);
-  const [changedAt, setChangedAt] = useState<Date | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  // The layout keeps the sidebar mounted, so a server refresh arrives as new rows: start again from them.
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (initial !== prevInitial) {
+    setPrevInitial(initial);
+    setRows(initial);
+    setElapsedMs(null);
+  }
+  const receivedAt = useRef(0);
   const channelId = useId();
 
   useEffect(() => {
+    receivedAt.current = Date.now();
     for (const { id, status } of initial) announced.add(`${id}:${status}`);
   }, [initial]);
 
@@ -42,6 +54,7 @@ export function useLiveSessions(
     // from cookies asynchronously, so subscribing straight away joins as anon and RLS filters out every event.
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let joined = false;
     void supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return;
       if (data.session) supabase.realtime.setAuth(data.session.access_token);
@@ -54,7 +67,7 @@ export function useLiveSessions(
           (payload) => {
             if (payload.eventType === "DELETE") return;
             const row = toSummary(payload.new);
-            setChangedAt(new Date());
+            setElapsedMs(Date.now() - receivedAt.current);
             setRows((current) => applySessionChange(current, row, { prepend, limit }));
             if (row.status === "ready") {
               // The payload has no card count: count the visible cards (RLS hides hidden ones).
@@ -85,13 +98,21 @@ export function useLiveSessions(
             }
           },
         )
-        .subscribe();
+        // shortcut: a change between the server render and the first join is missed until the next navigation;
+        // refresh on the first join too if that shows up in practice.
+        .subscribe((status, error) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+            console.error("useLiveSessions: subscribe", status, error);
+          // A rejoin after a dropped connection may have missed changes: re-read the rows through the server.
+          if (status === "SUBSCRIBED" && joined) router.refresh();
+          if (status === "SUBSCRIBED") joined = true;
+        });
     });
     return () => {
       cancelled = true;
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [userId, channelId, prepend, limit]);
+  }, [userId, channelId, prepend, limit, router]);
 
-  return { rows, changedAt };
+  return { rows, elapsedMs };
 }
