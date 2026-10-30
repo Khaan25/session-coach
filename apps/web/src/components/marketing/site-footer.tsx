@@ -25,7 +25,7 @@ export function FooterScene() {
         className="relative left-1/2 w-full max-w-none min-w-3xl -translate-x-1/2 mask-b-from-70% dark:hidden"
       />
       <Image
-        src="/art/footer-desk-dark.webp"
+        src="/art/footer-desk-night.webp"
         alt=""
         width={1600}
         height={533}

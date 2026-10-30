@@ -114,7 +114,7 @@ export function AuthArt({ scene }: { scene: AuthScene }) {
           <ReviewLoop />
         )}
       </div>
-      {/* Two keyed copies: the dark one keeps its paper so the scene reads as a lit sheet on a dark page. */}
+      {/* Two paintings: the day scene on light paper, and a night scene painted on the dark page colour. */}
       <Image
         src={`/art/auth/${image}.webp`}
         alt=""
@@ -124,7 +124,7 @@ export function AuthArt({ scene }: { scene: AuthScene }) {
         className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-2xl dark:hidden"
       />
       <Image
-        src={`/art/auth/${image}-dark.webp`}
+        src={`/art/auth/${image}-night.webp`}
         alt=""
         width={800}
         height={1200}
