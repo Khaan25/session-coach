@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { LoginForm } from "@/components/auth/login-form";
 
@@ -7,9 +8,13 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-// A UI mock until auth (Phase 2).
-// TODO(zia): read ?next= (inside <Suspense>, cacheComponents) and pass it through to the sign-in actions.
-export default function LoginPage() {
+// ?next= is request data, so with cacheComponents it is read inside <Suspense>. The shell's form works without it.
+async function LoginFormWithNext({ searchParams }: Pick<PageProps<"/login">, "searchParams">) {
+  const { next } = await searchParams;
+  return <LoginForm next={typeof next === "string" ? next : undefined} />;
+}
+
+export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
       <div className="flex flex-col gap-3">
@@ -20,7 +25,9 @@ export default function LoginPage() {
           Pick up your decision cards where you left them.
         </p>
       </div>
-      <LoginForm />
+      <Suspense fallback={<LoginForm />}>
+        <LoginFormWithNext searchParams={searchParams} />
+      </Suspense>
     </div>
   );
 }

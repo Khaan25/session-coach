@@ -33,6 +33,7 @@ pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (Decision +
 - [docs/rules/migrations.md](docs/rules/migrations.md): schema changes and the live database
 - [docs/rules/authorization.md](docs/rules/authorization.md): RLS, service role, API route guards
 - [docs/rules/error-handling.md](docs/rules/error-handling.md): failures in routes, the pipeline and crons
+- [docs/rules/components.md](docs/rules/components.md): how app components compose (children, slots, compound parts, hooks) and why
 
 ## Gotchas
 

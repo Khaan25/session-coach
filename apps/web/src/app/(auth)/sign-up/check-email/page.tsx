@@ -1,14 +1,22 @@
-import { EnvelopeSimpleIcon } from "@phosphor-icons/react/ssr";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 import { buttonVariants } from "@/components/ui/button";
-import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { SIGNUP_EMAIL_COOKIE } from "@/lib/auth/signup-email";
 
 export const metadata: Metadata = {
   title: "Check your email | Session Coach",
   robots: { index: false },
 };
+
+// The address comes from the httpOnly cookie signUp set, never the URL. A cookie read, so inside <Suspense>.
+async function Resend() {
+  const email = (await cookies()).get(SIGNUP_EMAIL_COOKIE)?.value;
+  return email ? <ResendConfirmation email={email} /> : null;
+}
 
 // Every sign-up lands here, new address or not, so the page never says whether an account exists (docs/plans/auth.md #3).
 export default function CheckEmailPage() {
@@ -23,20 +31,9 @@ export default function CheckEmailPage() {
           this device to finish.
         </p>
       </div>
-      {/* TODO(zia): a "Resend the email" button (resendConfirmation, auth.resend type "signup") with a 60 s cooldown
-      and generic copy (docs/plans/auth.md #2). It needs the address, so pass it through without putting it in the URL. */}
-      <Item variant="outline">
-        <ItemMedia variant="icon">
-          <EnvelopeSimpleIcon weight="duotone" aria-hidden />
-        </ItemMedia>
-        <ItemContent>
-          <ItemTitle>Sign-up isn&apos;t open yet</ItemTitle>
-          <ItemDescription>
-            Accounts arrive with the next release, so no email was sent. Nothing you typed was
-            saved.
-          </ItemDescription>
-        </ItemContent>
-      </Item>
+      <Suspense>
+        <Resend />
+      </Suspense>
       <p className="type-body-sm text-text-2">
         Already confirmed?{" "}
         <Link href="/login" className={buttonVariants({ variant: "link" })}>

@@ -1,10 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -19,14 +19,33 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 
 /**
- * Delete account: the confirm stays disabled until the learner types their email. A mock.
- * TODO(zia): DELETE /api/account removes every Storage object under the learner's sessions, then the auth user
- * (cascading to all rows), then signs out.
+ * Delete account: the confirm stays disabled until the learner types their email. DELETE /api/account removes their
+ * Storage objects, then the auth user (cascading to all rows), then signs out. The dialog stays open until it answers.
  */
 export function DeleteAccountDialog({ email }: { email: string }) {
   const id = useId();
+  const router = useRouter();
   const [typed, setTyped] = useState("");
-  const matches = typed.trim().toLowerCase() === email.toLowerCase();
+  const [pending, setPending] = useState(false);
+  const matches = email !== "" && typed.trim().toLowerCase() === email.toLowerCase();
+
+  async function deleteAccount() {
+    setPending(true);
+    const response = await fetch("/api/account", { method: "DELETE" }).catch(() => null);
+    if (!response?.ok) {
+      setPending(false);
+      const body: { error?: string } | null = await response?.json().catch(() => null);
+      toast.add({
+        title: "Your account was not deleted",
+        description: body?.error ?? "Check your connection and try again.",
+      });
+      return;
+    }
+    toast.add({ title: "Your account was deleted" });
+    router.replace("/");
+    router.refresh();
+  }
+
   return (
     <AlertDialog onOpenChange={(open) => !open && setTyped("")}>
       <AlertDialogTrigger render={<Button variant="destructive" />}>
@@ -50,20 +69,10 @@ export function DeleteAccountDialog({ email }: { email: string }) {
           </Field>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Keep account</AlertDialogCancel>
-          {/* TODO(zia): mock. Call DELETE /api/account. */}
-          <AlertDialogAction
-            variant="destructive"
-            disabled={!matches}
-            onClick={() =>
-              toast.add({
-                title: "Your account was not deleted",
-                description: "Account deletion isn't built yet. TODO(zia): Phase 8.",
-              })
-            }
-          >
+          <AlertDialogCancel disabled={pending}>Keep account</AlertDialogCancel>
+          <Button variant="destructive" disabled={!matches || pending} onClick={deleteAccount}>
             Delete account
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -2,7 +2,9 @@
 
 import { GearIcon, SignOutIcon, SquaresFourIcon } from "@phosphor-icons/react";
 import Link from "next/link";
+import { useRef } from "react";
 
+import { signOut } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -20,9 +22,9 @@ export type SiteNavUser = { name: string; email: string; initials: string };
 
 /**
  * The header's account corner: signed in, the dashboard and an avatar menu; signed out, sign in.
- * TODO(zia): the user comes from the Supabase session once auth lands (Phase 2).
  */
 export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
+  const signOutRef = useRef<HTMLFormElement>(null);
   if (!user)
     return (
       <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
@@ -32,15 +34,19 @@ export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
 
   return (
     <div className="flex items-center gap-2">
+      {/* Sign-out is a POST, never a GET link (docs/plans/auth.md #26). The form sits outside the menu popup, which
+      unmounts on close; the menu item submits it. */}
+      <form ref={signOutRef} action={signOut} hidden />
       <Link href="/dashboard" className={buttonVariants()}>
         Dashboard
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="ghost" size="icon" />}
+          render={<Button variant="ghost" size="icon-round" />}
           aria-label={`Account menu for ${user.name}`}
         >
-          <Avatar size="sm" aria-hidden>
+          {/* Default size (32px, --control): the circle is as tall as the Dashboard button beside it. */}
+          <Avatar aria-hidden>
             <AvatarFallback>{user.initials}</AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
@@ -61,8 +67,7 @@ export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
             Settings
           </DropdownMenuLinkItem>
           <DropdownMenuSeparator />
-          {/* TODO(zia): sign out through Supabase Auth (Phase 2). */}
-          <DropdownMenuItem disabled>
+          <DropdownMenuItem onClick={() => signOutRef.current?.requestSubmit()}>
             <SignOutIcon />
             Sign out
           </DropdownMenuItem>

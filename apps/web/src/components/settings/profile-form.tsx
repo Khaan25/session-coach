@@ -14,15 +14,17 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import { mockRequest } from "@/lib/sample/mock-request";
+
+import { updateProfile } from "@/app/(app)/settings/actions";
 
 type Profile = {
   display_name: string | null;
@@ -32,25 +34,36 @@ type Profile = {
 };
 
 /**
- * The profile: display name, email (read-only, synced from sign-in), time zone and email reminders. Saving is a mock.
- * TODO(zia): update display_name, timezone and notify_email through the anon client (the only columns a learner may
- * write), validated with profileUpdateSchema.
+ * The profile: display name, email (read-only, synced from sign-in), time zone and email reminders. Saves the three
+ * columns a learner may write through the `updateProfile` Server Action.
  */
 export function ProfileForm({ profile, timezones }: { profile: Profile; timezones: string[] }) {
   const id = useId();
   const [timezone, setTimezone] = useState(profile.timezone);
+  const [notify, setNotify] = useState(profile.notify_email);
+  const [pending, setPending] = useState(false);
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        // TODO(zia): mock save; write display_name, timezone and notify_email through the anon client.
+        const name = String(new FormData(event.currentTarget).get("display_name") ?? "").trim();
+        setPending(true);
         toast
-          .promise(mockRequest(null), {
-            loading: "Saving your profile",
-            success: "Profile saved",
-            error: "Your profile couldn't be saved. Try again.",
-          })
-          .catch(() => {});
+          .promise(
+            // A blank name is sent as null: the database and profileUpdateSchema reject "".
+            updateProfile({ display_name: name || null, timezone, notify_email: notify }).then(
+              ({ error }) => {
+                if (error) throw new Error(error);
+              },
+            ),
+            {
+              loading: "Saving your profile",
+              success: "Profile saved",
+              error: (error: Error) => error.message,
+            },
+          )
+          .catch(() => {})
+          .finally(() => setPending(false));
       }}
     >
       <Card>
@@ -86,22 +99,27 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
             </Field>
             <Field>
               <FieldLabel htmlFor={`${id}-timezone`}>Time zone</FieldLabel>
-              <Select
-                name="timezone"
+              <Combobox
+                items={timezones}
                 value={timezone}
-                onValueChange={(value) => value && setTimezone(value)}
+                onValueChange={(value: string | null) => value && setTimezone(value)}
               >
-                <SelectTrigger id={`${id}-timezone`} aria-describedby={`${id}-timezone-hint`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {timezones.map((zone) => (
-                    <SelectItem key={zone} value={zone}>
-                      {zone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <ComboboxInput
+                  id={`${id}-timezone`}
+                  aria-describedby={`${id}-timezone-hint`}
+                  placeholder="Find a time zone"
+                />
+                <ComboboxContent>
+                  <ComboboxEmpty>No time zones match.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(zone: string) => (
+                      <ComboboxItem key={zone} value={zone}>
+                        {zone}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
               <FieldDescription id={`${id}-timezone-hint`}>
                 Sets when a card is due today.
               </FieldDescription>
@@ -112,16 +130,14 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
                 <FieldLabel htmlFor={`${id}-notify`}>Email reminders</FieldLabel>
                 <FieldDescription>An email on days when cards are due.</FieldDescription>
               </FieldContent>
-              <Switch
-                id={`${id}-notify`}
-                name="notify_email"
-                defaultChecked={profile.notify_email}
-              />
+              <Switch id={`${id}-notify`} checked={notify} onCheckedChange={setNotify} />
             </Field>
           </FieldGroup>
         </CardContent>
         <CardFooter>
-          <Button type="submit">Save profile</Button>
+          <Button type="submit" disabled={pending}>
+            Save profile
+          </Button>
         </CardFooter>
       </Card>
     </form>
