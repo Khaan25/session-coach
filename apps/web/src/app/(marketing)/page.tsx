@@ -11,16 +11,35 @@ import {
 } from "@/components/marketing/landing-sections";
 import { FooterScene } from "@/components/marketing/site-footer";
 import { buttonVariants } from "@/components/ui/button";
+import { siteUrl } from "@/lib/site";
 
 // The hero follows docs/design/landing-hero.md: headline with one hand-drawn underline, subhead, CTA with a note,
 // the product object, then the trust strip. Headline, subhead and CTA are there on first paint (no entrance, and no
 // LCP delay); the underline draws in at 600ms and the card enters at 700ms, on ease-out-quint. Reduced motion drops
 // every entrance.
+// Structured data for search results: what the product is, that it's free during the trial, and who makes it.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Session Coach",
+  url: siteUrl,
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Web",
+  description:
+    "Each Claude Code session becomes 3 to 5 decision cards. Explain them back in your own words on day 1, 3 and 7.",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+};
+
 const enter = "animate-in fade-in fill-mode-both ease-out-quint motion-reduce:animate-none";
 
 export default function Home() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        // Static data built above, so there's nothing user-supplied to escape; < is escaped anyway.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <section className="relative isolate overflow-hidden">
         {/* The lower layer: a grey field ruled like an index card, which the card stack overlaps. */}
         <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-80 well sm:h-96">
