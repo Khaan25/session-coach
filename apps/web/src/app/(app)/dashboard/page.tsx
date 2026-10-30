@@ -37,6 +37,12 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
       <Suspense
         fallback={
           <Card>
+            {/* The real card's header, so the list keeps its place when the rows land. */}
+            <CardHeader>
+              <CardTitle>
+                <h2>Sessions</h2>
+              </CardTitle>
+            </CardHeader>
             <SessionListLoading />
           </Card>
         }

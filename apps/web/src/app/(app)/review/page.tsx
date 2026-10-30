@@ -34,6 +34,15 @@ export default function ReviewPage() {
       <Suspense
         fallback={
           <Card>
+            {/* The real card's header, so the list keeps its place when the rows land. */}
+            <CardHeader>
+              <CardTitle>
+                <h2>Due today</h2>
+              </CardTitle>
+              <CardDescription>
+                Cards due today, then new cards from the last 7 days.
+              </CardDescription>
+            </CardHeader>
             <SessionListLoading />
           </Card>
         }

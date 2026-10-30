@@ -28,6 +28,8 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
         // corners nested in the card's (10px less the 4px gap).
         "has-[>[data-variant=outline]]:gap-2 has-[>[data-variant=outline]]:overflow-visible has-[>[data-variant=outline]]:bg-transparent has-[>[data-variant=outline]]:before:hidden",
         "in-data-[slot=card]:mx-1 in-data-[slot=card]:mb-1 in-data-[slot=card]:w-auto in-data-[slot=card]:[--frame-radius:calc(var(--radius-frame)-4px)]",
+        // With no card header above it, the inset needs its top 4px too, or the panel touches the card's edge.
+        "in-data-[slot=card]:first:mt-1",
         className,
       )}
       {...props}
