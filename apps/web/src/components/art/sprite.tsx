@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import Image from "next/image";
 
-// Real pixel sizes of the WebP files in public/art/sprites (light and dark copies share one size).
+// Real pixel sizes of the WebP files in public/art/sprites (the day and night copies share one size).
 const SPRITES = {
   pencil: [192, 167],
   letter: [192, 137],
@@ -29,7 +29,7 @@ export function Sprite({ name, className }: { name: SpriteName; className?: stri
         className="h-auto w-full dark:hidden"
       />
       <Image
-        src={`/art/sprites/${name}-dark.webp`}
+        src={`/art/sprites/${name}-night.webp`}
         alt=""
         width={width}
         height={height}
