@@ -86,6 +86,27 @@ test("tool results are not prompts and are cut to 500 characters", () => {
   assert.equal(long.events[0]?.text.length, RESULT_MAX_CHARS);
 });
 
+test("an edit preview is redacted before the 60-character cut", () => {
+  const fakeKey = "sk-FAKE0example0key0for0tests0only"; //allowlist secret
+  const result = parseSession(
+    assistant([
+      {
+        type: "tool_use",
+        name: "Edit",
+        input: {
+          file_path: "/proj/demo/app.ts",
+          old_string: "a",
+          new_string: `${"x".repeat(49)} ${fakeKey}`,
+        },
+      },
+    ]),
+  );
+  const text = result.events[0]?.text ?? "";
+  assert.ok(text.includes("[REDACTED]"));
+  assert.equal(text.includes("key0for0tests0only"), false);
+  assert.equal(text.includes("sk-FAKE"), false);
+});
+
 test("drops thinking, attachments, mode, last-prompt and file-history-snapshot", () => {
   assert.equal(
     events.some((e) => e.text.includes("plan the page")),

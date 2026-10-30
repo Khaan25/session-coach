@@ -82,7 +82,8 @@ function summarizeEdit(input: Block): string | undefined {
   const path = str(input.file_path);
   if (!path) return undefined;
   const next = str(input.new_string) ?? "";
-  const first = next.split("\n")[0]?.trim().slice(0, 60);
+  // Redact before cutting, so a secret split by the limit isn't left half visible.
+  const first = redact(next.split("\n")[0]?.trim() ?? "").slice(0, 60);
   const counts = `replaced ${plural(countLines(str(input.old_string) ?? ""), "line")} with ${countLines(next)}`;
   return first ? `${path} — ${counts}: ${first}` : `${path} — ${counts}`;
 }
