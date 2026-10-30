@@ -1,14 +1,14 @@
 import type { MetadataRoute } from "next";
 
-// NEXT_PUBLIC_SITE_URL is the deployed origin; localhost is only the dev fallback until it is set.
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+import { siteUrl } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
       allow: "/",
-      // The signed-in app, the design-system gallery and sign-in: nothing a search result should land on.
+      // The signed-in app and the design-system gallery. Sign-in pages stay crawlable so crawlers can read their
+      // noindex; a disallowed page can still be indexed from links.
       disallow: [
         "/dashboard",
         "/s/",
@@ -17,11 +17,8 @@ export default function robots(): MetadataRoute.Robots {
         "/settings",
         "/setup",
         "/design-system",
-        "/login",
-        "/sign-up",
-        "/forgot-password",
       ],
     },
-    sitemap: `${siteUrl}/sitemap.xml`,
+    sitemap: new URL("/sitemap.xml", siteUrl).href,
   };
 }

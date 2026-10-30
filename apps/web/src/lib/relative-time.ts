@@ -20,7 +20,9 @@ const format = new Intl.RelativeTimeFormat("en-US", { numeric: "auto" });
 export function formatRelativeTime(iso: string, now: Date): string | null {
   const then = Date.parse(iso);
   if (Number.isNaN(then)) return null;
-  const seconds = Math.round((then - now.getTime()) / 1000);
+  const delta = then - now.getTime();
+  // Round the magnitude, so 59.5 s reads the same before and after now.
+  const seconds = Math.sign(delta) * Math.round(Math.abs(delta) / 1000);
   const abs = Math.abs(seconds);
   const sign = Math.sign(seconds);
   for (const [i, [unit, size]] of UNITS.entries()) {

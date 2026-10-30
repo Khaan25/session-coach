@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 const included = [
-  "A Claude Code hook that sends each finished session, with secrets removed on your laptop",
+  "A Claude Code hook that sends each finished session, with secrets filtered out on your laptop first",
   "3 to 5 decision cards per session, each quote checked against the session",
   "Review on day 1, 3 and 7, with each answer scored 0, 1 or 2",
   "A progress view of the decisions you can still explain",

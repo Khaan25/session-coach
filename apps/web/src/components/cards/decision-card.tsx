@@ -30,7 +30,14 @@ export function DecisionCard({ card }: { card: CardView }) {
         </CardTitle>
         {flagged && (
           <CardAction>
-            <Badge status="warn" label="One quote couldn't be verified" />
+            <Badge
+              status="warn"
+              label={
+                evidence.filter((item) => !item.verified).length === 1
+                  ? "One quote couldn't be verified"
+                  : "Some quotes couldn't be verified"
+              }
+            />
           </CardAction>
         )}
       </CardHeader>

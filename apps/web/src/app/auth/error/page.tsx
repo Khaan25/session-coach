@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { AuthNotice } from "@/components/auth/auth-notice";
+import { AuthHeading } from "@/components/auth/auth-parts";
 import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 const COPY = {
   link_expired: {
     title: "This link has expired",
-    body: "Links in our emails work once and expire after a while. Ask for a new one below.",
+    body: "Links in our emails work once and expire after a while. Sign in to get a new confirmation link, or reset your password for a new reset link.",
   },
   invalid_link: {
     title: "This link is incomplete",
@@ -55,10 +56,14 @@ async function ErrorNotice({ searchParams }: Pick<PageProps<"/auth/error">, "sea
 
 export default function AuthErrorPage({ searchParams }: PageProps<"/auth/error">) {
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
-      <h1 className="font-display text-5xl leading-none tracking-tight text-text-1 sm:text-6xl">
-        That didn&apos;t <span className="italic">work</span>
-      </h1>
+    <>
+      <AuthHeading
+        title={
+          <>
+            That didn&apos;t <span className="italic">work</span>
+          </>
+        }
+      />
       <Suspense>
         <ErrorNotice searchParams={searchParams} />
       </Suspense>
@@ -70,9 +75,9 @@ export default function AuthErrorPage({ searchParams }: PageProps<"/auth/error">
           href="/forgot-password"
           className={buttonVariants({ variant: "secondary", size: "lg" })}
         >
-          Get a new link
+          Reset password
         </Link>
       </div>
-    </div>
+    </>
   );
 }

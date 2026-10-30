@@ -4,14 +4,12 @@ import Link from "next/link";
 
 import { MarketingPageHeader } from "@/components/marketing/marketing-page-header";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supportEmail } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Delete your account | Session Coach",
   description: "How to delete your Session Coach account and data, with or without signing in.",
 };
-
-// Same inbox as /support. Inlined at build time, so the page stays static; set NEXT_PUBLIC_SUPPORT_EMAIL before launch.
-const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@example.com";
 
 export default function Page() {
   return (
@@ -52,8 +50,8 @@ export default function Page() {
               >
                 {supportEmail}
               </a>{" "}
-              from the address you signed up with and ask us to delete your account. TODO(zia): how
-              we confirm it&apos;s you, and how soon.
+              from the address you signed up with and ask us to delete your account.
+              {/* TODO(zia): say how we confirm it's you, and how soon. */}
             </CardDescription>
           </CardHeader>
         </Card>

@@ -596,6 +596,26 @@ const localDate = (date, timeZone) => new Intl.DateTimeFormat("en-CA", { timeZon
 const addDays = (ymd, days) =>
   new Date(Date.parse(`${ymd}T00:00:00Z`) + days * DAY).toISOString().slice(0, 10);
 
+/** Noon on a calendar date in the learner's zone, so the instant falls on that date there (UTC+13 included). */
+function localNoon(ymd, timeZone) {
+  const guess = Date.parse(`${ymd}T12:00:00Z`);
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+    })
+      .formatToParts(guess)
+      .map(({ type, value }) => [type, Number(value)]),
+  );
+  const offset = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute) - guess;
+  return guess - offset;
+}
+
 /** A decision_cards row for a demo card. Ids derive from the learner, session key and position, so reruns match. */
 function cardRow(userId, session, card, position, createdAt) {
   return {
@@ -614,7 +634,7 @@ function cardRow(userId, session, card, position, createdAt) {
   };
 }
 
-/** A plausible learner answer for a score: the model answer for 2, half of it for 1, a guess for 0. */
+/** A plausible learner answer for a score: the model answer for 2, half of it for 1, "Not sure." for 0. */
 function learnerAnswer(card, score) {
   if (score === 2) return { answer: card.model_answer, missing: null };
   if (score === 1) {
@@ -623,7 +643,7 @@ function learnerAnswer(card, score) {
       missing: `You said what it does but not why: ${card.why}`,
     };
   }
-  return { answer: "Not sure. I think it was for performance?", missing: card.why };
+  return { answer: "Not sure.", missing: card.why };
 }
 
 /**
@@ -672,7 +692,7 @@ function buildRows(userId, now, timeZone) {
       for (const [index, score] of card.scores.entries()) {
         if (index > 0) {
           if (dueOn === null || dueOn >= today) break; // mastered, or not due before today
-          answeredMs = Date.parse(`${dueOn}T12:00:00Z`);
+          answeredMs = localNoon(dueOn, timeZone);
         }
         rows.answers.push({
           id: uuidv5(`${userId}:answer:${session.key}:${position}:${index}`),
@@ -852,18 +872,21 @@ function mergeIds(a, b) {
   return out;
 }
 
-/** Replaces the learner's demo rows: deletes old and current ids, inserts parents first, then writes the manifest. */
+/**
+ * Replaces the learner's demo rows: deletes old and current ids, writes the manifest, then inserts parents first.
+ * The manifest goes first, so --reset can find the rows of a run that fails part way.
+ */
 async function seed(db, userId, rows) {
   await deleteRows(db, userId, mergeIds(readManifest(userId), idsOf(rows)));
-  check(await db.from("sessions").insert(rows.sessions), "insert sessions");
-  check(await db.from("decision_cards").insert(rows.decision_cards), "insert decision_cards");
-  check(await db.from("answers").insert(rows.answers), "insert answers");
-  check(await db.from("reviews").insert(rows.reviews), "insert reviews");
   mkdirSync(MANIFEST_DIR, { recursive: true });
   writeFileSync(
     manifestPath(userId),
     `${JSON.stringify({ user_id: userId, seeded_at: new Date().toISOString(), ids: idsOf(rows) }, null, 2)}\n`,
   );
+  check(await db.from("sessions").insert(rows.sessions), "insert sessions");
+  check(await db.from("decision_cards").insert(rows.decision_cards), "insert decision_cards");
+  check(await db.from("answers").insert(rows.answers), "insert answers");
+  check(await db.from("reviews").insert(rows.reviews), "insert reviews");
   console.log(`seeded          manifest at ${manifestPath(userId)}`);
 }
 

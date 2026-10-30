@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import type { SessionListItem } from "@/lib/sessions/rows";
 
-// Routes from docs/plans/pages-and-dashboard.md. Only /dashboard exists so far; the rest land in later phases.
+// Routes from docs/plans/pages-and-dashboard.md.
 export const navMain = [
   { title: "Dashboard", url: "/dashboard", icon: <SquaresFourIcon /> },
   { title: "Review", url: "/review", icon: <ExamIcon /> },

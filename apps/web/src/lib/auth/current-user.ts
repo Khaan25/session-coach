@@ -12,7 +12,9 @@ import { createClient } from "@/lib/supabase/server";
  */
 export const getCurrentUser = cache(async () => {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
+  // An auth-server or key failure reads as signed out; log it so it isn't silent.
+  if (error) console.error("getCurrentUser: getClaims", error);
   const claims = data?.claims;
   if (!claims?.sub) return null;
   return { id: claims.sub, email: typeof claims.email === "string" ? claims.email : null };

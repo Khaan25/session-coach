@@ -5,6 +5,13 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { safeNext } from "@/lib/auth/safe-next";
+import {
+  MIN_PASSWORD,
+  validateNewPassword,
+  validateResetRequest,
+  validateSignIn,
+  validateSignUp,
+} from "@/lib/auth/validate";
 import { SIGNUP_EMAIL_COOKIE } from "@/lib/auth/signup-email";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,19 +22,17 @@ export type AuthState = {
   fields?: { email?: string; password?: string };
   /** The address typed, so the form can keep it after React resets the fields. Never the password. */
   email?: string;
+  /** The sign-up name typed, kept the same way. */
+  name?: string;
 };
 
-/** Matches the dashboard and supabase/config.toml minimum (docs/plans/auth.md #23); checked here first for a fast error. */
-const MIN_PASSWORD = 10;
-// Only catches typos; Supabase decides what a valid address is.
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const GENERIC = "Something went wrong on our side. Try again in a minute.";
 const RATE_LIMITED = "Too many attempts. Wait a minute, then try again.";
 
 /**
- * This deployment's origin for email and OAuth redirect URLs. Next.js only runs a Server Action when its `Origin`
- * header matches the request host (its CSRF check), so it names this deployment, preview or production, and can't be
- * pointed elsewhere the way `x-forwarded-host` alone could (docs/plans/auth.md #10, #13).
+ * This deployment's origin for email and OAuth redirect URLs, so previews send links back to themselves
+ * (docs/plans/auth.md #10, #13). Next.js only runs a Server Action whose `Origin` matches the request host, but a
+ * client can set both, so this is not a trust check: Supabase's redirect allow-list (#11) stops links to other sites.
  */
 async function requestOrigin() {
   return (await headers()).get("origin");
@@ -39,10 +44,9 @@ function text(formData: FormData, name: string) {
   return typeof value === "string" ? value : "";
 }
 
-/** The field error for an email address, or undefined when it looks like one. */
-function checkEmail(email: string) {
-  if (!email) return "Enter your email address.";
-  if (!EMAIL.test(email)) return "Enter an email address like name@example.com.";
+/** True when the shared field check (lib/auth/validate.ts, the same one the form runs) found a problem. */
+function hasErrors(fields: object) {
+  return Object.keys(fields).length > 0;
 }
 
 /** Turns Supabase's weak-password reasons into one sentence that says what to change (#23). */
@@ -75,11 +79,8 @@ function fail(action: string, error: unknown, email?: string): AuthState {
 export async function signIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
   const password = text(formData, "password");
-  const fields = {
-    email: checkEmail(email),
-    password: password ? undefined : "Enter your password.",
-  };
-  if (fields.email || fields.password) return { status: "error", fields, email };
+  const fields = validateSignIn(formData);
+  if (hasErrors(fields)) return { status: "error", fields, email };
 
   const origin = await requestOrigin();
   if (!origin) return fail("signIn", "missing Origin header", email);
@@ -113,18 +114,11 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const email = text(formData, "email").trim();
   const password = text(formData, "password");
   const name = text(formData, "name").trim();
-  const fields = {
-    email: checkEmail(email),
-    password: !password
-      ? "Enter a password."
-      : password.length < MIN_PASSWORD
-        ? `Use at least ${MIN_PASSWORD} characters.`
-        : undefined,
-  };
-  if (fields.email || fields.password) return { status: "error", fields, email };
+  const fields = validateSignUp(formData);
+  if (hasErrors(fields)) return { status: "error", fields, email, name };
 
   const origin = await requestOrigin();
-  if (!origin) return fail("signUp", "missing Origin header", email);
+  if (!origin) return { ...fail("signUp", "missing Origin header", email), name };
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
@@ -138,15 +132,16 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   // A taken address must look like a new one (#3), so only errors about the input itself reach the form.
   if (error && error.code !== "user_already_exists") {
     if (error.code === "weak_password")
-      return { status: "error", fields: { password: weakPasswordMessage(error) }, email };
+      return { status: "error", fields: { password: weakPasswordMessage(error) }, email, name };
     if (error.code === "email_address_invalid")
       return {
         status: "error",
         fields: { email: "Enter an email address like name@example.com." },
         email,
+        name,
       };
-    if (isRateLimit(error)) return { status: "error", message: RATE_LIMITED, email };
-    return fail("signUp", error, email);
+    if (isRateLimit(error)) return { status: "error", message: RATE_LIMITED, email, name };
+    return { ...fail("signUp", error, email), name };
   }
 
   // The check-email page reads this to offer a resend; a cookie keeps the address out of the URL and server logs.
@@ -165,11 +160,12 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
  *
  * @param _prev - The form's last state (useActionState); unused.
  * @param formData - `email`.
- * @returns "sent" with the same message whether or not the address has an account, or a rate-limit error.
+ * @returns "sent" with the same message whether or not the address has an account, even when rate-limited.
  */
 export async function resendConfirmation(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
-  if (checkEmail(email)) return { status: "error", message: "Enter your email address first." };
+  if (hasErrors(validateResetRequest(formData)))
+    return { status: "error", message: "Enter your email address first." };
   const origin = await requestOrigin();
   if (!origin) return fail("resendConfirmation", "missing Origin header", email);
   const supabase = await createClient();
@@ -178,9 +174,8 @@ export async function resendConfirmation(_prev: AuthState, formData: FormData): 
     email,
     options: { emailRedirectTo: `${origin}/auth/confirm?next=/dashboard` },
   });
-  if (error && isRateLimit(error)) return { status: "error", message: RATE_LIMITED, email };
+  // Supabase's per-address limit only trips for real accounts, so a rate limit gets the same answer (#2, #4).
   if (error) console.error("auth/resendConfirmation", error);
-  // The same answer whether or not the address has an account (#2).
   return {
     status: "sent",
     message: "If that address is waiting to be confirmed, we sent a new link.",
@@ -194,21 +189,20 @@ export async function resendConfirmation(_prev: AuthState, formData: FormData): 
  *
  * @param _prev - The form's last state (useActionState); unused.
  * @param formData - `email`.
- * @returns "sent" whether or not the address has an account, or a field or rate-limit error.
+ * @returns "sent" whether or not the address has an account (even when rate-limited), or a field error.
  */
 export async function requestReset(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
-  const emailError = checkEmail(email);
-  if (emailError) return { status: "error", fields: { email: emailError }, email };
+  const fields = validateResetRequest(formData);
+  if (hasErrors(fields)) return { status: "error", fields, email };
   const origin = await requestOrigin();
   if (!origin) return fail("requestReset", "missing Origin header", email);
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/confirm?next=/update-password`,
   });
-  if (error && isRateLimit(error)) return { status: "error", message: RATE_LIMITED, email };
+  // Supabase's per-address limit only trips for real accounts, so a rate limit gets the same answer (#4).
   if (error) console.error("auth/requestReset", error);
-  // The same answer whether or not the address has an account (#4).
   return { status: "sent", email };
 }
 
@@ -222,13 +216,8 @@ export async function requestReset(_prev: AuthState, formData: FormData): Promis
  */
 export async function updatePassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const password = text(formData, "password");
-  if (password.length < MIN_PASSWORD)
-    return {
-      status: "error",
-      fields: {
-        password: password ? `Use at least ${MIN_PASSWORD} characters.` : "Enter a new password.",
-      },
-    };
+  const fields = validateNewPassword(formData);
+  if (hasErrors(fields)) return { status: "error", fields };
 
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();

@@ -16,17 +16,19 @@ import {
 export function AppBreadcrumb() {
   const pathname = usePathname();
   const page = navMain.find((item) => pathname.startsWith(item.url));
+  // Session pages aren't in the main nav, so they get their own crumb.
+  const title = page?.title ?? (pathname.startsWith("/s/") ? "Session" : undefined);
   return (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem className="hidden md:inline-flex">
           <BreadcrumbLink render={<Link href="/dashboard" />}>Session Coach</BreadcrumbLink>
         </BreadcrumbItem>
-        {page && (
+        {title && (
           <>
             <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>{page.title}</BreadcrumbPage>
+              <BreadcrumbPage>{title}</BreadcrumbPage>
             </BreadcrumbItem>
           </>
         )}

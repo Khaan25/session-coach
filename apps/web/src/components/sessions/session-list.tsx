@@ -8,7 +8,8 @@ import { useLiveSessions } from "@/lib/sessions/use-live-sessions";
 
 /**
  * The dashboard's session list, live: Realtime updates each row's status in place and, on page 1, prepends new
- * sessions. `now` is the server's render time, so the first render matches the server's relative times.
+ * sessions. `now` is the server's render time, so the first render matches the server's relative times, and later
+ * changes move it on by the time elapsed in the browser rather than by the browser's own clock, which may be wrong.
  */
 export function SessionList({
   sessions,
@@ -23,9 +24,9 @@ export function SessionList({
   prepend: boolean;
   limit: number;
 }) {
-  const { rows, changedAt } = useLiveSessions(userId, sessions, { prepend, limit });
+  const { rows, elapsedMs } = useLiveSessions(userId, sessions, { prepend, limit });
   if (rows.length === 0) return <NoSessionsEmpty variant="plain" />;
-  const clock = changedAt ?? new Date(now);
+  const clock = new Date(Date.parse(now) + (elapsedMs ?? 0));
   return (
     <ItemGroup>
       {rows.map((session) => (

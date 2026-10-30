@@ -14,6 +14,7 @@ import { Item, ItemContent, ItemDescription, ItemGroup } from "@/components/ui/i
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
+import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
 
 // MAX_ANSWER in lib/review/grade.ts; not imported, so zod stays out of the client bundle. The route checks it again.
 const MAX_ANSWER = 4000;
@@ -68,6 +69,8 @@ export function QuizForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [grade, setGrade] = useState<Grade | null>(null);
+  // The submit button unmounts when the result replaces the form, so focus moves to the result heading.
+  const { target: resultHeading } = useFocusWhenReplaced<HTMLHeadingElement>(grade !== null);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -106,7 +109,9 @@ export function QuizForm({
       <Card size="lg">
         <CardHeader>
           <CardTitle>
-            <h2>Your result</h2>
+            <h2 ref={resultHeading} tabIndex={-1}>
+              Your result
+            </h2>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -194,6 +199,8 @@ export function QuizForm({
               id={`${id}-answer`}
               rows={5}
               maxLength={MAX_ANSWER}
+              // Read-only while scoring, so the answer shown with the result is the one that was scored.
+              readOnly={pending}
               value={answer}
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}

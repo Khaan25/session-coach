@@ -15,6 +15,8 @@ test("picks the largest whole unit, past and future", () => {
 
 test("rounds past and future alike, and never reaches the next unit's count", () => {
   assert.equal(formatRelativeTime("2026-10-29T11:58:30Z", now), "2 minutes ago");
+  assert.equal(formatRelativeTime("2026-10-29T11:59:00.500Z", now), "1 minute ago");
+  assert.equal(formatRelativeTime("2026-10-29T12:00:59.500Z", now), "in 1 minute");
   assert.equal(formatRelativeTime("2026-10-29T12:01:30Z", now), "in 2 minutes");
   assert.equal(formatRelativeTime("2026-10-29T11:00:20Z", now), "1 hour ago");
   assert.equal(formatRelativeTime("2026-10-28T12:20:00Z", now), "yesterday");
