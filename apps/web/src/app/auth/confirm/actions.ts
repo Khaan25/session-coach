@@ -39,3 +39,29 @@ export async function confirmEmail(formData: FormData): Promise<void> {
   const next = formData.get("next");
   redirect(safeNext(typeof next === "string" ? next : null, origin));
 }
+
+/**
+ * Finishes a link from Supabase's default email template, which verifies the token on Supabase's side and comes back
+ * with a one-time PKCE `code` instead of a `token_hash`. The hosted project sends that template until custom SMTP lets
+ * it use ours. Exchanging the code needs the PKCE cookie from the browser that signed up, so in any other browser the
+ * email is already confirmed and the learner only has to sign in.
+ *
+ * @param formData - Hidden fields `code` and `next`, copied from the link's query.
+ */
+export async function confirmEmailCode(formData: FormData): Promise<void> {
+  const code = formData.get("code");
+  if (typeof code !== "string" || !code) redirect("/auth/error?code=invalid_link");
+
+  const origin = (await headers()).get("origin");
+  if (!origin) {
+    console.error("auth/confirmEmailCode", "missing Origin header");
+    redirect("/auth/error?code=confirm_failed");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) redirect("/auth/error?code=confirmed_sign_in");
+
+  const next = formData.get("next");
+  redirect(safeNext(typeof next === "string" ? next : null, origin));
+}
