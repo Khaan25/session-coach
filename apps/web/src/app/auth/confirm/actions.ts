@@ -39,3 +39,40 @@ export async function confirmEmail(formData: FormData): Promise<void> {
   const next = formData.get("next");
   redirect(safeNext(typeof next === "string" ? next : null, origin));
 }
+
+/**
+ * Finishes a link from Supabase's default email template, which verifies the token on Supabase's side and comes back
+ * with a one-time PKCE `code` instead of a `token_hash`. The hosted project sends that template until custom SMTP lets
+ * it use ours. Exchanging the code needs the PKCE cookie from the browser the email was requested in. In any other
+ * browser a sign-up is already confirmed by then, so the learner only has to sign in; a reset is not, so they need a
+ * new link from this browser.
+ *
+ * @param formData - Hidden fields `code` and `next`, copied from the link's query.
+ */
+export async function confirmEmailCode(formData: FormData): Promise<void> {
+  const code = formData.get("code");
+  if (typeof code !== "string" || !code) redirect("/auth/error?code=invalid_link");
+
+  const origin = (await headers()).get("origin");
+  if (!origin) {
+    console.error("auth/confirmEmailCode", "missing Origin header");
+    redirect("/auth/error?code=confirm_failed");
+  }
+
+  const next = formData.get("next");
+  const supabase = await createClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    const otherBrowser = error.code === "pkce_code_verifier_not_found";
+    if (!otherBrowser) console.error("auth/confirmEmailCode", error);
+    const reason =
+      next === "/update-password"
+        ? "reset_failed"
+        : otherBrowser
+          ? "confirmed_sign_in"
+          : "confirm_failed";
+    redirect(`/auth/error?code=${reason}`);
+  }
+
+  redirect(safeNext(typeof next === "string" ? next : null, origin));
+}
