@@ -6,4 +6,5 @@
 - **Shared contracts:** a change to `packages/shared` or `supabase/migrations` says so at the top and tags the other person. Agree in the team channel first.
 - **Bots:** cubic and CodeRabbit review every PR; Claude reviews too once `CLAUDE_CODE_OAUTH_TOKEN` is set. Fix valid comments in new commits. For a comment you won't fix, reply with the reason, then resolve the thread.
 - **Merging:** squash merge, after CI is green and every thread is resolved. An agent merges only when a person explicitly tells it to merge that PR.
+- **Branches after merge:** GitHub deletes a PR's head branch when it merges (repo setting `delete_branch_on_merge`, on since 2026-10-29). Delete local branches and worktrees that are merged, such as parallel lane branches merged into a feature branch, as soon as the merge passes its checks.
 - **Drafts** skip the Claude review; mark the PR ready when it is.

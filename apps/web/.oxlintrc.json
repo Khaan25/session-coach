@@ -143,6 +143,13 @@
         "shadcn/no-restyle": "off",
         "shadcn/no-arbitrary-values": "off"
       }
+    },
+    {
+      "files": ["src/lib/ui/**"],
+      "rules": {
+        "react/refs": "off",
+        "react/no-children-prop": "off"
+      }
     }
   ]
 }

@@ -21,3 +21,9 @@ coverage/
 supabase/.temp/
 .claude/settings.local.json
 .vercel
+
+# content-collections build output
+.content-collections/
+
+# seed-demo manifests: ids of demo rows per learner
+scripts/.seed-demo/
