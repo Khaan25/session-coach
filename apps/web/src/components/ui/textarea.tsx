@@ -13,7 +13,8 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
         fieldControlVariants({ size: "default" }),
         "flex field-sizing-content h-auto min-h-16 w-full resize-none px-3 py-2 leading-5! read-only:cursor-default",
         // No max height by default, so it grows with its text. Give it one (max-h-40) and the text scrolls there,
-        // and each edge with more behind it fades, so no line is cut without a cue.
+        // and each edge with more behind it fades, so no line is cut without a cue. While focused the fade is off:
+        // a mask also cuts the focus halo, and the caret's line is in view then.
         "scroll-fade-y focus-visible:mask-none",
         className,
       )}

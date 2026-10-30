@@ -3,18 +3,18 @@
 log-session.py — write a markdown log of a Claude Code session into .claude-logs/
 
 Two ways to run:
-  1. As a SessionEnd hook (Claude Code pipes JSON on stdin with transcript_path + cwd).
-     Configure in .claude/settings.json:
-         { "hooks": { "SessionEnd": [{ "hooks": [
-             { "type": "command",
-               "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/log-session.py\"" } ] }] } }
+  1. As a hook (Claude Code pipes JSON on stdin with transcript_path + cwd). .claude/settings.json runs it on
+     UserPromptSubmit, Stop, SubagentStop and SessionEnd, so the log is current after every turn, not only when a
+     session closes (a desktop session can stay open for days).
   2. Backfill past sessions that have no log yet:
          python3 .claude/log-session.py --backfill
      (add --force to regenerate logs that already exist)
 
 It reads the session transcript(s) Claude Code stores under
 ~/.claude/projects/<encoded-cwd>/<session-uuid>.jsonl and writes one
-<date>_<time>_<id8>.md per session into <project>/.claude-logs/.
+<date>_<time>_<session-id>.md per session into <project>/.claude-logs/: each typed prompt,
+the reply its turn ended on, and each subagent's brief and report. Tool calls,
+their output and injected context are left out, and every line is redacted.
 
 Author is stamped into each log's frontmatter. It is resolved, in order:
   1. the CLAUDE_LOG_AUTHOR environment variable, if set;
@@ -48,6 +48,61 @@ def project_root():
     if env and env.strip():
         return os.path.abspath(env.strip())
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+# ----------------------------- redaction -----------------------------
+# Logs are committed, so every line passes through redact() before it is written. This is a safety net on top of
+# scripts/check-secrets.mjs (the pre-commit scan), not permission to paste secrets. Personal data other than emails
+# still needs a read before staging (docs/rules/secrets.md).
+
+_SECRET_CHARS = r"[A-Za-z0-9_\-]"
+
+REDACTIONS = [
+    # Supabase keys (new format) and personal access tokens
+    (re.compile(r"sb_(secret|publishable)_" + _SECRET_CHARS + r"{4,}"), r"sb_\1_[REDACTED]"),
+    (re.compile(r"sbp_[A-Za-z0-9]{20,}"), "sbp_[REDACTED]"),
+    # JWTs (Supabase legacy anon/service_role keys, session tokens)
+    (re.compile(r"eyJ" + _SECRET_CHARS + r"{10,}\.eyJ" + _SECRET_CHARS + r"{10,}\." + _SECRET_CHARS + r"{10,}"),
+     "[JWT REDACTED]"),
+    # Model providers and email
+    (re.compile(r"sk-ant-" + _SECRET_CHARS + r"{12,}"), "sk-ant-[REDACTED]"),
+    (re.compile(r"sk-(?:proj-|live_|test_|or-v1-)" + _SECRET_CHARS + r"{12,}"), "sk-[REDACTED]"),
+    (re.compile(r"\bgsk_[A-Za-z0-9]{20,}"), "gsk_[REDACTED]"),
+    (re.compile(r"\bre_[A-Za-z0-9_]{20,}"), "re_[REDACTED]"),
+    # CLI tokens this app issues
+    (re.compile(r"\bsc_[A-Za-z0-9_\-]{20,}"), "sc_[REDACTED]"),
+    # GitHub, AWS, Google, Slack
+    (re.compile(r"\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}"), r"\1_[REDACTED]"),
+    (re.compile(r"github_pat_[A-Za-z0-9_]{20,}"), "github_pat_[REDACTED]"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "AKIA[REDACTED]"),
+    (re.compile(r"\bAIza[0-9A-Za-z_\-]{30,}"), "AIza[REDACTED]"),
+    (re.compile(r"\bxox[baprs]-[A-Za-z0-9\-]{10,}"), "xox-[REDACTED]"),
+    # Connection strings with embedded passwords
+    (re.compile(r"((?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|rediss?|amqp)://[A-Za-z0-9._%\-]+:)[A-Za-z0-9._%+!$*#~\-]{4,}@"),
+     r"\1[REDACTED]@"),
+    # Authorization headers
+    (re.compile(r"(?i)(bearer\s+)[A-Za-z0-9_\-.=]{16,}"), r"\1[REDACTED]"),
+    # PEM private keys
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----"), "[PRIVATE KEY REDACTED]"),
+    # KEY=value lines whose name says secret and whose value looks real (not "...", "<ref>" or "${VAR}")
+    (re.compile(
+        r"(?im)^(\s*(?:export\s+)?[A-Z0-9_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY|APIKEY|PRIVATE_KEY"
+        r"|ACCESS_KEY|CLIENT_SECRET|DATABASE_URL|SERVICE_ROLE)[A-Z0-9_]*\s*[=:]\s*[\"']?)"
+        r"(?!\[REDACTED\])([A-Za-z0-9_\-+/=.:@]{12,})(?<!\.\.\.)([\"']?\s*(?:#.*)?)$"),
+     r"\1[REDACTED]\3"),
+    # "password": "..." literals in JSON, YAML and TS
+    (re.compile(r"(?i)([\"']?(?:password|passwd|secret|token|api[_-]?key|client[_-]?secret)[\"']?\s*[:=]\s*[\"'])([^\"']{8,})([\"'])"),
+     r"\1[REDACTED]\3"),
+    # Email addresses other than GitHub noreply
+    (re.compile(r"[A-Za-z0-9._%+\-]+@(?!users\.noreply\.github\.com\b)[A-Za-z0-9.\-]+\.[A-Za-z]{2,}"), "[email redacted]"),
+]
+
+
+def redact(text):
+    """Mask credential-shaped strings and emails. Idempotent: redacted text redacts to itself."""
+    for pattern, replacement in REDACTIONS:
+        text = pattern.sub(replacement, text)
+    return text
 
 
 # ----------------------------- helpers -----------------------------
@@ -85,20 +140,35 @@ def text_from_content(content):
             return None
     return None
 
-def is_real_prompt(o):
-    """True for a prompt the human typed, not a tool result or subagent turn Claude Code also logs as 'user'."""
-    if o.get("isSidechain") or o.get("type") != "user":
-        return False
+# Context the IDE and harness attach to a prompt; nobody typed it.
+INJECTED_BLOCKS = re.compile(r"<(ide_opened_file|ide_selection|system-reminder)>[\s\S]*?</\1>\s*")
+# Harness events delivered as user turns: slash-command echoes, task and session notifications.
+HARNESS_PREFIXES = ("<command-name>", "<command-message>", "<local-command", "Caveat:", "<task-notification>",
+                    "<side-sessions-event>", "<ci-monitor-event>", "Another Claude session sent a message",
+                    "This session is being continued from a previous conversation")
+
+
+def is_harness_event(txt):
+    """True for a notification the harness delivered as a user turn; some carry a preamble before their tag."""
+    return txt.startswith(HARNESS_PREFIXES) or "<task-notification>" in txt
+
+
+def prompt_text(o):
+    """The text a person typed, or None for tool results, subagent and meta turns, and harness events."""
+    if o.get("isSidechain") or o.get("isMeta") or o.get("type") != "user":
+        return None
     m = o.get("message")
     if not isinstance(m, dict):
-        return False
+        return None
     c = m.get("content")
     if isinstance(c, list):
         types = [it.get("type") for it in c if isinstance(it, dict)]
         if "tool_result" in types or "text" not in types:
-            return False
-    txt = text_from_content(c)
-    return bool(txt and txt.strip())
+            return None
+    txt = INJECTED_BLOCKS.sub("", text_from_content(c) or "").strip()
+    if not txt or is_harness_event(txt):
+        return None
+    return txt
 
 
 def author_for(cwd):
@@ -119,10 +189,56 @@ def author_for(cwd):
     return "unknown"
 
 
+def git_config(cwd, key):
+    """A git config value, or "" when unset or git is missing."""
+    try:
+        out = subprocess.run(["git", "config", key], cwd=cwd, capture_output=True, text=True, timeout=3)
+        return (out.stdout or "").strip()
+    except Exception:
+        return ""
+
+
+def git_config_path(root):
+    """Absolute path of the repository's shared .git directory, or "" outside git."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                             cwd=root, capture_output=True, text=True, timeout=3)
+        return (out.stdout or "").strip()
+    except Exception:
+        return ""
+
+
+def masked_email(email):
+    """GitHub noreply addresses are public already; any other address keeps only its first letter and domain."""
+    if not email or "@" not in email or email.endswith("@users.noreply.github.com"):
+        return email or "unknown"
+    local, domain = email.split("@", 1)
+    return f"{local[:1]}***@{domain}"
+
+
+def github_user_for(cwd):
+    """GitHub login: $GITHUB_USER, else the login in a noreply commit email, else the active `gh` account.
+
+    `gh` is last because someone signed in to several accounts would otherwise have the session credited to
+    whichever is active, and these logs are public.
+    """
+    env = os.environ.get("GITHUB_USER", "").strip()
+    if env:
+        return env
+    m = re.match(r"^(?:\d+\+)?([A-Za-z0-9-]+)@users\.noreply\.github\.com$", git_config(cwd, "user.email"))
+    if m:
+        return m.group(1)
+    try:
+        out = subprocess.run(["gh", "api", "user", "--jq", ".login"], capture_output=True, text=True, timeout=5)
+        return (out.stdout or "").strip() or "unknown"
+    except Exception:
+        return "unknown"
+
+
 # ----------------------------- transcript -> exchanges -----------------------------
 
 def read_exchanges(path):
-    """Parse a transcript JSONL into a list of {prompt, pts, prts(raw), resp[], rts(raw)} exchanges."""
+    """Parse a transcript JSONL into a list of {prompt, prts(raw), resp[final reply], rts(raw)} exchanges."""
     exchanges, current = [], None
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
         for line in fh:
@@ -136,8 +252,8 @@ def read_exchanges(path):
             if o.get("isSidechain"):
                 continue
             t = o.get("type")
-            if t == "user" and is_real_prompt(o):
-                txt = text_from_content(o["message"]["content"]).strip()
+            txt = prompt_text(o) if t == "user" else None
+            if txt:
                 current = {"prompt": txt, "prts": o.get("timestamp"),
                            "resp": [], "rts": None}
                 exchanges.append(current)
@@ -145,20 +261,89 @@ def read_exchanges(path):
                 m = o.get("message", {})
                 txt = text_from_content(m.get("content") if isinstance(m, dict) else None)
                 if txt and txt.strip():
-                    current["resp"].append(txt.strip())
+                    # Only the reply the turn ends on: the narration between tool calls is work, not the answer.
+                    current["resp"] = [txt.strip()]
                     # Last reply time, so duration and the filename cover the assistant's work.
                     current["rts"] = o.get("timestamp") or current["rts"]
     return exchanges
 
 
-def build_log(exchanges, session_id, cwd):
+def read_subagent(path):
+    """A subagent's prompts (the brief, then any follow-ups) and its replies, as (role, timestamp, text) tuples.
+
+    A reply is the report handed back through SubagentHandback, or plain text for agents that answer directly.
+    """
+    entries = []
+    with open(path, "r", encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            try:
+                o = json.loads(line)
+            except Exception:
+                continue
+            ts = o.get("timestamp")
+            c = (o.get("message") or {}).get("content") if isinstance(o.get("message"), dict) else None
+            if o.get("type") == "user" and isinstance(c, str):
+                txt = INJECTED_BLOCKS.sub("", c).strip()
+                if txt and not is_harness_event(txt):
+                    entries.append(("prompt", ts, txt))
+            elif o.get("type") == "assistant" and isinstance(c, list):
+                texts = []
+                for b in c:
+                    if not isinstance(b, dict):
+                        continue
+                    if b.get("type") == "tool_use" and b.get("name") == "SubagentHandback":
+                        texts.append(str((b.get("input") or {}).get("message", "")).strip())
+                    elif b.get("type") == "text":
+                        texts.append(b.get("text", "").strip())
+                txt = "\n\n".join(t for t in texts if t)
+                if not txt:
+                    continue
+                # Keep only the last reply before each prompt, as for the main session.
+                if entries and entries[-1][0] == "reply":
+                    entries[-1] = ("reply", ts, txt)
+                else:
+                    entries.append(("reply", ts, txt))
+    return entries
+
+
+def subagent_sections(transcript_path, session_id):
+    """Markdown for each subagent of the session (in <session>/subagents/ beside the transcript), oldest first."""
+    sub_dir = os.path.join(os.path.splitext(transcript_path)[0], "subagents")
+    agents = []
+    for path in glob.glob(os.path.join(sub_dir, "agent-*.jsonl")):
+        entries = read_subagent(path)
+        if entries:
+            agents.append((entries[0][1] or "", path, entries))
+    out = []
+    for _, path, entries in sorted(agents, key=lambda a: a[0]):
+        agent_id = os.path.splitext(os.path.basename(path))[0].removeprefix("agent-")
+        try:
+            with open(os.path.splitext(path)[0] + ".meta.json", encoding="utf-8") as fh:
+                meta = json.load(fh)
+        except Exception:
+            meta = {}
+        out += ["", f"## Subagent: {meta.get('description') or agent_id}", "",
+                f"agent_id: {agent_id} | type: {meta.get('agentType', 'unknown')}"]
+        num = 0
+        for role, ts, txt in entries:
+            num += role == "prompt"
+            kind = "SUBAGENT_PROMPT" if role == "prompt" else "SUBAGENT_RESPONSE"
+            out += ["", f"[CLAUDE_LOG_ENTRY type={kind} num={num} session={session_id} agent={agent_id}]",
+                    f"timestamp: {ts}", f"chars: {len(txt)}", "", txt, ""]
+    return out
+
+
+def build_log(exchanges, session_id, cwd, subagents=()):
     """Return (filename, markdown_text) for a parsed session, or (None, None) if empty."""
     if not exchanges:
         return None, None
 
-    id8 = session_id[:8]
-    project = os.path.basename(project_root().rstrip("/")) or "unknown"
+    # The repo's name, not a worktree's: a worktree's .git points back to the main checkout's .git.
+    common = git_config_path(project_root())
+    project = os.path.basename(os.path.dirname(common) if common else project_root().rstrip("/")) or "unknown"
     author = author_for(cwd)
+    github_user = github_user_for(cwd)
+    git_email = masked_email(git_config(cwd, "user.email"))
 
     def words(s):
         return len(s.split())
@@ -189,16 +374,18 @@ def build_log(exchanges, session_id, cwd):
 
     # filename / date come from the session's last local activity
     end_local = to_local(parse_ts(exchanges[-1]["rts"] or last_pts)) or datetime.now().astimezone()
-    fname = f"{end_local.strftime('%Y-%m-%d_%H-%M-%S')}_{id8}.md"
+    fname = f"{end_local.strftime('%Y-%m-%d_%H-%M-%S')}_{session_id}.md"
     date_str = end_local.strftime("%Y-%m-%d")
 
     def ratio(a, b):
         return round(a / b, 2) if b else 0.0
 
     fm = [
-        ("session_id", id8),
+        ("session_id", session_id),
         ("date", date_str),
         ("author", author),
+        ("github_user", github_user),
+        ("git_email", git_email),
         ("project", project),
         ("session_status", "complete"),
         ("last_entry_type", last_type),
@@ -226,7 +413,7 @@ def build_log(exchanges, session_id, cwd):
     out = ["---"]
     out += [f"{k}: {v}" for k, v in fm]
     out += ["---", "", f"# Claude Session Log - {date_str}", "",
-            f"Session: `{id8}` | Project: `{project}` | Author: `{author}`", "", "---", ""]
+            f"Session: `{session_id}` | Project: `{project}` | Author: `{author}` | GitHub: `{github_user}`", "", "---", ""]
 
     path_re = PATH_RE
     url_re = re.compile(r"https?://")
@@ -238,7 +425,7 @@ def build_log(exchanges, session_id, cwd):
         has_urls = bool(url_re.search(p))
         is_pasted = words(p) > LONG_WORDS and "\n" in p
         out += ["",
-                f"[CLAUDE_LOG_ENTRY type=PROMPT num={i} session={id8}]",
+                f"[CLAUDE_LOG_ENTRY type=PROMPT num={i} session={session_id}]",
                 f"timestamp: {e['prts']}",
                 f"time: {pdt.strftime('%Y-%m-%d %H:%M') if pdt else ''}",
                 f"chars: {len(p)}",
@@ -252,13 +439,18 @@ def build_log(exchanges, session_id, cwd):
         if r:
             rdt = to_local(parse_ts(e["rts"]))
             out += ["",
-                    f"[CLAUDE_LOG_ENTRY type=RESPONSE num={i} session={id8}]",
+                    f"[CLAUDE_LOG_ENTRY type=RESPONSE num={i} session={session_id}]",
                     f"timestamp: {e['rts']}",
                     f"time: {rdt.strftime('%Y-%m-%d %H:%M') if rdt else ''}",
                     f"chars: {len(r)}",
                     "", r, ""]
 
-    return fname, "\n".join(out) + "\n"
+    if subagents:
+        out += ["", "---", "", "# Subagents", "",
+                "The brief each subagent was sent and the report it handed back, oldest first."]
+        out += list(subagents)
+
+    return fname, redact("\n".join(out) + "\n")
 
 
 def write_session(transcript_path, cwd, session_id=None, force=False):
@@ -269,13 +461,14 @@ def write_session(transcript_path, cwd, session_id=None, force=False):
     """
     session_id = session_id or os.path.splitext(os.path.basename(transcript_path))[0]
     exchanges = read_exchanges(transcript_path)
-    fname, text = build_log(exchanges, session_id, cwd)
+    fname, text = build_log(exchanges, session_id, cwd,
+                            subagent_sections(transcript_path, session_id))
     if not fname:
         return None
     outdir = os.path.join(project_root(), ".claude-logs")
     os.makedirs(outdir, exist_ok=True)
-    id8 = session_id[:8]
-    existing = glob.glob(os.path.join(outdir, f"*_{id8}.md"))
+    # Logs written before names carried the full session ID end in its first 8 characters; replace those too.
+    existing = glob.glob(os.path.join(outdir, f"*_{session_id}.md")) + glob.glob(os.path.join(outdir, f"*_{session_id[:8]}.md"))
     if existing and not force:
         return None  # already logged (backfill skips)
     # Write to a temp file and swap it in, so a failed write cannot leave a

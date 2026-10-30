@@ -70,7 +70,7 @@ async function Queue() {
           <Item key={card.id} role="listitem">
             <ItemContent>
               <ItemTitle>
-                <ItemLink href={`/review/${card.id}`}>{card.decision}</ItemLink>
+                <ItemLink render={<Link href={`/review/${card.id}`} />}>{card.decision}</ItemLink>
               </ItemTitle>
               <ItemDescription>{card.sessionName}</ItemDescription>
             </ItemContent>

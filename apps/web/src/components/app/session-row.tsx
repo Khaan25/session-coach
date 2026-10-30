@@ -1,4 +1,5 @@
 import type { Session } from "@session-coach/shared/session";
+import Link from "next/link";
 
 import {
   Item,
@@ -29,17 +30,22 @@ export function SessionRow({ session, cardCount, now }: SessionRowProps) {
   const { id, title, repo, branch, status, error, created_at } = session;
   const name = sessionName({ title, repo, branch });
   const when = formatRelativeTime(created_at, now);
-  // shortcut: ItemLink is a plain <a> (no client-side navigation); give ItemLink a render prop to take next/link.
   return (
     // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role, not an li.
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <Item role="listitem" data-status={status === "failed" ? "fail" : undefined}>
       <ItemContent>
         <ItemTitle>
-          {status === "ready" ? <ItemLink href={`/s/${id}`}>{name}</ItemLink> : <span>{name}</span>}
+          {status === "ready" ? (
+            <ItemLink render={<Link href={`/s/${id}`} />}>{name}</ItemLink>
+          ) : (
+            <span>{name}</span>
+          )}
         </ItemTitle>
         {status === "failed" ? (
-          <ItemDescription>{error ?? "Couldn't make cards from this session."}</ItemDescription>
+          <ItemDescription>
+            {error?.trim() || "Couldn't make cards from this session."}
+          </ItemDescription>
         ) : (
           title &&
           repo && (

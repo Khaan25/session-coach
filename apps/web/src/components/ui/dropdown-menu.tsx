@@ -238,8 +238,8 @@ function DropdownMenuRadioItem({
         className="pointer-events-none absolute start-2 flex size-4 items-center justify-center"
         data-slot="dropdown-menu-radio-item-indicator"
       >
-        {/* The chosen option is a filled 8px square, the design system's radio dot. */}
-        <MenuPrimitive.RadioItemIndicator className="size-(--mark-size) bg-ink forced-colors:bg-[CanvasText]" />
+        {/* The chosen option is a filled 8px dot, round like every radio so it never reads as a checkbox. */}
+        <MenuPrimitive.RadioItemIndicator className="size-(--mark-size) rounded-full bg-ink forced-colors:bg-[CanvasText]" />
       </span>
       {children}
     </MenuPrimitive.RadioItem>

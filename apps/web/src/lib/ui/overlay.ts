@@ -3,104 +3,16 @@
 import * as React from "react";
 import { cn } from "cn";
 
-// What Dialog and Sheet share: the open state that waits for a running action, the backdrop, and the
+// What Dialog and Sheet share: the open state, the backdrop, and the
 // edge fade on a scrolling body. Every overlay (dialogs, sheet, drawer, popover, menus, select, combobox) imports from here, so the behaviour is written once. Every
 // overlay, anchored or modal, also takes its look from here: one surface and one way to appear.
 
-// ---------- Open state and the pending block ----------
-
-type ChangeDetails = { cancel: () => void };
+// ---------- Open state ----------
 
 /**
- * What the open state knows, apart from React. Every open and every close starts a new session, and a
- * run belongs to the session it started in, so a settle from an earlier session changes nothing.
+ * Open state, controlled or not, for an overlay's Root. Pass setOpen as the Root's onOpenChange.
  */
-type OverlayModel = { open: boolean; session: number; pending: boolean; error: string | null };
-
-const overlayModel = (open: boolean): OverlayModel => ({
-  open,
-  session: 0,
-  pending: false,
-  error: null,
-});
-
-/** Any promise-like value counts as pending, not only a native Promise. */
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    value !== null &&
-    (typeof value === "object" || typeof value === "function") &&
-    typeof (value as { then?: unknown }).then === "function"
-  );
-}
-
-/**
- * The overlay opened or closed, by the parent's prop or by itself. Opening starts clean, with no error.
- * Any close, the parent's included, ends the session, so a run still going is no longer this overlay's.
- */
-function overlayOpenChanged(model: OverlayModel, open: boolean): OverlayModel {
-  if (model.open === open) return model;
-  return { open, session: model.session + 1, pending: false, error: open ? null : model.error };
-}
-
-/** Whether a request to close goes through. While a run is pending nothing closes the overlay. */
-function overlayMayClose(model: OverlayModel) {
-  return !model.pending;
-}
-
-/** A run starts. Refused while one is pending; the error clears. */
-function overlayRunStarted(model: OverlayModel): OverlayModel | null {
-  if (model.pending) return null;
-  return { ...model, pending: true, error: null };
-}
-
-type RunOutcome = { ok: true } | { ok: false; error: string };
-
-/**
- * A run settled. Ignored unless it belongs to the current session and that session still waits on it.
- * Success asks to close when closeAfter; failure keeps the message as the error.
- */
-function overlayRunSettled(
-  model: OverlayModel,
-  session: number,
-  outcome: RunOutcome,
-  closeAfter: boolean,
-): { model: OverlayModel; close: boolean } {
-  if (session !== model.session || !model.pending) return { model, close: false };
-  if (outcome.ok) return { model: { ...model, pending: false }, close: closeAfter && model.open };
-  return { model: { ...model, pending: false, error: outcome.error }, close: false };
-}
-
-const FAILED = "That did not work. Nothing changed.";
-const messageOf = (e: unknown) =>
-  e instanceof Error ? e.message : typeof e === "string" && e ? e : FAILED;
-
-/** Base UI's change details for a close the overlay asks for itself, after an action finished. */
-function ownDetails<D extends ChangeDetails>(): D {
-  const details = {
-    reason: "imperative-action",
-    event: new Event("overlay"),
-    trigger: undefined,
-    isCanceled: false,
-    isPropagationAllowed: false,
-    cancel() {
-      details.isCanceled = true;
-    },
-    allowPropagation() {
-      details.isPropagationAllowed = true;
-    },
-    preventUnmountOnClose() {},
-  };
-  return details as unknown as D;
-}
-
-/**
- * Open state, controlled or not, and the pending block. run() calls an action; a returned thenable
- * sets pending until it settles, and while pending setOpen(false) is refused, so Escape, a swipe, the
- * backdrop, Close and the X all wait. It closes after success when asked and keeps the rejection's
- * message as the error. `session` changes on every open and close, whichever side opened it, so state
- * that belongs to one open (a typed confirm) resets by keying on it.
- */
-function useOverlayOpen<D extends ChangeDetails>({
+function useOverlayOpen<D>({
   open: openProp,
   defaultOpen = false,
   onOpenChange,
@@ -111,88 +23,14 @@ function useOverlayOpen<D extends ChangeDetails>({
 }) {
   const [openState, setOpenState] = React.useState(defaultOpen);
   const open = openProp ?? openState;
-  const [model, setModel] = React.useState(() => overlayModel(open));
-  const modelRef = React.useRef(model);
-  const commit = React.useCallback((next: OverlayModel) => {
-    if (next === modelRef.current) return;
-    modelRef.current = next;
-    setModel(next);
-  }, []);
-  const latest = React.useRef({ controlled: openProp !== undefined, onOpenChange });
-  React.useLayoutEffect(() => {
-    latest.current = { controlled: openProp !== undefined, onOpenChange };
-  });
-  // The transition of open, from the prop or from inside, starts a new session.
-  React.useLayoutEffect(() => {
-    commit(overlayOpenChanged(modelRef.current, open));
-  }, [open, commit]);
-
-  const setOpen = React.useCallback((next: boolean, details?: D) => {
-    const full = details ?? ownDetails<D>();
-    // The action is running: nothing closes the overlay until it settles (trap/overlay-pending-dismiss).
-    if (!next && !overlayMayClose(modelRef.current)) {
-      full.cancel();
-      return;
-    }
-    if (!latest.current.controlled) setOpenState(next);
-    latest.current.onOpenChange?.(next, full);
-  }, []);
-
-  const run = React.useCallback(
-    (action: () => unknown, closeAfter: boolean) => {
-      const started = overlayRunStarted(modelRef.current);
-      if (!started) return;
-      let result: unknown;
-      try {
-        result = action();
-      } catch (e) {
-        commit({ ...modelRef.current, error: messageOf(e) });
-        return;
-      }
-      if (!isThenable(result)) {
-        commit({ ...modelRef.current, error: null });
-        if (closeAfter) setOpen(false);
-        return;
-      }
-      commit(started);
-      const settle = (outcome: RunOutcome) => {
-        const { model: next, close } = overlayRunSettled(
-          modelRef.current,
-          started.session,
-          outcome,
-          closeAfter,
-        );
-        commit(next);
-        if (close) setOpen(false);
-      };
-      result.then(
-        () => settle({ ok: true }),
-        (e: unknown) => settle({ ok: false, error: messageOf(e) }),
-      );
+  const setOpen = React.useCallback(
+    (next: boolean, details: D) => {
+      if (openProp === undefined) setOpenState(next);
+      onOpenChange?.(next, details);
     },
-    [commit, setOpen],
+    [openProp, onOpenChange],
   );
-
-  return { open, setOpen, pending: model.pending, error: model.error, session: model.session, run };
-}
-
-/**
- * Whether a primary action closes its overlay. With onAction it closes after the action settles.
- * Without one, a bare action is a "done" and closes, as a plain confirm button does; an onClick
- * or a form submit owns what happens next, so those stay open.
- */
-function closesAfter({
-  close,
-  onAction,
-  onClick,
-  type,
-}: {
-  close?: boolean;
-  onAction?: unknown;
-  onClick?: unknown;
-  type?: string;
-}) {
-  return close ?? (onAction !== undefined || (onClick === undefined && type !== "submit"));
+  return { open, setOpen };
 }
 
 // ---------- Looks ----------
@@ -271,13 +109,6 @@ const fadeClass = "fade-y";
 
 export {
   useOverlayOpen,
-  overlayModel,
-  overlayOpenChanged,
-  overlayMayClose,
-  overlayRunStarted,
-  overlayRunSettled,
-  isThenable,
-  closesAfter,
   overlaySurface,
   overlayShellSurface,
   overlayMotion,

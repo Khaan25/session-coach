@@ -187,7 +187,8 @@ function ChartTooltipContent({
       );
     }
 
-    if (!value) {
+    // A 0 label still shows.
+    if (value == null || value === false || value === "") {
       return null;
     }
 

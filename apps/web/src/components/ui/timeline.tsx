@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Kind } from "@/lib/ui/kind";
-import { durationUnitFor, formatDurations } from "@/lib/ui/format";
+import { durationUnitFor, EMPTY_VALUE, formatDurations } from "@/lib/ui/format";
 import { useOffscreen } from "@/lib/ui/use-offscreen";
 import { cn } from "cn";
 
@@ -101,7 +101,7 @@ function Timeline({
 }: TimelineProps) {
   // A queued span has not started running, so it has no elapsed time: no bar and no duration yet.
   const ends = spans.map((s) => s.end ?? (s.status === "queued" ? s.start : (now ?? s.start)));
-  const total = Math.max(1, ...ends, now ?? 0);
+  const total = ends.reduce((m, e) => Math.max(m, e), Math.max(1, now ?? 0));
   // Ticks fall on whole steps of the timeline's one unit: 0, 1, 2, 3 min, never 0.8 min.
   const { unit, size: unitSize } = durationUnitFor([total]);
   const unitScale = niceScale(0, total / unitSize, 4);
@@ -112,7 +112,9 @@ function Timeline({
   const span = scale.max || 1;
   const frac = (ms: number) => Math.min(Math.max(ms, 0), span) / span;
   const at = (ms: number) => `${frac(ms) * 100}%`;
-  const durations = formatDurations(spans.map((s, i) => ends[i] - s.start)).values;
+  const durations = formatDurations(spans.map((s, i) => ends[i] - s.start)).values.map((d, i) =>
+    spans[i].status === "queued" ? EMPTY_VALUE : d,
+  );
   const tickLabels = ticks.map((t) => `${t.toLocaleString("en-US")}${unit}`);
   const totalLabel = formatDurations([total]).values[0];
   const running = spans.some(
@@ -232,7 +234,10 @@ function Timeline({
             : "before";
     // A quiet bar is grey unless it is open (the timeline's kind, run blue by default) or in trouble.
     const colored = bars === "kind" || open || !!trouble;
-    const name = `${s.label}, started at ${formatDurations([s.start]).values[0]}, ${isRunning || s.status === "waiting" ? "so far" : "took"} ${durations[index]}${s.status && s.status !== "ok" ? `, ${statusWord(s).toLowerCase()}` : ""}`;
+    const name =
+      s.status === "queued"
+        ? `${s.label}, ${statusWord(s).toLowerCase()}`
+        : `${s.label}, started at ${formatDurations([s.start]).values[0]}, ${isRunning || s.status === "waiting" ? "so far" : "took"} ${durations[index]}${s.status && s.status !== "ok" ? `, ${statusWord(s).toLowerCase()}` : ""}`;
     return (
       <div
         key={s.id}
@@ -306,7 +311,7 @@ function Timeline({
                 glide,
               )}
             />
-          ) : (
+          ) : s.status === "queued" ? null : (
             <span
               data-slot="timeline-bar"
               data-status={trouble}
@@ -318,41 +323,43 @@ function Timeline({
               )}
             />
           )}
-          <span
-            data-slot="timeline-duration"
-            data-place={place}
-            className={cn(
-              "absolute top-1/2 -translate-y-1/2 type-label-sm data whitespace-nowrap",
-              place === "after"
-                ? "start-[calc(var(--bar-end)+var(--space-2))]"
-                : place === "in"
-                  ? "end-[calc(100%-var(--bar-end)+var(--space-2))]"
-                  : "end-[calc(100%-var(--bar-start)+var(--space-2))]",
-              place === "in"
-                ? colored
-                  ? "text-on-field"
-                  : "text-text-1"
-                : trouble === "fail"
-                  ? "text-fail-text"
-                  : trouble === "warn"
-                    ? "text-warn-text"
-                    : "text-text-2",
-              glide,
-            )}
-          >
-            <span className={cn(s.status === "waiting" && "@max-xl/timeline:hidden")}>
-              {durations[index]}
+          {s.status !== "queued" && (
+            <span
+              data-slot="timeline-duration"
+              data-place={place}
+              className={cn(
+                "absolute top-1/2 -translate-y-1/2 type-label-sm data whitespace-nowrap",
+                place === "after"
+                  ? "start-[calc(var(--bar-end)+var(--space-2))]"
+                  : place === "in"
+                    ? "end-[calc(100%-var(--bar-end)+var(--space-2))]"
+                    : "end-[calc(100%-var(--bar-start)+var(--space-2))]",
+                place === "in"
+                  ? colored
+                    ? "text-on-field"
+                    : "text-text-1"
+                  : trouble === "fail"
+                    ? "text-fail-text"
+                    : trouble === "warn"
+                      ? "text-warn-text"
+                      : "text-text-2",
+                glide,
+              )}
+            >
+              <span className={cn(s.status === "waiting" && "@max-xl/timeline:hidden")}>
+                {durations[index]}
+              </span>
+              {s.status === "waiting" && (
+                <Status status="waiting" size="sm" className="@xl/timeline:hidden">
+                  {statusWord(s)}
+                </Status>
+              )}
             </span>
-            {s.status === "waiting" && (
-              <Status status="waiting" className="type-label-sm @xl/timeline:hidden">
-                {statusWord(s)}
-              </Status>
-            )}
-          </span>
+          )}
         </span>
         <span aria-hidden className="flex justify-end pe-4 empty:hidden @max-xl/timeline:hidden">
           {s.status === "waiting" ? (
-            <Status status="waiting" className="type-label-sm">
+            <Status status="waiting" size="sm">
               {statusWord(s)}
             </Status>
           ) : (
@@ -409,13 +416,15 @@ function Timeline({
               </span>
             ))}
           </span>
-          <span className="@max-xl/timeline:hidden" />
+          {marked && <span className="@max-xl/timeline:hidden" />}
         </div>
         <div className="relative min-h-0">
           <div
             ref={scrollRef}
             role={onSpanClick ? "listbox" : "list"}
             aria-label={`Steps in ${label}`}
+            // Static rows repeat the sr-only table below, so only the table is read; interactive rows drop it.
+            aria-hidden={(!onSpanClick && !loading && spans.length > 0) || undefined}
             className="relative max-h-(--timeline-max-h) [scrollbar-width:thin] overflow-auto overscroll-contain"
             style={
               maxHeight
@@ -440,7 +449,7 @@ function Timeline({
                       }
                     />
                   </span>
-                  <span className="@max-xl/timeline:hidden" />
+                  {marked && <span className="@max-xl/timeline:hidden" />}
                 </div>
               ))
             ) : spans.length === 0 ? (
@@ -463,27 +472,29 @@ function Timeline({
           {footer}
         </div>
       )}
-      <table className="sr-only">
-        <caption>{label}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Step</th>
-            <th scope="col">Started at</th>
-            <th scope="col">Took</th>
-            <th scope="col">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {spans.map((s, i) => (
-            <tr key={s.id}>
-              <th scope="row">{s.label}</th>
-              <td>{formatDurations([s.start]).values[0]}</td>
-              <td>{durations[i]}</td>
-              <td>{statusWord(s) || statusLabels.ok}</td>
+      {!onSpanClick && (
+        <table className="sr-only">
+          <caption>{label}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Step</th>
+              <th scope="col">Started at</th>
+              <th scope="col">Took</th>
+              <th scope="col">Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {spans.map((s, i) => (
+              <tr key={s.id}>
+                <th scope="row">{s.label}</th>
+                <td>{formatDurations([s.start]).values[0]}</td>
+                <td>{durations[i]}</td>
+                <td>{statusWord(s) || statusLabels.ok}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

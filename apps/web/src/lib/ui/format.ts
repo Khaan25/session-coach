@@ -72,41 +72,6 @@ export function formatDurations(
   };
 }
 
-const countUnits: readonly Unit[] = [
-  { unit: "", size: 1 },
-  { unit: "k", size: 1_000 },
-  { unit: "M", size: 1_000_000 },
-  { unit: "B", size: 1_000_000_000 },
-];
-
-/** The magnitude for a column of counts, from its largest value as it will show with `digits`. */
-export function countUnitFor(values: readonly number[], digits = 1): Unit & { digits: number } {
-  const digitsAt = (i: number) => (i === 0 ? 0 : digits);
-  // Four digits before switching: k starts at 10,000.
-  const i = pickUnit(largest(values), countUnits, (j) => countUnits[j].size * 10, digitsAt);
-  return { ...countUnits[i], digits: digitsAt(i) };
-}
-
-/** Picks one magnitude (none, k, M, B) for a column of counts and formats every value in it. */
-export function formatCounts(
-  values: readonly number[],
-  { digits = 1, locale = "en-US" }: { digits?: number; locale?: string } = {},
-) {
-  const { unit, size, digits: d } = countUnitFor(values, digits);
-  // signDisplay 'negative' drops the sign from a negative zero.
-  const format = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: d,
-    minimumFractionDigits: d,
-    signDisplay: "negative",
-  });
-  return {
-    unit,
-    values: values.map((v) =>
-      Number.isFinite(v) ? `${format.format(v / size)}${unit}` : EMPTY_VALUE,
-    ),
-  };
-}
-
 /**
  * 420ms, 1.2s, 2m 04s, 2h 04m, 3d 02h: how long something took, as a clock reads. Tabular figures keep a ticking value
  * still. It rounds before it picks the unit, so 999.6ms reads 1.0s and 59.96s reads 1m 00s, never 1000ms or 60.0s. A

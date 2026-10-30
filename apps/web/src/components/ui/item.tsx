@@ -203,19 +203,24 @@ function ItemMeta({ className, ...props }: React.ComponentProps<"div">) {
 /**
  * The row's link, inside ItemTitle. Its hit area stretches over the whole row, so the row opens on a click
  * anywhere, while ItemActions stay their own buttons on top of it: no button inside a link.
+ * Pass `render={<Link href=… />}` for client-side navigation.
  */
-function ItemLink({ className, ...props }: React.ComponentProps<"a">) {
-  return (
-    <a
-      data-slot="item-link"
-      className={cn(
-        "min-w-0 truncate after:absolute after:inset-0 after:rounded-soft after:content-['']",
-        "focus-visible:outline-none focus-visible:after:focus-ring-inset",
-        className,
-      )}
-      {...props}
-    />
-  );
+function ItemLink({ className, render, ...props }: useRender.ComponentProps<"a">) {
+  return useRender({
+    defaultTagName: "a",
+    props: mergeProps<"a">(
+      {
+        className: cn(
+          "min-w-0 truncate after:absolute after:inset-0 after:rounded-soft after:content-['']",
+          "focus-visible:outline-none focus-visible:after:focus-ring-inset",
+          className,
+        ),
+      },
+      { "data-slot": "item-link" } as React.ComponentProps<"a">,
+      props,
+    ),
+    render,
+  });
 }
 
 /** Buttons at the end of the row. They never drop, and sit above an ItemLink. */

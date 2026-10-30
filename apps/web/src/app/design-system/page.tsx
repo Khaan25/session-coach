@@ -21,7 +21,6 @@ import {
   PageHeaderStats,
   PageHeaderTitle,
 } from "@/components/ui/page-header";
-import { Toaster } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const metadata: Metadata = {
@@ -45,50 +44,48 @@ const SECTIONS = [
 export default function DesignSystemPage() {
   return (
     <TooltipProvider>
-      <Toaster>
-        <main className="mx-auto flex w-full max-w-(--container) flex-col gap-12 px-(--gutter-sm) py-6 sm:px-(--gutter)">
-          <PageHeader kind="agent" condense>
-            <PageHeaderRow>
-              <PageHeaderContent>
-                <PageHeaderTitle>Design system</PageHeaderTitle>
-                <PageHeaderDescription>
-                  Explain back the decisions your coding agent made. Every component in
-                  components/ui, on the sample session.
-                </PageHeaderDescription>
-              </PageHeaderContent>
-              <PageHeaderActions>
-                <ThemeToggle />
-              </PageHeaderActions>
-            </PageHeaderRow>
-            <PageHeaderStats>
-              <PageHeaderStat label="Session" value={session.duration_min} detail="min" />
-              <PageHeaderStat label="Events" value={session.event_count} />
-              <PageHeaderStat label="Cards" value={cards.length} detail="3 to 5 per session" />
-            </PageHeaderStats>
-          </PageHeader>
+      <main className="mx-auto flex w-full max-w-(--container) flex-col gap-12 px-(--gutter-sm) py-6 sm:px-(--gutter)">
+        <PageHeader kind="agent" condense>
+          <PageHeaderRow>
+            <PageHeaderContent>
+              <PageHeaderTitle>Design system</PageHeaderTitle>
+              <PageHeaderDescription>
+                Explain back the decisions your coding agent made. Every component in components/ui,
+                on the sample session.
+              </PageHeaderDescription>
+            </PageHeaderContent>
+            <PageHeaderActions>
+              <ThemeToggle />
+            </PageHeaderActions>
+          </PageHeaderRow>
+          <PageHeaderStats>
+            <PageHeaderStat label="Session" value={session.duration_min} detail="min" />
+            <PageHeaderStat label="Events" value={session.event_count} />
+            <PageHeaderStat label="Cards" value={cards.length} detail="3 to 5 per session" />
+          </PageHeaderStats>
+        </PageHeader>
 
-          <nav aria-label="Sections" className="flex flex-wrap gap-2">
-            {SECTIONS.map((section) => (
-              <a
-                key={section.id}
-                href={`#${section.id}`}
-                className={buttonVariants({ variant: "ghost", size: "sm" })}
-              >
-                {section.label}
-              </a>
-            ))}
-          </nav>
+        <nav aria-label="Sections" className="flex flex-wrap gap-2">
+          {SECTIONS.map((section) => (
+            <a
+              key={section.id}
+              href={`#${section.id}`}
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {section.label}
+            </a>
+          ))}
+        </nav>
 
-          <ActionsCatalog />
-          <InputsCatalog />
-          <DisplayCatalog />
-          <DataCatalog />
-          <OverlaysCatalog />
-          <NavigationCatalog />
-          <BlocksGallery />
-          <AppCatalog />
-        </main>
-      </Toaster>
+        <ActionsCatalog />
+        <InputsCatalog />
+        <DisplayCatalog />
+        <DataCatalog />
+        <OverlaysCatalog />
+        <NavigationCatalog />
+        <BlocksGallery />
+        <AppCatalog />
+      </main>
     </TooltipProvider>
   );
 }

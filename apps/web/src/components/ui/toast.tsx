@@ -63,7 +63,7 @@ function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
       className={cn(
         "group/toast pointer-events-auto absolute end-0 bottom-0 z-[calc(1000-var(--toast-index))] w-full origin-bottom rounded-frame bg-page text-text-1 shadow-overlay will-change-transform outline-none select-none focus-visible:focus-ring motion-safe:data-[pulse=even]:animate-toast-pulse-even motion-safe:data-[pulse=odd]:animate-toast-pulse-odd forced-colors:outline-1 forced-colors:outline-solid",
         "[--gap:0.75rem] [--height:var(--toast-frontmost-height,var(--toast-height))] [--offset-y:calc(var(--toast-offset-y)*-1+calc(var(--toast-index)*var(--gap)*-1)+var(--toast-swipe-movement-y))] [--peek:0.75rem] [--scale:calc(max(0,1-(var(--toast-index)*0.1)))] [--shrink:calc(1-var(--scale))]",
-        "h-(--height) transform-[translateX(var(--toast-swipe-movement-x))_translateY(calc(var(--toast-swipe-movement-y)-(var(--toast-index)*var(--peek))-(var(--shrink)*var(--height))))_scale(var(--scale))] [transition:transform_500ms_var(--ease-out-quint),opacity_500ms,height_150ms]",
+        "h-(--height) transform-[translateX(var(--toast-swipe-movement-x))_translateY(calc(var(--toast-swipe-movement-y)-(var(--toast-index)*var(--peek))-(var(--shrink)*var(--height))))_scale(var(--scale))] [transition:transform_500ms_var(--ease-out-quint),opacity_500ms,height_150ms] motion-reduce:transition-none",
         "after:absolute after:start-0 after:top-full after:h-[calc(var(--gap)+1px)] after:w-full after:content-['']",
         "data-expanded:h-(--toast-height) data-expanded:transform-[translateX(var(--toast-swipe-movement-x))_translateY(var(--offset-y))]",
         "data-limited:opacity-0 data-starting-style:transform-[translateY(150%)]",
@@ -299,18 +299,23 @@ function AnchoredToastList() {
   ));
 }
 
+type ToasterProps = Omit<ToastPrimitive.Provider.Props, "toastManager"> & {
+  // Overrides the default bottom-end corner; pass the full inset set, since `cn` only drops what it recognises as conflicting.
+  viewportClassName?: string;
+} & (
+    | { anchored?: false; toastManager?: ToastPrimitive.Provider.Props["toastManager"] }
+    // Anchored and stacked toasts need different viewports, so an anchored Toaster takes its own manager - see
+    // Base UI's toast docs. The global `toast` would show each toast in both.
+    | { anchored: true; toastManager: NonNullable<ToastPrimitive.Provider.Props["toastManager"]> }
+  );
+
 function Toaster({
   children,
   toastManager = toast,
   viewportClassName,
   anchored = false,
   ...props
-}: ToastPrimitive.Provider.Props & {
-  // Anchored and stacked toasts need different viewports, so they need different managers - see Base UI's toast docs.
-  anchored?: boolean;
-  // Overrides the default bottom-end corner; pass the full inset set, since `cn` only drops what it recognises as conflicting.
-  viewportClassName?: string;
-}) {
+}: ToasterProps) {
   return (
     <ToastProvider toastManager={toastManager} {...props}>
       {children}

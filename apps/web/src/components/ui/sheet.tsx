@@ -14,16 +14,16 @@ import { mergeRefs } from "@/lib/ui/utils";
 // the actions back on the grey) with the zip's slide. The slide is a `translate` in the starting and ending states;
 // globals.css resets it under reduced motion through [data-slot="sheet-content"], so keep that slot name.
 
-// Open and modal: the page behind is inert while it is true (useModalLock).
+// Open: the page behind is inert while it is true (useModalLock). Always modal: the overlay and the viewport
+// cover the page, so a non-modal one would still block it; no caller needs one.
 const SheetLockContext = React.createContext(false);
 
 function Sheet({
   open: openProp,
   defaultOpen = false,
   onOpenChange,
-  modal = true,
   ...props
-}: SheetPrimitive.Root.Props) {
+}: Omit<SheetPrimitive.Root.Props, "modal">) {
   const { open, setOpen } = useOverlayOpen<SheetPrimitive.Root.ChangeEventDetails>({
     open: openProp,
     defaultOpen,
@@ -31,14 +31,8 @@ function Sheet({
   });
 
   return (
-    <SheetLockContext.Provider value={open && modal === true}>
-      <SheetPrimitive.Root
-        data-slot="sheet"
-        open={open}
-        onOpenChange={setOpen}
-        modal={modal}
-        {...props}
-      />
+    <SheetLockContext.Provider value={open}>
+      <SheetPrimitive.Root data-slot="sheet" open={open} onOpenChange={setOpen} modal {...props} />
     </SheetLockContext.Provider>
   );
 }
@@ -93,8 +87,8 @@ function SheetContent({
           "group/sheet fixed z-(--z-overlay) flex min-h-0 flex-col bg-(--surface-frame) text-text-1 shadow-overlay outline-none forced-colors:outline-1 forced-colors:outline-[CanvasText] forced-colors:outline-solid",
           "data-[side=left]:w-[calc(100%-var(--space-10))] data-[side=right]:w-[calc(100%-var(--space-10))] data-[side=left]:sm:w-overlay data-[side=right]:sm:w-overlay",
           "data-[side=bottom]:max-h-[calc(100dvh-var(--space-10))] data-[side=bottom]:rounded-t-frame data-[side=bottom]:pb-[env(safe-area-inset-bottom)] data-[side=top]:max-h-[calc(100dvh-var(--space-10))] data-[side=top]:rounded-b-frame",
-          // The zip's slide: 2.5rem in from its edge on the out curve, out a step faster, mirrored under rtl.
-          "transition-[opacity,translate] duration-200 ease-out-quint data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] rtl:data-[side=left]:data-ending-style:translate-x-[2.5rem] rtl:data-[side=left]:data-starting-style:translate-x-[2.5rem] rtl:data-[side=right]:data-ending-style:translate-x-[-2.5rem] rtl:data-[side=right]:data-starting-style:translate-x-[-2.5rem]",
+          // The zip's slide: 2.5rem in from its edge on the out curve, out a step faster. Sides are physical, so no rtl mirror.
+          "transition-[opacity,translate] duration-200 ease-out-quint data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem]",
           className,
         )}
         {...props}

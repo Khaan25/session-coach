@@ -9,7 +9,7 @@ import { Toaster, createToastManager, toast } from "@/components/ui/toast";
 
 import { cards, session } from "../sample";
 
-// Real toasts, not fakes: stacking, dedup and a rejecting promise are what break. Needs the page's <Toaster>.
+// Real toasts, not fakes: stacking, dedup and a rejecting promise are what break. Needs the root layout's <Toaster>.
 
 const settleIn = (ms: number, shouldReject = false) =>
   new Promise<{ cards: number }>((resolve, reject) => {

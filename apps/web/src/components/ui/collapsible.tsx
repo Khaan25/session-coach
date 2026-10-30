@@ -63,7 +63,7 @@ function CollapsibleRow({
         />
       )}
       {children}
-      {summary && (
+      {summary != null && summary !== false && summary !== "" && (
         <span
           data-slot="collapsible-summary"
           data-status={summaryStatus}

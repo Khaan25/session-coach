@@ -84,6 +84,8 @@ type StatusProps = Omit<React.ComponentProps<"span">, "children"> &
     label?: string | true;
     /** Speak when the status settles on ok, warn or fail; stay quiet for queued and running. */
     live?: boolean;
+    /** The waiting slot's size (InkSlot): sm for a dense row. The other statuses are a word and ignore it. */
+    size?: InkSlotProps["size"];
     /** Replaces the default word, like `label`. Keep it to 1 to 3 words. */
     children?: React.ReactNode;
   };
@@ -93,6 +95,7 @@ function Status({
   variant = "plain",
   label,
   live,
+  size,
   display: _display,
   className,
   children,
@@ -117,7 +120,7 @@ function Status({
         className={cn("inline-flex", className)}
         {...props}
       >
-        <InkSlot aria-hidden={live ? true : undefined} className={inRow}>
+        <InkSlot aria-hidden={live ? true : undefined} size={size} className={inRow}>
           {word}
         </InkSlot>
         {region}

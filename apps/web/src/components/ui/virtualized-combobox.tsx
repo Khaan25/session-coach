@@ -70,7 +70,7 @@ function useComboboxVirtualizer() {
     (item: unknown, { reason, index }: ComboboxPrimitive.Root.HighlightEventDetails) => {
       const virtualizer = virtualizerRef.current;
 
-      if (!item || !virtualizer) {
+      if (item == null || !virtualizer) {
         return;
       }
 
@@ -184,7 +184,10 @@ function ComboboxVirtualizedList<Item>({
             {virtualizer.getVirtualItems().map((virtualItem) => {
               const item = filteredItems[virtualItem.index];
 
-              return item === undefined ? null : children(item, virtualItem);
+              // Keyed here, so a render prop that forgets its key cannot remount rows as the window moves.
+              return item === undefined ? null : (
+                <React.Fragment key={virtualItem.key}>{children(item, virtualItem)}</React.Fragment>
+              );
             })}
           </ComboboxVirtualizerContext.Provider>
         </div>

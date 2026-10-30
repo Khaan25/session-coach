@@ -110,6 +110,7 @@ function AvatarGroupCount({ className, ...props }: React.ComponentProps<"div">) 
       data-slot="avatar-group-count"
       className={cn(
         "relative flex size-8 shrink-0 items-center justify-center rounded-full bg-page type-label-sm data text-text-1 shadow-[inset_0_0_0_1px_var(--line-control),0_0_0_var(--ring-cutout)_var(--surface-page)] group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
+        "group-has-data-[size=2xs]/avatar-group:size-4 group-has-data-[size=xs]/avatar-group:size-5 group-has-data-[size=2xs]/avatar-group:[&>svg]:hidden group-has-data-[size=xs]/avatar-group:[&>svg]:hidden",
         "forced-colors:outline forced-colors:outline-1",
         className,
       )}
