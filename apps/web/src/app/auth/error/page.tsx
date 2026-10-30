@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 // Copy by code. The URL only ever picks one of these; its text is never shown (docs/plans/auth.md #7).
 const COPY = {
   link_expired: {
-    title: "This link has expired",
-    body: "Links in our emails work once and expire after a while. Sign in to get a new confirmation link, or reset your password for a new reset link.",
+    title: "This link was already used or has expired",
+    body: "Each email link works once. If you opened it before, your account may already be confirmed: try signing in. Otherwise, signing in sends a new confirmation link, and Reset password sends a new reset link.",
   },
   invalid_link: {
     title: "This link is incomplete",
