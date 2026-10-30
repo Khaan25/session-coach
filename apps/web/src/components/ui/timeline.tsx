@@ -234,7 +234,10 @@ function Timeline({
             : "before";
     // A quiet bar is grey unless it is open (the timeline's kind, run blue by default) or in trouble.
     const colored = bars === "kind" || open || !!trouble;
-    const name = `${s.label}, started at ${formatDurations([s.start]).values[0]}, ${isRunning || s.status === "waiting" ? "so far" : "took"} ${durations[index]}${s.status && s.status !== "ok" ? `, ${statusWord(s).toLowerCase()}` : ""}`;
+    const name =
+      s.status === "queued"
+        ? `${s.label}, ${statusWord(s).toLowerCase()}`
+        : `${s.label}, started at ${formatDurations([s.start]).values[0]}, ${isRunning || s.status === "waiting" ? "so far" : "took"} ${durations[index]}${s.status && s.status !== "ok" ? `, ${statusWord(s).toLowerCase()}` : ""}`;
     return (
       <div
         key={s.id}

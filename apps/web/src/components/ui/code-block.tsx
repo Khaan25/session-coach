@@ -440,7 +440,8 @@ function commandLines(code: string, prompt: string): CommandLine[] {
         ? { kind: "command", text: l }
         : l.startsWith(marker)
           ? { kind: "command", text: l.slice(marker.length) }
-          : prev?.kind === "command" && prev.text.endsWith("\\")
+          : // An odd run of trailing backslashes continues the line; an even run is escaped backslashes and does not.
+            prev?.kind === "command" && (prev.text.match(/\\*$/)?.[0].length ?? 0) % 2 === 1
             ? { kind: "command", text: l }
             : { kind: "output", text: l },
     );
