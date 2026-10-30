@@ -11,7 +11,7 @@ const KEY_SHAPES = [
 // Long opaque runs. Not preceded by "/" or "." so path segments and file names are left alone.
 const LONG_TOKEN = /(?<![A-Za-z0-9/._-])[A-Za-z0-9+_=-]{32,}(?![A-Za-z0-9/])/g;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
-const HOME_PREFIX = /\/(?:Users|home)\/[^/\s]+\//g;
+const HOME_PREFIX = /\/(?:Users|home)\/[^/\s'"`]+\/?/g;
 
 /** Real secrets mix letters and digits; a long all-letter word or all-digit number is not one. */
 const looksSecret = (token: string): boolean => /[A-Za-z]/.test(token) && /\d/.test(token);

@@ -46,6 +46,18 @@ test("home path prefix becomes ~/ and keeps the rest of the path", () => {
   assert.equal(redact("cat /home/fakeuser/notes/todo.md"), "cat ~/notes/todo.md");
 });
 
+test("home path is redacted with or without a slash after the username", () => {
+  for (const [input, expected] of [
+    ["/home/jane", "~/"],
+    ["ls /home/jane", "ls ~/"],
+    ["cd /Users/jane && pnpm test", "cd ~/ && pnpm test"],
+  ]) {
+    const out = redact(input);
+    assert.ok(!out.includes("jane"));
+    assert.equal(out, expected);
+  }
+});
+
 test("a normal sentence is untouched", () => {
   const sentence = "Please add a login page, then run the tests (see /proj/demo/app.ts).";
   assert.equal(redact(sentence), sentence);
