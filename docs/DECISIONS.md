@@ -55,6 +55,12 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Rejected:** PostHog analytics, deferred: there is no personal PostHog project yet.
 - Pages and dashboard are planned in `docs/plans/pages-and-dashboard.md`, built after the design system.
 
+## 2026-10-29 · `allowImportingTsExtensions` in `apps/web`
+
+- **Decision:** `apps/web/tsconfig.json` sets `allowImportingTsExtensions: true`. Pipeline code and tests import siblings with the `.ts` extension (`./parser.ts`).
+- **Why:** `node --test --experimental-strip-types` runs the files as written and needs the extension, the same as `packages/shared`. Without the flag `tsc` rejects those imports. The web tsconfig already has `noEmit`, which the flag requires, so it changes nothing in the Next.js build.
+- **Rejected:** a separate tsconfig for tests (two configs to keep in sync); a test runner like vitest (new dependency for one parser).
+
 ## 2026-10-28 · `flagged` and `hidden` on decision cards
 
 - **Decision:** `flagged = true` when any evidence item has `verified: false`. `hidden = true` when no evidence item is verified; the row is kept and learners never see it.
@@ -78,3 +84,9 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 
 - **Decision:** pull request required, 1 approving review, stale approvals dismissed, conversations resolved, no force pushes, no deletion, admins included.
 - **Why:** two people and two agents on one repo; every change gets a second pair of eyes.
+
+## 2026-10-29 · Redaction in the parser
+
+- **Decision:** parser output is redacted before storing: API keys/tokens (sk-, ghp_, AIza, Bearer, github_pat_) and long letters+digits strings → [REDACTED]; emails → [EMAIL]; /Users/<name>/ and /home/<name>/ → ~/. Read paths get only the home-path rule so the path structure stays.
+- **Why:** the repo is public and session logs carry emails and paths with the user's name. Second layer after "never paste secrets" + the pre-commit scan.
+- **Known gaps:** a secret immediately after a "/" is skipped (so path segments aren't mistaken for tokens); Windows paths not covered. Verified on the real Rapporteur log: 0 emails or user paths left in the events.
