@@ -21,6 +21,10 @@ const COPY = {
     title: "This link is incomplete",
     body: "Open the link from the email again, or copy the whole address into the browser.",
   },
+  reset_failed: {
+    title: "This reset link didn't work here",
+    body: "Reset links work once, in the browser you asked from. Request a new link from this browser.",
+  },
   confirmed_sign_in: {
     title: "Your email is confirmed",
     body: "This browser isn't the one you signed up in, so sign in here to continue.",
