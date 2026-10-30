@@ -8,12 +8,19 @@ const FAKE_SK = "sk-FAKE0example0key0for0tests0only";
 const FAKE_GHP = "ghp_FAKE0example0token0for0tests0123";
 const FAKE_AIZA = "AIzaFAKE0example0key0for0tests0only0123456";
 const FAKE_HEX = "0123456789abcdef0123456789abcdef0123";
+const FAKE_JWT = "eyJFAKEheader.FAKEpayload0example.FAKEsignature0example"; // allowlist secret
 
 test("redacts api key and token shapes", () => {
   assert.equal(redact(`key ${FAKE_SK} end`), "key [REDACTED] end");
   assert.equal(redact(`token=${FAKE_GHP}`), "token=[REDACTED]");
   assert.equal(redact(`k: ${FAKE_AIZA}`), "k: [REDACTED]");
   assert.equal(redact("Authorization: Bearer fake.token-value_123"), "Authorization: [REDACTED]");
+});
+
+test("redacts a whole JWT, not just its header", () => {
+  const out = redact(`session ${FAKE_JWT} end`);
+  assert.equal(out, "session [REDACTED] end");
+  for (const segment of FAKE_JWT.split(".")) assert.ok(!out.includes(segment));
 });
 
 test("redacts long hex and base64-like strings that mix letters and digits", () => {
@@ -54,7 +61,10 @@ test("parseSession redacts real event text and only strips the home prefix from 
   const raw = [
     line({
       type: "user",
-      message: { role: "user", content: `email me at fake@example.com, key ${FAKE_SK}` },
+      message: {
+        role: "user",
+        content: `email me at fake@example.com, key ${FAKE_SK}`,
+      },
     }),
     line({
       type: "assistant",

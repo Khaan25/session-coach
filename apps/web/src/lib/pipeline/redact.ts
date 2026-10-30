@@ -5,6 +5,8 @@ const KEY_SHAPES = [
   /\bgithub_pat_[A-Za-z0-9_]{20,}/g,
   /\bAIza[A-Za-z0-9_-]{30,}/g,
   /\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/g,
+  // JWTs: Supabase anon/service-role keys and session tokens (header.payload.signature).
+  /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,
 ];
 // Long opaque runs. Not preceded by "/" or "." so path segments and file names are left alone.
 const LONG_TOKEN = /(?<![A-Za-z0-9/._-])[A-Za-z0-9+_=-]{32,}(?![A-Za-z0-9/])/g;
