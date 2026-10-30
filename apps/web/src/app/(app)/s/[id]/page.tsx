@@ -1,41 +1,56 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { EyeSlashIcon } from "@phosphor-icons/react/ssr";
 
 import { Container } from "@/components/app/container";
 import { EmptyState } from "@/components/app/empty-state";
 import { SessionFailedState } from "@/components/app/error-state";
-import { ProcessingState } from "@/components/app/loading-state";
+import { DecisionCardLoading, ProcessingState } from "@/components/app/loading-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { StatusBadge } from "@/components/app/status-badge";
 import { DecisionCard } from "@/components/cards/decision-card";
+import { RefreshOnSettle } from "@/components/cards/refresh-on-settle";
 import { Code } from "@/components/ui/code-block";
 import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
-import { getSessionCards } from "@/lib/sample/cards";
-import { getSampleSession, SAMPLE_NOW, sampleSessionIds } from "@/lib/sample/sessions";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { getSessionWithCards } from "@/lib/cards/queries";
 import { formatRelativeTime } from "@/lib/relative-time";
 
 export const metadata: Metadata = { title: "Session" };
 
-// Blocks on params so an unknown id still answers 404 before streaming. TODO(zia): revisit with the real query:
-// a Suspense boundary around the data (with the loading skeleton) makes the navigation instant.
-export const instant = false;
-
-// cacheComponents needs at least one param to prerender; the sample sessions cover every status.
-// TODO(zia): the learner's session ids can't be known at build time; return one placeholder and load at request time.
+// cacheComponents needs at least one param to prerender the shell (the layout's breadcrumb reads the pathname). A
+// learner's ids can't be known at build time, so this is a placeholder; every real id loads at request time.
 export function generateStaticParams() {
-  return sampleSessionIds.map((id) => ({ id }));
+  return [{ id: "00000000-0000-0000-0000-000000000000" }];
 }
 
-export default async function SessionPage({ params }: PageProps<"/s/[id]">) {
-  const { id } = await params;
-  // TODO(zia): load the session and its cards with the learner's client (RLS returns no row for another learner).
-  const session = getSampleSession(id);
-  if (!session) notFound();
+export default function SessionPage({ params }: PageProps<"/s/[id]">) {
+  return (
+    <Suspense
+      fallback={
+        <Container>
+          <AppPageHeader title="Session" />
+          <DecisionCardLoading />
+        </Container>
+      }
+    >
+      <SessionDetail params={params} />
+    </Suspense>
+  );
+}
 
+// Reads the signed-in learner, so it renders inside Suspense (cacheComponents). Missing, malformed or another
+// learner's id: not found (the query filters on the learner's id, and RLS returns no row anyway).
+async function SessionDetail({ params }: Pick<PageProps<"/s/[id]">, "params">) {
+  const [{ id }, user] = await Promise.all([params, getCurrentUser()]);
+  if (!user) notFound();
+  const { now, found } = await load(user.id, id);
+  if (!found) notFound();
+
+  const { session, cards } = found;
   const { title, repo, branch, started_at, duration_min, status, error } = session;
-  const cards = status === "ready" ? getSessionCards(id) : [];
-  const started = started_at ? formatRelativeTime(started_at, SAMPLE_NOW) : null;
+  const started = started_at ? formatRelativeTime(started_at, now) : null;
 
   return (
     <Container>
@@ -61,8 +76,10 @@ export default async function SessionPage({ params }: PageProps<"/s/[id]">) {
       </AppPageHeader>
 
       {status === "pending" || status === "processing" ? (
-        // TODO(zia): subscribe to this session's status with Realtime, as the dashboard does (Phase 5 step 4).
-        <ProcessingState status={status} />
+        <>
+          <ProcessingState status={status} />
+          <RefreshOnSettle userId={user.id} session={session} />
+        </>
       ) : status === "failed" ? (
         <SessionFailedState error={error} />
       ) : cards.length === 0 ? (
@@ -80,4 +97,10 @@ export default async function SessionPage({ params }: PageProps<"/s/[id]">) {
       )}
     </Container>
   );
+}
+
+/** Reads the clock outside render (cacheComponents and the compiler's purity rule), then the session. */
+async function load(userId: string, id: string) {
+  const now = new Date();
+  return { now, found: await getSessionWithCards(userId, id) };
 }

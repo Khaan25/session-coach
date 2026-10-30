@@ -7,6 +7,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
@@ -14,7 +15,8 @@ import {
 export function NavMain({
   items,
 }: {
-  items: { title: string; url: string; icon: React.ReactNode }[];
+  /** `badge`: a count shown at the row's end, such as cards due today; hidden when 0. */
+  items: { title: string; url: string; icon: React.ReactNode; badge?: number }[];
 }) {
   const pathname = usePathname();
   return (
@@ -31,6 +33,11 @@ export function NavMain({
               {item.icon}
               <span>{item.title}</span>
             </SidebarMenuButton>
+            {item.badge ? (
+              <SidebarMenuBadge aria-label={`${item.badge} due today`}>
+                {item.badge}
+              </SidebarMenuBadge>
+            ) : null}
           </SidebarMenuItem>
         ))}
       </SidebarMenu>

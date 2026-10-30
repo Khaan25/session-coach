@@ -164,6 +164,7 @@ site_url = "http://localhost:3000"
 # Vercel previews: the wildcard from docs/plans/auth.md, edge case 11.
 additional_redirect_urls = [
   "http://localhost:3000/**",
+  "http://localhost:*/**",
   "http://127.0.0.1:3000/**",
   "https://*-zia-ur-rehman-khans-projects.vercel.app/**",
 ]

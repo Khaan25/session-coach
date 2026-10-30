@@ -6,8 +6,10 @@ import type { Session } from "@session-coach/shared/session";
 export const SESSION_COLUMNS =
   "id, title, repo, branch, started_at, duration_min, status, error, created_at";
 
+/** Sessions per dashboard page (plan, Phase 4 step 1). */
 export const PAGE_SIZE = 20;
 
+/** One session as the lists show it: the `SESSION_COLUMNS`, nothing the learner doesn't see. */
 export type SessionSummary = Pick<
   Session,
   | "id"
@@ -40,7 +42,12 @@ export function localDate(timeZone: string, now: Date): string {
   }
 }
 
-/** Keeps only the summary columns of a Realtime record, which carries the whole row. */
+/**
+ * Keeps only the summary columns of a Realtime record, which carries the whole row, so a Realtime update has the same
+ * shape as a server-rendered row and `raw_path` and friends never land in client state.
+ *
+ * @param record - `payload.new` from a `postgres_changes` event.
+ */
 export function toSummary(record: Record<string, unknown>): SessionSummary {
   const r = record as SessionSummary;
   return {
@@ -59,6 +66,13 @@ export function toSummary(record: Record<string, unknown>): SessionSummary {
 /**
  * Applies an inserted or updated row: an existing row is updated in place (keeping its card count), a new one is
  * prepended when `prepend` is set (page 1, the sidebar) and the list is cut to `limit`.
+ * Older pages pass `prepend: false`, so a new upload doesn't push rows off a page the learner is reading.
+ *
+ * @param rows - The list as rendered now.
+ * @param row - The inserted or updated session.
+ * @param options.prepend - Whether a new session joins this list.
+ * @param options.limit - The most rows the list may hold.
+ * @returns A new array; `rows` is not changed.
  */
 export function applySessionChange(
   rows: SessionListItem[],

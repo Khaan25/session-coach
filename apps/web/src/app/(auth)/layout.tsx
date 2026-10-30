@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { AuthArt } from "@/components/auth/auth-art";
+import { RouteAuthArt } from "@/components/auth/auth-art";
 import { BrandMark } from "@/components/brand-mark";
 
 const links = [
@@ -37,7 +37,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
           </ul>
         </footer>
       </div>
-      <AuthArt />
+      <RouteAuthArt />
     </div>
   );
 }

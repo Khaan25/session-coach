@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { initialsOf } from "@/lib/auth/initials";
+import { dueTodayCount } from "@/lib/review/queries";
 import { recentSessions } from "@/lib/sessions/queries";
 import { getSettingsProfile } from "@/lib/settings/profile";
 
@@ -13,13 +14,18 @@ import { AppBreadcrumb } from "./app-breadcrumb";
 // Reads the signed-in learner, so it renders inside Suspense (cacheComponents); the fallback is the same sidebar empty.
 async function SignedInSidebar() {
   const user = await getCurrentUser();
-  if (!user) return <AppSidebar sessions={[]} userId={null} user={null} />;
-  const [sessions, profile] = await Promise.all([recentSessions(user.id), getSettingsProfile()]);
+  if (!user) return <AppSidebar sessions={[]} dueCount={0} userId={null} user={null} />;
+  const [sessions, profile, dueCount] = await Promise.all([
+    recentSessions(user.id),
+    getSettingsProfile(),
+    dueTodayCount(user.id),
+  ]);
   const email = profile?.email ?? user.email;
   const name = profile?.display_name || email || "Learner";
   return (
     <AppSidebar
       sessions={sessions}
+      dueCount={dueCount}
       userId={user.id}
       user={{
         name,
@@ -33,7 +39,7 @@ async function SignedInSidebar() {
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <SidebarProvider>
-      <Suspense fallback={<AppSidebar sessions={[]} userId={null} user={null} />}>
+      <Suspense fallback={<AppSidebar sessions={[]} dueCount={0} userId={null} user={null} />}>
         <SignedInSidebar />
       </Suspense>
       <SidebarInset>

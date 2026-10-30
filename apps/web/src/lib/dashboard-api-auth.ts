@@ -6,6 +6,9 @@ import { NextResponse, type NextRequest } from "next/server";
  * The stats dashboard calls with `Authorization: Bearer <DASHBOARD_API_KEY>`.
  * Returns a response to short-circuit with, or null when authorized. With no key set the API
  * is disabled (503), so a deploy without the secret exposes nothing.
+ *
+ * @param req - The incoming Play Stats request.
+ * @returns A 503 or 401 response to return as is, or null when the caller may go on.
  */
 export function requireDashboardKey(req: NextRequest): NextResponse | null {
   const expected = process.env.DASHBOARD_API_KEY;
@@ -27,6 +30,10 @@ export function requireDashboardKey(req: NextRequest): NextResponse | null {
 /**
  * Compares two secrets without leaking, through timing, how many leading characters match or how long the key is.
  * Both sides are hashed first so timingSafeEqual always compares two 32-byte digests.
+ *
+ * @param a - The key the caller sent.
+ * @param b - The key this deployment expects.
+ * @returns Whether they are equal.
  */
 function constantTimeEqual(a: string, b: string): boolean {
   const digest = (value: string) => createHash("sha256").update(value).digest();

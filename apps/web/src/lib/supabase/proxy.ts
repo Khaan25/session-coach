@@ -9,6 +9,7 @@ const PROTECTED = ["/dashboard", "/s", "/review", "/progress", "/settings", "/se
 // Signed-in visitors to these go on to where they were headed.
 const SIGNED_OUT_ONLY = ["/login", "/sign-up"];
 
+/** Whether `pathname` is one of `prefixes` or under one, so `/s` matches `/s/abc` but not `/setup`. */
 function matches(pathname: string, prefixes: string[]) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
@@ -51,6 +52,7 @@ export async function updateSession(request: NextRequest) {
   }
   if (!target) return response;
 
+  // A fresh redirect response drops what setAll wrote, so copy the refreshed cookies and no-store headers across.
   const redirect = NextResponse.redirect(target);
   for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
   for (const header of ["cache-control", "expires", "pragma"]) {
