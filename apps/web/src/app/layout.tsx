@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { themeScript } from "@/components/theme/theme-script";
 import { Toaster } from "@/components/ui/toast";
+import { siteUrl } from "@/lib/site";
 import { PortalProvider } from "@/lib/ui/portal";
 
 import "./globals.css";
@@ -26,9 +27,23 @@ const instrumentSerif = Instrument_Serif({
   style: ["normal", "italic"],
 });
 
+const description =
+  "Each Claude Code session becomes 3 to 5 decision cards. Explain them back in your own words on day 1, 3 and 7 until you know why your agent wrote what it wrote.";
+
+// metadataBase makes the opengraph-image and canonical paths absolute; pages override title and description.
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Session Coach",
-  description: "Explain back the decisions your coding agent made.",
+  description,
+  applicationName: "Session Coach",
+  openGraph: {
+    type: "website",
+    siteName: "Session Coach",
+    title: "Session Coach",
+    description,
+    locale: "en_US",
+  },
+  twitter: { card: "summary_large_image", title: "Session Coach", description },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
