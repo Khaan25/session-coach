@@ -61,6 +61,13 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Why:** `node --test --experimental-strip-types` runs the files as written and needs the extension, the same as `packages/shared`. Without the flag `tsc` rejects those imports. The web tsconfig already has `noEmit`, which the flag requires, so it changes nothing in the Next.js build.
 - **Rejected:** a separate tsconfig for tests (two configs to keep in sync); a test runner like vitest (new dependency for one parser).
 
+## 2026-10-29 · Redaction in the parser
+
+- **Decision:** parser output is redacted before storing: API keys/tokens (sk-, ghp_, AIza, Bearer, github_pat_) and long letters+digits strings → [REDACTED]; emails → [EMAIL]; /Users/<name>/ and /home/<name>/ → ~/. Read paths get only the home-path rule so the path structure stays.
+- **Why:** the repo is public and session logs carry emails and paths with the user's name. Second layer after "never paste secrets" + the pre-commit scan.
+- **Rejected:** a generic secret scanner (misses our own shapes such as home paths and emails, and flags path segments); redacting at display time instead of before storing (the raw text would sit in storage and in the repo); applying the full rule set to Read paths (the long-token rule would mangle path segments).
+- **Known gaps:** a secret immediately after a "/" is skipped (so path segments aren't mistaken for tokens); Windows paths not covered. Verified on the real Rapporteur log: 0 emails or user paths left in the events.
+
 ## 2026-10-28 · `flagged` and `hidden` on decision cards
 
 - **Decision:** `flagged = true` when any evidence item has `verified: false`. `hidden = true` when no evidence item is verified; the row is kept and learners never see it.
@@ -84,9 +91,3 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 
 - **Decision:** pull request required, 1 approving review, stale approvals dismissed, conversations resolved, no force pushes, no deletion, admins included.
 - **Why:** two people and two agents on one repo; every change gets a second pair of eyes.
-
-## 2026-10-29 · Redaction in the parser
-
-- **Decision:** parser output is redacted before storing: API keys/tokens (sk-, ghp_, AIza, Bearer, github_pat_) and long letters+digits strings → [REDACTED]; emails → [EMAIL]; /Users/<name>/ and /home/<name>/ → ~/. Read paths get only the home-path rule so the path structure stays.
-- **Why:** the repo is public and session logs carry emails and paths with the user's name. Second layer after "never paste secrets" + the pre-commit scan.
-- **Known gaps:** a secret immediately after a "/" is skipped (so path segments aren't mistaken for tokens); Windows paths not covered. Verified on the real Rapporteur log: 0 emails or user paths left in the events.
