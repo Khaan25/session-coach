@@ -12,7 +12,7 @@ Two ways to run:
 
 It reads the session transcript(s) Claude Code stores under
 ~/.claude/projects/<encoded-cwd>/<session-uuid>.jsonl and writes one
-<date>_<time>_<id8>.md per session into <project>/.claude-logs/: each typed prompt,
+<date>_<time>_<session-id>.md per session into <project>/.claude-logs/: each typed prompt,
 the reply its turn ended on, and each subagent's brief and report. Tool calls,
 their output and injected context are left out, and every line is redacted.
 
@@ -189,6 +189,52 @@ def author_for(cwd):
     return "unknown"
 
 
+def git_config(cwd, key):
+    """A git config value, or "" when unset or git is missing."""
+    try:
+        out = subprocess.run(["git", "config", key], cwd=cwd, capture_output=True, text=True, timeout=3)
+        return (out.stdout or "").strip()
+    except Exception:
+        return ""
+
+
+def git_config_path(root):
+    """Absolute path of the repository's shared .git directory, or "" outside git."""
+    try:
+        out = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                             cwd=root, capture_output=True, text=True, timeout=3)
+        return (out.stdout or "").strip()
+    except Exception:
+        return ""
+
+
+def masked_email(email):
+    """GitHub noreply addresses are public already; any other address keeps only its first letter and domain."""
+    if not email or "@" not in email or email.endswith("@users.noreply.github.com"):
+        return email or "unknown"
+    local, domain = email.split("@", 1)
+    return f"{local[:1]}***@{domain}"
+
+
+def github_user_for(cwd):
+    """GitHub login: $GITHUB_USER, else the login in a noreply commit email, else the active `gh` account.
+
+    `gh` is last because someone signed in to several accounts would otherwise have the session credited to
+    whichever is active, and these logs are public.
+    """
+    env = os.environ.get("GITHUB_USER", "").strip()
+    if env:
+        return env
+    m = re.match(r"^(?:\d+\+)?([A-Za-z0-9-]+)@users\.noreply\.github\.com$", git_config(cwd, "user.email"))
+    if m:
+        return m.group(1)
+    try:
+        out = subprocess.run(["gh", "api", "user", "--jq", ".login"], capture_output=True, text=True, timeout=5)
+        return (out.stdout or "").strip() or "unknown"
+    except Exception:
+        return "unknown"
+
+
 # ----------------------------- transcript -> exchanges -----------------------------
 
 def read_exchanges(path):
@@ -260,7 +306,7 @@ def read_subagent(path):
     return entries
 
 
-def subagent_sections(transcript_path, id8):
+def subagent_sections(transcript_path, session_id):
     """Markdown for each subagent of the session (in <session>/subagents/ beside the transcript), oldest first."""
     sub_dir = os.path.join(os.path.splitext(transcript_path)[0], "subagents")
     agents = []
@@ -282,7 +328,7 @@ def subagent_sections(transcript_path, id8):
         for role, ts, txt in entries:
             num += role == "prompt"
             kind = "SUBAGENT_PROMPT" if role == "prompt" else "SUBAGENT_RESPONSE"
-            out += ["", f"[CLAUDE_LOG_ENTRY type={kind} num={num} session={id8} agent={agent_id}]",
+            out += ["", f"[CLAUDE_LOG_ENTRY type={kind} num={num} session={session_id} agent={agent_id}]",
                     f"timestamp: {ts}", f"chars: {len(txt)}", "", txt, ""]
     return out
 
@@ -292,9 +338,12 @@ def build_log(exchanges, session_id, cwd, subagents=()):
     if not exchanges:
         return None, None
 
-    id8 = session_id[:8]
-    project = os.path.basename(project_root().rstrip("/")) or "unknown"
+    # The repo's name, not a worktree's: a worktree's .git points back to the main checkout's .git.
+    common = git_config_path(project_root())
+    project = os.path.basename(os.path.dirname(common) if common else project_root().rstrip("/")) or "unknown"
     author = author_for(cwd)
+    github_user = github_user_for(cwd)
+    git_email = masked_email(git_config(cwd, "user.email"))
 
     def words(s):
         return len(s.split())
@@ -325,16 +374,18 @@ def build_log(exchanges, session_id, cwd, subagents=()):
 
     # filename / date come from the session's last local activity
     end_local = to_local(parse_ts(exchanges[-1]["rts"] or last_pts)) or datetime.now().astimezone()
-    fname = f"{end_local.strftime('%Y-%m-%d_%H-%M-%S')}_{id8}.md"
+    fname = f"{end_local.strftime('%Y-%m-%d_%H-%M-%S')}_{session_id}.md"
     date_str = end_local.strftime("%Y-%m-%d")
 
     def ratio(a, b):
         return round(a / b, 2) if b else 0.0
 
     fm = [
-        ("session_id", id8),
+        ("session_id", session_id),
         ("date", date_str),
         ("author", author),
+        ("github_user", github_user),
+        ("git_email", git_email),
         ("project", project),
         ("session_status", "complete"),
         ("last_entry_type", last_type),
@@ -362,7 +413,7 @@ def build_log(exchanges, session_id, cwd, subagents=()):
     out = ["---"]
     out += [f"{k}: {v}" for k, v in fm]
     out += ["---", "", f"# Claude Session Log - {date_str}", "",
-            f"Session: `{id8}` | Project: `{project}` | Author: `{author}`", "", "---", ""]
+            f"Session: `{session_id}` | Project: `{project}` | Author: `{author}` | GitHub: `{github_user}`", "", "---", ""]
 
     path_re = PATH_RE
     url_re = re.compile(r"https?://")
@@ -374,7 +425,7 @@ def build_log(exchanges, session_id, cwd, subagents=()):
         has_urls = bool(url_re.search(p))
         is_pasted = words(p) > LONG_WORDS and "\n" in p
         out += ["",
-                f"[CLAUDE_LOG_ENTRY type=PROMPT num={i} session={id8}]",
+                f"[CLAUDE_LOG_ENTRY type=PROMPT num={i} session={session_id}]",
                 f"timestamp: {e['prts']}",
                 f"time: {pdt.strftime('%Y-%m-%d %H:%M') if pdt else ''}",
                 f"chars: {len(p)}",
@@ -388,7 +439,7 @@ def build_log(exchanges, session_id, cwd, subagents=()):
         if r:
             rdt = to_local(parse_ts(e["rts"]))
             out += ["",
-                    f"[CLAUDE_LOG_ENTRY type=RESPONSE num={i} session={id8}]",
+                    f"[CLAUDE_LOG_ENTRY type=RESPONSE num={i} session={session_id}]",
                     f"timestamp: {e['rts']}",
                     f"time: {rdt.strftime('%Y-%m-%d %H:%M') if rdt else ''}",
                     f"chars: {len(r)}",
@@ -411,13 +462,13 @@ def write_session(transcript_path, cwd, session_id=None, force=False):
     session_id = session_id or os.path.splitext(os.path.basename(transcript_path))[0]
     exchanges = read_exchanges(transcript_path)
     fname, text = build_log(exchanges, session_id, cwd,
-                            subagent_sections(transcript_path, session_id[:8]))
+                            subagent_sections(transcript_path, session_id))
     if not fname:
         return None
     outdir = os.path.join(project_root(), ".claude-logs")
     os.makedirs(outdir, exist_ok=True)
-    id8 = session_id[:8]
-    existing = glob.glob(os.path.join(outdir, f"*_{id8}.md"))
+    # Logs written before names carried the full session ID end in its first 8 characters; replace those too.
+    existing = glob.glob(os.path.join(outdir, f"*_{session_id}.md")) + glob.glob(os.path.join(outdir, f"*_{session_id[:8]}.md"))
     if existing and not force:
         return None  # already logged (backfill skips)
     # Write to a temp file and swap it in, so a failed write cannot leave a
