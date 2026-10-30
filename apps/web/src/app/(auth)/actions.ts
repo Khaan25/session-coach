@@ -4,7 +4,7 @@ import { isAuthWeakPasswordError, type AuthError } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { allowAuthAttempt } from "@/lib/auth/rate-limit";
+import { authAttemptWait } from "@/lib/auth/rate-limit";
 import { safeNext } from "@/lib/auth/safe-next";
 import {
   MIN_PASSWORD,
@@ -29,6 +29,11 @@ export type AuthState = {
 
 const GENERIC = "Something went wrong on our side. Try again in a minute.";
 const RATE_LIMITED = "Too many attempts. Wait a minute, then try again.";
+
+/** Our per-IP limit's message, with the wait its sliding window actually needs (10 minutes to an hour). */
+function tooManyFromNetwork(minutes: number) {
+  return `Too many attempts from your network. Try again in ${minutes === 1 ? "a minute" : `${minutes} minutes`}.`;
+}
 
 /**
  * This deployment's origin for email and OAuth redirect URLs, so previews send links back to themselves
@@ -82,7 +87,8 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const password = text(formData, "password");
   const fields = validateSignIn(formData);
   if (hasErrors(fields)) return { status: "error", fields, email };
-  if (!(await allowAuthAttempt("signIn"))) return { status: "error", message: RATE_LIMITED, email };
+  const signInWait = await authAttemptWait("signIn");
+  if (signInWait) return { status: "error", message: tooManyFromNetwork(signInWait), email };
 
   const origin = await requestOrigin();
   if (!origin) return fail("signIn", "missing Origin header", email);
@@ -118,8 +124,8 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const name = text(formData, "name").trim();
   const fields = validateSignUp(formData);
   if (hasErrors(fields)) return { status: "error", fields, email, name };
-  if (!(await allowAuthAttempt("signUp")))
-    return { status: "error", message: RATE_LIMITED, email, name };
+  const signUpWait = await authAttemptWait("signUp");
+  if (signUpWait) return { status: "error", message: tooManyFromNetwork(signUpWait), email, name };
 
   const origin = await requestOrigin();
   if (!origin) return { ...fail("signUp", "missing Origin header", email), name };
@@ -171,7 +177,8 @@ export async function resendConfirmation(_prev: AuthState, formData: FormData): 
   if (hasErrors(validateResetRequest(formData)))
     return { status: "error", message: "Enter your email address first." };
   // A per-IP limit says nothing about the address, so it can be shown without leaking whether an account exists.
-  if (!(await allowAuthAttempt("email"))) return { status: "error", message: RATE_LIMITED, email };
+  const emailWait = await authAttemptWait("email");
+  if (emailWait) return { status: "error", message: tooManyFromNetwork(emailWait), email };
   const origin = await requestOrigin();
   if (!origin) return fail("resendConfirmation", "missing Origin header", email);
   const supabase = await createClient();
@@ -201,7 +208,8 @@ export async function requestReset(_prev: AuthState, formData: FormData): Promis
   const email = text(formData, "email").trim();
   const fields = validateResetRequest(formData);
   if (hasErrors(fields)) return { status: "error", fields, email };
-  if (!(await allowAuthAttempt("email"))) return { status: "error", message: RATE_LIMITED, email };
+  const emailWait = await authAttemptWait("email");
+  if (emailWait) return { status: "error", message: tooManyFromNetwork(emailWait), email };
   const origin = await requestOrigin();
   if (!origin) return fail("requestReset", "missing Origin header", email);
   const supabase = await createClient();

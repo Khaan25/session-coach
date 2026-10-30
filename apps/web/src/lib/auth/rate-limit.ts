@@ -47,21 +47,21 @@ let warned = false;
  * limits are the only guard.
  *
  * @param action - Which budget to spend.
- * @returns True when the attempt may go ahead.
+ * @returns 0 when the attempt may go ahead, otherwise the whole minutes until this IP may try again.
  */
-export async function allowAuthAttempt(action: AuthLimit): Promise<boolean> {
+export async function authAttemptWait(action: AuthLimit): Promise<number> {
   if (!limiters) {
     if (process.env.VERCEL_ENV === "production" && !warned) {
       warned = true;
       console.error("auth/rate-limit: Upstash Redis is not configured; per-IP limits are off");
     }
-    return true;
+    return 0;
   }
   try {
-    const { success } = await limiters[action].limit(clientIp(await headers()));
-    return success;
+    const { success, reset } = await limiters[action].limit(clientIp(await headers()));
+    return success ? 0 : Math.max(1, Math.ceil((reset - Date.now()) / 60_000));
   } catch (error) {
     console.error(`auth/rate-limit ${action}`, error);
-    return true;
+    return 0;
   }
 }
