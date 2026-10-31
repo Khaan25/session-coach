@@ -88,6 +88,12 @@ function summarizeEdit(input: Block): string | undefined {
   return first ? `${path} — ${counts}: ${first}` : `${path} — ${counts}`;
 }
 
+function summarizeMultiEdit(input: Block): string | undefined {
+  const path = str(input.file_path);
+  if (!path || !Array.isArray(input.edits)) return undefined;
+  return `${path} — ${plural(input.edits.length, "edit")}`;
+}
+
 function toolUse(block: Block): Piece {
   const input = isRecord(block.input) ? block.input : {};
   const badInput = unknownOf("tools", `${nameOf(block.name)} (unusable input)`);
@@ -98,6 +104,10 @@ function toolUse(block: Block): Piece {
     }
     case "Edit": {
       const text = summarizeEdit(input);
+      return text ? { kind: "edit", text } : badInput;
+    }
+    case "MultiEdit": {
+      const text = summarizeMultiEdit(input);
       return text ? { kind: "edit", text } : badInput;
     }
     case "Bash": {
@@ -123,8 +133,8 @@ function toolResultText(content: unknown): string {
     .join("\n");
 }
 
-function userPieces(message: Block, isMeta: boolean, skippedToolIds: Set<string>): Piece[] {
-  if (isMeta) return ["drop"];
+function userPieces(message: Block, skip: boolean, skippedToolIds: Set<string>): Piece[] {
+  if (skip) return ["drop"];
   const content = message.content;
   const blocks: unknown[] =
     typeof content === "string"
@@ -145,10 +155,10 @@ function userPieces(message: Block, isMeta: boolean, skippedToolIds: Set<string>
       const callId = str(block.tool_use_id);
       if (callId !== undefined && skippedToolIds.has(callId)) return "dropResult";
       // Redact before cutting, so a secret split by the limit isn't left half visible.
-      return {
-        kind: "result",
-        text: redact(toolResultText(block.content)).slice(0, RESULT_MAX_CHARS),
-      };
+      const text = redact(toolResultText(block.content)).slice(0, RESULT_MAX_CHARS);
+      // A command with no output leaves an empty result; there is nothing to show.
+      if (text.trim() === "") return "drop";
+      return { kind: "result", text };
     }
     return unknownOf("blockTypes", `user/${nameOf(block.type)}`);
   });
@@ -183,8 +193,11 @@ function piecesFor(entry: Block, skippedToolIds: Set<string>): Piece[] {
   if (entry.type !== "user" && entry.type !== "assistant")
     return [unknownOf("lineTypes", nameOf(entry.type))];
   if (!isRecord(entry.message)) return [unknownOf("lineTypes", `${entry.type} (no message)`)];
-  if (entry.type === "user")
-    return userPieces(entry.message, entry.isMeta === true, skippedToolIds);
+  if (entry.type === "user") {
+    // A compact summary is written by the model, not the learner.
+    const skip = entry.isMeta === true || entry.isCompactSummary === true;
+    return userPieces(entry.message, skip, skippedToolIds);
+  }
   return assistantPieces(entry.message);
 }
 

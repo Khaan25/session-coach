@@ -31,6 +31,36 @@ test("redacts long hex and base64-like strings that mix letters and digits", () 
   );
 });
 
+test("redacts a JWT whose signature starts with sk-", () => {
+  const jwt = "eyJFAKEheader.FAKEpayload0example.sk-FAKEsignature0example0123"; // allowlist secret
+  assert.equal(redact(`session ${jwt} end`), "session [REDACTED] end");
+});
+
+test("redacts Basic auth", () => {
+  assert.equal(
+    redact("Authorization: Basic ZmFrZXVzZXI6ZmFrZXBhc3N3b3Jk"), //allowlist secret
+    "Authorization: [REDACTED]",
+  );
+});
+
+test("redacts secret assignments, quoted or not, and keeps the name", () => {
+  assert.equal(
+    redact('PGPASSWORD="fake pass word 1" psql -h localhost'),
+    "PGPASSWORD=[REDACTED] psql -h localhost",
+  );
+  assert.equal(redact("PGPASSWORD='fake pass' psql"), "PGPASSWORD=[REDACTED] psql");
+  assert.equal(redact("PGPASSWORD=fakepass psql"), "PGPASSWORD=[REDACTED] psql");
+  assert.equal(redact("API_KEY=fake1 SECRET=fake2"), "API_KEY=[REDACTED] SECRET=[REDACTED]");
+});
+
+test("keeps git SHAs (40 or 64 hex) but still redacts other hex lengths", () => {
+  const sha1 = "0123456789abcdef0123456789abcdef01234567";
+  const sha256 = "0123456789abcdef".repeat(4);
+  assert.equal(redact(`commit ${sha1}`), `commit ${sha1}`);
+  assert.equal(redact(`commit ${sha256}`), `commit ${sha256}`);
+  assert.equal(redact("secret 0123456789abcdef0123456789abcdef"), "secret [REDACTED]");
+});
+
 test("leaves long words and path segments alone", () => {
   const word = "internationalizationlocalizationconfiguration";
   assert.equal(redact(word), word);
@@ -51,6 +81,9 @@ test("home path is redacted with or without a slash after the username", () => {
     ["/home/jane", "~/"],
     ["ls /home/jane", "ls ~/"],
     ["cd /Users/jane && pnpm test", "cd ~/ && pnpm test"],
+    ["cd /Users/jane&&pnpm test", "cd ~/&&pnpm test"],
+    ["ls /home/jane;pwd", "ls ~/;pwd"],
+    ["(cd /Users/jane)", "(cd ~/)"],
   ]) {
     const out = redact(input);
     assert.ok(!out.includes("jane"));

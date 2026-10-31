@@ -63,10 +63,10 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 
 ## 2026-10-29 · Redaction in the parser
 
-- **Decision:** parser output is redacted before storing: API keys/tokens (sk-, ghp_, AIza, Bearer, github_pat_) and long letters+digits strings → [REDACTED]; emails → [EMAIL]; /Users/<name>/ and /home/<name>/ → ~/. Read paths get only the home-path rule so the path structure stays.
-- **Why:** the repo is public and session logs carry emails and paths with the user's name. Second layer after "never paste secrets" + the pre-commit scan.
+- **Decision:** parser output is redacted before storing: API keys/tokens (JWTs, sk-, ghp_, AIza, Bearer, Basic auth, github_pat_) and long letters+digits strings → [REDACTED]; `NAME=value` where NAME contains KEY, TOKEN, SECRET, PASSWORD or PASSWD → `NAME=[REDACTED]` (value is a quoted string or a run of non-space characters); emails → [EMAIL]; /Users/<name>/ and /home/<name>/ → ~/ (the name stops at shell operators, so `cd /Users/jane&&pnpm test` keeps its command). Hex runs of exactly 40 or 64 characters are left intact. Read paths get only the home-path rule so the path structure stays.
+- **Why:** the repo is public and session logs carry emails and paths with the user's name. Second layer after "never paste secrets" + the pre-commit scan. The JWT rule goes first so a JWT whose signature starts with `sk-` is redacted whole. Git SHA-1/SHA-256 hashes are evidence, so they are kept; other hex lengths (such as 32) are still redacted.
 - **Rejected:** a generic secret scanner (misses our own shapes such as home paths and emails, and flags path segments); redacting at display time instead of before storing (the raw text would sit in storage and in the repo); applying the full rule set to Read paths (the long-token rule would mangle path segments).
-- **Known gaps:** a secret immediately after a "/" is skipped (so path segments aren't mistaken for tokens); Windows paths not covered. Verified on the real Rapporteur log: 0 emails or user paths left in the events.
+- **Known gaps:** a secret immediately after a "/" is skipped (so path segments aren't mistaken for tokens); Windows paths not covered; passwords embedded in URLs (`postgres://user:pass@host`) are not caught; a secret that is exactly 40 or 64 hex characters with no known prefix won't be caught, since those runs are skipped. Verified on the real Rapporteur log: 0 emails or user paths left in the events.
 
 ## 2026-10-28 · `flagged` and `hidden` on decision cards
 

@@ -142,6 +142,61 @@ test("drops isMeta messages and injected command text", () => {
   assert.equal(result.stats.dropped, 4);
 });
 
+test("drops compact summaries, which are model-written, not the learner's words", () => {
+  const raw = [
+    user("This session is being continued from a previous conversation...", {
+      isCompactSummary: true,
+    }),
+    user("a real prompt"),
+  ].join("\n");
+  const result = parseSession(raw);
+  assert.deepEqual(
+    result.events.map((e) => e.text),
+    ["a real prompt"],
+  );
+  assert.equal(result.stats.dropped, 1);
+});
+
+test("drops a tool result that is empty after trimming", () => {
+  const result = parseSession(
+    [
+      user([{ type: "tool_result", tool_use_id: "t1", content: "" }]),
+      user([{ type: "tool_result", tool_use_id: "t2", content: [{ type: "text", text: " \n " }] }]),
+    ].join("\n"),
+  );
+  assert.equal(result.events.length, 0);
+  assert.equal(result.stats.dropped, 2);
+  assert.equal(result.stats.unknownSkipped, 0);
+});
+
+test("summarizes a MultiEdit call, and an unusable one stays unknown", () => {
+  const result = parseSession(
+    [
+      assistant([
+        {
+          type: "tool_use",
+          id: "m1",
+          name: "MultiEdit",
+          input: { file_path: "/proj/demo/app.ts", edits: [{}, {}] },
+        },
+      ]),
+      assistant([
+        {
+          type: "tool_use",
+          id: "m2",
+          name: "MultiEdit",
+          input: { file_path: "/proj/demo/app.ts" },
+        },
+      ]),
+    ].join("\n"),
+  );
+  assert.deepEqual(
+    result.events.map((e) => [e.kind, e.text]),
+    [["edit", "/proj/demo/app.ts — 2 edits"]],
+  );
+  assert.deepEqual(result.stats.unknownBreakdown.tools, { "MultiEdit (unusable input)": 1 });
+});
+
 test("skips sidechain events and counts them", () => {
   assert.equal(stats.sidechainSkipped, 1);
   assert.equal(
