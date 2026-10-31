@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
-    "test:rls": "node --test --experimental-strip-types tests/rls.test.ts"
+    "test:rls": "node --test --experimental-strip-types tests/rls.test.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -35,6 +36,7 @@
     "@content-collections/core": "0.15.3",
     "@content-collections/markdown": "0.1.4",
     "@content-collections/next": "0.2.11",
+    "@playwright/test": "1.64.1",
     "@shadcn/lint": "0.2.3",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^22",
