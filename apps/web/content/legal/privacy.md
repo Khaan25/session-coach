@@ -39,11 +39,11 @@ Your data is stored in Supabase, in the ap-south-1 region (Mumbai). The app runs
 
 ## Who processes it
 
-- **Supabase** stores your account, sessions, cards and answers, and sends sign-in and password emails.
+- **Supabase** stores your account, sessions, cards and answers.
 - **Vercel** runs the web app and the daily reminder job.
 - **A language model provider** reads a session log to write its cards, and reads your answer to score it. The server uses one of Google Gemini, OpenRouter or Groq.
 - **Google Gemini (free tier), if used:** Google may use what is sent to it to improve its products. This is why we try to remove secrets before anything leaves your laptop; removal is not a guarantee.
-- **Reminder emails** will be sent through Supabase's email service or a provider we name on this page before reminders start.
+- **Resend** sends sign-in, password and reminder emails.
 
 ## How long we keep it
 
