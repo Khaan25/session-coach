@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-10-31 · Groq as temporary extraction backup, and prompt v2
+
+- **Decision:** extraction runs on Groq `openai/gpt-oss-120b`, set through env only (`MODEL_PROVIDER`, `MODEL_EXTRACT`), with no code change. This is temporary. Gemini 3.8 Flash stays the target (#22) until a model comparison on the golden set. Zia agreed.
+- **Why:** the `gemini-3.8-flash` free tier returned 503 or hung all day. A plain curl with a tiny prompt failed the same way while the model list returned 200, so the fault is not our code. Many forum reports have said the same since early October.
+- **Limit:** the Groq free tier lists 8,000 tokens per minute, so large sessions may not fit.
+- **First real run (one session, Groq):** 5 cards, 4 of 5 quotes verified, 3 `stated` cards downgraded to `inferred`. Hand check: 1 of 5 was a real decision; the rest were file writes, a deletion and a test result. One session only. Prompt v2 is the response: a decision needs two real options, one quote must state the choice or reason in words (a file write or shell command does not count), a card with no such quote is `inferred`, and zero cards is a valid answer.
+- **Rejected:** waiting for Gemini to recover (blocks Monday's demo); paying for Gemini billing (a forum poster doubted it fixes the 503s, and it costs money); `gemini-2.5-flash` (the API said it is closed to new users, 404).
+- **Known gap:** `stated` is kept when a verified quote comes from a prompt or reply, even if the quote has no reason in it.
+
 ## 2026-10-31 · Extraction: card count, the stated rule, retry, file and lines
 
 - **Decision:** the model returns 1 to 5 cards per session, and 0 is allowed (fewer than 3 real decisions means fewer cards). A card stays `stated` only if at least one verified quote comes from a prompt, a reply, or a write or edit of a file named `DECISIONS.md`; otherwise code sets it to `inferred`. An answer that fails the zod schema gets one more call with the validation error in `data`; a second failure throws. `evidence.file` is filled by code from write and edit events (the path before `—`), never by the model; `lines` is `null` in v1.
