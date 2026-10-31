@@ -67,8 +67,9 @@ export default function Page() {
             </ul>
           </CardContent>
           <CardFooter>
-            <Link href="/setup" className={buttonVariants({ size: "lg" })}>
-              Set it up
+            {/* Points at /how-it-works until the CLI ships; then "Set it up" → /setup. */}
+            <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
+              See how it works
             </Link>
           </CardFooter>
         </Card>

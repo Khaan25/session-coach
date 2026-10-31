@@ -21,13 +21,13 @@ Session Coach is built and run by Zia Ur Rehman Khan and Kasam Thapa Magar for t
 
 ## What we try to remove
 
-We try to remove secrets from a session log twice: on your laptop before it is sent, and again on our server before it is stored. Thinking blocks and attachments from the session are dropped and not stored.
+Session logs reach us only through the Session Coach command-line tool. It is not released yet, so no session log has been collected. When it is, it removes secrets on your laptop before a log is sent, and our server removes them again when it reads the log to make cards. Thinking blocks and attachments are dropped before cards are made.
 
 We replace:
 
 - API keys and tokens with a known shape: JSON Web Tokens (including Supabase keys), `sk-` keys, GitHub tokens, Google API keys, and `Bearer` and `Basic` authorization headers.
 - The value of any `NAME=value` line where the name contains KEY, TOKEN, SECRET or PASSWORD.
-- Long runs of 32 or more letters and digits that look random. Git commit hashes are kept, because cards quote them as evidence.
+- Long runs of 32 or more letters and digits that look random. One exception: a string of exactly 40 or 64 hexadecimal characters is kept, because that is the shape of a Git commit hash, which cards quote as evidence. A secret in that exact shape is not removed.
 - Email addresses.
 - The username in home folder paths, such as `/Users/you/` or `/home/you/`.
 
