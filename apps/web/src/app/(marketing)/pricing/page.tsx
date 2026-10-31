@@ -46,8 +46,10 @@ export default function Page() {
                 <Badge variant="success">Free</Badge>
               </h2>
             </CardTitle>
-            {/* TODO(zia): the trial length and the price after it are not decided; replace this line when they are. */}
-            <CardDescription>Trial length and price after the trial: TODO(zia).</CardDescription>
+            <CardDescription>
+              Free during the 8x Playmakers trial, 28 Oct to 6 Nov 2026. No card needed, and we
+              won&apos;t charge you without asking first.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <h3 className="sr-only">What&apos;s included</h3>
@@ -65,9 +67,8 @@ export default function Page() {
             </ul>
           </CardContent>
           <CardFooter>
-            {/* TODO(zia): point at /setup once Phase 3 lands. */}
-            <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
-              See how it works
+            <Link href="/setup" className={buttonVariants({ size: "lg" })}>
+              Set it up
             </Link>
           </CardFooter>
         </Card>

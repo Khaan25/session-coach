@@ -50,8 +50,8 @@ export default function Page() {
               >
                 {supportEmail}
               </a>{" "}
-              from the address you signed up with and ask us to delete your account.
-              {/* TODO(zia): say how we confirm it's you, and how soon. */}
+              from the address you signed up with and ask us to delete your account. We only act on
+              a request from that address. We reply within 7 days and delete the account within 30.
             </CardDescription>
           </CardHeader>
         </Card>

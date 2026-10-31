@@ -72,8 +72,9 @@ export default function Home() {
               <CardsIcon weight="duotone" data-icon="inline-start" aria-hidden />
               See how it works
             </Link>
-            {/* TODO(zia): the reassurance note (price, trial, setup time) once those are decided. */}
-            <p className="type-body-sm text-text-2">Built for Claude Code sessions.</p>
+            <p className="type-body-sm text-text-2">
+              Free during the trial. Built for Claude Code sessions.
+            </p>
           </div>
 
           <div

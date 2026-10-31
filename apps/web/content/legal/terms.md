@@ -1,11 +1,11 @@
 ---
 title: Terms of use
 description: The rules for using Session Coach.
-updated: "2026-10-29"
+updated: "2026-10-31"
 draft: true
 ---
 
-TODO(zia): the legal entity that runs Session Coach, and the law and courts that govern these terms.
+Session Coach is built and run by Zia Ur Rehman Khan and Kasam Thapa Magar for the 8x Playmakers trial. It is not run by a company. "We" on this page means the two of us.
 
 ## Using Session Coach
 
@@ -23,14 +23,20 @@ Cards and scores are written by a language model. They can be wrong. A card is a
 
 ## The service
 
-Session Coach is free during the trial. It may change, pause or stop.
+Session Coach is free during the trial, and we don't take payment details. It may change, pause or stop.
 
-TODO(zia): what happens to accounts and data if the service stops, and notice periods.
+If we stop Session Coach, we email you at least 30 days before. On the day it stops, we delete every account and its data. Backups expire within 7 days after that.
+
+We don't charge for anything without asking you first. If a paid plan comes later, you choose whether to join it.
 
 ## Ending your account
 
 You can delete your account at any time from your settings page. We may close an account that misuses the service.
 
+## Disagreements
+
+If something goes wrong, email us first and we will try to sort it out with you.
+
 ## Contact
 
-TODO(zia): the contact email for questions about these terms.
+Email [kasamthapa89@gmail.com](mailto:kasamthapa89@gmail.com) with any question about these terms.
