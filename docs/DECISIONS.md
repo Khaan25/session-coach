@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-10-31 · Extraction: card count, the stated rule, retry, file and lines
+
+- **Decision:** the model returns 1 to 5 cards per session, and 0 is allowed (fewer than 3 real decisions means fewer cards). A card stays `stated` only if at least one verified quote comes from a prompt, a reply, or a write or edit of a file named `DECISIONS.md`; otherwise code sets it to `inferred`. An answer that fails the zod schema gets one more call with the validation error in `data`; a second failure throws. `evidence.file` is filled by code from write and edit events (the path before `—`), never by the model; `lines` is `null` in v1.
+- **Why:** padding to a fixed count invents decisions, and a card with no real decision teaches nothing. The model's own `source` can't be trusted, so the check uses only quotes that exist in the timeline. One retry with the error fixes most formatting slips without looping on a model that can't comply. The model can't see line numbers in the timeline, so a file path it wrote would be a guess, and lines would be too.
+- **Rejected:** a minimum of 3 cards; trusting the model's `source`; more than one retry; letting the model fill `file` or `lines`.
+- **Known gap:** a `stated` reason quoted from a `DECISIONS.md` write rarely verifies yet. The parser keeps only the path and line count of a write, and a 60-character preview of an edit, so the reason text is usually not in the event. The basename rule stays; it starts to matter when the parser keeps more of those events.
+
 ## 2026-10-29 · The browser key stays the anon key
 
 - **Decision:** the browser and server clients read `NEXT_PUBLIC_SUPABASE_ANON_KEY`, not the starter's newer `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
