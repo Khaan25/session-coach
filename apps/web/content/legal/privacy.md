@@ -1,13 +1,13 @@
 ---
 title: Privacy policy
 description: What Session Coach collects, where it is kept, who processes it and how to delete it.
-updated: "2026-10-29"
+updated: "2026-10-31"
 draft: true
 ---
 
 Session Coach turns your Claude Code sessions into decision cards and asks you to explain them back on day 1, 3 and 7. This page says what that takes.
 
-TODO(zia): the legal entity that runs Session Coach and its address.
+Session Coach is built and run by Zia Ur Rehman Khan and Kasam Thapa Magar for the 8x Playmakers trial. It is not run by a company. We are the people responsible for your data, and you can reach us at the email at the bottom of this page.
 
 ## What we collect
 
@@ -21,9 +21,17 @@ TODO(zia): the legal entity that runs Session Coach and its address.
 
 ## What we try to remove
 
-We try to remove secrets from a session log twice: on your laptop before it is sent, and again on our server before it is stored. Thinking blocks and attachments from the session are dropped and not stored.
+Session logs reach us only through the Session Coach command-line tool. It is not released yet, so no session log has been collected. When it is, it removes secrets on your laptop before a log is sent, and our server removes them again when it reads the log to make cards. Thinking blocks and attachments are dropped before cards are made.
 
-TODO(zia): the list of patterns treated as secrets, once the redaction rules are final.
+We replace:
+
+- API keys and tokens with a known shape: JSON Web Tokens (including Supabase keys), `sk-` keys, GitHub tokens, Google API keys, and `Bearer` and `Basic` authorization headers.
+- The value of any `NAME=value` line where the name contains KEY, TOKEN, SECRET or PASSWORD.
+- Long runs of 32 or more letters and digits that look random. One exception: a string of exactly 40 or 64 hexadecimal characters is kept, because that is the shape of a Git commit hash, which cards quote as evidence. A secret in that exact shape is not removed.
+- Email addresses.
+- The username in home folder paths, such as `/Users/you/` or `/home/you/`.
+
+A secret in a shape we don't know can get through. Check what your sessions contain before you send them.
 
 ## Where it is kept
 
@@ -33,17 +41,13 @@ Your data is stored in Supabase, in the ap-south-1 region (Mumbai). The app runs
 
 - **Supabase** stores your account, sessions, cards and answers.
 - **Vercel** runs the web app and the daily reminder job.
-- **A language model provider** reads a session log to write its cards, and reads your answer to score it. Model names are configured on the server.
+- **A language model provider** reads a session log to write its cards, and reads your answer to score it. The server uses one of Google Gemini, OpenRouter or Groq.
 - **Google Gemini (free tier), if used:** Google may use what is sent to it to improve its products. This is why we try to remove secrets before anything leaves your laptop; removal is not a guarantee.
-- **An email provider** sends the daily reminder, if you turned reminders on.
-
-TODO(zia): name the model providers and the email provider once they are chosen.
+- **Resend** sends sign-in, password and reminder emails.
 
 ## How long we keep it
 
-We keep your data while your account exists.
-
-TODO(zia): how long backups keep data after an account is deleted.
+We keep your data while your account exists. When you delete your account, it is deleted from the live database at once. Database backups can keep a copy for up to 7 days after that, until they expire.
 
 ## Deleting your data
 
@@ -53,4 +57,4 @@ If you can no longer sign in, the [delete account](/delete-account) page explain
 
 ## Contact
 
-TODO(zia): the contact email for privacy questions.
+Email [kasamthapa89@gmail.com](mailto:kasamthapa89@gmail.com) with any question about your data.
