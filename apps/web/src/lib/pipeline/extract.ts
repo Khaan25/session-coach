@@ -15,19 +15,19 @@ A prompt is the user's words. A reply is the agent's words. The others are what 
 Return JSON only, exactly this shape:
 { "cards": [ { "decision": string, "why": string, "source": "stated" | "inferred", "evidence": [ { "event_index": number, "quote": string } ], "files": [string], "question": string, "model_answer": string } ] }
 
-A decision is a choice between real alternatives that changes how the code works or is built. Examples: where shared styles live, whether a file may be touched, how data is stored. These are NOT decisions: running a command, reading a file, naming, formatting, writing a commit message. A bug fix is not a decision unless it chose between different approaches.
+A decision is a choice between at least two real options that changed the code or the plan. A file write, a deletion, a command or a test result alone is not a decision. Examples: where shared styles live, whether a file may be touched, how data is stored. These are NOT decisions: running a command, reading a file, naming, formatting, writing a commit message. A bug fix is not a decision unless it chose between different approaches.
 
 For each decision:
 
 decision: one plain sentence.
 why: the reason in plain words.
 source: “stated” only if the user or the agent wrote the reason somewhere in the timeline. Otherwise “inferred”.
-evidence: 1 to 3 items. Each has event_index (the number after E) and quote: 5 to 30 words copied exactly from that one event. Do not paraphrase, shorten with “...”, fix typos, or join text from two events. If source is “stated”, one quote must contain the reason.
+evidence: 1 to 3 items. Each has event_index (the number after E) and quote: 5 to 30 words copied exactly from that one event. Do not paraphrase, shorten with “...”, fix typos, or join text from two events. If source is “stated”, one quote must contain the reason. At least one quote must state the choice or its reason in words. A file-write line or a shell command does not count as that quote. If no quote states the reason, source must be “inferred” and the why must say the reason is inferred.
 files: file paths from write or edit events that belong to this decision, or [] if none.
 question: one question that checks the developer understands WHY, not what. It must be answerable from the timeline.
 model_answer: 1 to 2 sentences.
 
-Use only the timeline. Return at most 5, most important first. If there are fewer than 3 real decisions, return fewer. If there are none, return an empty list.`;
+Use only the timeline. Return at most 5, most important first. Return fewer cards when there are fewer real decisions. Zero cards is a valid answer; never pad to reach a number.`;
 
 const modelCardSchema = z.object({
   decision: z.string().min(1),
