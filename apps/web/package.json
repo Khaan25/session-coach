@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
     "test:rls": "node --test --experimental-strip-types tests/rls.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "extract:session": "node --conditions=react-server --experimental-strip-types --env-file=.env.local --import ./src/lib/pipeline/register-alias.mjs src/lib/pipeline/run-extract.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
