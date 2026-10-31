@@ -1,0 +1,28 @@
+{"type":"mode","mode":"default"}
+{"type":"file-history-snapshot","snapshot":{}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":"add a login page"}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"thinking","thinking":"plan the page"}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"I'll look at the app first."},{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":"/proj/demo/app.ts"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":"export const app = 1;"}]}}
+{"type":"assistant","isSidechain":true,"message":{"role":"assistant","content":[{"type":"text","text":"sub-agent chatter"}]}}
+{this line is not json
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t4","name":"Write","input":{"file_path":"/proj/demo/login.ts","content":"a\nb\nc"}}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t5","name":"Edit","input":{"file_path":"/proj/demo/app.ts","old_string":"export const app = 1;","new_string":"export const app = 2;\nexport const ready = true;"}}]}}
+{"type":"user","isSidechain":false,"isMeta":true,"message":{"role":"user","content":"injected by the tool"}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":"<command-name>/clear</command-name>"}}
+{"type":"attachment","attachment":{"type":"file"}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t2","name":"Bash","input":{"command":"pnpm test"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t2","content":[{"type":"text","text":"all tests passed"}]}]}}
+{"type":"surprise","detail":"a line type nobody has seen"}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t3","name":"Grep","input":{"pattern":"login"}}]}}
+{"type":"last-prompt","lastPrompt":"add a login page"}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"Done."}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t4","content":"File created"}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t5","content":"File updated"}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t6","name":"mcp__demo__click","input":{"target":"button"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t6","content":"clicked the button"}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t3","content":"login.ts:1"}]}}
+{"type":"ai-title","aiTitle":"Add a login page"}
+{"type":"permission-mode","permissionMode":"default"}
+{"type":"system","subtype":"something-routine"}
+{"type":"file-history-delta","delta":{}}
