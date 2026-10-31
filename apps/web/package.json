@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "oxlint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'"
+    "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
+    "test:rls": "node --test --experimental-strip-types tests/rls.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
