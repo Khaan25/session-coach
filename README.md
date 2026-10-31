@@ -50,6 +50,27 @@ pnpm dev                              # http://localhost:3000
 | `pnpm check:secrets` | scan tracked files for credentials          |
 | `pnpm build`         | production build                            |
 
+### Against the local Supabase stack
+
+`.env.local` points at the live project. To develop and test against a local database instead (needs Docker):
+
+```bash
+supabase start                                  # or `supabase db reset` to reapply the migrations
+pnpm db:local                                   # writes apps/web/.env.development.local from `supabase status`
+pnpm seed:demo:local --email you@example.test   # demo cards for a learner you created locally
+pnpm dev                                        # now uses http://127.0.0.1:54321; auth emails go to Mailpit (:54324)
+pnpm db:live                                    # deletes that file: back to .env.local
+```
+
+Model keys still come from `.env.local`. Set `MODEL_PROVIDER=fake pnpm dev` to grade without a model. Google sign-in doesn't work locally; use email and password.
+
+| Command         | What it does                                                                        |
+| --------------- | ----------------------------------------------------------------------------------- |
+| `pnpm test:rls` | two learners on the local stack: each reads only their own rows, can't write grades |
+| `pnpm test:e2e` | Playwright smoke: sign in, review a card, see a score (fake model, local stack)     |
+
+Neither runs in `pnpm test` or CI: both need the local stack. `pnpm test:e2e` also needs `pnpm --filter web exec playwright install chromium` once.
+
 ## Agreed before the repo
 
 | Topic              | Decision                                                                                                                      |
