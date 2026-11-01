@@ -8,6 +8,8 @@ Built by Kasam Thapa Magar and Zia Ur Rehman Khan for the 8x Playmakers trial (c
 
 ## How it works
 
+The full flow. The CLI (steps 1 and 2), card making (step 3) and the daily email (step 6) aren't live yet: see [Status](#status).
+
 1. A Claude Code session ends. The `SessionEnd` hook starts a detached worker and exits, so Claude Code never waits.
 2. The worker redacts secrets, gzips the log and uploads it in three calls: register the session, `PUT` the log straight to Storage, start processing. `session-coach push --latest` does the same by hand.
 3. The server filters the log, numbers the events (E1, E2, …) and one model call extracts 3–5 decisions.
@@ -24,8 +26,9 @@ stateDiagram-v2
     direction LR
     [*] --> pending: POST /api/sessions
     pending --> processing: log uploaded, POST /api/sessions/[id]/process
+    pending --> failed: log over 50 MB
     processing --> ready: 0 to 5 grounded cards
-    processing --> failed: model error or log too big
+    processing --> failed: model error
     ready --> [*]
     failed --> [*]
 ```
