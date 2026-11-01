@@ -146,6 +146,9 @@ export async function sendDailyReviews(
   return result;
 }
 
+/** How long one Resend call may take before it counts as failed. */
+const SEND_TIMEOUT_MS = 10_000;
+
 /**
  * A `send` for `DailyReviewDeps` through the Resend REST API. Errors carry the status only, never the response body,
  * which can echo the recipient's address.
@@ -163,6 +166,8 @@ export function resendSender(apiKey: string, from: string): DailyReviewDeps["sen
         "Idempotency-Key": idempotencyKey,
       },
       body: JSON.stringify({ from, to: [to], subject, text, html }),
+      // A stalled call would hold the serial loop until the function is killed; fail it and move to the next learner.
+      signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });
     if (!response.ok) throw new Error(`Resend responded ${response.status}`);
     const { id } = (await response.json()) as { id: string };

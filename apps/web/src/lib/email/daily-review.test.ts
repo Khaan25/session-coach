@@ -129,7 +129,7 @@ test("one learner's failure doesn't stop the others", async (t) => {
     ["a", "b", "c"].map((id) => review(id, "2026-10-31")),
     now,
   );
-  const { deps, outbox } = fakeDeps();
+  const { deps, log, outbox } = fakeDeps();
   const send = deps.send;
   deps.send = async (email) => {
     if (email.to.startsWith("b@")) throw new Error("Resend responded 500");
@@ -144,6 +144,9 @@ test("one learner's failure doesn't stop the others", async (t) => {
     outbox.map(({ to }) => to),
     ["a@example.test", "c@example.test"],
   );
+  // The failed learner's claim stays, with no message id: no retry until tomorrow.
+  assert.equal(log.has("b/2026-10-31"), true);
+  assert.equal(log.get("b/2026-10-31"), null);
 });
 
 test("the email has the count, the review link and how to turn it off", () => {
