@@ -9,6 +9,7 @@
 //   --simulate   flip the demo pending session to processing then ready (and the processing one
 //                to failed) over ~20 s, to watch the Realtime status badge
 //   --dry-run    preflight and counts only, no writes (--email optional)
+//   --local      refuse to run unless the Supabase URL is the local stack (127.0.0.1 or localhost)
 //
 // Every row gets a deterministic id (UUID v5 of the learner id and a fixed key), and the ids are
 // recorded in scripts/.seed-demo/<user-id>.json. Re-running deletes those ids first, so it never
@@ -781,6 +782,12 @@ async function connect() {
       "NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set. Run with node --env-file=apps/web/.env.local.",
     );
   }
+  // --local: exported shell variables beat --env-file, so check the URL that will actually be used.
+  if (flags.local && !["127.0.0.1", "localhost"].includes(new URL(url).hostname)) {
+    fail(
+      `--local was passed but NEXT_PUBLIC_SUPABASE_URL is ${url}, not the local stack. Nothing written.`,
+    );
+  }
   // No new dependency: use the copy apps/web already installs.
   const require = createRequire(join(ROOT, "apps", "web", "package.json"));
   const { createClient } = await import(
@@ -971,6 +978,7 @@ const { values: flags } = parseArgs({
     reset: { type: "boolean", default: false },
     simulate: { type: "boolean", default: false },
     "dry-run": { type: "boolean", default: false },
+    local: { type: "boolean", default: false },
   },
 });
 if (flags.reset && flags.simulate) fail("Pass --reset or --simulate, not both.");
