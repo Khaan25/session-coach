@@ -2,19 +2,19 @@
 
 import { useOptimistic, useTransition } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Markdown } from "@/components/tracker/markdown";
+import { Markdown } from "@/features/tracker/markdown";
 import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/toast";
-import { PROJECT_CONTEXT } from "@/lib/tracker/context";
-import type { TrackerTask } from "@/lib/tracker/queries";
+import { PROJECT_CONTEXT } from "@/features/tracker/context";
+import type { TrackerTask } from "@/features/tracker/queries";
 
-import { setTaskDone } from "@/app/(app)/tracker/actions";
+import { setTaskDone } from "@/features/tracker/actions";
 
-// One hue per person (Zia blue, Kasam green), so whose task it is reads at a glance; "both" stays neutral.
+// One hue per person (Zia blue, Kasam green), so whose task it is reads at a glance; "both" stays neutral. The hue
+// comes from the design system's kind slots: data-kind sets --accent-tint and --accent-label (tokens.css).
 const owners = {
   zia: { label: "Zia", kind: "run" },
   kasam: { label: "Kasam", kind: "model" },
@@ -94,7 +94,14 @@ function TaskRow({
   const owner = task.owner ? owners[task.owner] : null;
   const label = (
     <span className="flex min-w-0 items-center gap-2">
-      {owner && <Badge kind={owner.kind} label={owner.label} size="pill" />}
+      {owner && (
+        <span
+          data-kind={owner.kind}
+          className="inline-flex min-h-(--tag) shrink-0 items-center rounded-full bg-accent-tint px-2 py-0.5 type-label-sm text-accent-label"
+        >
+          {owner.label}
+        </span>
+      )}
       <span className={done ? "type-body text-text-3 line-through" : "type-body text-text-1"}>
         {task.title}
       </span>

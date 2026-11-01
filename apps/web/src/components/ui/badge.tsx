@@ -11,9 +11,8 @@ import type { Kind } from "@/lib/ui/kind";
 //   colour (the warn or fail line step) and the word stays ink.
 // - success and warning: the app's session-status and score badges, on their wash with their text step.
 // CodeTag: a method or a status code in mono, in the same outlined box.
-// Three sizes: default 20px and sm 16px on the 4px inner corner, and pill (20px, fully round), all with 12px text.
-// A count takes `count` and `max`: past the cap it shows "99+" and keeps the exact number for screen readers and the
-// title.
+// Two sizes: default 20px and sm 16px, both on the 4px inner corner with 12px text. A count takes `count` and
+// `max`: past the cap it shows "99+" and keeps the exact number for screen readers and the title.
 
 type BadgeStatus = "warn" | "fail";
 
@@ -55,8 +54,6 @@ const badgeVariants = cva(
         default:
           "min-h-(--tag) min-w-(--tag) gap-1 px-1.5 py-0.5 type-label-sm has-data-[icon=inline-end]:pe-1 has-data-[icon=inline-start]:ps-1",
         sm: "min-h-4 min-w-4 gap-0.5 px-1 type-label-sm",
-        // A rounded tag for a person or owner: the same tint, a full pill so it reads apart from a kind label.
-        pill: "min-h-(--tag) gap-1 px-2 py-0.5 type-label-sm data-[size=pill]:rounded-full",
       },
     },
     defaultVariants: { variant: "default", size: "default" },
