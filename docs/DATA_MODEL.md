@@ -214,18 +214,20 @@ One row per email sent (the daily review email, planned).
 The team's build to-do list at `/tracker`, not a learner feature. Everything about it, including how to remove it, is
 in [apps/web/src/features/tracker/README.md](../apps/web/src/features/tracker/README.md).
 
-| Column (`tracker_tasks`) | Stores                                                   | Written by            |
-| ------------------------ | -------------------------------------------------------- | --------------------- |
-| `section`, `position`    | The heading it sits under, and its order in the list.    | SQL editor            |
-| `owner`                  | `zia`, `kasam`, `both` or null.                          | SQL editor            |
-| `title`, `details`       | The task, and Markdown notes shown when it's expanded.   | SQL editor            |
-| `done_at`, `done_by`     | When it was ticked and by whom; both null when unticked. | Member (column grant) |
+| Column (`tracker_tasks`) | Stores                                                   | Written by                   |
+| ------------------------ | -------------------------------------------------------- | ---------------------------- |
+| `section`, `position`    | The heading it sits under, and its order in the list.    | SQL editor                   |
+| `owner`                  | `zia`, `kasam`, `both` or null.                          | SQL editor                   |
+| `title`, `details`       | The task, and Markdown notes shown when it's expanded.   | Member (column grant)        |
+| `done_at`, `done_by`     | When it was ticked and by whom; both null when unticked. | Member; `done_by` by trigger |
 
 - `tracker_members (user_id)`: who may see the tracker. No policies, so only the server and the SQL editor touch it.
 - `is_tracker_member()`: `security definer`, `search_path = ''`, executable by `authenticated` only. Both policies on
   `tracker_tasks` call it.
-- **Policies:** members select every task; members update, but the grant allows only `done_at` and `done_by`, and the
-  check requires `done_by` to be null or the caller.
+- **Policies:** members select and update every task; the grant allows only `done_at`, `title` and `details`.
+- **`tracker_tasks_done_by` trigger:** sets `done_by` to the caller when `done_at` changes, clears it on untick, and
+  keeps it otherwise, so an edit never renames who ticked a task and nobody can tick in someone else's name.
+- **Check:** `details` is null or not blank.
 
 ## Triggers
 
