@@ -327,6 +327,9 @@ function EditBox({
       if (!cancelled.current) onDone(event.currentTarget.value);
     },
     onKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      // Enter or Esc inside an IME composition belongs to the input method. Safari reports isComposing false on the
+      // confirming Enter, hence keyCode 229.
+      if (event.nativeEvent.isComposing || event.keyCode === 229) return;
       if (event.key === "Escape") {
         cancelled.current = true;
         onDone(null);
