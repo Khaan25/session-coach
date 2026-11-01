@@ -1,14 +1,13 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Markdown } from "@/features/tracker/markdown";
 import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
 import { CopyButton } from "@/components/ui/copy-button";
-import { Progress } from "@/components/ui/progress";
+import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { toast } from "@/components/ui/toast";
-import { PROJECT_CONTEXT } from "@/features/tracker/context";
 import type { TrackerTask } from "@/features/tracker/queries";
 
 import { setTaskDone } from "@/features/tracker/actions";
@@ -21,8 +20,14 @@ const owners = {
   both: { label: "Both", kind: undefined },
 } as const;
 
-/** The build tracker: tasks grouped under their section, a tick to mark done, and details behind a caret. */
-export function TaskList({ tasks }: { tasks: TrackerTask[] }) {
+/**
+ * The build tracker: tasks grouped under their section, a tick to mark done, and details behind a caret.
+ *
+ * @param tasks - In list order, from `getTrackerTasks()`.
+ * @param context - The Project context Markdown. Passed in from the server page so the team-only text never ships in
+ *   a public JS chunk.
+ */
+export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: string }) {
   const [optimistic, setOptimistic] = useOptimistic(
     tasks,
     (current, { id, done }: { id: string; done: boolean }) =>
@@ -31,12 +36,29 @@ export function TaskList({ tasks }: { tasks: TrackerTask[] }) {
       ),
   );
   const [, startTransition] = useTransition();
+  // Tasks with a save in flight: their box is disabled, so two quick clicks can't race and save the wrong state.
+  const [saving, setSaving] = useState<ReadonlySet<string>>(new Set());
 
   function toggle(id: string, done: boolean) {
+    if (saving.has(id)) return;
+    setSaving((current) => new Set(current).add(id));
     startTransition(async () => {
       setOptimistic({ id, done });
-      const { error } = await setTaskDone({ id, done });
-      if (error) toast.add({ title: error, type: "error" });
+      try {
+        const { error } = await setTaskDone({ id, done });
+        if (error) toast.add({ title: error, type: "error" });
+      } catch {
+        toast.add({
+          title: "That task couldn't be updated. Check your connection.",
+          type: "error",
+        });
+      } finally {
+        setSaving((current) => {
+          const next = new Set(current);
+          next.delete(id);
+          return next;
+        });
+      }
     });
   }
 
@@ -51,18 +73,14 @@ export function TaskList({ tasks }: { tasks: TrackerTask[] }) {
             <span className="type-body text-text-1">Project context</span>
           </CollapsibleRow>
           <CollapsibleContent>
-            <Details
-              markdown={PROJECT_CONTEXT}
-              copyLabel="project context"
-              copyValue={PROJECT_CONTEXT}
-            />
+            <Details markdown={context} copyLabel="project context" copyValue={context} />
           </CollapsibleContent>
         </Collapsible>
       </div>
       <Progress value={optimistic.length ? (doneCount / optimistic.length) * 100 : 0}>
-        <span className="type-label text-text-2">
+        <ProgressLabel>
           {doneCount} of {optimistic.length} done
-        </span>
+        </ProgressLabel>
       </Progress>
       {[...sections].map(([section, items]) => (
         <section key={section} className="flex flex-col gap-2">
@@ -74,7 +92,7 @@ export function TaskList({ tasks }: { tasks: TrackerTask[] }) {
           </h2>
           <ul className="flex flex-col">
             {items.map((task) => (
-              <TaskRow key={task.id} task={task} onToggle={toggle} />
+              <TaskRow key={task.id} task={task} saving={saving.has(task.id)} onToggle={toggle} />
             ))}
           </ul>
         </section>
@@ -85,9 +103,11 @@ export function TaskList({ tasks }: { tasks: TrackerTask[] }) {
 
 function TaskRow({
   task,
+  saving,
   onToggle,
 }: {
   task: TrackerTask;
+  saving: boolean;
   onToggle: (id: string, done: boolean) => void;
 }) {
   const done = Boolean(task.done_at);
@@ -112,6 +132,7 @@ function TaskRow({
     <li className="flex items-start gap-3 py-1">
       <Checkbox
         checked={done}
+        disabled={saving}
         onCheckedChange={(checked) => onToggle(task.id, checked)}
         aria-label={`${task.title}: done`}
         className="mt-2.5"

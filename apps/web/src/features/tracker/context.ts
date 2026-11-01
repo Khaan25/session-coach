@@ -1,5 +1,7 @@
+import "server-only";
+
 // The project context at the top of /tracker, from the build guide sent to Kasam on 31 Oct 2026. Edit here when the
-// plan changes; tasks live in the tracker_tasks table.
+// plan changes; tasks live in the tracker_tasks table. Server-only: team-only text must not land in a public chunk.
 export const PROJECT_CONTEXT = `
 **Session Coach** turns a Claude Code session into 3–5 decision cards the developer explains back on day 1, 3 and 7; a model grades each answer 0, 1 or 2. Live at [coach.ziaa.me](https://coach.ziaa.me). 8x Playmakers trial: feedback call **Mon 2 Nov**, demo and submit **Fri 6 Nov**, V2 (teams) right after.
 

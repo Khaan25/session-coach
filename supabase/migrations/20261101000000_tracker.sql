@@ -1,6 +1,6 @@
 -- Build tracker: the team's own to-do list at /tracker, in place of a project management tool.
 -- Only tracker members (Zia and Kasam) can read it or tick tasks; learners never see it.
--- Members are added by hand in the SQL editor:
+-- Zia and Kasam are added at the end of this file; anyone else by hand in the SQL editor:
 --   insert into public.tracker_members (user_id) select id from public.profiles where email = '<email>';
 
 create table public.tracker_members (
@@ -25,14 +25,19 @@ create function public.is_tracker_member() returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.tracker_members where user_id = (select auth.uid()));
 $$;
+-- Signed-in users only (the app calls it through the RLS client); functions are executable by public by default.
+revoke execute on function public.is_tracker_member() from public, anon;
+grant execute on function public.is_tracker_member() to authenticated;
 
 alter table public.tracker_members enable row level security;
 alter table public.tracker_tasks enable row level security;
 
 create policy "members read tasks" on public.tracker_tasks for select to authenticated
   using ((select public.is_tracker_member()));
+-- done_by is null (unticked) or the caller, so nobody can record a tick in someone else's name.
 create policy "members tick tasks" on public.tracker_tasks for update to authenticated
-  using ((select public.is_tracker_member())) with check ((select public.is_tracker_member()));
+  using ((select public.is_tracker_member()))
+  with check ((select public.is_tracker_member()) and (done_by is null or done_by = (select auth.uid())));
 -- Members may tick and untick only; tasks are added and edited in the SQL editor for now.
 revoke update on public.tracker_tasks from anon, authenticated;
 grant update (done_at, done_by) on public.tracker_tasks to authenticated;
@@ -99,7 +104,7 @@ Package: `packages/cli`.
 | ① 400 / 413 | log it; don't retry |
 | ③ 202 / 409 | mark sent |
 | ③ 422 | start again at ① |
-| 5xx / network | 3 tries (1 s, 4 s, 10 s), then outbox |
+| 5xx / network | up to 4 attempts (waits 1 s, 4 s, 10 s), then outbox |
 
 **Rules:** never print the token; never upload a file that wasn't redacted. 50 MB is the Storage limit.
 $md$),
@@ -138,7 +143,7 @@ $md$),
 **Worker:**
 
 - Same `redact()` as the server (share it, don't fork the rules), gzip, then the 3 upload calls.
-- Each call: 3 tries with 1 s, 4 s, 10 s waits. Still failing: save to `~/.session-coach/outbox/`, send next time.
+- Each call: up to 4 attempts, waiting 1 s, 4 s, then 10 s between them. Still failing: save to `~/.session-coach/outbox/`, send next time.
 - After ③ succeeds (or ① says done), append the `session_id` to `~/.session-coach/sent` and skip it next time.
 
 **Done means:** after a normal Claude Code session ends, it shows up on the dashboard with no command typed.
@@ -255,3 +260,8 @@ $md$),
 - Privacy policy and terms updated for team data.
 - Account deletion: decide what happens to team sessions.
 $md$);
+
+-- The two tracker members. A profile that doesn't exist yet (a fresh local database) is skipped.
+insert into public.tracker_members (user_id)
+select id from public.profiles where email in ('ziaurzai@gmail.com', 'kasamthapa89@gmail.com')
+on conflict do nothing;
