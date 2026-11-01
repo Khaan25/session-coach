@@ -7,6 +7,9 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
 - [`20261028000000_init.sql`](../supabase/migrations/20261028000000_init.sql): every table, RLS, the bucket, Realtime.
 - [`20261029000000_auth_profiles.sql`](../supabase/migrations/20261029000000_auth_profiles.sql): provider-neutral
   profiles (`display_name`, `avatar_url`) and the email sync trigger.
+- [`20261101000000_tracker.sql`](../supabase/migrations/20261101000000_tracker.sql) and
+  [`20261102000000_tracker_edit.sql`](../supabase/migrations/20261102000000_tracker_edit.sql): the team's `/tracker`
+  (see [`tracker_members` and `tracker_tasks`](#tracker_members-and-tracker_tasks)).
 
 ## The one rule
 
@@ -214,22 +217,27 @@ One row per email sent (the daily review email, planned).
 The team's build to-do list at `/tracker`, not a learner feature. Everything about it, including how to remove it, is
 in [apps/web/src/features/tracker/README.md](../apps/web/src/features/tracker/README.md).
 
-| Column (`tracker_tasks`) | Stores                                                   | Written by            |
-| ------------------------ | -------------------------------------------------------- | --------------------- |
-| `section`, `position`    | The heading it sits under, and its order in the list.    | SQL editor            |
-| `owner`                  | `zia`, `kasam`, `both` or null.                          | SQL editor            |
-| `title`, `details`       | The task, and Markdown notes shown when it's expanded.   | SQL editor            |
-| `done_at`, `done_by`     | When it was ticked and by whom; both null when unticked. | Member (column grant) |
+| Column (`tracker_tasks`) | Stores                                                   | Written by                   |
+| ------------------------ | -------------------------------------------------------- | ---------------------------- |
+| `section`, `position`    | The heading it sits under, and its order in the list.    | SQL editor; member on insert |
+| `owner`                  | `zia`, `kasam`, `both` or null.                          | SQL editor                   |
+| `title`, `details`       | The task, and Markdown notes shown when it's expanded.   | Member (column grant)        |
+| `done_at`, `done_by`     | When it was ticked and by whom; both null when unticked. | Member; `done_by` by trigger |
 
 - `tracker_members (user_id)`: who may see the tracker. No policies, so only the server and the SQL editor touch it.
 - `is_tracker_member()`: `security definer`, `search_path = ''`, executable by `authenticated` only. Both policies on
   `tracker_tasks` call it.
-- **Policies:** members select every task; members update, but the grant allows only `done_at` and `done_by`, and the
-  check requires `done_by` to be null or the caller.
+- **Policies:** members select, update and insert tasks. Update is granted on `done_at`, `title` and `details` only;
+  insert on `section`, `position` and `title` only. A task added on the page takes its section's last position, and
+  the page orders ties by `created_at`.
+- **`tracker_tasks_done_by` trigger:** clears `done_by` when unticked, sets it to the caller when `done_at` changes,
+  and keeps it otherwise, so an edit never renames who ticked a task and nobody can tick in someone else's name.
+- **Check:** `details` is null or has a non-whitespace character.
 
 ## Triggers
 
-Both are `security definer` with `search_path = ''`, so they run with the owner's rights (they write `profiles`, which
+The tracker's `tracker_tasks_done_by` is described with [its table](#tracker_members-and-tracker_tasks). The learner
+triggers are these two. Both are `security definer` with `search_path = ''`, so they run with the owner's rights (they write `profiles`, which
 the inserting role can't) and can't be hijacked by an object a caller puts earlier on the search path.
 
 - **`handle_new_user`** (`after insert on auth.users`): inserts the profile. `display_name` takes the first non-blank

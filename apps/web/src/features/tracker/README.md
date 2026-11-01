@@ -6,25 +6,26 @@ folder, so it can be removed without touching learner features.
 
 ## What's here
 
-| File               | What it does                                                                     |
-| ------------------ | -------------------------------------------------------------------------------- |
-| `tracker-page.tsx` | The page: header, Suspense, 404 for non-members                                  |
-| `task-list.tsx`    | Sections, progress bar, owner tags, tick boxes, expandable details, copy buttons |
-| `markdown.tsx`     | Renders task details (GitHub-flavoured Markdown, tables)                         |
-| `context.ts`       | The "Project context" panel text, from the build guide                           |
-| `queries.ts`       | `getTrackerTasks()`: member check, then tasks in order (RLS client)              |
-| `actions.ts`       | `setTaskDone()`: tick or untick one task                                         |
-| `remove.sql`       | Drops the tracker's tables and function                                          |
+| File               | What it does                                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `tracker-page.tsx` | The page: header, Suspense, 404 for non-members                                                                      |
+| `task-list.tsx`    | Sections, progress bar, owner tags, tick boxes, expandable details, copy buttons                                     |
+| `markdown.tsx`     | Renders task details (GitHub-flavoured Markdown, tables)                                                             |
+| `context.ts`       | The "Project context" panel text, from the build guide                                                               |
+| `queries.ts`       | `getTrackerTasks()`: member check, then tasks in order (RLS client)                                                  |
+| `actions.ts`       | `setTaskDone()`: tick or untick; `editTask()`: save an edited title or details; `addTask()`: add a task to a section |
+| `remove.sql`       | Drops the tracker's tables and function                                                                              |
 
 ## Outside this folder
 
-| Where                                            | What                                                                              |
-| ------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `apps/web/src/app/(app)/tracker/page.tsx`        | Two-line file that mounts this page at `/tracker`                                 |
-| `apps/web/src/lib/supabase/proxy.ts`             | `"/tracker"` in `PROTECTED`, so signed-out visitors log in                        |
-| `supabase/migrations/20261101000000_tracker.sql` | `tracker_members`, `tracker_tasks`, `is_tracker_member()`, RLS and the seed tasks |
-| `apps/web/package.json`                          | `react-markdown` and `remark-gfm`, used only here                                 |
-| `docs/DATA_MODEL.md`                             | The `tracker_members` and `tracker_tasks` section                                 |
+| Where                                                 | What                                                                              |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `apps/web/src/app/(app)/tracker/page.tsx`             | Two-line file that mounts this page at `/tracker`                                 |
+| `apps/web/src/lib/supabase/proxy.ts`                  | `"/tracker"` in `PROTECTED`, so signed-out visitors log in                        |
+| `supabase/migrations/20261101000000_tracker.sql`      | `tracker_members`, `tracker_tasks`, `is_tracker_member()`, RLS and the seed tasks |
+| `supabase/migrations/20261102000000_tracker_edit.sql` | In-place editing and adding: `done_by` trigger, update and insert grants          |
+| `apps/web/package.json`                               | `react-markdown` and `remark-gfm`, used only here                                 |
+| `docs/DATA_MODEL.md`                                  | The `tracker_members` and `tracker_tasks` section                                 |
 
 ## Add a member
 
@@ -40,7 +41,7 @@ It should list both. Anyone missing (or anyone else), in the Supabase SQL editor
 insert into public.tracker_members (user_id) select id from public.profiles where email = '<email>';
 ```
 
-Tasks are added and edited in the SQL editor too; the page only ticks and unticks.
+On the page, double-click a title or its notes to edit them (Markdown for notes); click outside saves, Esc cancels. Add task under a section adds one at its end, with no owner or notes. New sections, owners and order changes are still made in the SQL editor.
 
 ## Remove the tracker
 
