@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import type { TrackerTask } from "@/features/tracker/queries";
 
-import { editTask, setTaskDone } from "@/features/tracker/actions";
+import { addTask, editTask, setTaskDone } from "@/features/tracker/actions";
 
 // One hue per person (Zia blue, Kasam green), so whose task it is reads at a glance; "both" stays neutral. The hue
 // comes from the design system's kind slots: data-kind sets --accent-tint and --accent-label (tokens.css).
@@ -119,7 +119,7 @@ export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: st
         </Progress>
         <p className="type-label-sm text-text-3">
           Double-click a title or its notes to edit, or use Edit in an open task. Click outside to
-          save, Esc to cancel.
+          save, Esc to cancel. Add task puts a new one at the end of its section.
         </p>
       </div>
       {[...sections].map(([section, items]) => (
@@ -141,6 +141,7 @@ export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: st
               />
             ))}
           </ul>
+          <AddTask section={section} />
         </section>
       ))}
     </div>
@@ -242,6 +243,53 @@ function TaskRow({
         </CollapsibleContent>
       </Collapsible>
     </li>
+  );
+}
+
+/**
+ * "Add task" under a section: opens a title box that saves on Enter or click outside, like an edit. While the add is
+ * saving the box stays shown, read-only; a failed add reopens it with the typed title.
+ */
+function AddTask({ section }: { section: string }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function done(value: string | null) {
+    setOpen(false);
+    if (value === null || !value.trim()) {
+      setDraft("");
+      return;
+    }
+    setDraft(value);
+    startTransition(async () => {
+      const failed = (title: string) => {
+        toast.add({ title, type: "error" });
+        setOpen(true);
+      };
+      try {
+        const { error } = await addTask({ section, title: value });
+        if (error) failed(error);
+        else setDraft("");
+      } catch {
+        failed("That task couldn't be added. Check your connection.");
+      }
+    });
+  }
+
+  if (pending) {
+    return <p className="ms-9 py-1 type-body text-text-3">{draft}</p>;
+  }
+  return (
+    <div className="ms-9">
+      {open ? (
+        <EditBox multiline={false} initial={draft} label={`New task in ${section}`} onDone={done} />
+      ) : (
+        <Button variant="ghost" size="xs" onClick={() => setOpen(true)}>
+          Add task
+        </Button>
+      )}
+    </div>
   );
 }
 

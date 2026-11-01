@@ -27,6 +27,8 @@ export async function getTrackerTasks(): Promise<TrackerTask[] | null> {
     .from("tracker_tasks")
     .select("id, section, position, owner, title, details, done_at")
     .order("position")
+    // A task added on the page shares its section's last position; the later one goes after.
+    .order("created_at")
     .returns<TrackerTask[]>();
   if (error) throw new Error(`tracker_tasks: ${error.message}`);
   return data;

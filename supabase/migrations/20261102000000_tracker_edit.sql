@@ -1,4 +1,5 @@
--- Tracker members can edit a task's title and details in place (double-click on /tracker), not only tick it.
+-- Tracker members can edit a task's title and details in place (double-click on /tracker), not only tick it, and add
+-- tasks to an existing section.
 -- done_by moves to a trigger: an edit to a task the other member ticked keeps their name, and nobody can write a tick
 -- in someone else's name.
 
@@ -29,6 +30,13 @@ create policy "members edit tasks" on public.tracker_tasks for update to authent
 
 revoke update on public.tracker_tasks from anon, authenticated;
 grant update (done_at, title, details) on public.tracker_tasks to authenticated;
+
+-- Adding a task: members insert the section, position and title only, so a new task starts unticked with no notes and
+-- no owner, and done_by stays the trigger's.
+create policy "members add tasks" on public.tracker_tasks for insert to authenticated
+  with check ((select public.is_tracker_member()));
+revoke insert on public.tracker_tasks from anon, authenticated;
+grant insert (section, position, title) on public.tracker_tasks to authenticated;
 
 -- An emptied details box saves null, never blank text. \S, not btrim(), so newlines and tabs alone count as blank too.
 alter table public.tracker_tasks

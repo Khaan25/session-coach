@@ -219,7 +219,7 @@ in [apps/web/src/features/tracker/README.md](../apps/web/src/features/tracker/RE
 
 | Column (`tracker_tasks`) | Stores                                                   | Written by                   |
 | ------------------------ | -------------------------------------------------------- | ---------------------------- |
-| `section`, `position`    | The heading it sits under, and its order in the list.    | SQL editor                   |
+| `section`, `position`    | The heading it sits under, and its order in the list.    | SQL editor; member on insert |
 | `owner`                  | `zia`, `kasam`, `both` or null.                          | SQL editor                   |
 | `title`, `details`       | The task, and Markdown notes shown when it's expanded.   | Member (column grant)        |
 | `done_at`, `done_by`     | When it was ticked and by whom; both null when unticked. | Member; `done_by` by trigger |
@@ -227,7 +227,9 @@ in [apps/web/src/features/tracker/README.md](../apps/web/src/features/tracker/RE
 - `tracker_members (user_id)`: who may see the tracker. No policies, so only the server and the SQL editor touch it.
 - `is_tracker_member()`: `security definer`, `search_path = ''`, executable by `authenticated` only. Both policies on
   `tracker_tasks` call it.
-- **Policies:** members select and update every task; the grant allows only `done_at`, `title` and `details`.
+- **Policies:** members select, update and insert tasks. Update is granted on `done_at`, `title` and `details` only;
+  insert on `section`, `position` and `title` only. A task added on the page takes its section's last position, and
+  the page orders ties by `created_at`.
 - **`tracker_tasks_done_by` trigger:** clears `done_by` when unticked, sets it to the caller when `done_at` changes,
   and keeps it otherwise, so an edit never renames who ticked a task and nobody can tick in someone else's name.
 - **Check:** `details` is null or has a non-whitespace character.
