@@ -77,9 +77,11 @@ export async function GET(request: Request) {
     const chunks = Array.from({ length: Math.ceil(ids.length / ID_CHUNK) }, (_, i) =>
       ids.slice(i * ID_CHUNK, (i + 1) * ID_CHUNK),
     );
-    const reads = await Promise.all(
-      chunks.map((chunk) =>
-        Promise.all([
+    // One chunk at a time (its two reads in parallel), like api/account's batches: a daily job can wait, the pool can't.
+    const reads = [];
+    for (const chunk of chunks) {
+      reads.push(
+        await Promise.all([
           fetchAll<AnsweredRow>((from, to) =>
             admin
               .from("reviews")
@@ -100,8 +102,8 @@ export async function GET(request: Request) {
               .range(from, to),
           ),
         ]),
-      ),
-    );
+      );
+    }
     const answered = reads.flatMap(([rows]) => rows);
     const unanswered = reads.flatMap(([, rows]) => rows);
     const reviews: ReviewRow[] = answered.flatMap(({ card, ...review }) =>
