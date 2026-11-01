@@ -74,14 +74,9 @@ export async function processSession(sessionId: string): Promise<void> {
     const cards = checkEvidence(drafts, timeline);
     const rows = buildCardRows(cards, sessionId, session.user_id);
 
-    // Clear earlier cards for this session so a re-run can't hit the (session_id, position) unique constraint.
-    const { error: deleteError } = await admin
-      .from("decision_cards")
-      .delete()
-      .eq("session_id", sessionId);
-    if (deleteError) throw deleteError;
-
     // Cards first, `ready` second: a failure in between leaves `failed`, never a ready session with no cards.
+    // If a re-run ever hits the (session_id, position) unique constraint, the run fails loudly; a retry route must
+    // decide how to clear cards safely (unanswered only, or in one transaction).
     if (rows.length > 0) {
       const { error: insertError } = await admin.from("decision_cards").insert(rows);
       if (insertError) throw insertError;
