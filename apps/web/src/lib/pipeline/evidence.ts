@@ -18,37 +18,60 @@ function fileOf(event: TimelineEvent | undefined): string | null {
 
 const isDecisionsFile = (file: string | null) => file?.split("/").at(-1) === "DECISIONS.md";
 
+/** The checked quotes of one draft: each cited event, whether the quote is in it, and the file it wrote. */
+function checkQuotes(draft: ExtractedCard, events: readonly TimelineEvent[]) {
+  return draft.evidence.map(({ event_index, quote }) => {
+    const event = events[event_index - 1];
+    const verified = event !== undefined && squash(event.text).includes(squash(quote));
+    return { event_index, quote, file: fileOf(event), lines: null, verified, event };
+  });
+}
+
+type CheckedQuote = ReturnType<typeof checkQuotes>[number];
+
+const isGroundedQuote = ({ verified, event, file }: CheckedQuote) =>
+  verified &&
+  event !== undefined &&
+  (event.kind === "prompt" || event.kind === "reply" || isDecisionsFile(file));
+
 /**
- * Checks every quote against the timeline and settles each card's `source`. A card stays "stated" only when a verified
- * quote comes from a prompt, a reply, or a write or edit of a DECISIONS.md file; the model's own claim isn't trusted.
+ * Whether a draft has a verified quote from a prompt, a reply, or a write or edit of a DECISIONS.md file. Quotes from
+ * other writes, shell commands or reads show what the agent did, not why.
+ *
+ * @param draft - A card from `extractCards`.
+ * @param events - The same timeline the model saw; `event_index` is a 1-based position in it.
+ */
+export function isGrounded(draft: ExtractedCard, events: readonly TimelineEvent[]): boolean {
+  return checkQuotes(draft, events).some(isGroundedQuote);
+}
+
+/**
+ * Checks every quote against the timeline, drops the cards that are not grounded (see `isGrounded`) and settles each
+ * survivor's `source`: "stated" only when the model said so; the model's own claim is otherwise not trusted. `files`
+ * keeps only paths that some write or edit event wrote (the model writes relative paths, so a path matches when it
+ * equals the event's path or ends it after a "/").
  *
  * @param drafts - Cards from `extractCards`.
  * @param events - The same timeline the model saw; `event_index` is a 1-based position in it.
- * @returns Cards with `position` set to the array index. An out-of-range index gives `verified: false`.
+ * @returns Surviving cards with `position` set to 0, 1, 2... after the drops; empty when every card is dropped. An
+ *   out-of-range index gives `verified: false`.
  */
 export function checkEvidence(
   drafts: readonly ExtractedCard[],
   events: readonly TimelineEvent[],
 ): CheckedCard[] {
-  return drafts.map((draft, position) => {
-    const checked = draft.evidence.map(({ event_index, quote }) => {
-      const event = events[event_index - 1];
-      const verified = event !== undefined && squash(event.text).includes(squash(quote));
-      return { event_index, quote, file: fileOf(event), lines: null, verified, event };
-    });
+  const written = events.flatMap((event) => fileOf(event) ?? []);
+  const wasWritten = (file: string) =>
+    written.some((path) => path === file || path.endsWith(`/${file}`));
 
-    const grounded = checked.some(
-      ({ verified, event, file }) =>
-        verified &&
-        event !== undefined &&
-        (event.kind === "prompt" || event.kind === "reply" || isDecisionsFile(file)),
-    );
-
-    return {
+  return drafts
+    .map((draft) => ({ draft, checked: checkQuotes(draft, events) }))
+    .filter(({ checked }) => checked.some(isGroundedQuote))
+    .map(({ draft, checked }, position) => ({
       position,
       decision: draft.decision,
       why: draft.why,
-      source: draft.source === "stated" && grounded ? "stated" : "inferred",
+      source: draft.source,
       evidence: checked.map(({ event_index, quote, file, lines, verified }) => ({
         event_index,
         quote,
@@ -56,9 +79,8 @@ export function checkEvidence(
         lines,
         verified,
       })),
-      files: draft.files,
+      files: draft.files.filter(wasWritten),
       question: draft.question,
       model_answer: draft.model_answer,
-    };
-  });
+    }));
 }

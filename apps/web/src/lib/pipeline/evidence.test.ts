@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { evidenceSchema } from "@session-coach/shared/decision";
-import { checkEvidence } from "./evidence.ts";
+import { checkEvidence, isGrounded } from "./evidence.ts";
 import type { ExtractedCard } from "./extract.ts";
 import type { EventKind, TimelineEvent } from "./parser.ts";
 
@@ -34,11 +34,16 @@ const draft = (
   model_answer: "So every page reuses it.",
 });
 
+/** A prompt quote that always verifies, so a card is kept while the quotes under test are checked. */
+const anchor = { event_index: 1, quote: "shared styles in one tokens file" };
+
 const check = (evidence: ExtractedCard["evidence"], source?: ExtractedCard["source"]) => {
-  const [card] = checkEvidence([draft(evidence, source)], events);
+  const [card] = checkEvidence([draft([anchor, ...evidence], source)], events);
   assert.ok(card);
-  return card;
+  return { ...card, evidence: card.evidence.slice(1) };
 };
+
+const checkAll = (drafts: ExtractedCard[]) => checkEvidence(drafts, events);
 
 test("verified is true when the quote is in the cited event, false when it is not", () => {
   const card = check([
@@ -96,50 +101,98 @@ test("stated stays when the verified quote is a DECISIONS.md write or edit", () 
   assert.equal(check([{ event_index: 5, quote: "replaced 0 lines with 3" }]).source, "stated");
 });
 
-test("stated becomes inferred without a verified prompt, reply or DECISIONS.md quote", () => {
-  // Verified, but from a bash event.
-  assert.equal(check([{ event_index: 4, quote: "pnpm test" }]).source, "inferred");
-  // Verified, but from an edit of another file.
-  assert.equal(check([{ event_index: 3, quote: "replaced 1 line" }]).source, "inferred");
-  // A prompt quote that is not in the event.
-  assert.equal(
-    check([{ event_index: 1, quote: "invented words nobody wrote" }]).source,
-    "inferred",
+test("a card whose only verified quotes are write or bash events is dropped", () => {
+  assert.deepEqual(checkAll([draft([{ event_index: 4, quote: "pnpm test" }])]), []);
+  assert.deepEqual(checkAll([draft([{ event_index: 3, quote: "replaced 1 line" }])]), []);
+  assert.deepEqual(checkAll([draft([{ event_index: 6, quote: "wrote 4 lines" }])]), []);
+});
+
+test("a prompt quote that is not in the event does not ground a card", () => {
+  assert.deepEqual(
+    checkAll([draft([{ event_index: 1, quote: "invented words nobody wrote" }])]),
+    [],
   );
   // The grounded quote is unverified; the verified one is a bash event.
-  assert.equal(
-    check([
-      { event_index: 99, quote: "x" },
-      { event_index: 4, quote: "pnpm test" },
-    ]).source,
-    "inferred",
+  assert.deepEqual(
+    checkAll([
+      draft([
+        { event_index: 99, quote: "x" },
+        { event_index: 4, quote: "pnpm test" },
+      ]),
+    ]),
+    [],
   );
+});
+
+test("a card grounded by a DECISIONS.md write is kept", () => {
+  const cards = checkAll([draft([{ event_index: 5, quote: "replaced 0 lines with 3" }])]);
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0]?.source, "stated");
 });
 
 test("inferred is never upgraded", () => {
-  assert.equal(
-    check([{ event_index: 1, quote: "shared styles in one tokens file" }], "inferred").source,
-    "inferred",
-  );
+  assert.equal(check([], "inferred").source, "inferred");
 });
 
-test("position is the array index; no id, flagged or hidden is set; evidence fits the shared schema", () => {
-  const cards = checkEvidence(
-    [
-      draft([{ event_index: 1, quote: "shared styles" }]),
-      draft([{ event_index: 3, quote: "replaced 1 line" }]),
-    ],
-    events,
-  );
+test("isGrounded is true for a verified prompt, reply or DECISIONS.md quote, false otherwise", () => {
+  const grounded = (index: number, quote: string) =>
+    isGrounded(draft([{ event_index: index, quote }]), events);
+  assert.equal(grounded(1, "shared styles"), true);
+  assert.equal(grounded(2, "every page reuses them"), true);
+  assert.equal(grounded(5, "replaced 0 lines"), true);
+  assert.equal(grounded(4, "pnpm test"), false);
+  assert.equal(grounded(3, "replaced 1 line"), false);
+  assert.equal(grounded(1, "invented words nobody wrote"), false);
+});
+
+test("positions are 0..n-1 after drops", () => {
+  const cards = checkAll([
+    draft([{ event_index: 4, quote: "pnpm test" }]),
+    draft([{ event_index: 1, quote: "shared styles" }]),
+    draft([{ event_index: 3, quote: "replaced 1 line" }]),
+    draft([{ event_index: 2, quote: "every page reuses them" }]),
+  ]);
   assert.deepEqual(
     cards.map((c) => c.position),
     [0, 1],
   );
+});
+
+test("no id, flagged or hidden is set; evidence fits the shared schema", () => {
+  const cards = checkAll([draft([{ event_index: 1, quote: "shared styles" }])]);
+  assert.equal(cards.length, 1);
   for (const card of cards) {
     for (const key of ["id", "session_id", "user_id", "created_at", "flagged", "hidden"])
       assert.equal(key in card, false);
     for (const item of card.evidence) assert.ok(evidenceSchema.safeParse(item).success);
   }
+});
+
+test("files: a relative path matching the end of a write or edit path is kept, others are removed", () => {
+  const [card] = checkAll([
+    {
+      ...draft([anchor]),
+      files: [
+        "src/styles/tokens.css", // equals an event path
+        "styles/tokens.css", // ends an event path after "/"
+        "tokens.css",
+        "ens.css", // ends the text but not after "/"
+        "src/missing.ts", // no write or edit event wrote it
+        "pnpm", // a bash event is not a write
+      ],
+    },
+  ]);
+  assert.deepEqual(card?.files, ["src/styles/tokens.css", "styles/tokens.css", "tokens.css"]);
+});
+
+test("all cards dropped returns an empty array", () => {
+  assert.deepEqual(
+    checkAll([
+      draft([{ event_index: 4, quote: "pnpm test" }]),
+      draft([{ event_index: 6, quote: "wrote 4 lines" }]),
+    ]),
+    [],
+  );
 });
 
 test("no drafts gives no cards", () => {
