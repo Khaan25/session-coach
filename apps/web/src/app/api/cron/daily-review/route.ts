@@ -6,6 +6,7 @@
  */
 import { NextResponse } from "next/server";
 
+import { composeDailyReview } from "@/emails/daily-review-email";
 import {
   cronAuthorized,
   dailyReviewRecipients,
@@ -76,26 +77,30 @@ export async function GET(request: Request) {
       : [];
     const recipients = dailyReviewRecipients(profiles, reviews, now);
 
-    const result = await sendDailyReviews(recipients, siteUrl, {
-      async claim(userId, sentOn) {
-        const { error } = await admin
-          .from("email_log")
-          .insert({ user_id: userId, kind: KIND, sent_on: sentOn });
-        if (error?.code === UNIQUE_VIOLATION) return false;
-        if (error) throw new Error(error.message);
-        return true;
+    const result = await sendDailyReviews(
+      recipients,
+      (count) => composeDailyReview(count, siteUrl),
+      {
+        async claim(userId, sentOn) {
+          const { error } = await admin
+            .from("email_log")
+            .insert({ user_id: userId, kind: KIND, sent_on: sentOn });
+          if (error?.code === UNIQUE_VIOLATION) return false;
+          if (error) throw new Error(error.message);
+          return true;
+        },
+        send: resendSender(apiKey, process.env.EMAIL_FROM || DEFAULT_FROM),
+        async record(userId, sentOn, resendId) {
+          const { error } = await admin
+            .from("email_log")
+            .update({ resend_id: resendId })
+            .eq("user_id", userId)
+            .eq("kind", KIND)
+            .eq("sent_on", sentOn);
+          if (error) throw new Error(error.message);
+        },
       },
-      send: resendSender(apiKey, process.env.EMAIL_FROM || DEFAULT_FROM),
-      async record(userId, sentOn, resendId) {
-        const { error } = await admin
-          .from("email_log")
-          .update({ resend_id: resendId })
-          .eq("user_id", userId)
-          .eq("kind", KIND)
-          .eq("sent_on", sentOn);
-        if (error) throw new Error(error.message);
-      },
-    });
+    );
     return NextResponse.json(result);
   } catch (err) {
     console.error("[api/cron/daily-review] failed", err instanceof Error ? err.message : err);

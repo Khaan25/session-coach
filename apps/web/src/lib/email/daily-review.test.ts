@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import {
   cronAuthorized,
-  dailyReviewEmail,
+  dailyReviewCopy,
   type DailyReviewDeps,
   dailyReviewRecipients,
   type OutgoingEmail,
@@ -27,6 +27,12 @@ const review = (user_id: string, due_on: string | null, mastered = false): Revie
   due_on,
   mastered,
 });
+
+/** The words without the template: the route renders React Email, which node --test can't load. */
+const compose = async (count: number) => {
+  const { subject, text } = dailyReviewCopy(count, site);
+  return { subject, text, html: `<p>${text}</p>` };
+};
 
 /** In-memory `email_log` and outbox, so reruns behave like the real unique key. */
 function fakeDeps() {
@@ -58,7 +64,7 @@ test("nothing due means no recipient and no send", async () => {
   );
   assert.deepEqual(recipients, []);
   const { deps, outbox } = fakeDeps();
-  assert.deepEqual(await sendDailyReviews(recipients, site, deps), {
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 0,
     skipped: 0,
     failed: 0,
@@ -107,12 +113,12 @@ test("due today is evaluated in the learner's time zone", () => {
 test("a rerun the same day sends nothing twice", async () => {
   const recipients = dailyReviewRecipients([profile("a")], [review("a", "2026-10-31")], now);
   const { deps, log, outbox } = fakeDeps();
-  assert.deepEqual(await sendDailyReviews(recipients, site, deps), {
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 1,
     skipped: 0,
     failed: 0,
   });
-  assert.deepEqual(await sendDailyReviews(recipients, site, deps), {
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 0,
     skipped: 1,
     failed: 0,
@@ -135,7 +141,7 @@ test("one learner's failure doesn't stop the others", async (t) => {
     if (email.to.startsWith("b@")) throw new Error("Resend responded 500");
     return send(email);
   };
-  assert.deepEqual(await sendDailyReviews(recipients, site, deps), {
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 2,
     skipped: 0,
     failed: 1,
@@ -150,16 +156,17 @@ test("one learner's failure doesn't stop the others", async (t) => {
 });
 
 test("the email has the count, the review link and how to turn it off", () => {
-  const email = dailyReviewEmail(3, site);
-  assert.equal(email.subject, "3 cards to review today");
-  assert.equal(dailyReviewEmail(1, site).subject, "1 card to review today");
-  for (const body of [email.text, email.html]) {
-    assert.match(body, /3 cards due/);
-    assert.ok(body.includes(`${site}/review`));
-    assert.ok(body.includes(`${site}/settings`));
-  }
+  const copy = dailyReviewCopy(3, site);
+  assert.equal(copy.subject, "3 cards to review today");
+  assert.equal(copy.heading, "3 decisions to explain today");
+  assert.equal(dailyReviewCopy(1, site).subject, "1 card to review today");
+  assert.equal(dailyReviewCopy(1, site).heading, "1 decision to explain today");
+  assert.equal(copy.reviewUrl, `${site}/review`);
+  assert.equal(copy.settingsUrl, `${site}/settings`);
+  assert.match(copy.text, /3 cards due/);
+  assert.ok(copy.text.includes(`${site}/review`));
+  assert.ok(copy.text.includes(`${site}/settings`));
 });
-
 test("cron auth needs the exact bearer secret", () => {
   assert.equal(cronAuthorized("Bearer s3cret", "s3cret"), true);
   assert.equal(cronAuthorized("Bearer wrong", "s3cret"), false);

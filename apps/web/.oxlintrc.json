@@ -145,6 +145,13 @@
       }
     },
     {
+      "files": ["src/emails/**/*.tsx"],
+      "rules": {
+        "shadcn/no-inline-styles": "off",
+        "shadcn/no-raw-colors": "off"
+      }
+    },
+    {
       "files": ["src/lib/ui/**"],
       "rules": {
         "react/refs": "off",

@@ -74,30 +74,55 @@ export function dailyReviewRecipients(
   });
 }
 
+/** What the reminder says. The template in `emails/daily-review-email.tsx` lays it out; `text` is the plain part. */
+export type DailyReviewCopy = {
+  subject: string;
+  /** The inbox preview line, after the subject. */
+  preview: string;
+  heading: string;
+  body: string;
+  cta: string;
+  reviewUrl: string;
+  settingsUrl: string;
+  text: string;
+};
+
 /**
- * The reminder's subject and body: the due count, a link to /review and how to turn reminders off. No tracking.
+ * The reminder's words: the due count, a link to /review and how to turn reminders off. No tracking.
  *
  * @param count - Cards due today, at least 1.
  * @param siteUrl - The deployed origin, without a trailing slash.
  */
-export function dailyReviewEmail(count: number, siteUrl: string) {
+export function dailyReviewCopy(count: number, siteUrl: string): DailyReviewCopy {
   const cards = count === 1 ? "1 card" : `${count} cards`;
-  const review = `${siteUrl}/review`;
-  const settings = `${siteUrl}/settings`;
+  const reviewUrl = `${siteUrl}/review`;
+  const settingsUrl = `${siteUrl}/settings`;
+  const heading =
+    count === 1 ? "1 decision to explain today" : `${count} decisions to explain today`;
+  const body =
+    "Explain each one back in your own words. You get a score and what you missed, and the card comes back on day 1, 3 and 7 until you've got it.";
+  const footer = "You get this because daily reminders are on. Turn them off in Settings";
   return {
     subject: `${cards} to review today`,
+    preview: `You have ${cards} due. Explain them back while they're fresh.`,
+    heading,
+    body,
+    cta: "Start today's review",
+    reviewUrl,
+    settingsUrl,
     text: [
-      `You have ${cards} due for review today.`,
-      `Review them: ${review}`,
-      `You get this email because daily reminders are on. Turn them off in Settings: ${settings}`,
+      heading,
+      `You have ${cards} due for review today. ${body}`,
+      `Start today's review: ${reviewUrl}`,
+      `${footer}: ${settingsUrl}`,
     ].join("\n\n"),
-    html: [
-      `<p>You have ${cards} due for review today.</p>`,
-      `<p><a href="${review}">Review them</a></p>`,
-      `<p>You get this email because daily reminders are on. <a href="${settings}">Turn them off in Settings</a>.</p>`,
-    ].join("\n"),
   };
 }
+
+/** Builds one learner's email from their due count; the route renders the React Email template here. */
+export type ComposeDailyReview = (
+  count: number,
+) => Promise<Pick<OutgoingEmail, "subject" | "text" | "html">>;
 
 /**
  * Emails each recipient once per local day.
@@ -107,13 +132,13 @@ export function dailyReviewEmail(count: number, siteUrl: string) {
  * - One learner's failure is logged with their id only and the loop goes on.
  *
  * @param recipients - From `dailyReviewRecipients`.
- * @param siteUrl - The deployed origin, for the links.
+ * @param compose - Builds the email for a due count.
  * @param deps - Database and provider calls.
  * @returns How many were sent, skipped as already sent today, and failed.
  */
 export async function sendDailyReviews(
   recipients: Recipient[],
-  siteUrl: string,
+  compose: ComposeDailyReview,
   deps: DailyReviewDeps,
 ): Promise<DailyReviewResult> {
   const result: DailyReviewResult = { sent: 0, skipped: 0, failed: 0 };
@@ -126,7 +151,7 @@ export async function sendDailyReviews(
       }
       resendId = await deps.send({
         to: email,
-        ...dailyReviewEmail(count, siteUrl),
+        ...(await compose(count)),
         idempotencyKey: `daily_review/${userId}/${today}`,
       });
       result.sent++;

@@ -16,6 +16,7 @@
   "dependencies": {
     "@base-ui/react": "^1.9.0",
     "@phosphor-icons/react": "2.1.10",
+    "@react-email/components": "1.0.12",
     "@session-coach/shared": "workspace:*",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
