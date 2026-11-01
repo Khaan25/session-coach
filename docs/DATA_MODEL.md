@@ -209,6 +209,24 @@ One row per email sent (the daily review email, planned).
   already claimed it, so a rerun or a crash never sends twice ([rules/error-handling.md](rules/error-handling.md)).
 - **No policies at all:** RLS is on, so learners can't read or write it.
 
+### `tracker_members` and `tracker_tasks`
+
+The team's build to-do list at `/tracker`, not a learner feature. Everything about it, including how to remove it, is
+in [apps/web/src/features/tracker/README.md](../apps/web/src/features/tracker/README.md).
+
+| Column (`tracker_tasks`) | Stores                                                   | Written by            |
+| ------------------------ | -------------------------------------------------------- | --------------------- |
+| `section`, `position`    | The heading it sits under, and its order in the list.    | SQL editor            |
+| `owner`                  | `zia`, `kasam`, `both` or null.                          | SQL editor            |
+| `title`, `details`       | The task, and Markdown notes shown when it's expanded.   | SQL editor            |
+| `done_at`, `done_by`     | When it was ticked and by whom; both null when unticked. | Member (column grant) |
+
+- `tracker_members (user_id)`: who may see the tracker. No policies, so only the server and the SQL editor touch it.
+- `is_tracker_member()`: `security definer`, `search_path = ''`, executable by `authenticated` only. Both policies on
+  `tracker_tasks` call it.
+- **Policies:** members select every task; members update, but the grant allows only `done_at` and `done_by`, and the
+  check requires `done_by` to be null or the caller.
+
 ## Triggers
 
 Both are `security definer` with `search_path = ''`, so they run with the owner's rights (they write `profiles`, which
