@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { EyeSlashIcon } from "@phosphor-icons/react/ssr";
 
 import { Container } from "@/components/app/container";
 import { EmptyState } from "@/components/app/empty-state";
@@ -83,10 +82,10 @@ async function SessionDetail({ params }: Pick<PageProps<"/s/[id]">, "params">) {
       ) : status === "failed" ? (
         <SessionFailedState error={error} />
       ) : cards.length === 0 ? (
+        // Extraction drops every card it can't back with an exact quote, so a ready session can end with none.
         <EmptyState
-          icon={EyeSlashIcon}
           title="No cards to show"
-          description="Every card from this session was hidden by the evidence check: none of its quotes matched the session."
+          description="This session has no cards available to review. Sessions where you talk through options give the most cards."
         />
       ) : (
         <div className="flex flex-col gap-6">
