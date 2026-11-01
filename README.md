@@ -1,21 +1,79 @@
 # Session Coach
 
+![Session Coach: Explain the code your agent wrote.](apps/web/src/app/opengraph-image.png)
+
 Turns each Claude Code session into 3–5 evidence-backed decision cards, then tests you on the why on day 1, 3 and 7 until you can explain the code your agent wrote.
 
-Built by Kasam Thapa Magar and Zia Ur Rehman Khan for the 8x Playmakers trial (cohort C2, Coding theme), 28 Oct – 6 Nov 2026.
+Built by Kasam Thapa Magar and Zia Ur Rehman Khan for the 8x Playmakers trial (cohort C2, Coding theme), 28 Oct – 6 Nov 2026. Live at [coach.ziaa.me](https://coach.ziaa.me).
 
 ## How it works
 
-Planned flow. This PR is the scaffold: schemas, migration and an empty web app.
-
 1. A Claude Code session ends. The `SessionEnd` hook starts a detached worker and exits, so Claude Code never waits.
-2. The worker redacts secrets, gzips the log and uploads it (or `session-coach push --latest`).
+2. The worker redacts secrets, gzips the log and uploads it in three calls: register the session, `PUT` the log straight to Storage, start processing. `session-coach push --latest` does the same by hand.
 3. The server filters the log, numbers the events (E1, E2, …) and one model call extracts 3–5 decisions.
-4. Plain code checks every quote exists in the cited event. Cards with no verified quote are hidden.
+4. Plain code checks every quote exists in the cited event. Cards with no grounded quote (from a prompt, a reply or `DECISIONS.md`) are dropped.
 5. The learner explains each decision in their own words. A model grades it 0 / 1 / 2.
 6. The question returns on day 1, 3 and 7. A daily email brings the learner back.
 
 More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+### A session's status
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> pending: POST /api/sessions
+    pending --> processing: log uploaded, POST /api/sessions/[id]/process
+    processing --> ready: 0 to 5 grounded cards
+    processing --> failed: model error or log too big
+    ready --> [*]
+    failed --> [*]
+```
+
+The dashboard updates through Supabase Realtime, so a status change shows without a reload.
+
+### A card's review schedule
+
+```mermaid
+flowchart LR
+    new([New card]) --> d1[Day 1]
+    d1 -- "scored 2" --> d3[Day 3]
+    d3 -- "scored 2" --> d7[Day 7]
+    d7 -- "scored 2" --> m([Mastered])
+    d1 -- "0 or 1" --> d1
+    d3 -- "0 or 1" --> d1
+    d7 -- "0 or 1" --> d1
+```
+
+2 is Explained, 1 Partly, 0 Missed. Anything below 2 restarts the card at day 1 (`nextReview` in `apps/web/src/lib/review/schedule.ts`).
+
+## Screens
+
+Demo data from `pnpm seed:demo:local`; the graded answer is a real Groq call.
+
+|                                                                                                                                                       |                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <img src="docs/images/landing.png" alt="Landing page: Explain the code your agent wrote." width="440">                                                | <img src="docs/images/dashboard.png" alt="Dashboard: cards due today and every session with its status: queued, making cards, ready or failed." width="440"> |
+| **Landing**                                                                                                                                           | **Dashboard**: due cards and every session's status                                                                                                          |
+| <img src="docs/images/session-ready.png" alt="A ready session: decision cards with the why, the source, the files and a verified quote." width="440"> | <img src="docs/images/review-question.png" alt="Review: the learner explains a decision in their own words." width="440">                                    |
+| **Session, ready**: each card with its why, source and verified quote                                                                                 | **Review**: explain the decision in your own words                                                                                                           |
+| <img src="docs/images/review-result.png" alt="Review result: scored Explained, the model answer, and the card is mastered." width="440">              | <img src="docs/images/progress.png" alt="Progress: decisions you can still explain, cards by step, answers per day and score mix." width="440">              |
+| **Result**: the score, what was missing and the next review                                                                                           | **Progress**: cards by step, answers per day, score mix                                                                                                      |
+| <img src="docs/images/session-processing.png" alt="A session still making cards." width="440">                                                        | <img src="docs/images/session-failed.png" alt="A failed session with the reason." width="440">                                                               |
+| **Session, making cards**                                                                                                                             | **Session, failed**, with the reason                                                                                                                         |
+| <img src="docs/images/setup.png" alt="Setup: install the CLI and create a CLI token." width="440">                                                    | <img src="docs/images/landing-dark.png" alt="Landing page in dark mode." width="440">                                                                        |
+| **Setup**: CLI steps and CLI tokens                                                                                                                   | **Dark mode**                                                                                                                                                |
+
+## Status
+
+| Part                                                                            | State       |
+| ------------------------------------------------------------------------------- | ----------- |
+| Web app: auth, dashboard, session pages, review and grading, progress, settings | live        |
+| Upload API (`POST /api/sessions`, `POST /api/sessions/[id]/process`)            | live        |
+| Extraction and the evidence check                                               | in review   |
+| `processSession`: parse, extract, store the cards                               | next        |
+| CLI: `login`, `push`, the `SessionEnd` hook and worker                          | in progress |
+| Daily reminder email                                                            | planned     |
 
 ## Repo layout
 
