@@ -20,6 +20,17 @@ export function isDue(review: Pick<ReviewState, "due_on" | "mastered">, today: s
   return !review.mastered && review.due_on !== null && review.due_on <= today;
 }
 
+/** How long a never-answered card stays offered: the review queue and the daily email both stop after this. */
+export const NEW_CARD_DAYS = 7;
+
+/**
+ * The oldest `created_at` a new card can have and still be offered, as an ISO timestamp (a rolling window, not a
+ * calendar day, so a learner back from a break isn't handed the whole backlog).
+ */
+export function newCardsSince(now: Date): string {
+  return new Date(now.getTime() - NEW_CARD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+}
+
 /** A YYYY-MM-DD date plus whole days, in calendar days (no time zone or DST drift). */
 export function addDays(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00Z`);

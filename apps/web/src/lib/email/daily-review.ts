@@ -1,5 +1,5 @@
 import { constantTimeEqual } from "../auth/constant-time.ts";
-import { isDue } from "../review/schedule.ts";
+import { isDue, newCardsSince } from "../review/schedule.ts";
 import { localDate } from "../sessions/rows.ts";
 
 // The daily review email's pure core: who gets one, what it says, and the claim-then-send loop. The route
@@ -13,11 +13,33 @@ export type ProfileRow = {
   notify_email: boolean;
 };
 
-/** A `reviews` row as the cron reads it. */
-export type ReviewRow = { user_id: string; due_on: string | null; mastered: boolean };
+/**
+ * A `reviews` row as the cron reads it, with its card's decision. One row per card the learner has answered, so it
+ * also counts what they've answered and mastered.
+ */
+export type ReviewRow = {
+  user_id: string;
+  due_on: string | null;
+  mastered: boolean;
+  decision: string;
+};
 
-/** A learner to email: `today` is their local date, which is also the `email_log.sent_on` the send claims. */
-export type Recipient = { userId: string; email: string; today: string; count: number };
+/** A visible card never answered (no `reviews` row), as the cron reads it. */
+export type NewCardRow = { user_id: string; decision: string; created_at: string };
+
+/**
+ * A learner to email: `today` is their local date, which is also the `email_log.sent_on` the send claims. `due` and
+ * `fresh` are decision titles, due first by date, then new by age.
+ */
+export type Recipient = {
+  userId: string;
+  email: string;
+  today: string;
+  due: string[];
+  fresh: string[];
+  answered: number;
+  mastered: number;
+};
 
 /** One message for the provider. `idempotencyKey` lets the provider drop a repeat of the same send. */
 export type OutgoingEmail = {
@@ -53,26 +75,52 @@ export function cronAuthorized(header: string | null, secret: string | undefined
 }
 
 /**
- * The learners to remind today: reminders on, an email address, and at least one card due in their own time zone.
+ * The learners to remind today: reminders on, an email address, and at least one card to do. A card to do is either
+ * due again in their own time zone, or new (never answered) and from the last `NEW_CARD_DAYS` days, the same window
+ * the review queue offers new cards in. Older unanswered cards stop counting, so ignored reminders end after a week.
  *
  * @param profiles - Learners, any `notify_email`; those with it off are left out here.
- * @param reviews - Review rows; rows of other learners or not yet due are ignored.
+ * @param reviews - Answered cards. Rows of other learners or not yet due are ignored for `due`.
+ * @param newCards - Never-answered visible cards; ones older than the window are ignored.
  * @param now - The cron's current time. "Today" is each learner's date at this moment.
- * @returns One recipient per learner with cards due, with their count.
+ * @returns One recipient per learner with something to do.
  */
 export function dailyReviewRecipients(
   profiles: ProfileRow[],
   reviews: ReviewRow[],
+  newCards: NewCardRow[],
   now: Date,
 ): Recipient[] {
-  const byUser = Map.groupBy(reviews, (review) => review.user_id);
+  const reviewsByUser = Map.groupBy(reviews, (review) => review.user_id);
+  const since = newCardsSince(now);
+  const newByUser = Map.groupBy(
+    newCards.filter((card) => card.created_at >= since),
+    (card) => card.user_id,
+  );
   return profiles.flatMap(({ id, email, timezone, notify_email }) => {
     if (!notify_email || !email) return [];
     const today = localDate(timezone, now);
-    const count = (byUser.get(id) ?? []).filter((review) => isDue(review, today)).length;
-    return count > 0 ? [{ userId: id, email, today, count }] : [];
+    const mine = reviewsByUser.get(id) ?? [];
+    const due = mine
+      .filter((review) => isDue(review, today))
+      .toSorted((a, b) => (a.due_on ?? "").localeCompare(b.due_on ?? ""))
+      .map((review) => review.decision);
+    const fresh = (newByUser.get(id) ?? [])
+      .toSorted((a, b) => a.created_at.localeCompare(b.created_at))
+      .map((card) => card.decision);
+    if (due.length + fresh.length === 0) return [];
+    const mastered = mine.filter((review) => review.mastered).length;
+    return [{ userId: id, email, today, due, fresh, answered: mine.length, mastered }];
   });
 }
+
+/** At most this many decision titles in one email; the rest are "and N more". */
+const LISTED = 3;
+/** Long decisions are cut to this many characters in the list. */
+const TITLE_MAX = 90;
+
+/** One listed decision and whether it's new or due again. */
+export type ListedCard = { title: string; tag: "New" | "Due" };
 
 /** What the reminder says. The template in `emails/daily-review-email.tsx` lays it out; `text` is the plain part. */
 export type DailyReviewCopy = {
@@ -80,59 +128,102 @@ export type DailyReviewCopy = {
   /** The inbox preview line, after the subject. */
   preview: string;
   heading: string;
+  /** "3 new from your sessions · 2 due again", leaving out a zero. */
+  summary: string;
+  cards: ListedCard[];
+  /** "and 2 more", or null when every card is listed. */
+  more: string | null;
   body: string;
+  /** "18 answered so far, 6 mastered", or a first-time line. */
+  progress: string;
   cta: string;
   reviewUrl: string;
+  footer: string;
+  footerLink: string;
   settingsUrl: string;
   text: string;
 };
 
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const cut = (title: string) =>
+  title.length > TITLE_MAX ? `${title.slice(0, TITLE_MAX - 1).trimEnd()}…` : title;
+
 /**
- * The reminder's words: the due count, a link to /review and how to turn reminders off. No tracking.
+ * The reminder's words: what's due and new, up to 3 decision titles (never the answers), progress so far, a link to
+ * /review and how to turn reminders off. No tracking.
  *
- * @param count - Cards due today, at least 1.
+ * @param recipient - What this learner has to do and has done.
  * @param siteUrl - The deployed origin, without a trailing slash.
  */
-export function dailyReviewCopy(count: number, siteUrl: string): DailyReviewCopy {
-  const cards = count === 1 ? "1 card" : `${count} cards`;
+export function dailyReviewCopy(
+  { due, fresh, answered, mastered }: Pick<Recipient, "due" | "fresh" | "answered" | "mastered">,
+  siteUrl: string,
+): DailyReviewCopy {
+  const total = due.length + fresh.length;
   const reviewUrl = `${siteUrl}/review`;
   const settingsUrl = `${siteUrl}/settings`;
-  const heading =
-    count === 1 ? "1 decision to explain today" : `${count} decisions to explain today`;
+  const heading = `${plural(total, "decision", "decisions")} to explain today`;
+  const summary = [
+    fresh.length > 0 && `${fresh.length} new from your sessions`,
+    due.length > 0 && `${due.length} due again`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const all: ListedCard[] = [
+    ...due.map((title) => ({ title: cut(title), tag: "Due" as const })),
+    ...fresh.map((title) => ({ title: cut(title), tag: "New" as const })),
+  ];
+  const cards = all.slice(0, LISTED);
+  const more = all.length > LISTED ? `and ${all.length - LISTED} more` : null;
   const body =
     "Explain each one back in your own words. You get a score and what you missed, and the card comes back on day 1, 3 and 7 until you've got it.";
-  const footer = "You get this because daily reminders are on. Turn them off in Settings";
+  const progress =
+    answered === 0
+      ? "These are your first cards from Session Coach."
+      : `${plural(answered, "card", "cards")} answered so far, ${mastered} mastered.`;
+  const footer = "You get this because daily reminders are on.";
+  const footerLink = "Turn them off in Settings";
   return {
-    subject: `${cards} to review today`,
-    preview: `You have ${cards} due. Explain them back while they're fresh.`,
+    subject: `${plural(total, "card", "cards")} to review today`,
+    preview: `${summary}. Explain them back while they're fresh.`,
     heading,
+    summary,
+    cards,
+    more,
     body,
+    progress,
     cta: "Start today's review",
     reviewUrl,
+    footer,
+    footerLink,
     settingsUrl,
     text: [
       heading,
-      `You have ${cards} due for review today. ${body}`,
+      summary,
+      [...cards.map(({ title, tag }) => `- ${title} (${tag})`), ...(more ? [more] : [])].join("\n"),
+      body,
+      progress,
       `Start today's review: ${reviewUrl}`,
-      `${footer}: ${settingsUrl}`,
+      `${footer} ${footerLink}: ${settingsUrl}`,
     ].join("\n\n"),
   };
 }
 
-/** Builds one learner's email from their due count; the route renders the React Email template here. */
+/** Builds one learner's email; the route renders the React Email template here. */
 export type ComposeDailyReview = (
-  count: number,
+  recipient: Recipient,
 ) => Promise<Pick<OutgoingEmail, "subject" | "text" | "html">>;
 
 /**
  * Emails each recipient once per local day.
  *
- * - Claims the `email_log` row before sending, so a rerun or a crash after the send never sends twice
+ * - Builds the email first, so a template error leaves the day unclaimed and a same-day rerun can still send.
+ * - Then claims the `email_log` row before sending, so a rerun or a crash after the send never sends twice
  *   (docs/rules/error-handling.md). A claimed row whose send failed stays claimed: no retry that day.
  * - One learner's failure is logged with their id only and the loop goes on.
  *
  * @param recipients - From `dailyReviewRecipients`.
- * @param compose - Builds the email for a due count.
+ * @param compose - Builds one recipient's email.
  * @param deps - Database and provider calls.
  * @returns How many were sent, skipped as already sent today, and failed.
  */
@@ -142,16 +233,18 @@ export async function sendDailyReviews(
   deps: DailyReviewDeps,
 ): Promise<DailyReviewResult> {
   const result: DailyReviewResult = { sent: 0, skipped: 0, failed: 0 };
-  for (const { userId, email, today, count } of recipients) {
+  for (const recipient of recipients) {
+    const { userId, email, today } = recipient;
     let resendId: string;
     try {
+      const message = await compose(recipient);
       if (!(await deps.claim(userId, today))) {
         result.skipped++;
         continue;
       }
       resendId = await deps.send({
         to: email,
-        ...(await compose(count)),
+        ...message,
         idempotencyKey: `daily_review/${userId}/${today}`,
       });
       result.sent++;

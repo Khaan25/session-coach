@@ -6,7 +6,7 @@ import { sessionName } from "@/lib/sessions/name";
 import { localDate } from "@/lib/sessions/rows";
 import { createClient } from "@/lib/supabase/server";
 
-import type { Step } from "./schedule";
+import { newCardsSince, type Step } from "./schedule";
 
 // Learner reads through the RLS client: hidden cards and model_answer never come back. The caller passes the signed-in
 // learner's id, so access is decided before the query. The daily email cron, the dashboard banner and the queue share
@@ -81,7 +81,7 @@ const CARD_COLUMNS = "id, decision, session_id, session:sessions(title, repo, br
 export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[]> {
   const supabase = await createClient();
   const today = await learnerToday(supabase, userId, now);
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const weekAgo = newCardsSince(now);
   const [due, recent] = await Promise.all([
     supabase
       .from("reviews")

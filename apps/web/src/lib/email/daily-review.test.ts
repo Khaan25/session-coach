@@ -6,6 +6,7 @@ import {
   dailyReviewCopy,
   type DailyReviewDeps,
   dailyReviewRecipients,
+  type NewCardRow,
   type OutgoingEmail,
   type ProfileRow,
   type ReviewRow,
@@ -22,15 +23,25 @@ const profile = (id: string, timezone = "UTC", notify_email = true): ProfileRow 
   timezone,
   notify_email,
 });
-const review = (user_id: string, due_on: string | null, mastered = false): ReviewRow => ({
+const review = (
+  user_id: string,
+  due_on: string | null,
+  mastered = false,
+  decision = `${user_id} decision due ${due_on}`,
+): ReviewRow => ({ user_id, due_on, mastered, decision });
+const newCard = (
+  user_id: string,
+  created_at: string,
+  decision = `${user_id} new ${created_at}`,
+): NewCardRow => ({
   user_id,
-  due_on,
-  mastered,
+  decision,
+  created_at,
 });
 
 /** The words without the template: the route renders React Email, which node --test can't load. */
-const compose = async (count: number) => {
-  const { subject, text } = dailyReviewCopy(count, site);
+const compose: Parameters<typeof sendDailyReviews>[1] = async (recipient) => {
+  const { subject, text } = dailyReviewCopy(recipient, site);
   return { subject, text, html: `<p>${text}</p>` };
 };
 
@@ -60,6 +71,7 @@ test("nothing due means no recipient and no send", async () => {
   const recipients = dailyReviewRecipients(
     [profile("a"), profile("b")],
     [review("a", "2026-11-02"), review("b", null, true)],
+    [],
     now,
   );
   assert.deepEqual(recipients, []);
@@ -82,10 +94,20 @@ test("counts due and overdue cards, not mastered or future ones", () => {
       review("a", null, true),
       review("other", "2026-10-31"),
     ],
+    [],
     now,
   );
   assert.deepEqual(recipients, [
-    { userId: "a", email: "a@example.test", today: "2026-10-31", count: 2 },
+    {
+      userId: "a",
+      email: "a@example.test",
+      today: "2026-10-31",
+      // Oldest due first.
+      due: ["a decision due 2026-10-20", "a decision due 2026-10-31"],
+      fresh: [],
+      answered: 4,
+      mastered: 1,
+    },
   ]);
 });
 
@@ -93,7 +115,7 @@ test("notify_email = false and a missing address are skipped", () => {
   const off = profile("off", "UTC", false);
   const noEmail = { ...profile("none"), email: null };
   const reviews = [review("off", "2026-10-31"), review("none", "2026-10-31")];
-  assert.deepEqual(dailyReviewRecipients([off, noEmail], reviews, now), []);
+  assert.deepEqual(dailyReviewRecipients([off, noEmail], reviews, [], now), []);
 });
 
 test("due today is evaluated in the learner's time zone", () => {
@@ -101,6 +123,7 @@ test("due today is evaluated in the learner's time zone", () => {
   const recipients = dailyReviewRecipients(
     [profile("karachi", "Asia/Karachi"), profile("bogota", "America/Bogota")],
     reviews,
+    [],
     now,
   );
   // Due Nov 1: Karachi is past midnight, Bogotá is not.
@@ -111,7 +134,7 @@ test("due today is evaluated in the learner's time zone", () => {
 });
 
 test("a rerun the same day sends nothing twice", async () => {
-  const recipients = dailyReviewRecipients([profile("a")], [review("a", "2026-10-31")], now);
+  const recipients = dailyReviewRecipients([profile("a")], [review("a", "2026-10-31")], [], now);
   const { deps, log, outbox } = fakeDeps();
   assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 1,
@@ -133,6 +156,7 @@ test("one learner's failure doesn't stop the others", async (t) => {
   const recipients = dailyReviewRecipients(
     [profile("a"), profile("b"), profile("c")],
     ["a", "b", "c"].map((id) => review(id, "2026-10-31")),
+    [],
     now,
   );
   const { deps, log, outbox } = fakeDeps();
@@ -155,17 +179,92 @@ test("one learner's failure doesn't stop the others", async (t) => {
   assert.equal(log.get("b/2026-10-31"), null);
 });
 
-test("the email has the count, the review link and how to turn it off", () => {
-  const copy = dailyReviewCopy(3, site);
-  assert.equal(copy.subject, "3 cards to review today");
-  assert.equal(copy.heading, "3 decisions to explain today");
-  assert.equal(dailyReviewCopy(1, site).subject, "1 card to review today");
-  assert.equal(dailyReviewCopy(1, site).heading, "1 decision to explain today");
+test("new cards from the last 7 days count, older ones stop", () => {
+  const recipients = dailyReviewRecipients(
+    [profile("a"), profile("old")],
+    [],
+    [
+      newCard("a", "2026-10-30T10:00:00Z"),
+      newCard("a", "2026-10-25T10:00:00Z"),
+      // 8 days before `now`: past the window, so ignored reminders end.
+      newCard("old", "2026-10-23T20:00:00Z"),
+    ],
+    now,
+  );
+  assert.deepEqual(recipients, [
+    {
+      userId: "a",
+      email: "a@example.test",
+      today: "2026-10-31",
+      due: [],
+      fresh: ["a new 2026-10-25T10:00:00Z", "a new 2026-10-30T10:00:00Z"],
+      answered: 0,
+      mastered: 0,
+    },
+  ]);
+});
+
+test("the email says what's new and due, lists 3, and links review and settings", () => {
+  const copy = dailyReviewCopy(
+    {
+      due: ["Due one", "Due two"],
+      fresh: ["New one", "New two", "New three"],
+      answered: 18,
+      mastered: 6,
+    },
+    site,
+  );
+  assert.equal(copy.subject, "5 cards to review today");
+  assert.equal(copy.heading, "5 decisions to explain today");
+  assert.equal(copy.summary, "3 new from your sessions · 2 due again");
+  assert.deepEqual(copy.cards, [
+    { title: "Due one", tag: "Due" },
+    { title: "Due two", tag: "Due" },
+    { title: "New one", tag: "New" },
+  ]);
+  assert.equal(copy.more, "and 2 more");
+  assert.equal(copy.progress, "18 cards answered so far, 6 mastered.");
   assert.equal(copy.reviewUrl, `${site}/review`);
   assert.equal(copy.settingsUrl, `${site}/settings`);
-  assert.match(copy.text, /3 cards due/);
-  assert.ok(copy.text.includes(`${site}/review`));
-  assert.ok(copy.text.includes(`${site}/settings`));
+  for (const line of ["- Due one (Due)", "and 2 more", `${site}/review`, `${site}/settings`]) {
+    assert.ok(copy.text.includes(line), line);
+  }
+});
+
+test("one new card on a first session reads in the singular, with a first-time line", () => {
+  const copy = dailyReviewCopy(
+    { due: [], fresh: ["x".repeat(120)], answered: 0, mastered: 0 },
+    site,
+  );
+  assert.equal(copy.subject, "1 card to review today");
+  assert.equal(copy.heading, "1 decision to explain today");
+  assert.equal(copy.summary, "1 new from your sessions");
+  assert.equal(copy.more, null);
+  assert.match(copy.progress, /first cards/);
+  // Long decisions are cut for the list.
+  assert.equal(copy.cards[0].title.length, 90);
+  assert.ok(copy.cards[0].title.endsWith("…"));
+});
+
+test("a template error leaves the day unclaimed, so a rerun can still send", async (t) => {
+  t.mock.method(console, "error", () => {});
+  const recipients = dailyReviewRecipients([profile("a")], [review("a", "2026-10-31")], [], now);
+  const { deps, log, outbox } = fakeDeps();
+  const broken: typeof compose = async () => {
+    throw new Error("render failed");
+  };
+  assert.deepEqual(await sendDailyReviews(recipients, broken, deps), {
+    sent: 0,
+    skipped: 0,
+    failed: 1,
+  });
+  assert.equal(log.has("a/2026-10-31"), false);
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
+    sent: 1,
+    skipped: 0,
+    failed: 0,
+  });
+  assert.equal(outbox.length, 1);
 });
 test("cron auth needs the exact bearer secret", () => {
   assert.equal(cronAuthorized("Bearer s3cret", "s3cret"), true);

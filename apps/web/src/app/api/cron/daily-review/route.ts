@@ -10,12 +10,13 @@ import { composeDailyReview } from "@/emails/daily-review-email";
 import {
   cronAuthorized,
   dailyReviewRecipients,
+  type NewCardRow,
   type ProfileRow,
   resendSender,
   type ReviewRow,
   sendDailyReviews,
 } from "@/lib/email/daily-review";
-import { localDate } from "@/lib/sessions/rows";
+import { newCardsSince } from "@/lib/review/schedule";
 import { siteUrl } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
@@ -30,8 +31,8 @@ const DEFAULT_FROM = "Session Coach <noreply@coach.ziaa.me>";
  *
  * - Checks the cron secret before anything else, and the Resend key before claiming any `email_log` row, so a
  *   misconfigured deploy doesn't use up the day's claims.
- * - Reads learners with reminders on and their unmastered reviews due by the latest "today" of any time zone; the
- *   per-learner date rule is `dailyReviewRecipients`.
+ * - Reads learners with reminders on, every answered card (for due, answered and mastered) and the visible cards
+ *   from the last week never answered; who gets what is `dailyReviewRecipients`.
  *
  * @param request - Vercel Cron's request.
  */
@@ -59,27 +60,51 @@ export async function GET(request: Request) {
         .order("id")
         .range(from, to),
     );
-    // No learner's today is later than the latest one, so every card due for anyone comes back.
-    const latest = profiles
-      .map(({ timezone }) => localDate(timezone, now))
-      .sort()
-      .at(-1);
-    const reviews = latest
-      ? await fetchAll<ReviewRow>((from, to) =>
-          admin
-            .from("reviews")
-            .select("user_id, due_on, mastered")
-            .eq("mastered", false)
-            .lte("due_on", latest)
-            .order("card_id")
-            .range(from, to),
-        )
-      : [];
-    const recipients = dailyReviewRecipients(profiles, reviews, now);
+    // The admin client skips RLS, so hidden cards (no verified quote) are filtered here, never shown or counted.
+    const [answered, unanswered] = await Promise.all([
+      fetchAll<{
+        user_id: string;
+        due_on: string | null;
+        mastered: boolean;
+        card: { decision: string; hidden: boolean } | null;
+      }>((from, to) =>
+        admin
+          .from("reviews")
+          .select("user_id, due_on, mastered, card:decision_cards(decision, hidden)")
+          .order("card_id")
+          .range(from, to)
+          .overrideTypes<
+            {
+              user_id: string;
+              due_on: string | null;
+              mastered: boolean;
+              card: { decision: string; hidden: boolean } | null;
+            }[],
+            { merge: false }
+          >(),
+      ),
+      fetchAll<NewCardRow & { reviews: unknown }>((from, to) =>
+        admin
+          .from("decision_cards")
+          .select("user_id, decision, created_at, reviews(card_id)")
+          .eq("hidden", false)
+          .gte("created_at", newCardsSince(now))
+          .order("id")
+          .range(from, to),
+      ),
+    ]);
+    const reviews: ReviewRow[] = answered.flatMap(({ card, ...review }) =>
+      card && !card.hidden ? [{ ...review, decision: card.decision }] : [],
+    );
+    // reviews(card_id) is one-to-one (card_id is its primary key): null or [] means never answered.
+    const newCards: NewCardRow[] = unanswered
+      .filter(({ reviews }) => reviews === null || (Array.isArray(reviews) && reviews.length === 0))
+      .map(({ user_id, decision, created_at }) => ({ user_id, decision, created_at }));
+    const recipients = dailyReviewRecipients(profiles, reviews, newCards, now);
 
     const result = await sendDailyReviews(
       recipients,
-      (count) => composeDailyReview(count, siteUrl),
+      (recipient) => composeDailyReview(recipient, siteUrl),
       {
         async claim(userId, sentOn) {
           const { error } = await admin
