@@ -28,7 +28,13 @@ folder, so it can be removed without touching learner features.
 
 ## Add a member
 
-Zia and Kasam are added by the migration. Anyone else, in the Supabase SQL editor:
+Zia and Kasam are added by the migration, but only if their profiles exist when it runs. After applying it, check:
+
+```sql
+select p.email from public.tracker_members m join public.profiles p on p.id = m.user_id;
+```
+
+It should list both. Anyone missing (or anyone else), in the Supabase SQL editor:
 
 ```sql
 insert into public.tracker_members (user_id) select id from public.profiles where email = '<email>';
@@ -38,10 +44,10 @@ Tasks are added and edited in the SQL editor too; the page only ticks and untick
 
 ## Remove the tracker
 
-1. Delete this folder and `apps/web/src/app/(app)/tracker/`.
-2. Remove `"/tracker"` from `PROTECTED` in `apps/web/src/lib/supabase/proxy.ts`, and the tracker section from
+1. Copy `remove.sql` into a new migration (`supabase migration new remove_tracker`). Don't delete
+   `20261101000000_tracker.sql`: it has already run in production.
+2. Delete this folder and `apps/web/src/app/(app)/tracker/`.
+3. Remove `"/tracker"` from `PROTECTED` in `apps/web/src/lib/supabase/proxy.ts`, and the tracker section from
    `docs/DATA_MODEL.md`.
-3. `pnpm --filter web remove react-markdown remark-gfm`
-4. Add a new migration with the contents of `remove.sql`. Don't delete `20261101000000_tracker.sql`: it has already run
-   in production.
+4. `pnpm --filter web remove react-markdown remark-gfm`
 5. `pnpm typecheck && pnpm lint && pnpm test`

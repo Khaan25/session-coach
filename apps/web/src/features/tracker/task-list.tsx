@@ -36,7 +36,7 @@ export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: st
       ),
   );
   const [, startTransition] = useTransition();
-  // Tasks with a save in flight: their box is disabled, so two quick clicks can't race and save the wrong state.
+  // Tasks with a save in flight: their box is read-only, so two quick clicks can't race and save the wrong state.
   const [saving, setSaving] = useState<ReadonlySet<string>>(new Set());
 
   function toggle(id: string, done: boolean) {
@@ -132,7 +132,8 @@ function TaskRow({
     <li className="flex items-start gap-3 py-1">
       <Checkbox
         checked={done}
-        disabled={saving}
+        // Read-only, not disabled, while saving: the box keeps its look and keyboard focus; toggle ignores the click.
+        readOnly={saving}
         onCheckedChange={(checked) => onToggle(task.id, checked)}
         aria-label={`${task.title}: done`}
         className="mt-2.5"
