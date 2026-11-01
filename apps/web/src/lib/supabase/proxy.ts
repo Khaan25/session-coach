@@ -5,7 +5,7 @@ import { safeNext } from "@/lib/auth/safe-next";
 import { supabaseEnv } from "@/lib/supabase/env";
 
 // Signed-out visitors to these go to /login?next=… . A prefix match on whole path segments.
-const PROTECTED = ["/dashboard", "/s", "/review", "/progress", "/settings", "/setup"];
+const PROTECTED = ["/dashboard", "/s", "/review", "/progress", "/settings", "/setup", "/tracker"];
 // Signed-in visitors to these go on to where they were headed.
 const SIGNED_OUT_ONLY = ["/login", "/sign-up"];
 

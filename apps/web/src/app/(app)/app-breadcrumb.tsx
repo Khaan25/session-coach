@@ -16,8 +16,10 @@ import {
 export function AppBreadcrumb() {
   const pathname = usePathname();
   const page = navMain.find((item) => pathname.startsWith(item.url));
-  // Session pages aren't in the main nav, so they get their own crumb.
-  const title = page?.title ?? (pathname.startsWith("/s/") ? "Session" : undefined);
+  // Session pages and the team-only tracker aren't in the main nav, so they get their own crumb.
+  const title =
+    page?.title ??
+    (pathname.startsWith("/s/") ? "Session" : pathname === "/tracker" ? "Tracker" : undefined);
   return (
     <Breadcrumb>
       <BreadcrumbList>
