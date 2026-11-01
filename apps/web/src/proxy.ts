@@ -15,7 +15,8 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Everything except Next's assets, the Play Stats API (bearer key, no session) and files with a listed static extension.
-    "/((?!_next/static|_next/image|api/dashboard|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)",
+    // Everything except Next's assets, the Play Stats API and crons (bearer key, no session) and files with a listed
+    // static extension.
+    "/((?!_next/static|_next/image|api/dashboard|api/cron|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)",
   ],
 };

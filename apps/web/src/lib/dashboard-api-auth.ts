@@ -1,5 +1,6 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
+
+import { constantTimeEqual } from "@/lib/auth/constant-time";
 
 /**
  * Guard for the Play Stats API (/api/dashboard/v1/*), adapted from 8xsocial/template-monorepo (MIT).
@@ -25,17 +26,4 @@ export function requireDashboardKey(req: NextRequest): NextResponse | null {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return null;
-}
-
-/**
- * Compares two secrets without leaking, through timing, how many leading characters match or how long the key is.
- * Both sides are hashed first so timingSafeEqual always compares two 32-byte digests.
- *
- * @param a - The key the caller sent.
- * @param b - The key this deployment expects.
- * @returns Whether they are equal.
- */
-function constantTimeEqual(a: string, b: string): boolean {
-  const digest = (value: string) => createHash("sha256").update(value).digest();
-  return timingSafeEqual(digest(a), digest(b));
 }

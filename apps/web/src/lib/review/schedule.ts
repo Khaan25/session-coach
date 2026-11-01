@@ -12,6 +12,14 @@ export type ReviewState = { step: Step; due_on: string | null; mastered: boolean
 /** Days until the next review, by the step just passed: 0 to day 1, 1 to day 3, 2 to day 7. */
 const GAP_DAYS = [1, 3, 7] as const;
 
+/**
+ * "Due today": not mastered and `due_on` on or before the learner's today (`localDate` in their `profiles.timezone`).
+ * The queue and dashboard count filter on the same thing in SQL (`lib/review/queries.ts`); the daily email uses this.
+ */
+export function isDue(review: Pick<ReviewState, "due_on" | "mastered">, today: string): boolean {
+  return !review.mastered && review.due_on !== null && review.due_on <= today;
+}
+
 /** A YYYY-MM-DD date plus whole days, in calendar days (no time zone or DST drift). */
 export function addDays(date: string, days: number): string {
   const d = new Date(`${date}T00:00:00Z`);
