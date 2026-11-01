@@ -2,7 +2,7 @@
 // Run it with `pnpm --filter web extract:session <session-log.jsonl>`; the script loads .env.local itself.
 import { readFileSync } from "node:fs";
 import { callModel } from "../model/call-model.ts";
-import { checkEvidence, isGrounded } from "./evidence.ts";
+import { checkEvidence, checkQuotes, isGrounded } from "./evidence.ts";
 import { extractCards } from "./extract.ts";
 import { parseSession } from "./parser.ts";
 
@@ -23,9 +23,6 @@ try {
 const { events } = parseSession(raw);
 console.log(`${events.length} events parsed; asking the model...\n`);
 
-// Same whitespace rule as `checkEvidence`, so a dropped draft's ✓/✗ matches what a kept card would show.
-const squash = (text: string) => text.replace(/\s+/g, " ").trim();
-
 const drafts = await extractCards(events, callModel);
 const cards = checkEvidence(drafts, events);
 
@@ -43,9 +40,7 @@ for (const card of cards) {
 
 for (const draft of drafts.filter((d) => !isGrounded(d, events))) {
   console.log(`DROPPED: ${draft.decision} — no grounded quote (prompt, reply or DECISIONS.md)`);
-  for (const { event_index, quote } of draft.evidence) {
-    const event = events[event_index - 1];
-    const verified = event !== undefined && squash(event.text).includes(squash(quote));
+  for (const { event_index, quote, event, verified } of checkQuotes(draft, events)) {
     console.log(
       `  ${verified ? "✓" : "✗"} E${event_index} ${event?.kind ?? "no such event"}: "${quote}"`,
     );

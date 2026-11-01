@@ -18,11 +18,23 @@ function fileOf(event: TimelineEvent | undefined): string | null {
 
 const isDecisionsFile = (file: string | null) => file?.split("/").at(-1) === "DECISIONS.md";
 
-/** The checked quotes of one draft: each cited event, whether the quote is in it, and the file it wrote. */
-function checkQuotes(draft: ExtractedCard, events: readonly TimelineEvent[]) {
+/** The fewest words a quote needs to count as verified; the prompt asks for 5 to 30. */
+const MIN_QUOTE_WORDS = 5;
+
+const wordCount = (text: string) => (text === "" ? 0 : text.split(" ").length);
+
+/**
+ * The checked quotes of one draft: each cited event, whether the quote is verified (in the event and at least
+ * `MIN_QUOTE_WORDS` words once whitespace is collapsed), and the file it wrote.
+ */
+export function checkQuotes(draft: ExtractedCard, events: readonly TimelineEvent[]) {
   return draft.evidence.map(({ event_index, quote }) => {
     const event = events[event_index - 1];
-    const verified = event !== undefined && squash(event.text).includes(squash(quote));
+    const squashed = squash(quote);
+    const verified =
+      event !== undefined &&
+      wordCount(squashed) >= MIN_QUOTE_WORDS &&
+      squash(event.text).includes(squashed);
     return { event_index, quote, file: fileOf(event), lines: null, verified, event };
   });
 }
@@ -35,8 +47,8 @@ const isGroundedQuote = ({ verified, event, file }: CheckedQuote) =>
   (event.kind === "prompt" || event.kind === "reply" || isDecisionsFile(file));
 
 /**
- * Whether a draft has a verified quote from a prompt, a reply, or a write or edit of a DECISIONS.md file. Quotes from
- * other writes, shell commands or reads show what the agent did, not why.
+ * Whether a draft has a verified quote (at least `MIN_QUOTE_WORDS` words) from a prompt, a reply, or a write or edit of
+ * a DECISIONS.md file. Quotes from other writes, shell commands or reads show what the agent did, not why.
  *
  * @param draft - A card from `extractCards`.
  * @param events - The same timeline the model saw; `event_index` is a 1-based position in it.
