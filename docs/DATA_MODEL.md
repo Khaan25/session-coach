@@ -7,6 +7,9 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
 - [`20261028000000_init.sql`](../supabase/migrations/20261028000000_init.sql): every table, RLS, the bucket, Realtime.
 - [`20261029000000_auth_profiles.sql`](../supabase/migrations/20261029000000_auth_profiles.sql): provider-neutral
   profiles (`display_name`, `avatar_url`) and the email sync trigger.
+- [`20261101000000_tracker.sql`](../supabase/migrations/20261101000000_tracker.sql) and
+  [`20261102000000_tracker_edit.sql`](../supabase/migrations/20261102000000_tracker_edit.sql): the team's `/tracker`
+  (see [`tracker_members` and `tracker_tasks`](#tracker_members-and-tracker_tasks)).
 
 ## The one rule
 
@@ -225,13 +228,14 @@ in [apps/web/src/features/tracker/README.md](../apps/web/src/features/tracker/RE
 - `is_tracker_member()`: `security definer`, `search_path = ''`, executable by `authenticated` only. Both policies on
   `tracker_tasks` call it.
 - **Policies:** members select and update every task; the grant allows only `done_at`, `title` and `details`.
-- **`tracker_tasks_done_by` trigger:** sets `done_by` to the caller when `done_at` changes, clears it on untick, and
-  keeps it otherwise, so an edit never renames who ticked a task and nobody can tick in someone else's name.
-- **Check:** `details` is null or not blank.
+- **`tracker_tasks_done_by` trigger:** clears `done_by` when unticked, sets it to the caller when `done_at` changes,
+  and keeps it otherwise, so an edit never renames who ticked a task and nobody can tick in someone else's name.
+- **Check:** `details` is null or has a non-whitespace character.
 
 ## Triggers
 
-Both are `security definer` with `search_path = ''`, so they run with the owner's rights (they write `profiles`, which
+The tracker's `tracker_tasks_done_by` is described with [its table](#tracker_members-and-tracker_tasks). The learner
+triggers are these two. Both are `security definer` with `search_path = ''`, so they run with the owner's rights (they write `profiles`, which
 the inserting role can't) and can't be hijacked by an object a caller puts earlier on the search path.
 
 - **`handle_new_user`** (`after insert on auth.users`): inserts the profile. `display_name` takes the first non-blank

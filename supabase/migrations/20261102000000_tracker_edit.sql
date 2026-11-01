@@ -6,8 +6,11 @@
 create function public.tracker_tasks_done_by() returns trigger
 language plpgsql set search_path = '' as $$
 begin
-  if new.done_at is distinct from old.done_at then
-    new.done_by := case when new.done_at is null then null else (select auth.uid()) end;
+  -- Unticked always means no done_by, even on a row an older policy left with one.
+  if new.done_at is null then
+    new.done_by := null;
+  elsif new.done_at is distinct from old.done_at then
+    new.done_by := (select auth.uid());
   else
     new.done_by := old.done_by;
   end if;
@@ -27,6 +30,6 @@ create policy "members edit tasks" on public.tracker_tasks for update to authent
 revoke update on public.tracker_tasks from anon, authenticated;
 grant update (done_at, title, details) on public.tracker_tasks to authenticated;
 
--- An emptied details box saves null, never "": the page shows no caret for a task without details.
+-- An emptied details box saves null, never blank text. \S, not btrim(), so newlines and tabs alone count as blank too.
 alter table public.tracker_tasks
-  add constraint tracker_tasks_details_not_blank check (details is null or btrim(details) <> '');
+  add constraint tracker_tasks_details_not_blank check (details is null or details ~ '\S');

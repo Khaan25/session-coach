@@ -16,8 +16,9 @@ const editSchema = z
     title: z.string().trim().min(1).max(300).optional(),
     details: z
       .string()
+      .trim()
       .max(20_000)
-      .transform((value) => value.trim() || null)
+      .transform((value) => value || null)
       .optional(),
   })
   .refine((edit) => edit.title !== undefined || edit.details !== undefined);

@@ -2,6 +2,7 @@
 
 import { useOptimistic, useRef, useState, useTransition } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Markdown } from "@/features/tracker/markdown";
 import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
@@ -43,20 +44,38 @@ export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: st
   // Tasks with a save in flight: their box is read-only, so two quick clicks can't race and save the wrong state.
   const [saving, setSaving] = useState<ReadonlySet<string>>(new Set());
 
-  /** Shows the change at once, saves it, and puts it back (with a toast) if the save fails. */
-  function save(id: string, patch: Patch, call: () => Promise<{ error: string | null }>) {
-    if (saving.has(id)) return;
+  /**
+   * Shows the change at once, saves it, and puts it back (with a toast) if the save fails. `restore` reopens an edit
+   * with the typed text when it couldn't be saved, so nothing typed is lost.
+   */
+  function save(
+    id: string,
+    patch: Patch,
+    call: () => Promise<{ error: string | null }>,
+    restore?: () => void,
+  ) {
+    if (saving.has(id)) {
+      if (restore) {
+        toast.add({ title: "This task is still saving. Try again in a moment.", type: "error" });
+        restore();
+      }
+      return;
+    }
     setSaving((current) => new Set(current).add(id));
     startTransition(async () => {
       setOptimistic({ id, patch });
       try {
         const { error } = await call();
-        if (error) toast.add({ title: error, type: "error" });
+        if (error) {
+          toast.add({ title: error, type: "error" });
+          restore?.();
+        }
       } catch {
         toast.add({
           title: "That task couldn't be updated. Check your connection.",
           type: "error",
         });
+        restore?.();
       } finally {
         setSaving((current) => {
           const next = new Set(current);
@@ -71,10 +90,10 @@ export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: st
     save(id, { done_at: done ? new Date().toISOString() : null }, () => setTaskDone({ id, done }));
   }
 
-  function edit(task: TrackerTask, field: EditField, value: string) {
+  function edit(task: TrackerTask, field: EditField, value: string, restore: () => void) {
     const next = field === "title" ? value.trim() : value.trim() || null;
     if (next === (task[field] ?? null) || (field === "title" && !next)) return;
-    save(task.id, { [field]: next }, () => editTask({ id: task.id, [field]: value }));
+    save(task.id, { [field]: next }, () => editTask({ id: task.id, [field]: value }), restore);
   }
 
   const sections = Map.groupBy(optimistic, (t) => t.section);
@@ -99,7 +118,8 @@ export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: st
           </ProgressLabel>
         </Progress>
         <p className="type-label-sm text-text-3">
-          Double-click a title or its notes to edit. Click outside to save, Esc to cancel.
+          Double-click a title or its notes to edit, or use Edit in an open task. Click outside to
+          save, Esc to cancel.
         </p>
       </div>
       {[...sections].map(([section, items]) => (
@@ -136,9 +156,25 @@ function TaskRow({
   task: TrackerTask;
   saving: boolean;
   onToggle: (id: string, done: boolean) => void;
-  onEdit: (task: TrackerTask, field: EditField, value: string) => void;
+  onEdit: (task: TrackerTask, field: EditField, value: string, restore: () => void) => void;
 }) {
   const [editing, setEditing] = useState<EditField | null>(null);
+  // The text of an edit that couldn't be saved, shown again in the reopened box.
+  const [draft, setDraft] = useState<string | null>(null);
+  // A task without notes starts open, so its "double-click to add" line is in view. Read once: Collapsible's
+  // defaultOpen must not change after the first render, and adding notes would change it.
+  const [startOpen] = useState(!task.details);
+
+  function finish(field: EditField, value: string | null) {
+    setEditing(null);
+    setDraft(null);
+    if (value === null) return;
+    onEdit(task, field, value, () => {
+      setDraft(value);
+      setEditing(field);
+    });
+  }
+
   const done = Boolean(task.done_at);
   const owner = task.owner ? owners[task.owner] : null;
   const label = (
@@ -174,16 +210,13 @@ function TaskRow({
         aria-label={`${task.title}: done`}
         className="mt-2.5"
       />
-      <Collapsible className="min-w-0 flex-1">
+      <Collapsible className="min-w-0 flex-1" defaultOpen={startOpen}>
         {editing === "title" ? (
           <EditBox
             multiline={false}
-            initial={task.title}
+            initial={draft ?? task.title}
             label={`Title of ${task.title}`}
-            onDone={(value) => {
-              setEditing(null);
-              if (value !== null) onEdit(task, "title", value);
-            }}
+            onDone={(value) => finish("title", value)}
           />
         ) : (
           <CollapsibleRow className="w-full">{label}</CollapsibleRow>
@@ -193,12 +226,9 @@ function TaskRow({
             <div className="ms-7 mb-3">
               <EditBox
                 multiline
-                initial={task.details?.trim() ?? ""}
+                initial={draft ?? task.details?.trim() ?? ""}
                 label={`Details of ${task.title}, in Markdown`}
-                onDone={(value) => {
-                  setEditing(null);
-                  if (value !== null) onEdit(task, "details", value);
-                }}
+                onDone={(value) => finish("details", value)}
               />
             </div>
           ) : (
@@ -206,7 +236,7 @@ function TaskRow({
               markdown={task.details}
               copyLabel={`details of ${task.title}`}
               copyValue={asMarkdown(task)}
-              onEdit={() => setEditing("details")}
+              onEdit={setEditing}
             />
           )}
         </CollapsibleContent>
@@ -223,7 +253,7 @@ function asMarkdown(task: TrackerTask) {
 
 /**
  * Expanded notes: rendered Markdown with a copy button that copies the source. With `onEdit`, a double-click on the
- * notes opens them for editing, and an empty task offers to add some.
+ * notes opens them for editing, an empty task offers to add some, and Edit buttons do the same from the keyboard.
  */
 function Details({
   markdown,
@@ -234,7 +264,7 @@ function Details({
   markdown: string | null;
   copyLabel: string;
   copyValue: string;
-  onEdit?: () => void;
+  onEdit?: (field: EditField) => void;
 }) {
   return (
     <div className="relative ms-7 mb-3 pe-10">
@@ -247,14 +277,27 @@ function Details({
           className="absolute end-0 top-2"
         />
       )}
-      {/* Double-click is a shortcut for the mouse; it stays out of the tab order, like selecting text. */}
-      <div onDoubleClick={onEdit} title={onEdit ? "Double-click to edit" : undefined}>
+      {/* Double-click is the mouse shortcut; the Edit buttons below are the keyboard way in. */}
+      <div
+        onDoubleClick={onEdit && (() => onEdit("details"))}
+        title={onEdit ? "Double-click to edit" : undefined}
+      >
         {markdown ? (
           <Markdown>{markdown.trim()}</Markdown>
         ) : (
           <p className="my-3 type-body text-text-3">No notes yet. Double-click to add some.</p>
         )}
       </div>
+      {onEdit && (
+        <div className="flex gap-1">
+          <Button variant="ghost" size="xs" onClick={() => onEdit("title")}>
+            Edit title
+          </Button>
+          <Button variant="ghost" size="xs" onClick={() => onEdit("details")}>
+            Edit notes
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
