@@ -23,14 +23,12 @@ class EmptyLogError extends Error {
 function learnerMessage(error: unknown): string {
   if (error instanceof EmptyLogError) return "We couldn't find a conversation in this log.";
   if (error instanceof LogReadError) return "We couldn't read this session's log.";
-  if (error instanceof ModelConfigError)
-    return "Cards aren't set up on our side yet. Try again later.";
+  if (error instanceof ModelConfigError) return "Cards aren't set up on our side yet.";
   if (error instanceof ExtractError) {
-    return "The model's answer didn't fit twice, so no cards were made. Try again.";
+    return "The model's answer didn't fit twice, so no cards were made.";
   }
-  if (error instanceof ModelCallError)
-    return "The model didn't answer. Try again in a few minutes.";
-  return "Something went wrong while making your cards. Try again.";
+  if (error instanceof ModelCallError) return "The model didn't answer.";
+  return "Something went wrong while making your cards.";
 }
 
 /**
@@ -75,6 +73,13 @@ export async function processSession(sessionId: string): Promise<void> {
     const drafts = await extractCards(timeline, callModel);
     const cards = checkEvidence(drafts, timeline);
     const rows = buildCardRows(cards, sessionId, session.user_id);
+
+    // Clear earlier cards for this session so a re-run can't hit the (session_id, position) unique constraint.
+    const { error: deleteError } = await admin
+      .from("decision_cards")
+      .delete()
+      .eq("session_id", sessionId);
+    if (deleteError) throw deleteError;
 
     // Cards first, `ready` second: a failure in between leaves `failed`, never a ready session with no cards.
     if (rows.length > 0) {
