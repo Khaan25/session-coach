@@ -84,8 +84,8 @@ async function SessionDetail({ params }: Pick<PageProps<"/s/[id]">, "params">) {
       ) : cards.length === 0 ? (
         // Extraction drops every card it can't back with an exact quote, so a ready session can end with none.
         <EmptyState
-          title="No decisions found"
-          description="None of this session's choices could be traced to something you or the agent wrote, so no cards were made. Sessions where you talk through options give the most cards."
+          title="No cards to show"
+          description="This session has no cards available to review. Sessions where you talk through options give the most cards."
         />
       ) : (
         <div className="flex flex-col gap-6">
