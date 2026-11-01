@@ -110,7 +110,9 @@ deploy, then `supabase db push`. Between those two steps only the Play Stats ros
 1. Auth → Providers → Google: enable, paste the client ID and secret.
 2. URL Configuration: Site URL = production; redirect URLs = production paths, `http://localhost:3000/**`, the Vercel preview wildcard.
 3. Email: Confirm email on, Secure email change on, minimum password length 10 + character requirements.
-4. Email Templates: Confirm signup, Reset password and Change email use the `token_hash` links above.
+4. Email Templates: Confirm signup, Reset password and Change email use the `token_hash` links above. Confirm signup,
+   Reset password and the Password changed notification are designed in `apps/web/src/emails/auth` and exported to
+   `supabase/templates` with `pnpm --filter web emails:export`; paste that HTML into the dashboard (or the Management API).
 5. SMTP: custom provider, then raise the email rate limit.
 6. JWT: move to asymmetric signing keys so `getClaims()` verifies locally.
 

@@ -251,6 +251,8 @@ otp_expiry = 3600
 # sender_name = "Admin"
 
 # token_hash links to /auth/confirm, as the hosted project's templates use (docs/plans/auth.md, "Flows").
+# The HTML is exported from apps/web/src/emails/auth by `pnpm --filter web emails:export`; edit the .tsx, not the
+# .html. The export replaces everything in supabase/templates.
 [auth.email.template.confirmation]
 subject = "Confirm your Session Coach account"
 content_path = "./supabase/templates/confirmation.html"
@@ -264,11 +266,10 @@ content_path = "./supabase/templates/recovery.html"
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
-# Uncomment to customize notification email template
-# [auth.email.notification.password_changed]
-# enabled = true
-# subject = "Your password has been changed"
-# content_path = "./supabase/templates/password_changed_notification.html"
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Your Session Coach password was changed"
+content_path = "./supabase/templates/password-changed.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.

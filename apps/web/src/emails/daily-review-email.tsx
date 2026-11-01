@@ -22,28 +22,15 @@ import {
   type Recipient,
 } from "@/lib/email/daily-review";
 
+import { color, font } from "./brand";
+
 // The daily review reminder in the app's look: icy paper, navy-graphite ink, Geist, the watercolour card stack.
-// Email clients don't read CSS variables or oklch, so the design tokens are copied here as hex (light theme,
-// from styles/tokens.css; the alpha text steps are flattened onto paper). Keep them in step with the tokens.
-const color = {
-  canvas: "#fbfcfd", // --surface-canvas
-  paper: "#fdfeff", // --paper
-  ink: "#101621", // --ink, --text-1
-  text2: "#3f444d", // --text-2 on paper
-  text3: "#61656c", // --text-3 on paper
-  line: "#eaecee", // --line-row on paper
-  well: "#eff1f3", // --surface-card
-  dueTint: "#c2defb", // --hue-3-tint
-  dueLabel: "#274562", // --hue-3-label
-  newTint: "#bfe6d0", // --hue-5-tint
-  newLabel: "#204c37", // --hue-5-label
-};
+
 /** New cards in the model green, due-again ones in the run blue: the two kind tints the app already uses. */
 const tagColor: Record<ListedCard["tag"], { background: string; foreground: string }> = {
   New: { background: color.newTint, foreground: color.newLabel },
   Due: { background: color.dueTint, foreground: color.dueLabel },
 };
-const font = 'Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif';
 
 /**
  * The reminder email. Every word comes from `dailyReviewCopy`, so the plain-text part says the same thing.
