@@ -25,6 +25,16 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 const UNIQUE_VIOLATION = "23505";
 const KIND = "daily_review";
 const DEFAULT_FROM = "Session Coach <noreply@coach.ziaa.me>";
+/** Learner ids per `in (...)` filter. */
+const ID_CHUNK = 100;
+
+/** A `reviews` row with its card, before hidden cards are dropped. */
+type AnsweredRow = {
+  user_id: string;
+  due_on: string | null;
+  mastered: boolean;
+  card: { decision: string; hidden: boolean } | null;
+};
 
 /**
  * Sends today's review reminders.
@@ -60,39 +70,40 @@ export async function GET(request: Request) {
         .order("id")
         .range(from, to),
     );
-    // The admin client skips RLS, so hidden cards (no verified quote) are filtered here, never shown or counted.
-    const [answered, unanswered] = await Promise.all([
-      fetchAll<{
-        user_id: string;
-        due_on: string | null;
-        mastered: boolean;
-        card: { decision: string; hidden: boolean } | null;
-      }>((from, to) =>
-        admin
-          .from("reviews")
-          .select("user_id, due_on, mastered, card:decision_cards(decision, hidden)")
-          .order("card_id")
-          .range(from, to)
-          .overrideTypes<
-            {
-              user_id: string;
-              due_on: string | null;
-              mastered: boolean;
-              card: { decision: string; hidden: boolean } | null;
-            }[],
-            { merge: false }
-          >(),
+    // Only learners with reminders on, read in chunks of ids so each request's URL stays short. The admin client skips
+    // RLS, so hidden cards (no verified quote) are filtered here, never shown or counted.
+    // shortcut: answered and mastered are counted from these rows; count them in SQL once learners number thousands.
+    const ids = profiles.map(({ id }) => id);
+    const chunks = Array.from({ length: Math.ceil(ids.length / ID_CHUNK) }, (_, i) =>
+      ids.slice(i * ID_CHUNK, (i + 1) * ID_CHUNK),
+    );
+    const reads = await Promise.all(
+      chunks.map((chunk) =>
+        Promise.all([
+          fetchAll<AnsweredRow>((from, to) =>
+            admin
+              .from("reviews")
+              .select("user_id, due_on, mastered, card:decision_cards(decision, hidden)")
+              .in("user_id", chunk)
+              .order("card_id")
+              .range(from, to)
+              .overrideTypes<AnsweredRow[], { merge: false }>(),
+          ),
+          fetchAll<NewCardRow & { reviews: unknown }>((from, to) =>
+            admin
+              .from("decision_cards")
+              .select("user_id, decision, created_at, reviews(card_id)")
+              .in("user_id", chunk)
+              .eq("hidden", false)
+              .gte("created_at", newCardsSince(now))
+              .order("id")
+              .range(from, to),
+          ),
+        ]),
       ),
-      fetchAll<NewCardRow & { reviews: unknown }>((from, to) =>
-        admin
-          .from("decision_cards")
-          .select("user_id, decision, created_at, reviews(card_id)")
-          .eq("hidden", false)
-          .gte("created_at", newCardsSince(now))
-          .order("id")
-          .range(from, to),
-      ),
-    ]);
+    );
+    const answered = reads.flatMap(([rows]) => rows);
+    const unanswered = reads.flatMap(([, rows]) => rows);
     const reviews: ReviewRow[] = answered.flatMap(({ card, ...review }) =>
       card && !card.hidden ? [{ ...review, decision: card.decision }] : [],
     );

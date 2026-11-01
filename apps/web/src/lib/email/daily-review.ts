@@ -145,8 +145,16 @@ export type DailyReviewCopy = {
 };
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const cut = (title: string) =>
-  title.length > TITLE_MAX ? `${title.slice(0, TITLE_MAX - 1).trimEnd()}…` : title;
+// By code point, not UTF-16 unit, so an emoji at the cut is never split in half.
+const cut = (title: string) => {
+  const chars = [...title];
+  return chars.length > TITLE_MAX
+    ? `${chars
+        .slice(0, TITLE_MAX - 1)
+        .join("")
+        .trimEnd()}…`
+    : title;
+};
 
 /**
  * The reminder's words: what's due and new, up to 3 decision titles (never the answers), progress so far, a link to

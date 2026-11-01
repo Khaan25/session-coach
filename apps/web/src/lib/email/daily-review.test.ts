@@ -275,3 +275,11 @@ test("cron auth needs the exact bearer secret", () => {
   assert.equal(cronAuthorized("Bearer ", undefined), false);
   assert.equal(cronAuthorized("Bearer ", ""), false);
 });
+
+test("a long title is cut by character, never through an emoji", () => {
+  const title = `${"x".repeat(88)}😀 and the rest of a long decision`;
+  const [card] = dailyReviewCopy({ due: [title], fresh: [], answered: 1, mastered: 0 }, site).cards;
+  assert.equal([...card.title].length, 90);
+  assert.ok(card.title.includes("😀"));
+  assert.doesNotMatch(card.title, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+});
