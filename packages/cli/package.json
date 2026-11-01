@@ -3,5 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "CLI: init, login, push, plus the SessionEnd hook and background worker. Owned by Kasam."
+  "description": "CLI: init, login, push, plus the SessionEnd hook and background worker. Owned by Kasam.",
+  "bin": {
+    "session-coach": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "test": "node --test --experimental-strip-types src/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "oxlint": "^1.90.0",
+    "typescript": "^5"
+  }
 }
