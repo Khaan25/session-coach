@@ -1,10 +1,10 @@
 // Runs parse -> extract -> checkEvidence on one local session log with the real callModel and prints the cards.
 // Run it with `pnpm --filter web extract:session <session-log.jsonl>`; the script loads .env.local itself.
 import { readFileSync } from "node:fs";
-import { callModel } from "../model/call-model.ts";
-import { checkEvidence, checkQuotes, isGrounded } from "./evidence.ts";
-import { extractCards } from "./extract.ts";
-import { parseSession } from "./parser.ts";
+import { callModel } from "../src/lib/model/call-model.ts";
+import { checkEvidence, checkQuotes, isGrounded } from "../src/lib/pipeline/evidence.ts";
+import { extractCards } from "../src/lib/pipeline/extract.ts";
+import { parseSession } from "../src/lib/pipeline/parser.ts";
 
 const path = process.argv[2];
 if (!path) {
