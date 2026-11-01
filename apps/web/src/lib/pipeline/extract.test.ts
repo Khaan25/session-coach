@@ -17,11 +17,19 @@ const card = {
   decision: "Shared styles live in tokens.css.",
   why: "Every page reuses one file.",
   source: "stated",
-  evidence: [{ event_index: 2, quote: "put them in tokens.css so every page reuses them" }],
+  evidence: [{ event: "E2", quote: "put them in tokens.css so every page reuses them" }],
   files: [],
   question: "Why do the styles live in one file?",
   model_answer: "So every page reuses the same tokens.",
 };
+
+/** What `extractCards` returns for `card`: the event id is now a number. */
+const parsedCard = {
+  ...card,
+  evidence: [{ event_index: 2, quote: "put them in tokens.css so every page reuses them" }],
+};
+const three = [card, card, card];
+const parsedThree = [parsedCard, parsedCard, parsedCard];
 
 /** A fake model that answers from a list and records each call. */
 function fakeModel(...answers: unknown[]) {
@@ -34,9 +42,9 @@ function fakeModel(...answers: unknown[]) {
 }
 
 test("valid on the first try: one call, task extract, timeline without line numbers", async () => {
-  const { model, calls } = fakeModel({ cards: [card] });
+  const { model, calls } = fakeModel({ decisions: three });
   const cards = await extractCards(events, model);
-  assert.deepEqual(cards, [card]);
+  assert.deepEqual(cards, parsedThree);
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.[0], "extract");
   assert.equal(calls[0]?.[1].instructions, EXTRACT_INSTRUCTIONS);
@@ -49,9 +57,12 @@ test("valid on the first try: one call, task extract, timeline without line numb
 });
 
 test("invalid then valid: the second call carries the validation error", async () => {
-  const { model, calls } = fakeModel({ cards: [{ ...card, source: "guess" }] }, { cards: [card] });
+  const { model, calls } = fakeModel(
+    { decisions: [{ ...card, source: "guess" }, card, card] },
+    { decisions: three },
+  );
   const cards = await extractCards(events, model);
-  assert.deepEqual(cards, [card]);
+  assert.deepEqual(cards, parsedThree);
   assert.equal(calls.length, 2);
   assert.equal(calls[0]?.[1].data.validation_error, undefined);
   const error = calls[1]?.[1].data.validation_error;
@@ -62,8 +73,8 @@ test("invalid then valid: the second call carries the validation error", async (
 });
 
 test("invalid twice throws a clear error after exactly two calls", async () => {
-  const bad = { cards: "none" };
-  const { model, calls } = fakeModel(bad, bad, { cards: [card] });
+  const bad = { decisions: "none" };
+  const { model, calls } = fakeModel(bad, bad, { decisions: three });
   await assert.rejects(
     extractCards(events, model),
     (error: unknown) => error instanceof ExtractError && /invalid cards twice/.test(error.message),
@@ -71,32 +82,52 @@ test("invalid twice throws a clear error after exactly two calls", async () => {
   assert.equal(calls.length, 2);
 });
 
-test("0 cards is a valid answer", async () => {
-  const { model, calls } = fakeModel({ cards: [] });
-  assert.deepEqual(await extractCards(events, model), []);
-  assert.equal(calls.length, 1);
+test("3 and 5 decisions are accepted", async () => {
+  for (const count of [3, 5]) {
+    const answer = { decisions: Array.from({ length: count }, () => card) };
+    assert.equal((await extractCards(events, fakeModel(answer).model)).length, count);
+  }
 });
 
-test("5 cards are accepted, more than 5 are rejected", async () => {
-  const five = { cards: Array.from({ length: 5 }, () => card) };
-  assert.equal((await extractCards(events, fakeModel(five).model)).length, 5);
+test("2 decisions or 6 decisions fail the schema and trigger the single retry", async () => {
+  for (const count of [2, 6]) {
+    const answer = { decisions: Array.from({ length: count }, () => card) };
+    const { model, calls } = fakeModel(answer, answer);
+    await assert.rejects(extractCards(events, model), ExtractError);
+    assert.equal(calls.length, 2);
+  }
+});
 
-  const six = { cards: Array.from({ length: 6 }, () => card) };
-  const { model, calls } = fakeModel(six, six);
+test('"E2" converts to event_index 2', async () => {
+  const [first] = await extractCards(events, fakeModel({ decisions: three }).model);
+  assert.deepEqual(first?.evidence, [
+    { event_index: 2, quote: "put them in tokens.css so every page reuses them" },
+  ]);
+});
+
+test('an event other than "E<number>" fails the schema', async () => {
+  for (const event of ["X2", "2", "E", "e2", "E1.5"]) {
+    const bad = { ...card, evidence: [{ event, quote: "x" }] };
+    const answer = { decisions: [bad, card, card] };
+    const { model, calls } = fakeModel(answer, answer);
+    await assert.rejects(extractCards(events, model), ExtractError);
+    assert.equal(calls.length, 2);
+  }
+});
+
+test("a whitespace-only quote fails the schema", async () => {
+  const bad = { ...card, evidence: [{ event: "E2", quote: " \n\t " }] };
+  const answer = { decisions: [bad, card, card] };
+  const { model, calls } = fakeModel(answer, answer);
   await assert.rejects(extractCards(events, model), ExtractError);
   assert.equal(calls.length, 2);
 });
 
-test("evidence needs 1 to 3 items with a positive integer event_index", async () => {
+test("evidence needs 1 to 3 items", async () => {
   const item = card.evidence[0];
-  const invalid = [
-    { ...card, evidence: [] },
-    { ...card, evidence: [item, item, item, item] },
-    { ...card, evidence: [{ ...item, event_index: 0 }] },
-    { ...card, evidence: [{ ...item, event_index: 1.5 }] },
-  ];
-  for (const bad of invalid) {
-    const { model, calls } = fakeModel({ cards: [bad] }, { cards: [bad] });
+  for (const evidence of [[], [item, item, item, item]]) {
+    const answer = { decisions: [{ ...card, evidence }, card, card] };
+    const { model, calls } = fakeModel(answer, answer);
     await assert.rejects(extractCards(events, model), ExtractError);
     assert.equal(calls.length, 2);
   }
