@@ -24,6 +24,14 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Not verified:** reasoning token counts (needs a real call); whether Groq bills the free 8K limit on input only or on input plus `max_tokens` (the docs describe one combined TPM cap); the Groq price on groq.com itself (read from OpenRouter's Groq endpoint instead); whether 9,000 characters still yields 3 to 5 grounded cards on a long session (check in the accuracy run on 5 real sessions).
 - **Revisit when:** the accuracy check shows long sessions losing their important decisions, or V2 adds teams and more users. Then switch to the developer tier (config and billing only), raise the cut, move grading and extraction to separate keys or models so one can't starve the other, add the split-at-prompts path for sessions over the cap instead of dropping their start, and cut long Bash commands in the parser the way tool results are cut.
 
+## 2026-11-01 · Timeline trim budget, and cards before `ready`
+
+- **Decision:** before extraction each event's text is cut to 1,500 characters (the start is kept), then events are kept in order until 16,000 characters are used; the rest are counted as `cut_events` and logged. `processSession` inserts all cards in one call and sets `ready` only after that insert succeeds.
+- **Why:** Groq's free tier allows 8,000 tokens per minute, and the instructions and the retry share that window. The per-event cap stops one huge event eating the budget; ids stay intact. Insert-then-ready means a crash in between leaves `failed`, never a `ready` session with no cards.
+- **Not aligned yet:** #32 chose to send the LAST ~9,000 characters (newest events kept); this keeps the FIRST 16,000 with each event capped at 1,500. Align in a follow-up (event ids must stay consistent between the cut timeline, `extractCards` and `checkEvidence`).
+- **No delete on re-run:** deleting a session's cards would cascade to answers and reviews. No code path re-processes a failed session yet; when Zia adds a retry transition, it must clear cards safely.
+- **Known gaps:** insert and `ready` are separate writes (a transaction needs an RPC migration), and a platform kill leaves a session in `processing` (needs a sweep in a cron).
+
 ## 2026-10-31 · Groq as temporary extraction backup, and prompt v2
 
 - **Decision:** extraction runs on Groq `openai/gpt-oss-120b`, set through env only (`MODEL_PROVIDER`, `MODEL_EXTRACT`), with no code change. This is temporary. Gemini 3.8 Flash stays the target (#22) until a model comparison on the golden set. Zia agreed.
