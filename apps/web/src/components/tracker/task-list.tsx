@@ -4,9 +4,12 @@ import { useOptimistic, useTransition } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Markdown } from "@/components/tracker/markdown";
 import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/toast";
+import { PROJECT_CONTEXT } from "@/lib/tracker/context";
 import type { TrackerTask } from "@/lib/tracker/queries";
 
 import { setTaskDone } from "@/app/(app)/tracker/actions";
@@ -42,6 +45,20 @@ export function TaskList({ tasks }: { tasks: TrackerTask[] }) {
 
   return (
     <div className="flex flex-col gap-8">
+      <div className="rounded-soft bg-well p-2">
+        <Collapsible className="flex flex-col">
+          <CollapsibleRow className="w-full">
+            <span className="type-body text-text-1">Project context</span>
+          </CollapsibleRow>
+          <CollapsibleContent>
+            <Details
+              markdown={PROJECT_CONTEXT}
+              copyLabel="project context"
+              copyValue={PROJECT_CONTEXT}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
       <Progress value={optimistic.length ? (doneCount / optimistic.length) * 100 : 0}>
         <span className="type-label text-text-2">
           {doneCount} of {optimistic.length} done
@@ -96,12 +113,46 @@ function TaskRow({
         <Collapsible className="min-w-0 flex-1">
           <CollapsibleRow className="w-full">{label}</CollapsibleRow>
           <CollapsibleContent>
-            <p className="ms-7 mb-2 type-body-sm whitespace-pre-wrap text-text-2">{task.details}</p>
+            <Details
+              markdown={task.details}
+              copyLabel={`details of ${task.title}`}
+              copyValue={asMarkdown(task)}
+            />
           </CollapsibleContent>
         </Collapsible>
       ) : (
         <div className="flex min-h-(--control) min-w-0 flex-1 items-center ps-8">{label}</div>
       )}
     </li>
+  );
+}
+
+/** A task as one Markdown block, for pasting into a PR, a chat or an agent prompt. */
+function asMarkdown(task: TrackerTask) {
+  const owner = task.owner ? `Owner: ${owners[task.owner].label}\n\n` : "";
+  return `## ${task.title}\n\n${owner}${task.details?.trim() ?? ""}\n`;
+}
+
+/** Expanded notes: rendered Markdown with a copy button that copies the source. */
+function Details({
+  markdown,
+  copyLabel,
+  copyValue,
+}: {
+  markdown: string;
+  copyLabel: string;
+  copyValue: string;
+}) {
+  return (
+    <div className="relative ms-7 mb-3 pe-10">
+      <CopyButton
+        value={copyValue}
+        label={copyLabel}
+        size="icon-sm"
+        variant="ghost"
+        className="absolute end-0 top-2"
+      />
+      <Markdown>{markdown.trim()}</Markdown>
+    </div>
   );
 }
