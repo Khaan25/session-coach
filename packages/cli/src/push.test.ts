@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { gunzipSync } from "node:zlib";
 
 import {
   createRequest,
@@ -7,9 +8,11 @@ import {
   interpretCreate,
   interpretProcess,
   interpretPut,
+  prepareLog,
   processRequest,
   putRequest,
   sessionMetadata,
+  validateFileName,
 } from "./push.ts";
 
 const TOKEN = "sc_secrettoken123";
@@ -59,19 +62,52 @@ describe("requests", () => {
   });
 
   it("PUTs the raw gzip with no auth header, as storage-js does", () => {
-    const req = putRequest(UPLOAD_URL, new Uint8Array([1]));
+    const bytes = new Uint8Array([1, 2, 3]);
+    const req = putRequest(UPLOAD_URL, bytes);
     const headers = req.init.headers as Record<string, string>;
     assert.equal(req.url, UPLOAD_URL);
     assert.equal(req.init.method, "PUT");
     assert.equal(headers["x-upsert"], "true");
     assert.equal(headers["content-type"], "text/plain;charset=UTF-8");
     assert.equal("authorization" in headers, false);
+    assert.deepEqual(req.init.body, bytes);
   });
 
   it("POSTs to the session's process route", () => {
     const req = processRequest("https://app.test", TOKEN, ID);
     assert.equal(req.url, `https://app.test/api/sessions/${ID}/process`);
     assert.equal(req.init.method, "POST");
+    const headers = req.init.headers as Record<string, string>;
+    assert.equal(headers.authorization, `Bearer ${TOKEN}`);
+  });
+});
+
+describe("file name and bytes", () => {
+  it("accepts the server's pattern, with or without .jsonl and a directory", () => {
+    assert.equal(
+      validateFileName("5c1e0f0a-3b8e_4c6a.jsonl".replace(".jsonl", "") + ".jsonl"),
+      null,
+    );
+    assert.equal(validateFileName("/home/me/.claude/abc-123_X.jsonl"), null);
+    assert.equal(validateFileName(`${"a".repeat(128)}.jsonl`), null);
+  });
+
+  it("rejects other characters and names over 128 characters, with the rename hint", () => {
+    const hint = "Rename the file to letters, numbers, - and _ only (max 128 characters).";
+    assert.equal(validateFileName("my session.jsonl"), hint);
+    assert.equal(validateFileName("a.b.jsonl"), hint);
+    assert.equal(validateFileName(`${"a".repeat(129)}.jsonl`), hint);
+    assert.equal(validateFileName(".jsonl"), hint);
+  });
+
+  it("gzips the raw bytes, so an invalid UTF-8 byte survives", () => {
+    const bytes = Buffer.concat([
+      Buffer.from('{"timestamp":"2026-10-27T10:11:00.000Z"}\n'),
+      Buffer.from([0xff, 0xfe, 0x0a]),
+    ]);
+    const { gzipped, text } = prepareLog(bytes);
+    assert.deepEqual(gunzipSync(gzipped), bytes);
+    assert.equal(firstTimestamp(text), "2026-10-27T10:11:00.000Z");
   });
 });
 
@@ -89,10 +125,15 @@ describe("step 1 responses", () => {
     assert.equal(result.action, "upload");
   });
 
-  it("409 with only an id says already processed and prints the id", () => {
+  it("409 with only an id is neutral, prints the id and exits 0", () => {
     const result = interpretCreate(409, { id: ID });
     assert.equal(result.action, "stop");
-    assert.ok(result.action === "stop" && /already processed/i.test(result.message));
+    assert.ok(
+      result.action === "stop" &&
+        result.message.startsWith(
+          "This session is already uploaded. Open the app to see its status.",
+        ),
+    );
     assert.ok(result.action === "stop" && result.message.includes(ID));
     assert.ok(result.action === "stop" && result.exitCode === 0);
   });
@@ -134,6 +175,11 @@ describe("step 3 responses", () => {
     const out = interpretProcess(409, { id: ID, status: "processing" }, ID);
     assert.match(out.message, /already processing/);
     assert.equal(out.exitCode, 0);
+  });
+
+  it("409 exits 1 when the session failed and 0 when it is ready", () => {
+    assert.equal(interpretProcess(409, { id: ID, status: "failed" }, ID).exitCode, 1);
+    assert.equal(interpretProcess(409, { id: ID, status: "ready" }, ID).exitCode, 0);
   });
 
   it("422 says the upload didn't land", () => {

@@ -1,5 +1,7 @@
 // Request building and response handling for `push`. Pure, so node --test runs it with no network.
 
+import { gzipSync } from "node:zlib";
+
 /** Storage's per-file limit, mirrored from the server (`MAX_UPLOAD_BYTES` in apps/web/src/lib/sessions/upload.ts). */
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
@@ -104,6 +106,29 @@ export function processRequest(baseUrl: string, token: string, id: string): Http
   };
 }
 
+/** The server's pattern for `external_id`. */
+const EXTERNAL_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Checks the file name locally against the server's `external_id` pattern, so a bad name fails before any request.
+ *
+ * @param fileName - The log's file name or path; `.jsonl` is dropped before the check.
+ * @returns A message telling the user how to fix the name, or null when it is fine.
+ */
+export function validateFileName(fileName: string): string | null {
+  const base = fileName.split(/[\\/]/).pop() ?? fileName;
+  if (EXTERNAL_ID.test(base.replace(/\.jsonl$/, ""))) return null;
+  return "Rename the file to letters, numbers, - and _ only (max 128 characters).";
+}
+
+/**
+ * Gzips the log's raw bytes, so a byte that isn't valid UTF-8 still arrives unchanged, and decodes a string only for
+ * the metadata.
+ */
+export function prepareLog(bytes: Uint8Array): { gzipped: Buffer; text: string } {
+  return { gzipped: gzipSync(bytes), text: Buffer.from(bytes).toString("utf8") };
+}
+
 /** Messages shared by steps ① and ③. Never includes the token or the upload URL. */
 function commonFailure(status: number): Outcome | null {
   if (status === 401) return { message: "Run session-coach login again.", exitCode: 1 };
@@ -125,7 +150,7 @@ function badRequest(body: unknown): string {
 }
 
 /**
- * Step ① response: 201 or 409-with-upload_url means upload; 409 with only an id means it was done before.
+ * Step ① response: 201 or 409-with-upload_url means upload; 409 with only an id means it was uploaded before.
  *
  * @param status - HTTP status.
  * @param body - Parsed JSON body, or null if it wasn't JSON.
@@ -141,7 +166,7 @@ export function interpretCreate(status: number, body: unknown): CreateResult {
     if (status === 409) {
       return {
         action: "stop",
-        message: `Already processed.\nSession id: ${id}`,
+        message: `This session is already uploaded. Open the app to see its status.\nSession id: ${id}`,
         exitCode: 0,
       };
     }
@@ -174,7 +199,10 @@ export function interpretProcess(status: number, body: unknown, id: string): Out
   if (status === 409) {
     const state = (body as { status?: unknown } | null)?.status;
     const label = typeof state === "string" ? state : "unknown";
-    return { message: `Session is already ${label}.\nSession id: ${id}`, exitCode: 0 };
+    return {
+      message: `Session is already ${label}.\nSession id: ${id}`,
+      exitCode: state === "failed" ? 1 : 0,
+    };
   }
   if (status === 422) {
     return { message: "Upload didn't land, run push again.", exitCode: 1 };

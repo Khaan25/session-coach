@@ -20,10 +20,13 @@ export function validateToken(token: string): string | null {
   return null;
 }
 
+/** Hosts where plain http is allowed, so a token never crosses the network unencrypted. */
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
 /**
- * Normalises a site URL: http(s) only, no trailing slash.
+ * Normalises a site URL: https, or http for a local host only; no trailing slash.
  *
- * @returns The cleaned URL, or null when it isn't an http(s) URL.
+ * @returns The cleaned URL, or null when it isn't allowed.
  */
 export function normalizeUrl(input: string): string | null {
   let url: URL;
@@ -32,7 +35,9 @@ export function normalizeUrl(input: string): string | null {
   } catch {
     return null;
   }
-  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && LOCAL_HOSTS.has(url.hostname))) {
+    return null;
+  }
   return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }
 

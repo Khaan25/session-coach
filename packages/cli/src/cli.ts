@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
-import { gzipSync } from "node:zlib";
 
+import { parseLoginArgs, parsePushArgs } from "./args.ts";
 import {
   configPath,
   DEFAULT_URL,
@@ -18,9 +18,11 @@ import {
   interpretProcess,
   interpretPut,
   MAX_UPLOAD_BYTES,
+  prepareLog,
   processRequest,
   putRequest,
   sessionMetadata,
+  validateFileName,
   type HttpRequest,
 } from "./push.ts";
 
@@ -49,11 +51,12 @@ const NETWORK_ERROR =
   "Couldn't reach the server. Check your connection and the --url, then try again.";
 
 async function login(args: string[]): Promise<number> {
+  const parsed = parseLoginArgs(args);
+  if ("error" in parsed) return say(`${parsed.error}\n${USAGE}`, 1);
   let url = DEFAULT_URL;
-  const flag = args.indexOf("--url");
-  if (flag !== -1) {
-    const cleaned = normalizeUrl(args[flag + 1] ?? "");
-    if (!cleaned) return say("--url must be an http(s) URL.", 1);
+  if (parsed.url !== null) {
+    const cleaned = normalizeUrl(parsed.url);
+    if (!cleaned) return say("--url must be an https URL (http works only for localhost).", 1);
     url = cleaned;
   }
 
@@ -66,24 +69,28 @@ async function login(args: string[]): Promise<number> {
 }
 
 async function push(args: string[]): Promise<number> {
-  const file = args[0];
-  if (!file) return say(USAGE, 1);
+  const parsed = parsePushArgs(args);
+  if ("error" in parsed) return say(`${parsed.error}\n${USAGE}`, 1);
+  const { file } = parsed;
+
+  const nameProblem = validateFileName(file);
+  if (nameProblem) return say(nameProblem, 1);
 
   const config = await loadConfig(configPath());
   if (!config) return say("Not signed in. Run session-coach login first.", 1);
 
-  let raw: string;
+  let bytes: Buffer;
   try {
-    raw = await readFile(file, "utf8");
+    bytes = await readFile(file);
   } catch {
     return say(`Couldn't read ${file}.`, 1);
   }
 
-  const gzipped = gzipSync(raw);
+  const { gzipped, text } = prepareLog(bytes);
   if (gzipped.length > MAX_UPLOAD_BYTES) return say("Log over 50 MB, too big to upload.", 1);
 
   // ① register the session
-  const meta = sessionMetadata(raw, basename(file), gzipped.length);
+  const meta = sessionMetadata(text, basename(file), gzipped.length);
   const created = await send(createRequest(config.url, config.token, meta));
   if (!created) return say(NETWORK_ERROR, 1);
   const next = interpretCreate(created.status, created.body);

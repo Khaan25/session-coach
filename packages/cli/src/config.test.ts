@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -24,6 +24,14 @@ describe("normalizeUrl", () => {
     assert.equal(normalizeUrl("http://localhost:3000"), "http://localhost:3000");
   });
 
+  it("allows http only for localhost, 127.0.0.1 and [::1]", () => {
+    assert.equal(normalizeUrl("http://127.0.0.1:3000/"), "http://127.0.0.1:3000");
+    assert.equal(normalizeUrl("http://[::1]:3000"), "http://[::1]:3000");
+    assert.equal(normalizeUrl("http://coach.ziaa.me"), null);
+    assert.equal(normalizeUrl("http://localhost.evil.test"), null);
+    assert.equal(normalizeUrl("http://192.168.1.5:3000"), null);
+  });
+
   it("rejects non-http URLs and garbage", () => {
     assert.equal(normalizeUrl("ftp://x.test"), null);
     assert.equal(normalizeUrl("not a url"), null);
@@ -41,7 +49,7 @@ describe("config file", () => {
     try {
       const path = configPath(dir);
       await saveConfig(path, { token: "sc_x", url: "https://app.test" });
-      await writeFile(path, "{}", { mode: 0o644 });
+      await chmod(path, 0o644);
       await saveConfig(path, { token: "sc_x", url: "https://app.test" });
 
       assert.equal((await stat(path)).mode & 0o777, 0o600);
