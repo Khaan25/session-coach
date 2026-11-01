@@ -9,7 +9,7 @@
 // the local stack's public demo keys. Start the stack first: `supabase start`.
 
 import { execFileSync } from "node:child_process";
-import { rmSync, writeFileSync } from "node:fs";
+import { renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,8 +42,9 @@ if (!["127.0.0.1", "localhost"].includes(url.hostname)) {
   process.exit(1);
 }
 
+// Write a temp file, then rename: a `pnpm dev` starting mid-write never reads half a file.
 writeFileSync(
-  FILE,
+  `${FILE}.tmp`,
   [
     "# Written by scripts/use-local-db.mjs: the LOCAL Supabase stack. Remove with --off.",
     `NEXT_PUBLIC_SUPABASE_URL=${status.API_URL}`,
@@ -59,5 +60,6 @@ writeFileSync(
   ].join("\n"),
   { mode: 0o600 },
 );
+renameSync(`${FILE}.tmp`, FILE);
 console.log(`Wrote apps/web/.env.development.local: pnpm dev now uses ${status.API_URL}.`);
 console.log(`Auth emails land in Mailpit: ${status.MAILPIT_URL ?? status.INBUCKET_URL}`);

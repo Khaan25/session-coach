@@ -21,7 +21,7 @@
     "check:commits": "node scripts/check-commit-message.mjs --range origin/main..HEAD",
     "seed:demo": "node --env-file=apps/web/.env.local scripts/seed-demo.mjs --dry-run",
     "seed:demo:live": "node --env-file=apps/web/.env.local scripts/seed-demo.mjs",
-    "seed:demo:local": "node --env-file=apps/web/.env.development.local scripts/seed-demo.mjs",
+    "seed:demo:local": "node --env-file=apps/web/.env.development.local scripts/seed-demo.mjs --local",
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
   },
   "devDependencies": {

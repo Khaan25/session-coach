@@ -157,7 +157,14 @@ test("a learner can't write answers or reviews, even for their own card", async 
     for (const userId of [me.id, other.id]) {
       const answer = await me.client
         .from("answers")
-        .insert({ card_id: me.cardId, user_id: userId, review_step: 0, answer: "x", score: 2 });
+        // Each user_id with that learner's own card, so a refusal comes from RLS and not the (card_id, user_id) key.
+        .insert({
+          card_id: userId === me.id ? me.cardId : other.cardId,
+          user_id: userId,
+          review_step: 0,
+          answer: "x",
+          score: 2,
+        });
       assert.ok(answer.error, "answers insert allowed");
     }
     const review = await me.client
