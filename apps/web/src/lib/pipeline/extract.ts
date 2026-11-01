@@ -58,33 +58,52 @@ export class ExtractError extends Error {
   name = "ExtractError";
 }
 
+/** How long the retry waits by default: a full minute, so the first call's tokens leave Groq's 8,000 tokens/minute window. */
+export const RETRY_DELAY_MS = 60_000;
+
+export type ExtractOptions = {
+  /** Wait before the retry, in milliseconds. */
+  retryDelayMs?: number;
+  /** Does the waiting; tests pass a fake so they never wait. */
+  sleep?: (ms: number) => Promise<void>;
+};
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 /**
- * Asks the model for decision cards. An answer that fails the schema gets one more call, with the validation error in
- * the data so the model can fix it; a second failure throws. Two calls at most.
+ * Asks the model for decision cards. An answer that fails the schema gets one more call, after a wait so it stays
+ * under the provider's tokens-per-minute limit. The data carries the failed answer and the validation error so the
+ * model can correct it; a second failure throws. Two calls at most.
  *
  * @param events - The parsed timeline; `line` is not sent, the model has no use for it.
  * @param model - `callModel` in production, a fake in tests.
+ * @param options - `retryDelayMs` (default `RETRY_DELAY_MS`) and `sleep`, to change the wait.
  * @returns 3 to 5 cards, unverified.
  * @throws ExtractError when both answers are invalid. Errors from `model` itself pass through.
  */
 export async function extractCards(
   events: readonly TimelineEvent[],
   model: ExtractModel,
+  { retryDelayMs = RETRY_DELAY_MS, sleep = wait }: ExtractOptions = {},
 ): Promise<ExtractedCard[]> {
   const timeline = events.map(({ id, kind, text }) => ({ id, kind, text }));
-  const first = extractOutputSchema.safeParse(
-    await model("extract", { instructions: EXTRACT_INSTRUCTIONS, data: { events: timeline } }),
-  );
+  const firstAnswer = await model("extract", {
+    instructions: EXTRACT_INSTRUCTIONS,
+    data: { events: timeline },
+  });
+  const first = extractOutputSchema.safeParse(firstAnswer);
   if (first.success) return first.data.decisions;
 
   const validationError = z.prettifyError(first.error);
+  await sleep(retryDelayMs);
   const second = extractOutputSchema.safeParse(
     await model("extract", {
       instructions: EXTRACT_INSTRUCTIONS,
       data: {
         events: timeline,
+        previous_answer: firstAnswer,
         validation_error: validationError,
-        fix: "Your previous answer failed validation with the error above. Return the full JSON again with exactly those problems fixed.",
+        fix: "Your previous_answer failed validation with the error above. Return the full JSON again with exactly those problems fixed.",
       },
     }),
   );

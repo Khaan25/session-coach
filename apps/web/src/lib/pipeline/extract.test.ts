@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { EXTRACT_INSTRUCTIONS, ExtractError, extractCards, type ExtractModel } from "./extract.ts";
+import {
+  EXTRACT_INSTRUCTIONS,
+  ExtractError,
+  RETRY_DELAY_MS,
+  extractCards,
+  type ExtractModel,
+  type ExtractOptions,
+} from "./extract.ts";
 import type { TimelineEvent } from "./parser.ts";
 
 const events: TimelineEvent[] = [
@@ -31,6 +38,17 @@ const parsedCard = {
 const three = [card, card, card];
 const parsedThree = [parsedCard, parsedCard, parsedCard];
 
+/** Options for tests that may retry: the wait is recorded, never waited. */
+function noWait() {
+  const delays: number[] = [];
+  const options: ExtractOptions = {
+    sleep: async (ms) => {
+      delays.push(ms);
+    },
+  };
+  return { delays, options };
+}
+
 /** A fake model that answers from a list and records each call. */
 function fakeModel(...answers: unknown[]) {
   const calls: Parameters<ExtractModel>[] = [];
@@ -56,15 +74,15 @@ test("valid on the first try: one call, task extract, timeline without line numb
   });
 });
 
-test("invalid then valid: the second call carries the validation error", async () => {
-  const { model, calls } = fakeModel(
-    { decisions: [{ ...card, source: "guess" }, card, card] },
-    { decisions: three },
-  );
-  const cards = await extractCards(events, model);
+test("invalid then valid: the second call carries the failed answer and the validation error", async () => {
+  const badAnswer = { decisions: [{ ...card, source: "guess" }, card, card] };
+  const { model, calls } = fakeModel(badAnswer, { decisions: three });
+  const cards = await extractCards(events, model, noWait().options);
   assert.deepEqual(cards, parsedThree);
   assert.equal(calls.length, 2);
   assert.equal(calls[0]?.[1].data.validation_error, undefined);
+  assert.equal(calls[0]?.[1].data.previous_answer, undefined);
+  assert.deepEqual(calls[1]?.[1].data.previous_answer, badAnswer);
   const error = calls[1]?.[1].data.validation_error;
   assert.equal(typeof error, "string");
   assert.match(String(error), /source/);
@@ -72,11 +90,39 @@ test("invalid then valid: the second call carries the validation error", async (
   assert.deepEqual(calls[1]?.[1].data.events, calls[0]?.[1].data.events);
 });
 
+test("the retry waits before the second call, using the injected delay", async () => {
+  const bad = { decisions: "none" };
+  const order: string[] = [];
+  const model: ExtractModel = async () => {
+    order.push("call");
+    return order.length === 1 ? bad : { decisions: three };
+  };
+  const sleep = async (ms: number) => {
+    order.push(`sleep ${ms}`);
+  };
+  await extractCards(events, model, { retryDelayMs: 1234, sleep });
+  assert.deepEqual(order, ["call", "sleep 1234", "call"]);
+});
+
+test("the retry waits 60 seconds by default", async () => {
+  const bad = { decisions: "none" };
+  const { delays, options } = noWait();
+  await extractCards(events, fakeModel(bad, { decisions: three }).model, options);
+  assert.equal(RETRY_DELAY_MS, 60_000);
+  assert.deepEqual(delays, [RETRY_DELAY_MS]);
+});
+
+test("a valid first answer never waits", async () => {
+  const { delays, options } = noWait();
+  await extractCards(events, fakeModel({ decisions: three }).model, options);
+  assert.deepEqual(delays, []);
+});
+
 test("invalid twice throws a clear error after exactly two calls", async () => {
   const bad = { decisions: "none" };
   const { model, calls } = fakeModel(bad, bad, { decisions: three });
   await assert.rejects(
-    extractCards(events, model),
+    extractCards(events, model, noWait().options),
     (error: unknown) => error instanceof ExtractError && /invalid cards twice/.test(error.message),
   );
   assert.equal(calls.length, 2);
@@ -93,7 +139,7 @@ test("2 decisions or 6 decisions fail the schema and trigger the single retry", 
   for (const count of [2, 6]) {
     const answer = { decisions: Array.from({ length: count }, () => card) };
     const { model, calls } = fakeModel(answer, answer);
-    await assert.rejects(extractCards(events, model), ExtractError);
+    await assert.rejects(extractCards(events, model, noWait().options), ExtractError);
     assert.equal(calls.length, 2);
   }
 });
@@ -110,7 +156,7 @@ test('an event other than "E<number>" fails the schema', async () => {
     const bad = { ...card, evidence: [{ event, quote: "x" }] };
     const answer = { decisions: [bad, card, card] };
     const { model, calls } = fakeModel(answer, answer);
-    await assert.rejects(extractCards(events, model), ExtractError);
+    await assert.rejects(extractCards(events, model, noWait().options), ExtractError);
     assert.equal(calls.length, 2);
   }
 });
@@ -119,7 +165,7 @@ test("a whitespace-only quote fails the schema", async () => {
   const bad = { ...card, evidence: [{ event: "E2", quote: " \n\t " }] };
   const answer = { decisions: [bad, card, card] };
   const { model, calls } = fakeModel(answer, answer);
-  await assert.rejects(extractCards(events, model), ExtractError);
+  await assert.rejects(extractCards(events, model, noWait().options), ExtractError);
   assert.equal(calls.length, 2);
 });
 
@@ -128,7 +174,7 @@ test("evidence needs 1 to 3 items", async () => {
   for (const evidence of [[], [item, item, item, item]]) {
     const answer = { decisions: [{ ...card, evidence }, card, card] };
     const { model, calls } = fakeModel(answer, answer);
-    await assert.rejects(extractCards(events, model), ExtractError);
+    await assert.rejects(extractCards(events, model, noWait().options), ExtractError);
     assert.equal(calls.length, 2);
   }
 });

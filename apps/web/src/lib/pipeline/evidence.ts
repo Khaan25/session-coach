@@ -58,10 +58,10 @@ export function isGrounded(draft: ExtractedCard, events: readonly TimelineEvent[
 }
 
 /**
- * Checks every quote against the timeline, drops the cards that are not grounded (see `isGrounded`) and settles each
- * survivor's `source`: "stated" only when the model said so; the model's own claim is otherwise not trusted. `files`
- * keeps only paths that some write or edit event wrote (the model writes relative paths, so a path matches when it
- * equals the event's path or ends it after a "/").
+ * Checks every quote against the timeline and drops the cards that are not grounded (see `isGrounded`). A survivor
+ * keeps the model's `source` as is: every kept card is grounded, so "stated" means the model said the reason was
+ * written and a grounded quote exists. `files` keeps only paths that some write or edit event wrote (the model writes
+ * relative paths, so a path matches when it equals the event's path or ends it after a "/").
  *
  * @param drafts - Cards from `extractCards`.
  * @param events - The same timeline the model saw; `event_index` is a 1-based position in it.
