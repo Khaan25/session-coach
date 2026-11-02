@@ -2,10 +2,9 @@
 
 import { GearIcon, SignOutIcon, SquaresFourIcon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useEffect } from "react";
-import { forgetShapes } from "skullet";
 
 import { signOut } from "@/app/(auth)/actions";
+import { ForgetShapes } from "@/components/auth/forget-shapes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -25,17 +24,14 @@ export type SiteNavUser = { name: string; email: string; initials: string };
  * The header's account corner: signed in, the dashboard and an avatar menu; signed out, sign in.
  */
 export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
-  // Every sign-out lands here signed out. Skullet keeps the last skeleton shapes in localStorage, links (with card and
-  // session ids) included, so they go with the session rather than stay for the next person on this browser.
-  useEffect(() => {
-    if (!user) forgetShapes();
-  }, [user]);
-
   if (!user)
     return (
-      <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
-        Sign in
-      </Link>
+      <>
+        <ForgetShapes />
+        <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
+          Sign in
+        </Link>
+      </>
     );
 
   return (
