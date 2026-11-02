@@ -1,14 +1,30 @@
-# @session-coach/cli
+# session-coach
 
-Uploads Claude Code session logs to Session Coach. Not published to npm yet: run it from this repo.
+Uploads Claude Code session logs to Session Coach.
+
+## Usage
+
+Needs Node 20 or newer (tested on Node 22). Nothing to install first; `npx` fetches it.
+
+```sh
+npx session-coach login
+npx session-coach push --latest
+npx session-coach push <file.jsonl>
+```
+
+`login` asks for a CLI token from the app's `/setup` page. `push --latest` uploads the newest log of the project in the folder you run it from, and only that project (see [push](#push)).
+
+## Run from the repo (contributors)
 
 ```sh
 # from the repo root
 pnpm install
-pnpm --filter @session-coach/cli start login [--url <site url>]
-pnpm --filter @session-coach/cli start push <file.jsonl>
-pnpm --filter @session-coach/cli start push --latest
+pnpm --filter session-coach start login [--url <site url>]
+pnpm --filter session-coach start push <file.jsonl>
+pnpm --filter session-coach start push --latest
 ```
+
+`pnpm --filter session-coach build` bundles the CLI into `dist/cli.js` (one file, Node 20+).
 
 ## push
 

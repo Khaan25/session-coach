@@ -277,14 +277,16 @@ importers:
         version: 4.3.3
 
   packages/cli:
-    dependencies:
+    devDependencies:
       '@session-coach/shared':
         specifier: workspace:*
         version: link:../shared
-    devDependencies:
       '@types/node':
         specifier: ^22
         version: 22.20.5
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       oxlint:
         specifier: ^1.90.0
         version: 1.90.0

@@ -1,23 +1,34 @@
 {
-  "name": "@session-coach/cli",
-  "version": "0.0.0",
-  "private": true,
+  "name": "session-coach",
+  "version": "0.1.0",
   "type": "module",
   "description": "CLI: init, login, push, plus the SessionEnd hook and background worker. Owned by Kasam.",
+  "license": "MIT",
   "bin": {
-    "session-coach": "./src/cli.ts"
+    "session-coach": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/cli.ts",
+    "build": "node build.mjs",
+    "prepack": "node build.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "test": "node --test --experimental-strip-types src/*.test.ts"
   },
-  "dependencies": {
-    "@session-coach/shared": "workspace:*"
-  },
   "devDependencies": {
+    "@session-coach/shared": "workspace:*",
     "@types/node": "^22",
+    "esbuild": "0.28.2",
     "oxlint": "^1.90.0",
     "typescript": "^5"
   }
