@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
 import { Sprite } from "@/components/art/sprite";
 import { Container } from "@/components/app/container";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
-import { SessionListLoading } from "@/components/app/loading-state";
 import { AppPageHeader } from "@/components/app/page-header";
+import { SessionRow } from "@/components/app/session-row";
 import { SessionList } from "@/components/sessions/session-list";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,15 +16,40 @@ import {
   ItemActions,
   ItemContent,
   ItemDescription,
+  ItemGroup,
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { dueTodayCount } from "@/lib/review/queries";
 import { listSessions } from "@/lib/sessions/queries";
-import { PAGE_SIZE, parsePage } from "@/lib/sessions/rows";
+import { PAGE_SIZE, parsePage, type SessionListItem } from "@/lib/sessions/rows";
 
 export const metadata: Metadata = { title: "Dashboard" };
+
+// Only the skeleton's shape comes from these: text lengths and statuses like a real list.
+const SAMPLE_NOW = new Date("2026-01-01T12:00:00Z");
+const sample = (
+  i: number,
+  title: string,
+  status: SessionListItem["status"],
+  cardCount?: number,
+): Parameters<typeof SessionRow>[0]["session"] & { cardCount?: number } => ({
+  id: `sample-${i}`,
+  title,
+  repo: "session-coach",
+  branch: null,
+  status,
+  error: null,
+  created_at: new Date(SAMPLE_NOW.getTime() - (i + 1) * 3_600_000).toISOString(),
+  cardCount,
+});
+const SAMPLE_SESSIONS = [
+  sample(0, "Add rate limiting to the upload route", "ready", 4),
+  sample(1, "Move auth emails to React Email", "ready", 3),
+  sample(2, "Fix the tracker's inline title edit", "processing"),
+  sample(3, "Stream the CLI upload", "ready", 5),
+];
 
 // shortcut: the page is read from searchParams directly; nuqs isn't installed (no new dependencies this phase).
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
@@ -34,21 +59,32 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
         title="Dashboard"
         description="Explain back the decisions your coding agent made."
       />
-      <Suspense
-        fallback={
+      {/* Skullet measures the real rows, drawn from sample sessions, so nothing moves when the data lands. */}
+      <SkeletonSuspense
+        label="Loading sessions"
+        skeleton={
           <Card>
-            {/* The real card's header, so the list keeps its place when the rows land. */}
-            <CardHeader>
+            {/* skullet-own: the heading is static, so it stays real, not a bar. */}
+            <CardHeader skullet-own="">
               <CardTitle>
                 <h2>Sessions</h2>
               </CardTitle>
             </CardHeader>
-            <SessionListLoading />
+            <ItemGroup>
+              {SAMPLE_SESSIONS.map((session) => (
+                <SessionRow
+                  key={session.id}
+                  session={session}
+                  cardCount={session.cardCount}
+                  now={SAMPLE_NOW}
+                />
+              ))}
+            </ItemGroup>
           </Card>
         }
       >
         <Sessions searchParams={searchParams} />
-      </Suspense>
+      </SkeletonSuspense>
     </Container>
   );
 }

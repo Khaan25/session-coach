@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
 import { NoCardsDueEmpty } from "@/components/app/empty-state";
 import { Container } from "@/components/app/container";
-import { SessionListLoading } from "@/components/app/loading-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -18,9 +17,39 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { reviewQueue } from "@/lib/review/queries";
+import { reviewQueue, type QueueCard } from "@/lib/review/queries";
 
 export const metadata: Metadata = { title: "Review" };
+
+// Only the skeleton's shape comes from these: decision lengths and steps like a real queue.
+const sample = (i: number, decision: string, sessionName: string, step: QueueCard["step"]) => ({
+  id: `sample-${i}`,
+  decision,
+  sessionId: `sample-session-${i}`,
+  sessionName,
+  step,
+  dueOn: null,
+});
+const SAMPLE_QUEUE: QueueCard[] = [
+  sample(
+    0,
+    "Rate limit the upload route per token, not per IP",
+    "Add rate limiting to the upload route",
+    1,
+  ),
+  sample(
+    1,
+    "Render auth emails with React Email at build time",
+    "Move auth emails to React Email",
+    0,
+  ),
+  sample(
+    2,
+    "Save the tracker title on blur, not on every key",
+    "Fix the tracker's inline title edit",
+    2,
+  ),
+];
 
 const stepLabels = ["New", "Day 1", "Day 3", "Day 7"] as const;
 
@@ -31,24 +60,13 @@ export default function ReviewPage() {
         title="Review"
         description="Explain each decision back in your own words. Each card comes back on day 1, 3 and 7."
       />
-      <Suspense
-        fallback={
-          <Card>
-            {/* The real card's header, so the list keeps its place when the rows land. */}
-            <CardHeader>
-              <CardTitle>
-                <h2>Due today</h2>
-              </CardTitle>
-              <CardDescription>
-                Cards due today, then new cards from the last 7 days.
-              </CardDescription>
-            </CardHeader>
-            <SessionListLoading />
-          </Card>
-        }
+      {/* Skullet measures the real queue, drawn from sample cards, so nothing moves when the data lands. */}
+      <SkeletonSuspense
+        label="Loading your review queue"
+        skeleton={<QueueList queue={SAMPLE_QUEUE} />}
       >
         <Queue />
-      </Suspense>
+      </SkeletonSuspense>
     </Container>
   );
 }
@@ -57,20 +75,29 @@ async function Queue() {
   const user = await getCurrentUser();
   if (!user) return <NoCardsDueEmpty />;
   const queue = await load(user.id);
+  if (queue.length === 0) return <NoCardsDueEmpty />;
+  return <QueueList queue={queue} />;
+}
+
+function QueueList({ queue }: { queue: QueueCard[] }) {
   const first = queue[0];
-  if (!first) return <NoCardsDueEmpty />;
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
+        {/* skullet-own: static text stays real in the skeleton; only the queue is drawn as bars. */}
+        <CardTitle skullet-own="">
           <h2>Due today</h2>
         </CardTitle>
-        <CardDescription>Cards due today, then new cards from the last 7 days.</CardDescription>
-        <CardAction>
-          <Link href={`/review/${first.id}`} className={buttonVariants()}>
-            Start review
-          </Link>
-        </CardAction>
+        <CardDescription skullet-own="">
+          Cards due today, then new cards from the last 7 days.
+        </CardDescription>
+        {first && (
+          <CardAction>
+            <Link href={`/review/${first.id}`} className={buttonVariants()}>
+              Start review
+            </Link>
+          </CardAction>
+        )}
       </CardHeader>
       <ItemGroup>
         {queue.map((card) => (
