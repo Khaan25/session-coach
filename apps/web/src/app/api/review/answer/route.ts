@@ -117,7 +117,12 @@ export async function POST(request: Request) {
     }
 
     const step = reviewResult.data?.step ?? 0;
-    const next = nextReview(step, grade.score, today);
+    // A fresh date: grading can cross the learner's midnight, and the schedule counts from the day it was answered.
+    const next = nextReview(
+      step,
+      grade.score,
+      localDate(profileResult.data?.timezone ?? "UTC", new Date()),
+    );
     // Move the schedule first, and only from the state this request read: a second submit racing this one finds the
     // row changed (or already inserted) and gets 409, so one answer can't advance a card twice.
     const schedule = {

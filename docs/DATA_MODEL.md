@@ -126,7 +126,7 @@ One uploaded Claude Code session and its processing status.
 
 ### `decision_cards`
 
-The 3–5 decisions extracted from a ready session, each with a question for the learner.
+The 0–5 decisions extracted from a ready session, each with a question for the learner.
 
 | Column                  | Stores                                                                          | Written by |
 | ----------------------- | ------------------------------------------------------------------------------- | ---------- |

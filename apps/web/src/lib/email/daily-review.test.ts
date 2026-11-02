@@ -11,6 +11,7 @@ import {
   type ProfileRow,
   type ReviewRow,
   sendDailyReviews,
+  SendRejectedError,
 } from "./daily-review.ts";
 
 const site = "https://coach.example.test";
@@ -165,7 +166,7 @@ test("one learner's failure doesn't stop the others", async (t) => {
   const { deps, log, outbox } = fakeDeps();
   const send = deps.send;
   deps.send = async (email) => {
-    if (email.to.startsWith("b@")) throw new Error("Resend responded 500");
+    if (email.to.startsWith("b@")) throw new SendRejectedError("Resend responded 500");
     return send(email);
   };
   assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
@@ -190,6 +191,29 @@ test("one learner's failure doesn't stop the others", async (t) => {
   assert.equal(outbox[2].idempotencyKey, "daily_review/b/2026-10-31");
 });
 
+test("a timeout keeps the claim, so a rerun the same day doesn't send again", async (t) => {
+  t.mock.method(console, "error", () => {});
+  const recipients = dailyReviewRecipients([profile("a")], [review("a", "2026-10-31")], [], now);
+  const { deps, log, outbox } = fakeDeps();
+  const send = deps.send;
+  deps.send = async () => {
+    throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
+  };
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
+    sent: 0,
+    skipped: 0,
+    failed: 1,
+  });
+  assert.equal(log.has("a/2026-10-31"), true);
+  deps.send = send;
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
+    sent: 0,
+    skipped: 1,
+    failed: 0,
+  });
+  assert.equal(outbox.length, 0);
+});
+
 test("a failed release is logged and the batch goes on", async (t) => {
   const errors = t.mock.method(console, "error", () => {});
   const recipients = dailyReviewRecipients(
@@ -201,7 +225,7 @@ test("a failed release is logged and the batch goes on", async (t) => {
   const { deps, outbox } = fakeDeps();
   const send = deps.send;
   deps.send = async (email) => {
-    if (email.to.startsWith("a@")) throw new Error("Resend responded 500");
+    if (email.to.startsWith("a@")) throw new SendRejectedError("Resend responded 500");
     return send(email);
   };
   deps.release = async () => {

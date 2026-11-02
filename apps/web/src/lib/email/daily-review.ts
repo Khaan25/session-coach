@@ -239,8 +239,8 @@ export type ComposeDailyReview = (
  *
  * - Builds the email first, so a template error leaves the day unclaimed and a same-day rerun can still send.
  * - Then claims the `email_log` row before sending, so a rerun or a crash after the send never sends twice
- *   (docs/rules/error-handling.md). A send that fails releases its claim, so a rerun the same day retries it; the
- *   Idempotency-Key still stops a duplicate if the provider did accept it.
+ *   (docs/rules/error-handling.md). A send the provider refused (`SendRejectedError`) releases its claim, so a rerun
+ *   the same day retries it. A timeout or network error keeps the claim: the email may have gone out.
  * - One learner's failure is logged with their id only and the loop goes on.
  *
  * @param recipients - From `dailyReviewRecipients`.
@@ -274,7 +274,9 @@ export async function sendDailyReviews(
     } catch (err) {
       result.failed++;
       console.error(`[cron/daily-review] send failed for user ${userId}`, errorMessage(err));
-      if (claimed) {
+      // Only a sure rejection frees the day: after a timeout the email may be out, and a rerun with a changed payload
+      // under the same Idempotency-Key would be refused anyway. That learner waits for tomorrow.
+      if (claimed && err instanceof SendRejectedError) {
         await deps.release(userId, today).catch((releaseErr: unknown) => {
           console.error(
             `[cron/daily-review] claim not released for user ${userId}`,
@@ -293,6 +295,14 @@ export async function sendDailyReviews(
     });
   }
   return result;
+}
+
+/**
+ * The provider answered and refused the email, so it surely wasn't sent and the claim can be released. A timeout or a
+ * network error isn't this: the email may have gone out.
+ */
+export class SendRejectedError extends Error {
+  name = "SendRejectedError";
 }
 
 /** How long one Resend call may take before it counts as failed. */
@@ -318,7 +328,11 @@ export function resendSender(apiKey: string, from: string): DailyReviewDeps["sen
       // A stalled call would hold the serial loop until the function is killed; fail it and move to the next learner.
       signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });
-    if (!response.ok) throw new Error(`Resend responded ${response.status}`);
+    // 409 means this Idempotency-Key was already used, so an earlier try may have been accepted: not a sure rejection.
+    if (!response.ok) {
+      const message = `Resend responded ${response.status}`;
+      throw response.status === 409 ? new Error(message) : new SendRejectedError(message);
+    }
     const { id } = (await response.json()) as { id: string };
     return id;
   };

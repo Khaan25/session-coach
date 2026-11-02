@@ -26,15 +26,21 @@ export const MAX_RETRY_WAIT_MS = 20_000;
  * How long to wait before retrying a failed model call.
  *
  * @param error - What the failed attempt threw.
+ * @param now - The current time, for an HTTP-date `retry-after`; tests pass a fixed one.
  * @returns Milliseconds to wait, or null when a retry can't help: a 4xx other than 429 (bad key, bad request) will
  *   fail the same way again. A 429 waits for its `retry-after` seconds, capped at `MAX_RETRY_WAIT_MS`.
  */
-export function retryWaitMs(error: unknown): number | null {
+export function retryWaitMs(error: unknown, now = Date.now()): number | null {
   if (!(error instanceof ProviderHttpError)) return RETRY_WAIT_MS;
   if (error.status === 429) {
-    // A missing or blank header, or an HTTP date (rare), falls back to the default wait. Number("") is 0, not NaN.
+    // Seconds or an HTTP date; a missing, blank or unreadable header falls back to the default wait.
+    // Number("") is 0, not NaN, so blank is checked first.
     const raw = error.retryAfter?.trim();
-    const seconds = raw ? Number(raw) : Number.NaN;
+    const seconds = !raw
+      ? Number.NaN
+      : /^\d+$/.test(raw)
+        ? Number(raw)
+        : (Date.parse(raw) - now) / 1_000;
     if (!Number.isFinite(seconds) || seconds < 0) return RETRY_WAIT_MS;
     return Math.min(seconds * 1_000, MAX_RETRY_WAIT_MS);
   }

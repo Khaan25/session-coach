@@ -78,16 +78,18 @@ export async function GET(request: Request) {
   if (!cronAuthorized(request.headers.get("authorization"), process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const admin = createAdminClient();
   const now = new Date();
-  // Before the Resend check: recovering stuck sessions doesn't need email.
-  const swept = await sweepStuckSessions(admin, now).catch((err: unknown) => {
-    console.error(
-      "[api/cron/daily-review] stuck-session sweep failed",
-      err instanceof Error ? err.message : err,
-    );
-    return undefined;
-  });
+  // Before the Resend check: recovering stuck sessions doesn't need email. Inside the promise, so a client that can't
+  // be built is logged like any sweep error.
+  const swept = await Promise.resolve()
+    .then(() => sweepStuckSessions(createAdminClient(), now))
+    .catch((err: unknown) => {
+      console.error(
+        "[api/cron/daily-review] stuck-session sweep failed",
+        err instanceof Error ? err.message : err,
+      );
+      return undefined;
+    });
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("[api/cron/daily-review] RESEND_API_KEY is not set");
@@ -101,6 +103,7 @@ export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET as string;
 
   try {
+    const admin = createAdminClient();
     const profiles = await fetchAll<ProfileRow>((from, to) =>
       admin
         .from("profiles")

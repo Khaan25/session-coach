@@ -225,6 +225,12 @@ export function prepareLog(bytes: Uint8Array): { gzipped: Buffer; text: string }
 function commonFailure(status: number): Outcome | null {
   if (status === 401) return { message: "Run session-coach login again.", exitCode: 1 };
   if (status === 413) return { message: "Log over 50 MB, too big to upload.", exitCode: 1 };
+  if (status === 429) {
+    return {
+      message: "Too many pushes in the last hour. Wait a while, then run push again.",
+      exitCode: 1,
+    };
+  }
   return null;
 }
 

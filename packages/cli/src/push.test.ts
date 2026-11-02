@@ -330,6 +330,7 @@ describe("step 1 responses", () => {
   const failures: [number, RegExp][] = [
     [401, /session-coach login again/],
     [413, /over 50 MB/],
+    [429, /Wait a while/],
     [400, /rejected/],
     [500, /HTTP 500/],
   ];
