@@ -7,16 +7,8 @@ import { LoadFailedState } from "@/components/app/error-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { RefreshButton } from "@/components/setup/refresh-button";
 import { TokenSection, TokenSectionLoading } from "@/components/setup/token-section";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Code, CodeBlock } from "@/components/ui/code-block";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { formatRelativeTime } from "@/lib/relative-time";
@@ -24,14 +16,19 @@ import { listTokens, type TokenRow } from "@/lib/tokens/queries";
 
 export const metadata: Metadata = { title: "Setup" };
 
-// TODO(zia): the commands and what each does come from Kasam's CLI README (packages/cli); until it exists they are
-// shown as coming soon.
+// The commands packages/cli ships (session-coach on npm). Keep in step with its USAGE.
 const steps = [
-  { command: "npx session-coach init", what: "Adds the SessionEnd hook to Claude Code." },
-  { command: "session-coach login", what: "Signs the CLI in with a token from the list below." },
   {
-    command: "session-coach push --latest",
-    what: "Uploads a session that ended before you set up.",
+    command: "npx session-coach login",
+    what: "Signs the CLI in with a token from the list below.",
+  },
+  {
+    command: "npx session-coach push --latest",
+    what: "Uploads the last Claude Code session you ran in this folder.",
+  },
+  {
+    command: "npx session-coach push <file.jsonl>",
+    what: "Or uploads one session log by its path.",
   },
 ];
 
@@ -48,10 +45,7 @@ export default function SetupPage() {
           <CardTitle>
             <h2>Install the CLI</h2>
           </CardTitle>
-          <CardDescription>The CLI isn&apos;t published yet.</CardDescription>
-          <CardAction>
-            <Badge>Coming soon</Badge>
-          </CardAction>
+          <CardDescription>Needs Node 20 or later.</CardDescription>
         </CardHeader>
         <CardContent>
           <ol className="flex flex-col gap-4">
@@ -70,23 +64,21 @@ export default function SetupPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            <h2>What the hook uploads</h2>
+            <h2>What a push uploads</h2>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="type-body">
-            When a Claude Code session ends, the SessionEnd hook hands its log to a background
-            worker on your laptop. The worker redacts secrets locally, compresses the log and
-            uploads it. If you are offline it keeps the log in <Code>~/.session-coach/outbox/</Code>{" "}
-            and tries again.
+            The CLI reads the session&apos;s log from <Code>~/.claude/projects/</Code>, redacts
+            secrets on your laptop, compresses the log and uploads it.
           </p>
           <p className="type-body">
             The server redacts again, then keeps your prompts, the agent&apos;s replies, file edit
             summaries and shell commands. It drops thinking blocks and attachments.
           </p>
           <p className="type-body">
-            Cards are written by a model. The free tier of Gemini may use what it reads to improve
-            Google&apos;s products, which is why redaction stays strict.
+            Cards are written by a model through Groq&apos;s API, which is why redaction stays
+            strict.
           </p>
           <p>
             <Link href="/privacy" className={buttonVariants({ variant: "link" })}>
