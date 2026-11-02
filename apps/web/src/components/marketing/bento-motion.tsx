@@ -2,10 +2,11 @@
 
 import { BellIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
-import { MotionConfig, motion } from "motion/react";
+import { MotionConfig, motion, useReducedMotion } from "motion/react";
 
 // The bento's micro motion, on motion.dev. All of it idles in place: nothing waits for a scroll. MotionProvider
-// turns off every transform under reduced motion (motion's "user" setting); the dot and caret only fade.
+// turns off every transform under reduced motion (motion's "user" setting). That leaves opacity running, so the
+// dot and caret check the preference themselves and hold still.
 
 export function MotionProvider({ children }: { children: React.ReactNode }) {
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
@@ -27,11 +28,12 @@ export function RingingBell() {
 
 /** A dot that breathes, for a "ready" or "live" label. */
 export function LiveDot() {
+  const reduced = useReducedMotion();
   return (
     <motion.span
       aria-hidden
       className="size-1.5 rounded-full bg-success"
-      animate={{ opacity: [1, 0.35, 1] }}
+      animate={{ opacity: reduced ? 1 : [1, 0.35, 1] }}
       transition={{ duration: 1.6, ease: "easeInOut", repeat: Infinity }}
     />
   );
@@ -39,11 +41,12 @@ export function LiveDot() {
 
 /** The typing caret: solid, then blinking at half-second steps. */
 export function Caret() {
+  const reduced = useReducedMotion();
   return (
     <motion.span
       aria-hidden
       className="h-4 w-0.5 bg-accent-mark"
-      animate={{ opacity: [1, 1, 0, 0] }}
+      animate={{ opacity: reduced ? 1 : [1, 1, 0, 0] }}
       transition={{ duration: 1, times: [0, 0.5, 0.5, 1], repeat: Infinity, ease: "linear" }}
     />
   );
