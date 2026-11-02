@@ -1,6 +1,7 @@
 import { CardsIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 
+import { BentoSection } from "@/components/marketing/bento-section";
 import { DecisionCardPreview } from "@/components/marketing/decision-card-preview";
 import { HandUnderline } from "@/components/marketing/hand-underline";
 import {
@@ -86,6 +87,7 @@ export default function Home() {
           {/* TODO(zia): the trusted-by strip goes here once there are real teams or learners to name. */}
         </div>
       </section>
+      <BentoSection />
       <LoopSection />
       <CardSection />
       <TrustSection />

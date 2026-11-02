@@ -2,6 +2,12 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-02 · The landing's demos loop in place, on motion.dev
+
+- **Decision:** the landing gets a product bento under the hero (`components/marketing/bento-*.tsx`, layout and timing cloned from a reference video, spec in `.reanimate/bento/spec.md`, which is git-ignored) and one looping demo per section: the review schedule, the quote check, the secret filter. Idle micro motion (bell, bars, dot, caret) and the demos' springs and enter/exit swaps use `motion` (pinned 14.3.0, client components only). Simple transitions stay Tailwind. Every demo idles in place; none waits for a scroll. `MotionConfig reducedMotion="user"` drops transforms and `useLoopStep` stops the loops under reduced motion.
+- **Why:** Zia asked for micro animations with motion.dev. Springs, keyframe loops and exit animations are a few lines with it and a lot of hand CSS without. The design system bans scroll reveals, so the motion runs on its own clock.
+- **Rejected:** scroll-triggered entrances (banned); the reference's sliding tab pill (the segmented control cuts by design); a 3D glass asterisk (the watercolour cards sprite turns instead).
+
 ## 2026-11-02 · The CLI ships as one bundled file, as the unscoped npm package `session-coach`
 
 - **Decision:** `packages/cli` is named `session-coach` (version 0.1.0, MIT) and publishes only `dist/cli.js`, `README.md`, `LICENSE` and `package.json`. `esbuild` (pinned 0.28.2) bundles our code and `@session-coach/shared/redact` into that one ESM file for Node 20+; only `node:` builtins stay external, so `@session-coach/shared` is a devDependency and no workspace import is left at runtime. `prepack` runs the build. The root private package is renamed `session-coach-monorepo`.
