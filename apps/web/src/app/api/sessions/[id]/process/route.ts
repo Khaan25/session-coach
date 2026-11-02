@@ -9,12 +9,20 @@
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { userRateLimit } from "@/lib/auth/rate-limit";
 import { processSession } from "@/lib/pipeline/process";
 import { bearerToken, MAX_UPLOAD_BYTES, SESSIONS_BUCKET } from "@/lib/sessions/upload";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { userForToken } from "@/lib/tokens/verify";
 
 const idSchema = z.uuid();
+
+/**
+ * Seconds this route, and the `processSession` it runs in `after()`, may take. Set explicitly rather than trusting the
+ * platform default: the slowest run is about 220 s, and `processSession` gives up at 280 s so it can still mark the
+ * session failed.
+ */
+export const maxDuration = 300;
 
 /**
  * Starts extraction for one uploaded session.
@@ -44,6 +52,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         { status: 401 },
       );
     }
+    const limited = await userRateLimit("process", userId);
+    if (limited) return limited;
 
     const admin = createAdminClient();
     const { data: session, error: readError } = await admin

@@ -1,5 +1,7 @@
+import { gunzipSync } from "node:zlib";
 import { decisionSourceSchema, evidenceSchema } from "@session-coach/shared/decision";
 import { z } from "zod";
+import { MAX_UPLOAD_BYTES } from "../sessions/upload.ts";
 import type { CheckedCard } from "./evidence.ts";
 import type { TimelineEvent } from "./parser.ts";
 
@@ -7,8 +9,9 @@ import type { TimelineEvent } from "./parser.ts";
 // `server-only` and the `@/` alias).
 
 /**
- * The most event text we send the model, in characters. About 4 characters per token puts this near 4,000 tokens, which
- * leaves room for the instructions and the retry inside Groq's 8,000 tokens per minute.
+ * The most timeline we send the model, in characters of the JSON it actually gets (ids, kinds, quotes and escapes
+ * included). About 4 characters per token puts this near 4,000 tokens, which leaves room for the instructions and the
+ * retry inside Groq's 8,000 tokens per minute.
  */
 export const MAX_TIMELINE_CHARS = 16_000;
 
@@ -16,8 +19,9 @@ export const MAX_TIMELINE_CHARS = 16_000;
 export const MAX_EVENT_CHARS = 1_500;
 
 /**
- * Caps each event's text, then keeps events in order until the budget is spent. An event that doesn't fit ends the
- * timeline, so ids stay E1..En with no gaps and `event_index` still points at the right event.
+ * Caps each event's text, then keeps events in order until the budget is spent. Each event costs its JSON as
+ * `extractCards` sends it, plus one for the comma. An event that doesn't fit ends the timeline, so ids stay E1..En with
+ * no gaps and `event_index` still points at the right event.
  *
  * Temporary: Zia's big-session decision (a bigger model, or chunks) replaces this.
  *
@@ -32,11 +36,38 @@ export function trimTimeline(events: readonly TimelineEvent[]): {
   let used = 0;
   for (const event of events) {
     const text = event.text.slice(0, MAX_EVENT_CHARS);
-    if (used + text.length > MAX_TIMELINE_CHARS) break;
-    used += text.length;
+    const size = JSON.stringify({ id: event.id, kind: event.kind, text }).length + 1;
+    if (used + size > MAX_TIMELINE_CHARS) break;
+    used += size;
     kept.push({ ...event, text });
   }
   return { kept, cut: events.length - kept.length };
+}
+
+/** The most a log may unzip to: twice the 50 MB upload limit. A gzip bomb stops here instead of filling memory. */
+export const MAX_LOG_BYTES = 2 * MAX_UPLOAD_BYTES;
+
+/** The log unzips to more than `MAX_LOG_BYTES`. */
+export class LogTooBigError extends Error {
+  name = "LogTooBigError";
+}
+
+/**
+ * Unzips an uploaded log to text, refusing to grow past `maxBytes`.
+ *
+ * @param gzipped - The log as stored.
+ * @param maxBytes - The unzipped size limit; tests pass a small one.
+ * @throws LogTooBigError when the log unzips past `maxBytes`. Other zlib errors (not gzip, truncated) pass through.
+ */
+export function unzipLog(gzipped: Buffer, maxBytes = MAX_LOG_BYTES): string {
+  try {
+    return gunzipSync(gzipped, { maxOutputLength: maxBytes }).toString("utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ERR_BUFFER_TOO_LARGE") {
+      throw new LogTooBigError(`log unzips past ${maxBytes} bytes`, { cause: error });
+    }
+    throw error;
+  }
 }
 
 /** A `decision_cards` insert row: what the pipeline writes. Postgres adds id and created_at and generates flagged/hidden. */

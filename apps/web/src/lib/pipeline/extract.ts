@@ -27,7 +27,7 @@ files: file paths from write or edit events that belong to this decision, or [] 
 question: one question that checks the developer understands WHY, not what. It must be answerable from the timeline.
 model_answer: 1 to 2 sentences.
 
-Use only the timeline. Return 3 to 5 decisions, most important first.`;
+Use only the timeline. Return at most 5 decisions, most important first. If the session has fewer real decisions, return fewer, or an empty list; never invent one to fill the list.`;
 
 const modelCardSchema = z.object({
   decision: z.string().min(1),
@@ -36,7 +36,8 @@ const modelCardSchema = z.object({
   evidence: z
     .array(
       z
-        .object({ event: z.string().regex(/^E\d+$/), quote: z.string().trim().min(1) })
+        // E1 is the first event: "E0" or "E01" would point at no event, so the card is dropped here.
+        .object({ event: z.string().regex(/^E[1-9]\d*$/), quote: z.string().trim().min(1) })
         // The model cites "E2"; the rest of the pipeline works with the number 2.
         .transform(({ event, quote }) => ({ event_index: Number(event.slice(1)), quote })),
     )
@@ -47,13 +48,16 @@ const modelCardSchema = z.object({
   model_answer: z.string().min(1),
 });
 
-/** What the model must return: 3 to 5 decisions. `checkEvidence` later drops the ones with no grounded quote. */
-export const extractOutputSchema = z.object({ decisions: z.array(modelCardSchema).min(3).max(5) });
+/** The most cards one session yields; extra valid cards past this are dropped, most important first. */
+export const MAX_CARDS = 5;
+
+/** The answer's outer shape. Cards are parsed one by one (`parseAnswer`), so one bad card can't sink the rest. */
+const extractOutputSchema = z.object({ decisions: z.array(z.unknown()) });
 
 /** A card as the model wrote it, before `checkEvidence` verifies the quotes. */
 export type ExtractedCard = z.infer<typeof modelCardSchema>;
 
-/** The model's answer failed the schema twice. `cause` is the last zod error. */
+/** The model's answer failed the schema twice. The message carries the last validation error. */
 export class ExtractError extends Error {
   name = "ExtractError";
 }
@@ -71,14 +75,32 @@ export type ExtractOptions = {
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
- * Asks the model for decision cards. An answer that fails the schema gets one more call, after a wait so it stays
- * under the provider's tokens-per-minute limit. The data carries the failed answer and the validation error so the
- * model can correct it; a second failure throws. Two calls at most.
+ * Keeps the valid cards of one answer, up to `MAX_CARDS`. Invalid cards are dropped. The answer counts as failed only
+ * when its outer shape is wrong, or when it has cards and none of them is valid, so the retry can fix them.
+ */
+function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: string } {
+  const outer = extractOutputSchema.safeParse(answer);
+  if (!outer.success) return { error: z.prettifyError(outer.error) };
+  const results = outer.data.decisions.map((card) => modelCardSchema.safeParse(card));
+  const cards = results.flatMap((result) => (result.success ? [result.data] : []));
+  if (cards.length === 0 && results.length > 0) {
+    const errors = results.map((result, i) =>
+      result.success ? "" : `decisions[${i}]: ${z.prettifyError(result.error)}`,
+    );
+    return { error: errors.join("\n") };
+  }
+  return { cards: cards.slice(0, MAX_CARDS) };
+}
+
+/**
+ * Asks the model for decision cards and keeps the valid ones (see `parseAnswer`). An answer that fails gets one more
+ * call, after a wait so it stays under the provider's tokens-per-minute limit. The data carries the failed answer and
+ * the validation error so the model can correct it; a second failure throws. Two calls at most.
  *
  * @param events - The parsed timeline; `line` is not sent, the model has no use for it.
  * @param model - `callModel` in production, a fake in tests.
  * @param options - `retryDelayMs` (default `RETRY_DELAY_MS`) and `sleep`, to change the wait.
- * @returns 3 to 5 cards, unverified.
+ * @returns 0 to `MAX_CARDS` cards, unverified. Zero is a valid answer: a session can have no real decisions.
  * @throws ExtractError when both answers are invalid. Errors from `model` itself pass through.
  */
 export async function extractCards(
@@ -91,26 +113,22 @@ export async function extractCards(
     instructions: EXTRACT_INSTRUCTIONS,
     data: { events: timeline },
   });
-  const first = extractOutputSchema.safeParse(firstAnswer);
-  if (first.success) return first.data.decisions;
+  const first = parseAnswer(firstAnswer);
+  if ("cards" in first) return first.cards;
 
-  const validationError = z.prettifyError(first.error);
   await sleep(retryDelayMs);
-  const second = extractOutputSchema.safeParse(
+  const second = parseAnswer(
     await model("extract", {
       instructions: EXTRACT_INSTRUCTIONS,
       data: {
         events: timeline,
         previous_answer: firstAnswer,
-        validation_error: validationError,
+        validation_error: first.error,
         fix: "Your previous_answer failed validation with the error above. Return the full JSON again with exactly those problems fixed.",
       },
     }),
   );
-  if (second.success) return second.data.decisions;
+  if ("cards" in second) return second.cards;
 
-  throw new ExtractError(
-    `The model returned invalid cards twice. Last error:\n${z.prettifyError(second.error)}`,
-    { cause: second.error },
-  );
+  throw new ExtractError(`The model returned invalid cards twice. Last error:\n${second.error}`);
 }

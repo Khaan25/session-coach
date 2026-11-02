@@ -17,8 +17,14 @@ const events: TimelineEvent[] = [
   event(2, "reply", "I will put them in tokens.css\nso   every page reuses them."),
   event(3, "edit", "src/styles/tokens.css — replaced 1 line with 2: --gap: 4px;"),
   event(4, "bash", "pnpm test --filter web --run"),
-  event(5, "edit", "docs/DECISIONS.md — replaced 0 lines with 3: ## Styles"),
+  event(
+    5,
+    "edit",
+    "docs/DECISIONS.md — replaced 0 lines with 3: Styles live in tokens.css so pages share",
+  ),
   event(6, "write", "src/other.ts — wrote 4 lines"),
+  event(7, "write", "docs/DECISIONS.md — wrote 40 lines"),
+  event(8, "reply", "我们把共享样式放在一个文件里，这样每个页面都能复用。"),
 ];
 
 const draft = (
@@ -117,8 +123,42 @@ test("stated stays when a verified quote is a prompt or a reply", () => {
   assert.equal(check([{ event_index: 2, quote: "so every page reuses them" }]).source, "stated");
 });
 
-test("stated stays when the verified quote is a DECISIONS.md write or edit", () => {
-  assert.equal(check([{ event_index: 5, quote: "replaced 0 lines with 3" }]).source, "stated");
+test("stated stays when the verified quote is the written words of a DECISIONS.md edit", () => {
+  assert.equal(check([{ event_index: 5, quote: "Styles live in tokens.css so" }]).source, "stated");
+});
+
+test("the parser's metadata of a DECISIONS.md write or edit is verified but does not ground a card", () => {
+  for (const item of [
+    { event_index: 5, quote: "docs/DECISIONS.md — replaced 0 lines with 3" },
+    { event_index: 7, quote: "docs/DECISIONS.md — wrote 40 lines" },
+  ]) {
+    assert.equal(check([item]).evidence[0]?.verified, true);
+    assert.equal(isGrounded(draft([item]), events), false);
+  }
+});
+
+test("curly quotes, dashes, full-width forms and case don't stop a match", () => {
+  const verified = (text: string, quote: string) =>
+    isGrounded(draft([{ event_index: 1, quote }]), [event(1, "prompt", text)]);
+  assert.equal(
+    verified(
+      "Don\u2019t touch the \u201Cauth\u201D module\u2014ever, please",
+      `don't touch the "auth" module-ever`,
+    ),
+    true,
+  );
+  assert.equal(
+    verified("Use the ＡＰＩ client in every route", "use the API client in every"),
+    true,
+  );
+  assert.equal(verified("Keep it in one file", "keep it in two files"), false);
+});
+
+test("CJK text without spaces counts words and matches", () => {
+  const item = { event_index: 8, quote: "共享样式放在一个文件里" };
+  assert.equal(check([item]).evidence[0]?.verified, true);
+  assert.equal(isGrounded(draft([item]), events), true);
+  assert.equal(isGrounded(draft([{ event_index: 8, quote: "样式" }]), events), false);
 });
 
 test("a card whose only verified quotes are write or bash events is dropped", () => {
@@ -150,8 +190,8 @@ test("a prompt quote that is not in the event does not ground a card", () => {
   );
 });
 
-test("a card grounded by a DECISIONS.md write is kept", () => {
-  const cards = checkAll([draft([{ event_index: 5, quote: "replaced 0 lines with 3" }])]);
+test("a card grounded by a DECISIONS.md edit is kept", () => {
+  const cards = checkAll([draft([{ event_index: 5, quote: "Styles live in tokens.css so" }])]);
   assert.equal(cards.length, 1);
   assert.equal(cards[0]?.source, "stated");
 });
@@ -165,7 +205,8 @@ test("isGrounded is true for a verified prompt, reply or DECISIONS.md quote, fal
     isGrounded(draft([{ event_index: index, quote }]), events);
   assert.equal(grounded(1, "Keep the shared styles in"), true);
   assert.equal(grounded(2, "so every page reuses them"), true);
-  assert.equal(grounded(5, "replaced 0 lines with 3"), true);
+  assert.equal(grounded(5, "Styles live in tokens.css so"), true);
+  assert.equal(grounded(5, "replaced 0 lines with 3"), false);
   assert.equal(grounded(4, "pnpm test --filter web --run"), false);
   assert.equal(grounded(3, "replaced 1 line with 2"), false);
   assert.equal(grounded(1, "invented words that nobody wrote"), false);

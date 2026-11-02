@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { gzipSync } from "node:zlib";
 import { decisionCardSchema, getEvidenceFlags } from "@session-coach/shared/decision";
 import type { CheckedCard } from "./evidence.ts";
 import type { TimelineEvent } from "./parser.ts";
 import {
+  LogTooBigError,
   MAX_EVENT_CHARS,
+  MAX_LOG_BYTES,
   MAX_TIMELINE_CHARS,
   buildCardRows,
   trimTimeline,
+  unzipLog,
 } from "./process-rows.ts";
 
 const event = (n: number, length: number): TimelineEvent => ({
@@ -16,6 +20,9 @@ const event = (n: number, length: number): TimelineEvent => ({
   text: "x".repeat(length),
   line: n,
 });
+
+/** What one event costs the budget: its JSON as the model gets it, plus the comma. */
+const size = ({ id, kind, text }: TimelineEvent) => JSON.stringify({ id, kind, text }).length + 1;
 
 const SESSION_ID = "11111111-1111-4111-8111-111111111111";
 const USER_ID = "22222222-2222-4222-8222-222222222222";
@@ -40,7 +47,7 @@ test("trimTimeline keeps everything that fits and cuts nothing", () => {
 });
 
 test("trimTimeline stops at the first event over budget and counts the rest as cut", () => {
-  // 10 events of 1,500 chars: 10 x 1,500 = 15,000 fits; the 11th would reach 16,500.
+  // 1,500 chars of text cost about 1,540 as JSON: 10 fit in 16,000, the 11th would not.
   const events = Array.from({ length: 12 }, (_, i) => event(i + 1, MAX_EVENT_CHARS));
   const { kept, cut } = trimTimeline(events);
   assert.equal(kept.length, 10);
@@ -52,9 +59,23 @@ test("trimTimeline stops at the first event over budget and counts the rest as c
 });
 
 test("trimTimeline accepts an event that lands exactly on the budget", () => {
-  const events = Array.from({ length: MAX_TIMELINE_CHARS / 1_000 }, (_, i) => event(i + 1, 1_000));
-  assert.equal(trimTimeline(events).cut, 0);
-  assert.equal(trimTimeline([...events, event(99, 1)]).cut, 1);
+  const events = Array.from({ length: 15 }, (_, i) => event(i + 1, 1_000));
+  const used = events.reduce((sum, e) => sum + size(e), 0);
+  const last = event(16, 0);
+  last.text = "x".repeat(MAX_TIMELINE_CHARS - used - size(last));
+  assert.equal(trimTimeline([...events, last]).cut, 0);
+  assert.equal(trimTimeline([...events, last, event(99, 0)]).cut, 1);
+});
+
+test("trimTimeline counts the serialized JSON, so many short events can't double the real size", () => {
+  const events = Array.from({ length: 2_000 }, (_, i) => ({
+    ...event(i + 1, 0),
+    text: 'say "hi"\n',
+  }));
+  const { kept } = trimTimeline(events);
+  const sent = JSON.stringify(kept.map(({ id, kind, text }) => ({ id, kind, text }))).length;
+  assert.ok(sent <= MAX_TIMELINE_CHARS + 1, `sent ${sent}`);
+  assert.ok(kept.length < 400);
 });
 
 test("trimTimeline caps a huge first event and keeps it, instead of cutting it", () => {
@@ -106,4 +127,18 @@ test("a built row plus the database's columns parses with the shared decisionCar
     };
     assert.deepEqual(decisionCardSchema.parse(full), full);
   }
+});
+
+test("unzipLog returns the text of a log under the limit", () => {
+  assert.equal(unzipLog(gzipSync("hello log")), "hello log");
+  assert.equal(MAX_LOG_BYTES, 100 * 1024 * 1024);
+});
+
+test("unzipLog throws LogTooBigError when the log unzips past the limit", () => {
+  const bomb = gzipSync(Buffer.alloc(10_000));
+  assert.throws(() => unzipLog(bomb, 1_000), LogTooBigError);
+  assert.throws(
+    () => unzipLog(Buffer.from("not gzip")),
+    (e: unknown) => !(e instanceof LogTooBigError),
+  );
 });
