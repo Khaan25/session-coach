@@ -91,8 +91,8 @@ export async function processSession(sessionId: string): Promise<void> {
         ...(title !== null && { title }),
         ...(duration !== null && { duration_min: duration }),
       };
-    } catch {
-      console.error("[pipeline/process] title and duration skipped", sessionId);
+    } catch (error) {
+      console.error("[pipeline/process] title and duration skipped", sessionId, error);
     }
     const { error: readyError } = await admin
       .from("sessions")

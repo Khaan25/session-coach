@@ -85,7 +85,9 @@ export function sessionTitle(events: readonly TimelineEvent[]): string | null {
   if (!prompt) return null;
   const text = prompt.text.replace(/\s+/g, " ").trim();
   if (text === "") return null;
-  return text.length > MAX_TITLE_CHARS ? `${text.slice(0, MAX_TITLE_CHARS)}…` : text;
+  // Count and cut by code points, so an emoji at the limit is kept whole or dropped, never split in two.
+  const chars = [...text];
+  return chars.length > MAX_TITLE_CHARS ? `${chars.slice(0, MAX_TITLE_CHARS).join("")}…` : text;
 }
 
 /** A `decision_cards` insert row: what the pipeline writes. Postgres adds id and created_at and generates flagged/hidden. */

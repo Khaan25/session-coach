@@ -123,6 +123,18 @@ test("sessionTitle cuts a long prompt to the limit and adds an ellipsis", () => 
   );
 });
 
+test("sessionTitle never splits an emoji that straddles the limit", () => {
+  // 79 letters, then a 2-unit emoji occupying UTF-16 units 79-80, then more text.
+  const title = sessionTitle([promptEvent(`${"x".repeat(MAX_TITLE_CHARS - 1)}😀 and more`)]);
+  assert.ok(title !== null);
+  assert.doesNotMatch(
+    title,
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/,
+  );
+  assert.equal(title, `${"x".repeat(MAX_TITLE_CHARS - 1)}😀…`);
+  assert.equal([...title].length, MAX_TITLE_CHARS + 1);
+});
+
 test("sessionTitle is null with no prompt or a blank one", () => {
   assert.equal(sessionTitle([event(1, 5)]), null);
   assert.equal(sessionTitle([]), null);
