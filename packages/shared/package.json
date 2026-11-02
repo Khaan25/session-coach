@@ -6,7 +6,8 @@
     "./decision": "./src/decision.ts",
     "./session": "./src/session.ts",
     "./fixtures/session.sample.json": "./fixtures/session.sample.json",
-    "./profile": "./src/profile.ts"
+    "./profile": "./src/profile.ts",
+    "./redact": "./src/redact.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
