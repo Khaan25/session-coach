@@ -79,7 +79,7 @@ async function push(args: string[]): Promise<number> {
     const found = await findLatestLog(defaultProjectsDir(), cwd);
     if ("error" in found) return say(found.error, 1);
     const problem = validateFileName(found.name);
-    if (problem) return say(`${found.name}: ${problem}`, 1);
+    if (problem) return say(`${found.path}: ${problem}`, 1);
     console.log(`Pushing ${found.name} (${formatSize(found.size)})`);
     return pushFile(found.path);
   }
