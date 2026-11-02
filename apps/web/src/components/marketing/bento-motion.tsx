@@ -26,6 +26,9 @@ export function RingingBell() {
   );
 }
 
+// Under reduced motion: jump to full opacity once, with no repeat left running.
+const still = { duration: 0 };
+
 /** A dot that breathes, for a "ready" or "live" label. */
 export function LiveDot() {
   const reduced = useReducedMotion();
@@ -34,7 +37,7 @@ export function LiveDot() {
       aria-hidden
       className="size-1.5 rounded-full bg-success"
       animate={{ opacity: reduced ? 1 : [1, 0.35, 1] }}
-      transition={{ duration: 1.6, ease: "easeInOut", repeat: Infinity }}
+      transition={reduced ? still : { duration: 1.6, ease: "easeInOut", repeat: Infinity }}
     />
   );
 }
@@ -47,7 +50,9 @@ export function Caret() {
       aria-hidden
       className="h-4 w-0.5 bg-accent-mark"
       animate={{ opacity: reduced ? 1 : [1, 1, 0, 0] }}
-      transition={{ duration: 1, times: [0, 0.5, 0.5, 1], repeat: Infinity, ease: "linear" }}
+      transition={
+        reduced ? still : { duration: 1, times: [0, 0.5, 0.5, 1], repeat: Infinity, ease: "linear" }
+      }
     />
   );
 }
