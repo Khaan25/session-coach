@@ -146,15 +146,16 @@ export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue>
     learnerToday(supabase, userId, now),
   ]);
   if (cards.error) throw new Error(`emptyQueue: ${cards.error.message}`);
+  // Inner embed: RLS drops a hidden card, and with it its review, so nextDue never points at a card the queue can't show.
   const next = await supabase
     .from("reviews")
-    .select("due_on")
+    .select("due_on, card:decision_cards!inner(id)")
     .eq("user_id", userId)
     .eq("mastered", false)
     .gt("due_on", today)
     .order("due_on")
     .limit(1)
-    .maybeSingle<{ due_on: string }>();
+    .maybeSingle<{ due_on: string; card: { id: string } }>();
   if (next.error) throw new Error(`emptyQueue: ${next.error.message}`);
   return { hasCards: (cards.count ?? 0) > 0, nextDue: next.data?.due_on ?? null, today };
 }
