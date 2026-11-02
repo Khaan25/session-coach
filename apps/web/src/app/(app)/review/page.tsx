@@ -60,7 +60,8 @@ export default function ReviewPage() {
         title="Review"
         description="Explain each decision back in your own words. Each card comes back on day 1, 3 and 7."
       />
-      {/* Skullet measures the real queue, drawn from sample cards, so nothing moves when the data lands. */}
+      {/* Skullet measures the real queue, drawn from sample cards, so each row keeps its shape when the data lands. The
+          queue length isn't known until then, so the list can still grow or shrink. */}
       <SkeletonSuspense
         label="Loading your review queue"
         skeleton={<QueueList queue={SAMPLE_QUEUE} />}
