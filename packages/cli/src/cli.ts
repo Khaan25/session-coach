@@ -11,6 +11,7 @@ import {
   saveConfig,
   validateToken,
 } from "./config.ts";
+import { defaultProjectsDir, findLatestLog, formatSize, resolveCwd } from "./latest.ts";
 import { promptHidden } from "./prompt.ts";
 import {
   createRequest,
@@ -28,7 +29,8 @@ import {
 
 const USAGE = `Usage:
   session-coach login [--url <site url>]
-  session-coach push <file.jsonl>`;
+  session-coach push <file.jsonl>
+  session-coach push --latest`;
 
 /** Prints a message and returns the exit code. */
 function say(message: string, exitCode = 0): number {
@@ -71,8 +73,20 @@ async function login(args: string[]): Promise<number> {
 async function push(args: string[]): Promise<number> {
   const parsed = parsePushArgs(args);
   if ("error" in parsed) return say(`${parsed.error}\n${USAGE}`, 1);
-  const { file } = parsed;
 
+  if ("latest" in parsed) {
+    const cwd = resolveCwd(process.env, process.cwd());
+    const found = await findLatestLog(defaultProjectsDir(), cwd);
+    if ("error" in found) return say(found.error, 1);
+    const problem = validateFileName(found.name);
+    if (problem) return say(`${found.path}: ${problem}`, 1);
+    console.log(`Pushing ${found.name} (${formatSize(found.size)})`);
+    return pushFile(found.path);
+  }
+  return pushFile(parsed.file);
+}
+
+async function pushFile(file: string): Promise<number> {
   const nameProblem = validateFileName(file);
   if (nameProblem) return say(nameProblem, 1);
 

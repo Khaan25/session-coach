@@ -1,7 +1,7 @@
 // Argument parsing for `login` and `push`. Pure, so node --test covers it without a terminal.
 
 export type LoginArgs = { url: string | null } | { error: string };
-export type PushArgs = { file: string } | { error: string };
+export type PushArgs = { file: string } | { latest: true } | { error: string };
 
 /** Accepts `--url value` and `--url=value`; anything else is an error. */
 export function parseLoginArgs(args: string[]): LoginArgs {
@@ -23,10 +23,16 @@ export function parseLoginArgs(args: string[]): LoginArgs {
   return { url };
 }
 
-/** `push` takes exactly one file and no flags. */
+/** `push` takes one file, or `--latest` alone; no other flags. */
 export function parsePushArgs(args: string[]): PushArgs {
+  const latest = args.includes("--latest");
+  const others = args.filter((arg) => arg !== "--latest");
+  if (latest && others.length > 0) return { error: "Use either a file or --latest, not both." };
+  if (latest) {
+    return args.length > 1 ? { error: "--latest was given twice." } : { latest: true };
+  }
   const [file, ...rest] = args;
-  if (!file) return { error: "push needs a file." };
+  if (!file) return { error: "push needs a file or --latest." };
   if (file.startsWith("-")) return { error: `Unknown argument: ${file}` };
   if (rest.length > 0) return { error: `Unknown argument: ${rest[0]}` };
   return { file };
