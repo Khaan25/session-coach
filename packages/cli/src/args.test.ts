@@ -27,6 +27,23 @@ describe("parsePushArgs", () => {
     assert.deepEqual(parsePushArgs(["abc.jsonl"]), { file: "abc.jsonl" });
   });
 
+  it("takes --latest alone", () => {
+    assert.deepEqual(parsePushArgs(["--latest"]), { latest: true });
+  });
+
+  it("rejects --latest with a file, twice, or with a value", () => {
+    assert.deepEqual(parsePushArgs(["--latest", "a.jsonl"]), {
+      error: "Use either a file or --latest, not both.",
+    });
+    assert.deepEqual(parsePushArgs(["a.jsonl", "--latest"]), {
+      error: "Use either a file or --latest, not both.",
+    });
+    assert.deepEqual(parsePushArgs(["--latest", "--latest"]), {
+      error: "--latest was given twice.",
+    });
+    assert.deepEqual(parsePushArgs(["--latest=x"]), { error: "Unknown argument: --latest=x" });
+  });
+
   it("rejects no file, flags and extra arguments", () => {
     assert.ok("error" in parsePushArgs([]));
     assert.deepEqual(parsePushArgs(["--force"]), { error: "Unknown argument: --force" });
