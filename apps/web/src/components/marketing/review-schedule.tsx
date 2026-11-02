@@ -26,7 +26,7 @@ const percent = (stop: number) => `${(stop / (stops.length - 1)) * 100}%`;
 const stopLeft = ["left-0", "left-1/4", "left-1/2", "left-3/4", "left-full"];
 
 export function ReviewSchedule() {
-  const step = useLoopStep(story.length, 2200);
+  const step = useLoopStep(story.length, 2200, story.length - 1);
   const { at, score, note } = story[step];
 
   return (

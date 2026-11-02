@@ -9,7 +9,7 @@ import { useLoopStep } from "@/hooks/use-loop-step";
 
 // One log line on its way out, on a loop of three 2s stages: as written, masked on the laptop, masked again on the
 // server. The masks are the CLI's own ([REDACTED], [EMAIL]). The key and address are fakes, short enough that
-// the secret scanner leaves them alone. Reduced motion stays on the first stage.
+// the secret scanner leaves them alone.
 const parts: ({ text: string } | { secret: string; mask: string; stage: number })[] = [
   { text: "› the key is " },
   { secret: "sk-ant-x7Qe9…", mask: "[REDACTED]", stage: 1 },
@@ -26,7 +26,7 @@ const stages = [
 ];
 
 export function RedactionDemo() {
-  const stage = useLoopStep(stages.length, 2000);
+  const stage = useLoopStep(stages.length, 2000, stages.length - 1);
 
   return (
     <MotionConfig reducedMotion="user">

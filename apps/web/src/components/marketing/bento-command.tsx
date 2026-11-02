@@ -1,5 +1,6 @@
 "use client";
 
+import { useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { Caret } from "@/components/marketing/bento-motion";
@@ -23,15 +24,16 @@ const DELETE_MS = 18;
 const HOLD_MS = 1200;
 const GAP_MS = 250;
 
-const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-/** Types, holds and deletes each line in turn. `startFull` begins on the first line already typed. */
+/**
+ * Types, holds and deletes each line in turn. `startFull` begins on the first line already typed. Under reduced
+ * motion, followed live, it shows the first line and the timers stop.
+ */
 function useTypedLines(lines: readonly string[], startFull: boolean) {
-  // startFull is only false after a click, so matchMedia never runs on the server.
-  const [text, setText] = useState(() => (startFull || reduced() ? lines[0] : ""));
+  const [text, setText] = useState(startFull ? lines[0] : "");
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    if (reduced()) return;
+    if (reduced) return;
     let line = 0;
     let chars = startFull ? lines[0].length : 0;
     let deleting = false;
@@ -59,9 +61,9 @@ function useTypedLines(lines: readonly string[], startFull: boolean) {
 
     timer = setTimeout(tick, startFull ? HOLD_MS : GAP_MS);
     return () => clearTimeout(timer);
-  }, [lines, startFull]);
+  }, [lines, startFull, reduced]);
 
-  return text;
+  return reduced ? lines[0] : text;
 }
 
 function TypedLine({ lines, startFull }: { lines: readonly string[]; startFull: boolean }) {

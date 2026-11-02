@@ -51,7 +51,7 @@ function SessionCard() {
         </Badge>
         <BentoSpin />
       </div>
-      <div className="absolute inset-x-2 bottom-16 flex translate-y-14 flex-col gap-1 rounded-soft bg-page p-4 transition-transform duration-300 ease-out group-focus-within/session:translate-y-0 group-hover/session:translate-y-0 motion-reduce:transition-none">
+      <div className="absolute inset-x-2 bottom-16 flex translate-y-14 flex-col gap-1 rounded-soft bg-page p-4 transition-transform duration-300 ease-out group-focus-within/session:translate-y-0 group-hover/session:translate-y-0 motion-reduce:translate-y-0 motion-reduce:transition-none">
         <p className="type-body-sm text-text-2">
           {session.duration_min} min session · {cards.length} cards
         </p>
