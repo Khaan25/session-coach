@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { checkEvidence } from "./evidence.ts";
 import { ExtractError, extractCards } from "./extract.ts";
 import { parseSession } from "./parser.ts";
-import { buildCardRows, trimTimeline } from "./process-rows.ts";
+import { buildCardRows, durationMinutes, sessionTitle, trimTimeline } from "./process-rows.ts";
 
 /** The session log couldn't be fetched, unzipped or found. Kept apart so the learner gets the right sentence. */
 class LogReadError extends Error {
@@ -45,7 +45,7 @@ export async function processSession(sessionId: string): Promise<void> {
 
     const { data: session, error: readError } = await admin
       .from("sessions")
-      .select("user_id, raw_path")
+      .select("user_id, raw_path, title")
       .eq("id", sessionId)
       .single();
     if (readError || !session?.raw_path) {
@@ -81,9 +81,22 @@ export async function processSession(sessionId: string): Promise<void> {
       const { error: insertError } = await admin.from("decision_cards").insert(rows);
       if (insertError) throw insertError;
     }
+
+    // Title and duration are optional: if computing them throws, the session is still marked ready.
+    let extras: { title?: string; duration_min?: number } = {};
+    try {
+      const title = session.title ? null : sessionTitle(events);
+      const duration = durationMinutes(raw);
+      extras = {
+        ...(title !== null && { title }),
+        ...(duration !== null && { duration_min: duration }),
+      };
+    } catch (error) {
+      console.error("[pipeline/process] title and duration skipped", sessionId, error);
+    }
     const { error: readyError } = await admin
       .from("sessions")
-      .update({ status: "ready", error: null })
+      .update({ status: "ready", error: null, ...extras })
       .eq("id", sessionId);
     if (readyError) throw readyError;
 
@@ -92,6 +105,8 @@ export async function processSession(sessionId: string): Promise<void> {
       extracted: drafts.length,
       kept: rows.length,
       cut_events: cut,
+      title_set: extras.title !== undefined,
+      duration_min: extras.duration_min ?? null,
       ms: Date.now() - started,
     });
   } catch (error) {

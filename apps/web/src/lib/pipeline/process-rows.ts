@@ -39,6 +39,57 @@ export function trimTimeline(events: readonly TimelineEvent[]): {
   return { kept, cut: events.length - kept.length };
 }
 
+/** A session title is cut to this many characters, then "…" is added. */
+export const MAX_TITLE_CHARS = 80;
+
+/**
+ * The session's length in whole minutes, from the top-level `timestamp` of each log line. Lines that aren't JSON
+ * objects, or have no valid timestamp, are skipped.
+ *
+ * @param raw - The gunzipped session log (JSONL).
+ * @returns Rounded minutes between the earliest and latest timestamp, or null with fewer than two valid ones.
+ */
+export function durationMinutes(raw: string): number | null {
+  let first = Infinity;
+  let last = -Infinity;
+  let count = 0;
+  for (const line of raw.split(/\r?\n/)) {
+    if (line.trim() === "") continue;
+    let entry: unknown;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (typeof entry !== "object" || entry === null) continue;
+    const stamp = (entry as Record<string, unknown>).timestamp;
+    if (typeof stamp !== "string") continue;
+    const time = Date.parse(stamp);
+    if (Number.isNaN(time)) continue;
+    first = Math.min(first, time);
+    last = Math.max(last, time);
+    count++;
+  }
+  return count < 2 ? null : Math.round((last - first) / 60_000);
+}
+
+/**
+ * A session title from the first prompt: whitespace collapsed, cut to `MAX_TITLE_CHARS` with "…" when longer. The
+ * parser has already redacted the text.
+ *
+ * @param events - The parsed timeline.
+ * @returns The title, or null when there is no prompt or it is blank.
+ */
+export function sessionTitle(events: readonly TimelineEvent[]): string | null {
+  const prompt = events.find((e) => e.kind === "prompt");
+  if (!prompt) return null;
+  const text = prompt.text.replace(/\s+/g, " ").trim();
+  if (text === "") return null;
+  // Count and cut by code points, so an emoji at the limit is kept whole or dropped, never split in two.
+  const chars = [...text];
+  return chars.length > MAX_TITLE_CHARS ? `${chars.slice(0, MAX_TITLE_CHARS).join("")}…` : text;
+}
+
 /** A `decision_cards` insert row: what the pipeline writes. Postgres adds id and created_at and generates flagged/hidden. */
 const cardRowSchema = z.object({
   session_id: z.uuid(),

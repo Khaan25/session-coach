@@ -6,7 +6,10 @@ import type { TimelineEvent } from "./parser.ts";
 import {
   MAX_EVENT_CHARS,
   MAX_TIMELINE_CHARS,
+  MAX_TITLE_CHARS,
   buildCardRows,
+  durationMinutes,
+  sessionTitle,
   trimTimeline,
 } from "./process-rows.ts";
 
@@ -71,6 +74,71 @@ test("trimTimeline does not change the events it was given", () => {
   const huge = event(1, MAX_EVENT_CHARS + 10);
   trimTimeline([huge]);
   assert.equal(huge.text.length, MAX_EVENT_CHARS + 10);
+});
+
+const stamped = (...stamps: string[]) =>
+  stamps.map((timestamp) => JSON.stringify({ type: "user", timestamp })).join("\n");
+
+test("durationMinutes is the rounded minutes from the earliest to the latest timestamp", () => {
+  const raw = stamped("2026-11-02T10:00:00Z", "2026-11-02T10:12:00Z", "2026-11-02T10:30:20Z");
+  assert.equal(durationMinutes(raw), 30);
+  // Order in the file doesn't matter.
+  assert.equal(durationMinutes(stamped("2026-11-02T10:30:00Z", "2026-11-02T10:00:00Z")), 30);
+});
+
+test("durationMinutes is null with one timestamp or none", () => {
+  assert.equal(durationMinutes(stamped("2026-11-02T10:00:00Z")), null);
+  assert.equal(durationMinutes(JSON.stringify({ type: "user" })), null);
+  assert.equal(durationMinutes(""), null);
+});
+
+test("durationMinutes skips junk lines instead of throwing", () => {
+  const raw = [
+    "not json {",
+    "",
+    "42",
+    "null",
+    "[1,2]",
+    JSON.stringify({ timestamp: 123 }),
+    JSON.stringify({ timestamp: "yesterday-ish" }),
+    JSON.stringify({ timestamp: "2026-11-02T10:00:00Z" }),
+    JSON.stringify({ timestamp: "2026-11-02T10:05:00Z" }),
+  ].join("\n");
+  assert.equal(durationMinutes(raw), 5);
+});
+
+const promptEvent = (text: string): TimelineEvent => ({ id: "E1", kind: "prompt", text, line: 1 });
+
+test("sessionTitle is the first prompt with whitespace collapsed", () => {
+  const events = [event(1, 5), promptEvent("  fix the\n\n  login   bug \t"), promptEvent("later")];
+  assert.equal(sessionTitle(events), "fix the login bug");
+});
+
+test("sessionTitle cuts a long prompt to the limit and adds an ellipsis", () => {
+  const title = sessionTitle([promptEvent("x".repeat(200))]);
+  assert.equal(title, `${"x".repeat(MAX_TITLE_CHARS)}…`);
+  assert.equal(
+    sessionTitle([promptEvent("y".repeat(MAX_TITLE_CHARS))]),
+    "y".repeat(MAX_TITLE_CHARS),
+  );
+});
+
+test("sessionTitle never splits an emoji that straddles the limit", () => {
+  // 79 letters, then a 2-unit emoji occupying UTF-16 units 79-80, then more text.
+  const title = sessionTitle([promptEvent(`${"x".repeat(MAX_TITLE_CHARS - 1)}😀 and more`)]);
+  assert.ok(title !== null);
+  assert.doesNotMatch(
+    title,
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/,
+  );
+  assert.equal(title, `${"x".repeat(MAX_TITLE_CHARS - 1)}😀…`);
+  assert.equal([...title].length, MAX_TITLE_CHARS + 1);
+});
+
+test("sessionTitle is null with no prompt or a blank one", () => {
+  assert.equal(sessionTitle([event(1, 5)]), null);
+  assert.equal(sessionTitle([]), null);
+  assert.equal(sessionTitle([promptEvent(" \n\t ")]), null);
 });
 
 test("buildCardRows has no flagged or hidden, and numbers positions 0..n-1", () => {
