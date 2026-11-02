@@ -22,6 +22,9 @@ export const RETRY_WAIT_MS = 2_000;
  */
 export const MAX_RETRY_WAIT_MS = 20_000;
 
+/** The HTTP-date form `retry-after` uses (RFC 9110 IMF-fixdate), so an ISO date or other text isn't read as one. */
+const HTTP_DATE = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+
 /**
  * How long to wait before retrying a failed model call.
  *
@@ -40,7 +43,9 @@ export function retryWaitMs(error: unknown, now = Date.now()): number | null {
       ? Number.NaN
       : /^\d+$/.test(raw)
         ? Number(raw)
-        : (Date.parse(raw) - now) / 1_000;
+        : HTTP_DATE.test(raw)
+          ? (Date.parse(raw) - now) / 1_000
+          : Number.NaN;
     if (!Number.isFinite(seconds) || seconds < 0) return RETRY_WAIT_MS;
     return Math.min(seconds * 1_000, MAX_RETRY_WAIT_MS);
   }

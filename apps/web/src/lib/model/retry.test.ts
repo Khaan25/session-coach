@@ -23,6 +23,7 @@ test("a 429 with no usable retry-after waits the default", () => {
   const now = Date.parse("2026-10-21T07:28:00Z");
   assert.equal(retryWaitMs(http(429, "Wed, 21 Oct 2026 07:27:00 GMT"), now), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(http(429, "soon"), now), RETRY_WAIT_MS);
+  assert.equal(retryWaitMs(http(429, "2026-10-21T07:28:10Z"), now), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(http(429, "-1")), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(http(429, "")), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(http(429, "  ")), RETRY_WAIT_MS);
