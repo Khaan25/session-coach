@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SkeletonSuspense } from "skullet/react";
 
 import { Container } from "@/components/app/container";
+import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoReviewsEmpty } from "@/components/app/empty-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
@@ -47,12 +47,12 @@ export default function ProgressPage() {
   // Skullet measures the real page, drawn from sample progress, so each card keeps its shape when the data lands. The
   // session count isn't known until then, so the last list can still grow or shrink.
   return (
-    <SkeletonSuspense
+    <MeasuredSuspense
       label="Loading your progress"
       skeleton={<ProgressSummary progress={SAMPLE_PROGRESS} />}
     >
       <ProgressView />
-    </SkeletonSuspense>
+    </MeasuredSuspense>
   );
 }
 

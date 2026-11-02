@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SkeletonSuspense } from "skullet/react";
 
 import { NoCardsDueEmpty } from "@/components/app/empty-state";
 import { Container } from "@/components/app/container";
+import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { AppPageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -62,12 +62,12 @@ export default function ReviewPage() {
       />
       {/* Skullet measures the real queue, drawn from sample cards, so each row keeps its shape when the data lands. The
           queue length isn't known until then, so the list can still grow or shrink. */}
-      <SkeletonSuspense
+      <MeasuredSuspense
         label="Loading your review queue"
         skeleton={<QueueList queue={SAMPLE_QUEUE} />}
       >
         <Queue />
-      </SkeletonSuspense>
+      </MeasuredSuspense>
     </Container>
   );
 }

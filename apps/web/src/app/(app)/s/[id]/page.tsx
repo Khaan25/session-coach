@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { SkeletonSuspense } from "skullet/react";
 
 import { Container } from "@/components/app/container";
+import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { EmptyState } from "@/components/app/empty-state";
 import { SessionFailedState } from "@/components/app/error-state";
 import { ProcessingState } from "@/components/app/loading-state";
@@ -77,12 +77,12 @@ export default function SessionPage({ params }: PageProps<"/s/[id]">) {
   // Skullet measures the real page, drawn from a sample session, so the header and each card keep their shape when the
   // data lands. The card count isn't known until then, so the list can still grow or shrink.
   return (
-    <SkeletonSuspense
+    <MeasuredSuspense
       label="Loading the session"
       skeleton={<SessionView session={SAMPLE_SESSION} cards={SAMPLE_CARDS} now={SAMPLE_NOW} />}
     >
       <SessionDetail params={params} />
-    </SkeletonSuspense>
+    </MeasuredSuspense>
   );
 }
 

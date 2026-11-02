@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SkeletonSuspense } from "skullet/react";
 
 import { Container } from "@/components/app/container";
+import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { AppPageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { QuizForm } from "@/components/review/quiz-form";
@@ -30,12 +30,12 @@ export default function QuizPage({ params }: PageProps<"/review/[cardId]">) {
   return (
     <Container>
       {/* Skullet measures the real quiz, drawn from a sample card, so nothing moves when the card lands. */}
-      <SkeletonSuspense
+      <MeasuredSuspense
         label="Loading the card"
         skeleton={<QuizView card={SAMPLE_CARD} nextHref={null} />}
       >
         <Quiz params={params} />
-      </SkeletonSuspense>
+      </MeasuredSuspense>
     </Container>
   );
 }

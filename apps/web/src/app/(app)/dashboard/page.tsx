@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { SkeletonSuspense } from "skullet/react";
 
 import { Sprite } from "@/components/art/sprite";
 import { Container } from "@/components/app/container";
+import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { SessionRow } from "@/components/app/session-row";
@@ -61,7 +61,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
       />
       {/* Skullet measures the real rows, drawn from sample sessions, so each row keeps its shape when the data lands. The
           row count, due banner and page links aren't known until then, so the list can still grow or shrink. */}
-      <SkeletonSuspense
+      <MeasuredSuspense
         label="Loading sessions"
         skeleton={
           <Card>
@@ -85,7 +85,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
         }
       >
         <Sessions searchParams={searchParams} />
-      </SkeletonSuspense>
+      </MeasuredSuspense>
     </Container>
   );
 }
