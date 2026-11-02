@@ -114,16 +114,10 @@ export async function POST(request: Request) {
       if (existing.status !== "failed" && !stuck)
         return NextResponse.json({ id: existing.id }, { status: 409 });
 
-      // Cards first: if the reset below then fails, a later push still finds it failed and retries from here.
-      const { error: cardsError } = await admin
-        .from("decision_cards")
-        .delete()
-        .eq("session_id", existing.id);
-      if (cardsError) throw new Error(cardsError.message);
-      // shortcut: `sessions` has no updated_at, so `created_at` restarts here and stands in for "processing since" in the
-      // stuck check and the cron's sweep (the CLI processes right after uploading). Add an updated_at column with a
-      // trigger if processing can ever start long after the upload.
-      // Compare-and-set on what was read, so two pushes racing can't both reset it.
+      // shortcut: `sessions` has no updated_at, so `created_at` stands in for "processing since": it restarts here, and
+      // the process route sets it again when it claims the row. Add a processing_started_at column if anything else
+      // ever needs the real upload time.
+      // Compare-and-set on what was read, so of two pushes racing only one resets it and clears its cards.
       const { data: reset, error: resetError } = await admin
         .from("sessions")
         .update({ ...meta, status: "pending", error: null, created_at: new Date().toISOString() })
@@ -133,6 +127,14 @@ export async function POST(request: Request) {
         .select("id");
       if (resetError) throw new Error(resetError.message);
       if (reset.length === 0) return NextResponse.json({ id: existing.id }, { status: 409 });
+      // After the claim, so a losing push never deletes cards. Done before answering, so the new run can't start first.
+      // If this fails the session stays `pending` with old cards; the new run then fails on the cards' unique position
+      // and the next push lands here again.
+      const { error: cardsError } = await admin
+        .from("decision_cards")
+        .delete()
+        .eq("session_id", existing.id);
+      if (cardsError) throw new Error(cardsError.message);
       return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 201 });
     }
     if (insertError) throw new Error(insertError.message);

@@ -18,7 +18,12 @@ export type SendOptions = {
 async function attempt(req: HttpRequest, timeoutMs: number, fetchImpl: typeof fetch) {
   try {
     const res = await fetchImpl(req.url, { ...req.init, signal: AbortSignal.timeout(timeoutMs) });
-    const body: unknown = await res.json().catch(() => null);
+    // An empty or non-JSON body is null; a timeout while reading it still fails the attempt.
+    const body: unknown = await res.json().catch((err: unknown) => {
+      if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError"))
+        throw err;
+      return null;
+    });
     return { status: res.status, body };
   } catch (err) {
     const timedOut = err instanceof Error && err.name === "TimeoutError";
@@ -62,14 +67,21 @@ export function meRequest(baseUrl: string, token: string): HttpRequest {
  * @param url - The site URL, shown so the user sees where they signed in.
  */
 export function interpretMe(status: number, body: unknown, url: string): Outcome {
-  if (status === 200) {
-    const email = (body as { email?: unknown } | null)?.email;
-    const who = typeof email === "string" && email ? ` as ${email}` : "";
+  const email = (body as { email?: unknown } | null)?.email;
+  // Only the documented `{ email: string | null }`: another app answering 200 at that URL isn't a sign-in.
+  if (status === 200 && (typeof email === "string" || email === null)) {
+    const who = email ? ` as ${email}` : "";
     return { message: `Signed in to ${url}${who}.`, exitCode: 0 };
   }
   if (status === 401) {
     return {
       message: `${url} doesn't accept that token. Create a new one on the app's /setup page. Nothing was saved.`,
+      exitCode: 1,
+    };
+  }
+  if (status === 200) {
+    return {
+      message: `${url} didn't answer like Session Coach. Check the site URL. Nothing was saved.`,
       exitCode: 1,
     };
   }

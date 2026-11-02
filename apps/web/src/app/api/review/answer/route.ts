@@ -28,12 +28,13 @@ type GradedCard = {
  *
  * - Validates the body before any query or model call, so bad input costs nothing.
  * - `getUser()` checks the session with the auth server, since grading writes data.
- * - Spends one of the learner's 60 grades an hour (`userRateLimit`), since each costs a model call.
  * - Reads the card (with its answer key), its review row and the learner's time zone in parallel.
  * - Refuses a card that has a review row but isn't due in the learner's today (mastered, or answered for this step
  *   already), before the model call, so answering early can't move or un-master it. A never-answered card is always open.
+ * - Then spends one of the learner's 60 grades an hour (`userRateLimit`), since each costs a model call.
  * - Grades with `callModel("grade")`, retrying once when the output doesn't fit `{ score, missing }`.
- * - Moves `reviews` with a compare-and-set on `updated_at`, then inserts the `answers` row.
+ * - Moves `reviews` with a compare-and-set on `updated_at`, then inserts the `answers` row. If that insert fails, the
+ *   schedule is put back, so the learner can answer again.
  *
  * @param request - JSON body `{ cardId, answer }`.
  * @returns 200 `{ score, missing, modelAnswer, evidence, nextDue }`; 400 bad body; 401 signed out; 404 not the
@@ -55,8 +56,6 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  const limited = await userRateLimit("grade", user.id);
-  if (limited) return limited;
 
   try {
     const admin = createAdminClient();
@@ -68,13 +67,14 @@ export async function POST(request: Request) {
         .maybeSingle<GradedCard>(),
       admin
         .from("reviews")
-        .select("step, updated_at, due_on, mastered")
+        .select("step, updated_at, due_on, mastered, last_score")
         .eq("card_id", cardId)
         .maybeSingle<{
           step: Step;
           updated_at: string;
           due_on: string | null;
           mastered: boolean;
+          last_score: number | null;
         }>(),
       admin
         .from("profiles")
@@ -100,6 +100,10 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+
+    // Here, not earlier: a 404 or 409 costs no model call, so it shouldn't spend one of the hour's grades.
+    const limited = await userRateLimit("grade", user.id);
+    if (limited) return limited;
 
     const input = { instructions: GRADE_INSTRUCTIONS, data: gradeData(card, answer) };
     const grade =
@@ -142,8 +146,6 @@ export async function POST(request: Request) {
     }
     if (moved.error) throw moved.error;
 
-    // shortcut: two writes, not one transaction; if this insert fails the schedule has moved without its answer row.
-    // Move both into one RPC if the progress numbers ever need to be exact.
     const { error: answerError } = await admin.from("answers").insert({
       card_id: cardId,
       user_id: user.id,
@@ -152,7 +154,25 @@ export async function POST(request: Request) {
       score: grade.score,
       missing: grade.missing || null,
     });
-    if (answerError) throw answerError;
+    if (answerError) {
+      // shortcut: two writes, not one transaction, so a failed answer row undoes the schedule move by hand; only from the
+      // state this request wrote. Move both into one RPC if this ever fails in practice.
+      const undo = previous
+        ? admin
+            .from("reviews")
+            .update(previous)
+            .eq("card_id", cardId)
+            .eq("updated_at", schedule.updated_at)
+        : admin
+            .from("reviews")
+            .delete()
+            .eq("card_id", cardId)
+            .eq("updated_at", schedule.updated_at);
+      const { error: undoError } = await undo;
+      if (undoError)
+        console.error("[api/review/answer] schedule not put back", { cardId }, undoError);
+      throw answerError;
+    }
 
     return NextResponse.json({
       score: grade.score,

@@ -206,27 +206,29 @@ test("a learner can't change another learner's profile or revoke their CLI token
 test("tracker_tasks: members read, add and edit only the granted columns; others see and change nothing", async () => {
   const [member, outsider] = learners;
   const anon = createClient(stack.url, stack.anonKey, options);
+  // Every row this test writes, so the finally removes them even when setup fails halfway.
   const added: string[] = [];
-  const seeded = await admin
-    .from("tracker_tasks")
-    .insert({ section: "rls", position: 1, title: `rls task ${randomUUID()}`, details: "d" })
-    .select("id")
-    .single<{ id: string }>();
-  assert.ifError(seeded.error);
-  const taskId = seeded.data.id;
-  added.push(taskId);
-  const joined = await admin.from("tracker_members").insert({ user_id: member.id });
-  assert.ifError(joined.error);
-  const stored = async () =>
-    (
-      await admin
-        .from("tracker_tasks")
-        .select("title, details, owner, section, done_at, done_by")
-        .eq("id", taskId)
-        .single()
-    ).data;
 
   try {
+    const seeded = await admin
+      .from("tracker_tasks")
+      .insert({ section: "rls", position: 1, title: `rls task ${randomUUID()}`, details: "d" })
+      .select("id")
+      .single<{ id: string }>();
+    assert.ifError(seeded.error);
+    const taskId = seeded.data.id;
+    added.push(taskId);
+    const joined = await admin.from("tracker_members").insert({ user_id: member.id });
+    assert.ifError(joined.error);
+    const stored = async () =>
+      (
+        await admin
+          .from("tracker_tasks")
+          .select("title, details, owner, section, done_at, done_by")
+          .eq("id", taskId)
+          .single()
+      ).data;
+
     // Reads: members see the list; a signed-in non-member and anon see no rows.
     const mine = await member.client.from("tracker_tasks").select("id").eq("id", taskId);
     assert.ifError(mine.error);

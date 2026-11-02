@@ -108,7 +108,7 @@ deploy, then `supabase db push`. Between those two steps only the Play Stats ros
 **Supabase dashboard:**
 
 1. Auth → Providers → Google: enable, paste the client ID and secret.
-2. URL Configuration: Site URL = production; redirect URLs = production paths, `http://localhost:3000/**`, the Vercel preview wildcard.
+2. URL Configuration: Site URL = production; redirect URLs = `https://coach.ziaa.me/**` and `http://localhost:3000/**`, no Vercel preview wildcard (#11).
 3. Email: Confirm email on, Secure email change on, minimum password length 10 + character requirements.
 4. Email Templates: Confirm signup, Reset password and Change email use the `token_hash` links above. Confirm signup,
    Reset password and the Password changed notification are designed in `apps/web/src/emails/auth` and exported to

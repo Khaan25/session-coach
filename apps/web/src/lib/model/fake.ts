@@ -2,6 +2,8 @@
 // model keys.
 // callModel refuses it when NODE_ENV=production. Pure, so node --test runs it.
 
+import { wordCount } from "../pipeline/evidence.ts";
+
 const words = (text: string) => new Set(text.toLowerCase().match(/[a-z0-9]{3,}/g) ?? []);
 
 /**
@@ -38,11 +40,14 @@ export function fakeExtract(data: { events?: unknown }) {
   const decisions = events
     .flatMap((event: { id?: unknown; kind?: unknown; text?: unknown }) => {
       if (event.kind !== "prompt" && event.kind !== "reply") return [];
-      const quoteWords = String(event.text ?? "")
+      const quote = String(event.text ?? "")
         .trim()
-        .split(/\s+/);
-      if (typeof event.id !== "string" || quoteWords.length < 5) return [];
-      return [{ id: event.id, quote: quoteWords.slice(0, 12).join(" ") }];
+        .split(/\s+/)
+        .slice(0, 12)
+        .join(" ");
+      // The same word count `checkEvidence` uses, so punctuation-only tokens don't make a card it then drops.
+      if (typeof event.id !== "string" || wordCount(quote) < 5) return [];
+      return [{ id: event.id, quote }];
     })
     .slice(0, FAKE_CARDS)
     .map(({ id, quote }) => ({

@@ -3,7 +3,8 @@
  *   202 `{ id }`: the session moved to `processing`; cards follow, and the dashboard updates through Realtime.
  *   409 `{ id, status }`: already processing, ready or failed; nothing to do.
  *   422: the log isn't in Storage yet; start again at POST /api/sessions.
- *   400 bad id, 401 missing or unknown token, 404 not this learner's session, 413 log over 50 MB, 500 anything else.
+ *   400 bad id, 401 missing or unknown token, 404 not this learner's session, 413 log over 50 MB, 429 over 20 runs an
+ *   hour (`Retry-After` header, in seconds), 500 anything else.
  * Auth: `Authorization: Bearer sc_…`.
  */
 import { after, NextResponse } from "next/server";
@@ -86,7 +87,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     const { data: claimed, error: claimError } = await admin
       .from("sessions")
-      .update({ status: "processing", error: null })
+      // created_at restarts so the stuck check and the cron sweep time the run, not the upload.
+      .update({ status: "processing", error: null, created_at: new Date().toISOString() })
       .eq("id", session.id)
       .eq("status", "pending")
       .select("id");

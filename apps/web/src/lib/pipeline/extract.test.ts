@@ -155,7 +155,7 @@ test("more than 5 valid decisions keeps the first 5, without a retry", async () 
 test("the cap counts valid cards: invalid ones are dropped first", async () => {
   const bad = { ...card, source: "guess" };
   const answer = { decisions: [bad, card, bad, card, card, card, card, card] };
-  assert.equal((await extractCards(events, fakeModel(answer).model)).length, 5);
+  assert.deepEqual(await extractCards(events, fakeModel(answer).model), Array(5).fill(parsedCard));
 });
 
 test('"E2" converts to event_index 2', async () => {
@@ -189,11 +189,18 @@ test("evidence needs 1 to 3 items, else the card is dropped", async () => {
 });
 
 test("cards that are all invalid trigger the retry, with each card's error", async () => {
-  const bad = { decisions: [{ ...card, evidence: [{ event: "E0", quote: "x" }] }] };
+  const bad = {
+    decisions: [
+      { ...card, evidence: [{ event: "E0", quote: "x" }] },
+      { ...card, source: "guess" },
+    ],
+  };
   const { model, calls } = fakeModel(bad, { decisions: three });
   assert.deepEqual(await extractCards(events, model, noWait().options), parsedThree);
   assert.equal(calls.length, 2);
-  assert.match(String(calls[1]?.[1].data.validation_error), /decisions\[0\]/);
+  const error = String(calls[1]?.[1].data.validation_error);
+  assert.match(error, /decisions\[0\]/);
+  assert.match(error, /decisions\[1\]/);
 });
 
 test("an error thrown by the model itself passes through without a retry", async () => {

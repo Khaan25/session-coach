@@ -27,8 +27,8 @@ const steps = [
     what: "Uploads the last Claude Code session you ran in this folder.",
   },
   {
-    command: "npx session-coach push <file.jsonl>",
-    what: "Or uploads one session log by its path.",
+    command: "npx session-coach push ./your-session.jsonl",
+    what: "Or uploads one session log by its path; put your file's path in place of the example.",
   },
 ];
 
@@ -69,16 +69,17 @@ export default function SetupPage() {
         </CardHeader>
         <CardContent>
           <p className="type-body">
-            The CLI reads the session&apos;s log from <Code>~/.claude/projects/</Code>, redacts
-            secrets on your laptop, compresses the log and uploads it.
+            <Code>push --latest</Code> finds the session&apos;s log in{" "}
+            <Code>~/.claude/projects/</Code>; <Code>push</Code> with a path reads that file. Either
+            way the CLI redacts secrets on your laptop, compresses the log and uploads it.
           </p>
           <p className="type-body">
             The server redacts again, then keeps your prompts, the agent&apos;s replies, file edit
             summaries and shell commands. It drops thinking blocks and attachments.
           </p>
           <p className="type-body">
-            Cards are written by a model through Groq&apos;s API, which is why redaction stays
-            strict.
+            Cards are written by a third-party model provider&apos;s API, which is why redaction
+            stays strict.
           </p>
           <p>
             <Link href="/privacy" className={buttonVariants({ variant: "link" })}>

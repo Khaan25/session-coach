@@ -15,6 +15,8 @@ test("a 429 with no usable retry-after waits the default", () => {
   assert.equal(retryWaitMs(http(429)), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(http(429, "Wed, 21 Oct 2026 07:28:00 GMT")), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(http(429, "-1")), RETRY_WAIT_MS);
+  assert.equal(retryWaitMs(http(429, "")), RETRY_WAIT_MS);
+  assert.equal(retryWaitMs(http(429, "  ")), RETRY_WAIT_MS);
 });
 
 test("other 4xx answers are not retried", () => {

@@ -62,20 +62,25 @@ function learnerMessage(error: unknown): string {
  */
 export async function processSession(sessionId: string): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // The run can't be interrupted mid-call, so on the deadline it is told to stop and checks before each write.
+  const stop = new AbortController();
   const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new DeadlineError(`over ${DEADLINE_MS} ms`)), DEADLINE_MS);
+    timer = setTimeout(() => {
+      stop.abort();
+      reject(new DeadlineError(`over ${DEADLINE_MS} ms`));
+    }, DEADLINE_MS);
   });
   try {
-    // shortcut: the losing run isn't cancelled, it only loses the race; if it writes `ready` before the platform kills
-    // it, that wins over `failed`, which is fine. Upgrade to an AbortSignal through callModel if that ever matters.
-    await Promise.race([run(sessionId), deadline]);
+    await Promise.race([run(sessionId, stop.signal), deadline]);
   } catch (error) {
     console.error("[pipeline/process] failed", sessionId, error);
     try {
+      // Only from `processing`: if a re-push already reset the session, this run's failure is stale.
       const { error: updateError } = await createAdminClient()
         .from("sessions")
         .update({ status: "failed", error: learnerMessage(error) })
-        .eq("id", sessionId);
+        .eq("id", sessionId)
+        .eq("status", "processing");
       if (updateError) {
         console.error("[pipeline/process] status not set", sessionId, updateError.message);
       }
@@ -87,8 +92,12 @@ export async function processSession(sessionId: string): Promise<void> {
   }
 }
 
-/** The work of `processSession`: every failure throws, and `processSession` marks the session failed. */
-async function run(sessionId: string): Promise<void> {
+/**
+ * The work of `processSession`: every failure throws, and `processSession` marks the session failed.
+ *
+ * @param signal - Aborted at the deadline; no write happens after that.
+ */
+async function run(sessionId: string, signal: AbortSignal): Promise<void> {
   const started = Date.now();
   const admin = createAdminClient();
 
@@ -127,15 +136,20 @@ async function run(sessionId: string): Promise<void> {
   // Cards first, `ready` second: a failure in between leaves `failed`, never a ready session with no cards.
   // If a re-run ever hits the (session_id, position) unique constraint, the run fails loudly; a retry route must
   // decide how to clear cards safely (unanswered only, or in one transaction).
+  signal.throwIfAborted();
   if (rows.length > 0) {
     const { error: insertError } = await admin.from("decision_cards").insert(rows);
     if (insertError) throw insertError;
   }
-  const { error: readyError } = await admin
+  signal.throwIfAborted();
+  const { data: readied, error: readyError } = await admin
     .from("sessions")
     .update({ status: "ready", error: null })
-    .eq("id", sessionId);
+    .eq("id", sessionId)
+    .eq("status", "processing")
+    .select("id");
   if (readyError) throw readyError;
+  if (readied.length === 0) throw new Error("session left processing before the run finished");
 
   console.log("[pipeline/process]", {
     session_id: sessionId,

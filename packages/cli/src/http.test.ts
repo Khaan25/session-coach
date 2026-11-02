@@ -64,6 +64,21 @@ describe("send", () => {
     assert.match(unreachable("timeout", 15_000), /15 s/);
     assert.doesNotMatch(unreachable("network", 15_000), /--url, then/);
   });
+
+  it("treats a timeout while reading the body as a timeout, and a non-JSON body as null", async () => {
+    const stalled = (async () => ({
+      status: 200,
+      json: () => Promise.reject(timeoutError),
+    })) as unknown as typeof fetch;
+    assert.deepEqual(await send(REQ, { timeoutMs: 1000, retry: false, fetchImpl: stalled }), {
+      error: "timeout",
+    });
+    const html = (async () => new Response("<html>", { status: 200 })) as unknown as typeof fetch;
+    assert.deepEqual(await send(REQ, { timeoutMs: 1000, retry: false, fetchImpl: html }), {
+      status: 200,
+      body: null,
+    });
+  });
 });
 
 describe("login token check", () => {
@@ -78,6 +93,8 @@ describe("login token check", () => {
     assert.equal(ok.exitCode, 0);
     assert.match(ok.message, /as a@b\.test/);
     assert.equal(interpretMe(200, { email: null }, "https://app.test").exitCode, 0);
+    assert.equal(interpretMe(200, null, "https://app.test").exitCode, 1);
+    assert.equal(interpretMe(200, { ok: true }, "https://app.test").exitCode, 1);
     assert.match(interpretMe(401, null, "https://app.test").message, /Nothing was saved/);
     assert.equal(interpretMe(500, null, "https://app.test").exitCode, 1);
   });

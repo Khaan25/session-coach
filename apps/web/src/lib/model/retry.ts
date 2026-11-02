@@ -32,8 +32,9 @@ export const MAX_RETRY_WAIT_MS = 20_000;
 export function retryWaitMs(error: unknown): number | null {
   if (!(error instanceof ProviderHttpError)) return RETRY_WAIT_MS;
   if (error.status === 429) {
-    // A missing header or an HTTP date (rare) falls back to the default wait.
-    const seconds = error.retryAfter === null ? Number.NaN : Number(error.retryAfter);
+    // A missing or blank header, or an HTTP date (rare), falls back to the default wait. Number("") is 0, not NaN.
+    const raw = error.retryAfter?.trim();
+    const seconds = raw ? Number(raw) : Number.NaN;
     if (!Number.isFinite(seconds) || seconds < 0) return RETRY_WAIT_MS;
     return Math.min(seconds * 1_000, MAX_RETRY_WAIT_MS);
   }

@@ -47,7 +47,7 @@ const MIN_QUOTE_WORDS = 5;
 const words = new Intl.Segmenter(undefined, { granularity: "word" });
 
 /** Words by Unicode rules, so Chinese or Japanese text with no spaces still counts each word. */
-const wordCount = (text: string) =>
+export const wordCount = (text: string) =>
   [...words.segment(text)].filter((segment) => segment.isWordLike).length;
 
 /**
