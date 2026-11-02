@@ -21,8 +21,9 @@ function Card({
         // The hover edge recolours the frame's own line (drawn above the content), so a child's
         // background cannot cover it; same 150ms ease-out as the zip's shadow version.
         "before:transition-[border-color] before:duration-150 before:ease-out hover:[--frame-color:var(--line-control-hover)] [a]:hover:bg-hover",
-        // A card holding a list becomes a panel: grey, header on the grey, the list inset in white.
-        "has-[>[data-slot=item-group]]:bg-(--surface-frame) has-[>[data-slot=item-group]]:*:data-[slot=card-header]:shadow-none",
+        // A card holding a list becomes a panel: grey, header on the grey, the list inset in white. A plain `none`, not
+        // `shadow-none`: that is five transparent shadows, which skullet 0.0.3 reads as a surface and draws the header as one block.
+        "has-[>[data-slot=item-group]]:bg-(--surface-frame) has-[>[data-slot=item-group]]:*:data-[slot=card-header]:[box-shadow:none]",
         "[--card-spacing:var(--space-4)] data-[size=lg]:[--card-spacing:var(--space-6)] data-[size=sm]:[--card-spacing:var(--space-3)]",
         "*:[img:first-child]:rounded-t-frame *:[img:last-child]:rounded-b-frame",
         "forced-colors:outline forced-colors:outline-1",
