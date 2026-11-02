@@ -20,6 +20,7 @@ import {
   type Progress as ProgressData,
 } from "@/lib/progress/progress";
 import { getProgress } from "@/lib/progress/queries";
+import { cardlessReason } from "@/lib/sessions/queries";
 
 export const metadata: Metadata = { title: "Progress" };
 
@@ -63,7 +64,10 @@ async function ProgressView() {
   const progress = user ? await load(user.id) : null;
 
   // First run (no cards) points at the CLI; cards but no answer yet point at the queue.
-  if (!progress || progress.totalCards === 0) return <ProgressEmpty empty={<NoCardsYetEmpty />} />;
+  if (!user || !progress) return <ProgressEmpty empty={<NoCardsYetEmpty />} />;
+  if (progress.totalCards === 0) {
+    return <ProgressEmpty empty={<NoCardsYetEmpty reason={await cardlessReason(user.id)} />} />;
+  }
   if (progress.steps.new === progress.totalCards && answeredCount(progress) === 0) {
     return <ProgressEmpty empty={<NoReviewsEmpty />} />;
   }

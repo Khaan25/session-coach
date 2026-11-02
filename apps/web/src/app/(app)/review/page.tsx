@@ -19,6 +19,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { emptyQueue, reviewQueue, type QueueCard } from "@/lib/review/queries";
 import { dueInWords } from "@/lib/review/schedule";
+import { cardlessReason } from "@/lib/sessions/queries";
 
 export const metadata: Metadata = { title: "Review" };
 
@@ -80,7 +81,7 @@ async function Queue() {
   if (queue.length > 0) return <QueueList queue={queue} />;
   // Only an empty queue pays for the second read: it tells a first run from a learner who is all caught up.
   const empty = await emptyQueue(user.id, now);
-  if (!empty.hasCards) return <NoCardsYetEmpty />;
+  if (!empty.hasCards) return <NoCardsYetEmpty reason={await cardlessReason(user.id)} />;
   return (
     <AllCaughtUpEmpty next={empty.nextDue ? dueInWords(empty.nextDue, empty.today) : undefined} />
   );

@@ -103,6 +103,8 @@ export function AppCatalog() {
         <div className="grid w-full gap-3 md:grid-cols-2">
           <NoSessionsEmpty />
           <NoCardsYetEmpty />
+          <NoCardsYetEmpty reason="processing" />
+          <NoCardsYetEmpty reason="no-cards" />
           <AllCaughtUpEmpty next="tomorrow" />
           <AllCaughtUpEmpty />
           <NoReviewsEmpty />

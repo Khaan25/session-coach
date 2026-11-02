@@ -10,6 +10,7 @@ import {
 
 import { Sprite, type SpriteName } from "@/components/art/sprite";
 import { buttonVariants } from "@/components/ui/button";
+import type { CardlessReason } from "@/lib/sessions/queries";
 import {
   Empty,
   EmptyContent,
@@ -84,21 +85,45 @@ export function NoSessionsEmpty({ variant }: PresetProps) {
   );
 }
 
+const cardless = {
+  "no-sessions": {
+    title: "No cards yet",
+    description:
+      "Cards come from your Claude Code sessions. Set up the CLI, and each session that ends becomes 3 to 5 cards to explain back.",
+    action: { href: "/setup", label: "Set up the CLI", variant: "default" },
+  },
+  processing: {
+    title: "Cards on the way",
+    description: "Your latest session is still being read. Its cards appear here once it's ready.",
+    action: { href: "/dashboard", label: "See your sessions", variant: "secondary" },
+  },
+  "no-cards": {
+    title: "No cards yet",
+    description:
+      "Your sessions so far gave no cards: each card needs an exact quote from its session to back it. Sessions where you talk through options give the most.",
+    action: { href: "/dashboard", label: "See your sessions", variant: "secondary" },
+  },
+} as const;
+
 /**
- * First run on a card screen (review queue, progress): the learner has no cards at all, so the way forward is the CLI,
- * not the queue.
+ * A card screen (review queue, progress) for a learner with no visible card. `reason` (from `cardlessReason`) picks
+ * the way forward: set up the CLI, wait for the session being read, or look at the sessions that gave none.
  */
-export function NoCardsYetEmpty({ variant }: PresetProps) {
+export function NoCardsYetEmpty({
+  reason = "no-sessions",
+  variant,
+}: PresetProps & { reason?: CardlessReason }) {
+  const { title, description, action } = cardless[reason];
   return (
     <EmptyState
       variant={variant}
       icon={CardsIcon}
       sprite="pencil"
-      title="No cards yet"
-      description="Cards come from your Claude Code sessions. Set up the CLI, and each session that ends becomes 3 to 5 cards to explain back."
+      title={title}
+      description={description}
       action={
-        <Link href="/setup" className={buttonVariants()}>
-          Set up the CLI
+        <Link href={action.href} className={buttonVariants({ variant: action.variant })}>
+          {action.label}
         </Link>
       }
     />
@@ -107,7 +132,8 @@ export function NoCardsYetEmpty({ variant }: PresetProps) {
 
 /**
  * All done: the learner has cards, but none is due today. `next` is when the next one is due, in words ("tomorrow",
- * "on Thursday 5 November"); leave it out when nothing is scheduled.
+ * "on Thursday 5 November"); leave it out when nothing is scheduled. Then the way out is the sessions: a card never
+ * answered within 7 days leaves the queue but stays on its session's page.
  */
 export function AllCaughtUpEmpty({ next, variant }: PresetProps & { next?: string }) {
   return (
@@ -119,12 +145,18 @@ export function AllCaughtUpEmpty({ next, variant }: PresetProps & { next?: strin
       description={
         next
           ? `Nothing is due today. Your next card is due ${next}, and new cards arrive when your next session ends.`
-          : "Nothing is due today, and no review is scheduled. New cards arrive when your next session ends."
+          : "Nothing is due today, and no review is scheduled. A card you didn't answer within 7 days of its session stays on that session's page."
       }
       action={
-        <Link href="/progress" className={buttonVariants({ variant: "secondary" })}>
-          See your progress
-        </Link>
+        next ? (
+          <Link href="/progress" className={buttonVariants({ variant: "secondary" })}>
+            See your progress
+          </Link>
+        ) : (
+          <Link href="/dashboard" className={buttonVariants({ variant: "secondary" })}>
+            See your sessions
+          </Link>
+        )
       }
     />
   );
