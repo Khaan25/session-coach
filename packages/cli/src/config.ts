@@ -58,5 +58,7 @@ export async function loadConfig(path: string): Promise<Config | null> {
   }
   const { token, url } = (parsed ?? {}) as { token?: unknown; url?: unknown };
   if (typeof token !== "string" || typeof url !== "string") return null;
-  return { token, url };
+  // Same rules as on save, so a hand-edited file can't add a trailing slash or downgrade to http.
+  const cleaned = normalizeUrl(url);
+  return cleaned ? { token, url: cleaned } : null;
 }

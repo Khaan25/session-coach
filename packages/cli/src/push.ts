@@ -258,7 +258,7 @@ export function interpretCreate(status: number, body: unknown): CreateResult {
     if (status === 409) {
       return {
         action: "stop",
-        message: `This session is already uploaded. Open the app to see its status.\nSession id: ${id}`,
+        message: `This session was already uploaded and is ready or processing. Open the app to see it.\nSession id: ${id}`,
         exitCode: 0,
       };
     }
@@ -291,10 +291,13 @@ export function interpretProcess(status: number, body: unknown, id: string): Out
   if (status === 409) {
     const state = (body as { status?: unknown } | null)?.status;
     const label = typeof state === "string" ? state : "unknown";
-    return {
-      message: `Session is already ${label}.\nSession id: ${id}`,
-      exitCode: state === "failed" ? 1 : 0,
-    };
+    if (state === "failed") {
+      return {
+        message: `Processing failed. Run push again to retry.\nSession id: ${id}`,
+        exitCode: 1,
+      };
+    }
+    return { message: `Session is already ${label}.\nSession id: ${id}`, exitCode: 0 };
   }
   if (status === 422) {
     return { message: "Upload didn't land, run push again.", exitCode: 1 };

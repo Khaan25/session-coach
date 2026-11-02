@@ -2,7 +2,7 @@
   "name": "session-coach",
   "version": "0.1.0",
   "type": "module",
-  "description": "CLI: init, login, push, plus the SessionEnd hook and background worker. Owned by Kasam.",
+  "description": "Upload Claude Code sessions to Session Coach: login, push <file>, push --latest.",
   "license": "MIT",
   "bin": {
     "session-coach": "./dist/cli.js"

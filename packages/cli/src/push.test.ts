@@ -320,7 +320,7 @@ describe("step 1 responses", () => {
     assert.ok(
       result.action === "stop" &&
         result.message.startsWith(
-          "This session is already uploaded. Open the app to see its status.",
+          "This session was already uploaded and is ready or processing. Open the app to see it.",
         ),
     );
     assert.ok(result.action === "stop" && result.message.includes(ID));
