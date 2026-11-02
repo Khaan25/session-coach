@@ -63,6 +63,9 @@ function fakeDeps() {
     async record(userId, sentOn, resendId) {
       log.set(`${userId}/${sentOn}`, resendId);
     },
+    async release(userId, sentOn) {
+      log.delete(`${userId}/${sentOn}`);
+    },
   };
   return { deps, log, outbox };
 }
@@ -174,9 +177,46 @@ test("one learner's failure doesn't stop the others", async (t) => {
     outbox.map(({ to }) => to),
     ["a@example.test", "c@example.test"],
   );
-  // The failed learner's claim stays, with no message id: no retry until tomorrow.
-  assert.equal(log.has("b/2026-10-31"), true);
-  assert.equal(log.get("b/2026-10-31"), null);
+  // The failed learner's claim is released, so a rerun the same day retries them and only them.
+  assert.equal(log.has("b/2026-10-31"), false);
+  deps.send = send;
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
+    sent: 1,
+    skipped: 2,
+    failed: 0,
+  });
+  assert.equal(log.get("b/2026-10-31"), "re_3");
+  // Same key as the failed try, so the provider drops it if that one did go out.
+  assert.equal(outbox[2].idempotencyKey, "daily_review/b/2026-10-31");
+});
+
+test("a failed release is logged and the batch goes on", async (t) => {
+  const errors = t.mock.method(console, "error", () => {});
+  const recipients = dailyReviewRecipients(
+    [profile("a"), profile("b")],
+    ["a", "b"].map((id) => review(id, "2026-10-31")),
+    [],
+    now,
+  );
+  const { deps, outbox } = fakeDeps();
+  const send = deps.send;
+  deps.send = async (email) => {
+    if (email.to.startsWith("a@")) throw new Error("Resend responded 500");
+    return send(email);
+  };
+  deps.release = async () => {
+    throw new Error("db down");
+  };
+  assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
+    sent: 1,
+    skipped: 0,
+    failed: 1,
+  });
+  assert.deepEqual(
+    outbox.map(({ to }) => to),
+    ["b@example.test"],
+  );
+  assert.equal(errors.mock.callCount(), 2);
 });
 
 test("new cards from the last 7 days count, older ones stop", () => {
@@ -226,6 +266,8 @@ test("the email says what's new and due, lists 3, and links review and settings"
   assert.equal(copy.progress, "18 cards answered so far, 6 mastered.");
   assert.equal(copy.reviewUrl, `${site}/review`);
   assert.equal(copy.settingsUrl, `${site}/settings`);
+  assert.equal(copy.unsubscribeUrl, null);
+  assert.doesNotMatch(copy.text, /Unsubscribe/);
   for (const line of ["- Due one (Due)", "and 2 more", `${site}/review`, `${site}/settings`]) {
     assert.ok(copy.text.includes(line), line);
   }
@@ -282,4 +324,15 @@ test("a long title is cut by character, never through an emoji", () => {
   assert.equal([...card.title].length, 90);
   assert.ok(card.title.includes("😀"));
   assert.doesNotMatch(card.title, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+});
+
+test("a signed unsubscribe link goes in the copy and the plain text", () => {
+  const link = `${site}/api/unsubscribe?u=a&t=b`;
+  const copy = dailyReviewCopy(
+    { due: ["Due one"], fresh: [], answered: 1, mastered: 0 },
+    site,
+    link,
+  );
+  assert.equal(copy.unsubscribeUrl, link);
+  assert.ok(copy.text.endsWith(`Unsubscribe: ${link}`));
 });

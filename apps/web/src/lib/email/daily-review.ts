@@ -41,13 +41,17 @@ export type Recipient = {
   mastered: number;
 };
 
-/** One message for the provider. `idempotencyKey` lets the provider drop a repeat of the same send. */
+/**
+ * One message for the provider. `idempotencyKey` lets the provider drop a repeat of the same send; `headers` are extra
+ * message headers, such as `List-Unsubscribe`.
+ */
 export type OutgoingEmail = {
   to: string;
   subject: string;
   text: string;
   html: string;
   idempotencyKey: string;
+  headers?: Record<string, string>;
 };
 
 /** What the loop needs from the outside world; the route passes Supabase and Resend, tests pass fakes. */
@@ -58,6 +62,8 @@ export type DailyReviewDeps = {
   send: (email: OutgoingEmail) => Promise<string>;
   /** Stores the provider's id on the claimed row. */
   record: (userId: string, sentOn: string, resendId: string) => Promise<void>;
+  /** Deletes the claimed row after a failed send, so a rerun the same day can try again. */
+  release: (userId: string, sentOn: string) => Promise<void>;
 };
 
 /** The cron's response body. */
@@ -141,6 +147,8 @@ export type DailyReviewCopy = {
   footer: string;
   footerLink: string;
   settingsUrl: string;
+  /** One-click unsubscribe, or null when the deployment can't sign the link. */
+  unsubscribeUrl: string | null;
   text: string;
 };
 
@@ -162,10 +170,12 @@ const cut = (title: string) => {
  *
  * @param recipient - What this learner has to do and has done.
  * @param siteUrl - The deployed origin, without a trailing slash.
+ * @param unsubscribeUrl - This learner's signed one-click link (`lib/email/unsubscribe.ts`), or null to leave it out.
  */
 export function dailyReviewCopy(
   { due, fresh, answered, mastered }: Pick<Recipient, "due" | "fresh" | "answered" | "mastered">,
   siteUrl: string,
+  unsubscribeUrl: string | null = null,
 ): DailyReviewCopy {
   const total = due.length + fresh.length;
   const reviewUrl = `${siteUrl}/review`;
@@ -205,6 +215,7 @@ export function dailyReviewCopy(
     footer,
     footerLink,
     settingsUrl,
+    unsubscribeUrl,
     text: [
       heading,
       summary,
@@ -213,6 +224,7 @@ export function dailyReviewCopy(
       progress,
       `Start today's review: ${reviewUrl}`,
       `${footer} ${footerLink}: ${settingsUrl}`,
+      ...(unsubscribeUrl ? [`Unsubscribe: ${unsubscribeUrl}`] : []),
     ].join("\n\n"),
   };
 }
@@ -220,14 +232,15 @@ export function dailyReviewCopy(
 /** Builds one learner's email; the route renders the React Email template here. */
 export type ComposeDailyReview = (
   recipient: Recipient,
-) => Promise<Pick<OutgoingEmail, "subject" | "text" | "html">>;
+) => Promise<Pick<OutgoingEmail, "subject" | "text" | "html" | "headers">>;
 
 /**
  * Emails each recipient once per local day.
  *
  * - Builds the email first, so a template error leaves the day unclaimed and a same-day rerun can still send.
  * - Then claims the `email_log` row before sending, so a rerun or a crash after the send never sends twice
- *   (docs/rules/error-handling.md). A claimed row whose send failed stays claimed: no retry that day.
+ *   (docs/rules/error-handling.md). A send that fails releases its claim, so a rerun the same day retries it; the
+ *   Idempotency-Key still stops a duplicate if the provider did accept it.
  * - One learner's failure is logged with their id only and the loop goes on.
  *
  * @param recipients - From `dailyReviewRecipients`.
@@ -244,9 +257,11 @@ export async function sendDailyReviews(
   for (const recipient of recipients) {
     const { userId, email, today } = recipient;
     let resendId: string;
+    let claimed = false;
     try {
       const message = await compose(recipient);
-      if (!(await deps.claim(userId, today))) {
+      claimed = await deps.claim(userId, today);
+      if (!claimed) {
         result.skipped++;
         continue;
       }
@@ -259,6 +274,14 @@ export async function sendDailyReviews(
     } catch (err) {
       result.failed++;
       console.error(`[cron/daily-review] send failed for user ${userId}`, errorMessage(err));
+      if (claimed) {
+        await deps.release(userId, today).catch((releaseErr: unknown) => {
+          console.error(
+            `[cron/daily-review] claim not released for user ${userId}`,
+            errorMessage(releaseErr),
+          );
+        });
+      }
       continue;
     }
     // The email is out; a failure here only loses the provider id.
@@ -283,7 +306,7 @@ const SEND_TIMEOUT_MS = 10_000;
  * @param from - The sender, such as `Session Coach <noreply@coach.ziaa.me>`.
  */
 export function resendSender(apiKey: string, from: string): DailyReviewDeps["send"] {
-  return async ({ to, subject, text, html, idempotencyKey }) => {
+  return async ({ to, subject, text, html, idempotencyKey, headers }) => {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -291,7 +314,7 @@ export function resendSender(apiKey: string, from: string): DailyReviewDeps["sen
         "Content-Type": "application/json",
         "Idempotency-Key": idempotencyKey,
       },
-      body: JSON.stringify({ from, to: [to], subject, text, html }),
+      body: JSON.stringify({ from, to: [to], subject, text, html, headers }),
       // A stalled call would hold the serial loop until the function is killed; fail it and move to the next learner.
       signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
     });

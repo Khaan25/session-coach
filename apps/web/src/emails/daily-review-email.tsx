@@ -21,6 +21,7 @@ import {
   type ListedCard,
   type Recipient,
 } from "@/lib/email/daily-review";
+import { listUnsubscribeHeaders } from "@/lib/email/unsubscribe";
 
 import { color, font } from "./brand";
 
@@ -160,6 +161,17 @@ export function DailyReviewEmail({ copy, siteUrl }: { copy: DailyReviewCopy; sit
             >
               {copy.footerLink}
             </Link>
+            {copy.unsubscribeUrl ? (
+              <>
+                {" or "}
+                <Link
+                  href={copy.unsubscribeUrl}
+                  style={{ color: color.text3, textDecoration: "underline" }}
+                >
+                  unsubscribe
+                </Link>
+              </>
+            ) : null}
             .
           </Text>
         </Container>
@@ -197,13 +209,23 @@ function Pill({
 }
 
 /**
- * One learner's reminder: subject, plain text and the rendered HTML.
+ * One learner's reminder: subject, plain text, the rendered HTML and, with a link, the one-click unsubscribe headers.
  *
  * @param recipient - What this learner has to do and has done.
  * @param siteUrl - The deployed origin, without a trailing slash.
+ * @param unsubscribeUrl - This learner's signed link (`lib/email/unsubscribe.ts`), or null to leave it out.
  */
-export async function composeDailyReview(recipient: Recipient, siteUrl: string) {
-  const copy = dailyReviewCopy(recipient, siteUrl);
+export async function composeDailyReview(
+  recipient: Recipient,
+  siteUrl: string,
+  unsubscribeUrl: string | null = null,
+) {
+  const copy = dailyReviewCopy(recipient, siteUrl, unsubscribeUrl);
   const html = await render(<DailyReviewEmail copy={copy} siteUrl={siteUrl} />);
-  return { subject: copy.subject, text: copy.text, html };
+  return {
+    subject: copy.subject,
+    text: copy.text,
+    html,
+    headers: unsubscribeUrl ? listUnsubscribeHeaders(unsubscribeUrl) : undefined,
+  };
 }
