@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { localDate } from "../sessions/rows.ts";
-import { addDays, nextReview } from "./schedule.ts";
+import { addDays, dueInWords, nextReview } from "./schedule.ts";
 
 const today = "2026-10-29";
 
@@ -36,4 +36,10 @@ test("the due date follows the learner's local midnight, not UTC", () => {
   assert.equal(nextReview(0, 2, localDate("America/New_York", now)).due_on, "2026-10-30");
   // One minute before local midnight in Karachi is still the 29th there.
   assert.equal(localDate("Asia/Karachi", new Date("2026-10-29T18:59:00Z")), "2026-10-29");
+});
+
+test("dueInWords says tomorrow, then the weekday and date", () => {
+  assert.equal(dueInWords("2026-11-03", "2026-11-02"), "tomorrow");
+  assert.equal(dueInWords("2026-11-05", "2026-11-02"), "on Thursday 5 November");
+  assert.equal(dueInWords("2027-01-01", "2026-12-31"), "tomorrow");
 });

@@ -39,7 +39,6 @@ import {
   ItemGroup,
   ItemTitle,
 } from "@/components/ui/item";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 
 /** A token row with its times already written as words by the server. */
@@ -60,10 +59,11 @@ export function TokenSection({ initialTokens }: { initialTokens: TokenListRow[] 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
+        {/* skullet-own: static text stays real in the skeleton; only the tokens are drawn as bars. */}
+        <CardTitle skullet-own="">
           <h2>CLI tokens</h2>
         </CardTitle>
-        <CardDescription>
+        <CardDescription skullet-own="">
           Each laptop signs in with its own token. Revoke one to sign it out.
         </CardDescription>
         <CardAction>
@@ -107,34 +107,6 @@ export function TokenSection({ initialTokens }: { initialTokens: TokenListRow[] 
           description="Create a token, then sign the CLI in with it."
         />
       )}
-    </Card>
-  );
-}
-
-/** The token card while the list loads: its header and two rows. */
-export function TokenSectionLoading() {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2>CLI tokens</h2>
-        </CardTitle>
-        <CardDescription>
-          Each laptop signs in with its own token. Revoke one to sign it out.
-        </CardDescription>
-      </CardHeader>
-      <output className="sr-only">Loading your tokens</output>
-      <ItemGroup aria-hidden>
-        {[0, 1].map((row) => (
-          <Item key={row}>
-            <ItemContent>
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </ItemContent>
-            <Skeleton className="h-4 w-14" />
-          </Item>
-        ))}
-      </ItemGroup>
     </Card>
   );
 }

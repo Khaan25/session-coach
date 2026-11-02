@@ -93,6 +93,19 @@ export function LoadFailedState({
   );
 }
 
+/** A screen's data didn't load because the browser is offline. Pass a retry in `action`. */
+export function OfflineState({ noun = "this page", ...props }: PresetProps & { noun?: string }) {
+  return (
+    <ErrorState
+      {...props}
+      status="warn"
+      statusWord="Offline"
+      title="You're offline"
+      message={`Couldn't load ${noun} without a connection. It loads again by itself when you reconnect.`}
+    />
+  );
+}
+
 /** A row that doesn't exist or isn't the learner's (RLS returns no row, so the two look the same). */
 export function NotFoundState({
   noun = "Session",

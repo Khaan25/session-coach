@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
-
 import { Container } from "@/components/app/container";
 import { LoadFailedState } from "@/components/app/error-state";
+import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { AppPageHeader } from "@/components/app/page-header";
 import { RefreshButton } from "@/components/setup/refresh-button";
-import { TokenSection, TokenSectionLoading } from "@/components/setup/token-section";
+import { TokenSection, type TokenListRow } from "@/components/setup/token-section";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Code, CodeBlock } from "@/components/ui/code-block";
@@ -30,6 +29,12 @@ const steps = [
     command: "npx session-coach push ./your-session.jsonl",
     what: "Or uploads one session log by its path; put your file's path in place of the example.",
   },
+];
+
+// Only the skeleton's shape comes from these: two laptops, one never used.
+const SAMPLE_TOKENS: TokenListRow[] = [
+  { id: "sample-0", label: "Work laptop", created: "3 days ago", lastUsed: "2 hours ago" },
+  { id: "sample-1", label: "Home desktop", created: "2 weeks ago", lastUsed: null },
 ];
 
 export default function SetupPage() {
@@ -89,9 +94,12 @@ export default function SetupPage() {
         </CardContent>
       </Card>
 
-      <Suspense fallback={<TokenSectionLoading />}>
+      <MeasuredSuspense
+        label="Loading your tokens"
+        skeleton={<TokenSection initialTokens={SAMPLE_TOKENS} />}
+      >
         <Tokens />
-      </Suspense>
+      </MeasuredSuspense>
     </Container>
   );
 }

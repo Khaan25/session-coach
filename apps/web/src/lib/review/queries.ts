@@ -125,6 +125,41 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
   return [...dueCards, ...fresh];
 }
 
+/** Why the queue is empty: no cards at all (first run), or all done for today and when the next one is due. */
+export type EmptyQueue = { hasCards: boolean; nextDue: string | null; today: string };
+
+/**
+ * Read only when the queue came back empty, to tell a first run from a learner who is all caught up.
+ *
+ * @param userId - The signed-in learner.
+ * @param now - The current time, from the page.
+ * @returns Whether the learner has any visible card, and the earliest `due_on` after today (null when none is
+ *   scheduled: every answered card is mastered).
+ */
+export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue> {
+  const supabase = await createClient();
+  const [cards, today] = await Promise.all([
+    supabase
+      .from("decision_cards")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    learnerToday(supabase, userId, now),
+  ]);
+  if (cards.error) throw new Error(`emptyQueue: ${cards.error.message}`);
+  // Inner embed: RLS drops a hidden card, and with it its review, so nextDue never points at a card the queue can't show.
+  const next = await supabase
+    .from("reviews")
+    .select("due_on, card:decision_cards!inner(id)")
+    .eq("user_id", userId)
+    .eq("mastered", false)
+    .gt("due_on", today)
+    .order("due_on")
+    .limit(1)
+    .maybeSingle<{ due_on: string; card: { id: string } }>();
+  if (next.error) throw new Error(`emptyQueue: ${next.error.message}`);
+  return { hasCards: (cards.count ?? 0) > 0, nextDue: next.data?.due_on ?? null, today };
+}
+
 /** What the quiz shows before an answer: the decision and the question, never the why or the answer key. */
 export type QuizCard = {
   id: string;

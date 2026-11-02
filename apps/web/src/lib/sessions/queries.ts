@@ -79,3 +79,34 @@ async function withCardCounts(sessions: SessionSummary[]): Promise<SessionListIt
     s.status === "ready" ? { ...s, cardCount: counts.get(s.id) ?? 0 } : s,
   );
 }
+
+/**
+ * Why a learner has no visible cards, from their latest session: none sent yet, the latest still being read, the latest
+ * failed (`sessionId` links to its error), or sessions that gave none.
+ */
+export type Cardless =
+  | { reason: "no-sessions" | "processing" | "no-cards" }
+  | { reason: "failed"; sessionId: string };
+
+/**
+ * Read only for a learner with no visible card, so a card screen doesn't tell someone whose session is processing to
+ * set up the CLI again. Only the latest session counts: an older row left pending says nothing about now.
+ *
+ * @param userId - The signed-in learner.
+ */
+export async function cardlessReason(userId: string): Promise<Cardless> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("id, status")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; status: SessionSummary["status"] }>();
+  if (error) throw new Error(`cardlessReason: ${error.message}`);
+  if (!data) return { reason: "no-sessions" };
+  if (data.status === "pending" || data.status === "processing") return { reason: "processing" };
+  if (data.status === "failed") return { reason: "failed", sessionId: data.id };
+  return { reason: "no-cards" };
+}

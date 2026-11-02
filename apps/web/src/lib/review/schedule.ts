@@ -51,3 +51,21 @@ export function nextReview(step: Step, score: Score, today: string): ReviewState
   if (step === 3) return { step: 3, due_on: null, mastered: true };
   return { step: (step + 1) as Step, due_on: addDays(today, GAP_DAYS[step]), mastered: false };
 }
+
+const dayFormat = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+
+/**
+ * A due date in words, for "Your next card is due ...": "tomorrow", or "on Thursday 5 November".
+ *
+ * @param due - YYYY-MM-DD, after `today`.
+ * @param today - The learner's today, YYYY-MM-DD.
+ */
+export function dueInWords(due: string, today: string): string {
+  if (due === addDays(today, 1)) return "tomorrow";
+  return `on ${dayFormat.format(new Date(`${due}T00:00:00Z`))}`;
+}
