@@ -71,12 +71,15 @@ export async function GET(req: NextRequest) {
         return [];
       });
 
-    const [[total, last7, last30], retention] = await Promise.all([
-      Promise.all([countProfiles(), countProfiles(daysAgo(7)), countProfiles(daysAgo(30))]),
-      retentionRead,
+    // Counts are checked before retention is awaited, so a failed count answers 500 without waiting on retention.
+    const [total, last7, last30] = await Promise.all([
+      countProfiles(),
+      countProfiles(daysAgo(7)),
+      countProfiles(daysAgo(30)),
     ]);
     for (const result of [total, last7, last30]) if (result.error) throw result.error;
     const usersTotal = total.count ?? 0;
+    const retention = await retentionRead;
 
     const body: Record<string, unknown> = {
       play: PLAY,
