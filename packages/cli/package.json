@@ -13,6 +13,9 @@
     "lint": "oxlint",
     "test": "node --test --experimental-strip-types src/*.test.ts"
   },
+  "dependencies": {
+    "@session-coach/shared": "workspace:*"
+  },
   "devDependencies": {
     "@types/node": "^22",
     "oxlint": "^1.90.0",

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { gunzipSync } from "node:zlib";
 
+// This test crosses packages on purpose: the CLI's output must stay readable by the server parser.
+import { parseSession } from "../../../apps/web/src/lib/pipeline/parser.ts";
 import {
   createRequest,
   firstTimestamp,
@@ -9,6 +11,7 @@ import {
   interpretProcess,
   interpretPut,
   prepareLog,
+  redactLog,
   processRequest,
   putRequest,
   sessionMetadata,
@@ -99,15 +102,150 @@ describe("file name and bytes", () => {
     assert.equal(validateFileName(`${"a".repeat(129)}.jsonl`), hint);
     assert.equal(validateFileName(".jsonl"), hint);
   });
+});
 
-  it("gzips the raw bytes, so an invalid UTF-8 byte survives", () => {
-    const bytes = Buffer.concat([
-      Buffer.from('{"timestamp":"2026-10-27T10:11:00.000Z"}\n'),
-      Buffer.from([0xff, 0xfe, 0x0a]),
-    ]);
-    const { gzipped, text } = prepareLog(bytes);
-    assert.deepEqual(gunzipSync(gzipped), bytes);
+const FAKE_SK = "sk-FAKE0example0key0for0tests0only";
+const FAKE_EMAIL = "jane.doe@example.com";
+
+const secretLog = [
+  JSON.stringify({
+    type: "user",
+    timestamp: "2026-10-27T10:11:00.000Z",
+    message: { role: "user", content: `mail ${FAKE_EMAIL}, key ${FAKE_SK}` },
+  }),
+  "",
+  JSON.stringify({
+    type: "user",
+    n: 3,
+    ok: true,
+    nothing: null,
+    message: {
+      content: [
+        { type: "tool_result", content: `say "hi"\\path\nkey ${FAKE_SK} in /Users/jane/app` },
+      ],
+    },
+  }),
+  `not json, but ${FAKE_SK} and ${FAKE_EMAIL}`,
+].join("\n");
+
+describe("redaction before upload", () => {
+  const { gzipped } = prepareLog(Buffer.from(secretLog));
+  const sent = putRequest(UPLOAD_URL, gzipped).init.body as Uint8Array;
+  const out = gunzipSync(sent).toString("utf8");
+
+  it("the bytes sent contain neither the key nor the email", () => {
+    assert.equal(out.includes(FAKE_SK), false);
+    assert.equal(out.includes(FAKE_EMAIL), false);
+    assert.equal(out.includes("/Users/jane"), false);
+  });
+
+  it("every line that was JSON still parses, and non-string values are unchanged", () => {
+    const lines = out.split("\n");
+    assert.equal(lines.length, 4);
+    assert.equal(lines[1], "");
+    const first = JSON.parse(lines[0] as string);
+    assert.equal(first.message.content, "mail [EMAIL], key [REDACTED]");
+    assert.equal(first.timestamp, "2026-10-27T10:11:00.000Z");
+    const second = JSON.parse(lines[2] as string);
+    assert.deepEqual([second.n, second.ok, second.nothing], [3, true, null]);
+    assert.equal(second.message.content[0].content, 'say "hi"\\path\nkey [REDACTED] in ~/app');
+  });
+
+  it("keeps an unparseable line in place, redacted as plain text", () => {
+    assert.equal(out.split("\n")[3], "not json, but [REDACTED] and [EMAIL]");
+  });
+
+  it("only string values are redacted, not keys", () => {
+    const key = `${FAKE_EMAIL}`;
+    assert.deepEqual(JSON.parse(redactLog(JSON.stringify({ [key]: FAKE_EMAIL }))), {
+      [key]: "[EMAIL]",
+    });
+  });
+
+  it("the metadata sees the redacted text and redacts a title", () => {
+    const { text } = prepareLog(Buffer.from(secretLog));
     assert.equal(firstTimestamp(text), "2026-10-27T10:11:00.000Z");
+    assert.equal(sessionMetadata(text, "s.jsonl", 1, `fix ${FAKE_EMAIL}`).title, "fix [EMAIL]");
+    assert.equal(sessionMetadata(text, "s.jsonl", 1).title, null);
+  });
+
+  it("an invalid UTF-8 byte arrives as U+FFFD, and the rest of the line is kept", () => {
+    const bytes = Buffer.concat([
+      Buffer.from('{"a":"x'),
+      Buffer.from([0xff]),
+      Buffer.from('y"}\n'),
+    ]);
+    assert.equal(gunzipSync(prepareLog(bytes).gzipped).toString("utf8"), '{"a":"x\ufffdy"}\n');
+  });
+});
+
+describe("redaction keeps the log's structure", () => {
+  // All ids are invented. The Read's id is uuid-shaped, which the long-token rule would otherwise redact.
+  const READ_ID = "3f2b8c1e-5a4d-4e7b-9c3a-1d2e3f4a5b6c";
+  const BASH_ID = "toolu_01XUWkYBQ6Z4JqTgGdYSBjPQ";
+  const base = {
+    uuid: "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+    parentUuid: "1b2c3d4e-5f6a-4b7c-8d9e-0f1a2b3c4d5e",
+    sessionId: "5c1e0f0a-3b8e-4c6a-9f1d-2a7b8c9d0e11",
+    timestamp: "2026-11-01T12:34:56.789Z",
+  };
+  const original = [
+    { ...base, type: "user", message: { role: "user", content: "read the file" } },
+    {
+      ...base,
+      type: "assistant",
+      requestId: "req_01ABCdefGHIjklMNOpqrSTUv",
+      message: {
+        id: "msg_01ABCdefGHIjklMNOpqrSTUv",
+        role: "assistant",
+        content: [
+          { type: "tool_use", id: READ_ID, name: "Read", input: { file_path: "/proj/a.ts" } },
+          { type: "tool_use", id: BASH_ID, name: "Bash", input: { command: "ls" } },
+        ],
+      },
+    },
+    {
+      ...base,
+      type: "user",
+      message: {
+        role: "user",
+        content: [
+          { type: "tool_result", tool_use_id: READ_ID, content: "file body, dropped" },
+          { type: "tool_result", tool_use_id: BASH_ID, content: "a.ts" },
+        ],
+      },
+    },
+  ]
+    .map((event) => JSON.stringify(event))
+    .join("\n");
+
+  it("parseSession finds the same events before and after redaction", () => {
+    const before = parseSession(original);
+    const after = parseSession(redactLog(original));
+    assert.equal(after.events.length, before.events.length);
+    assert.deepEqual(
+      after.events.filter((e) => e.kind === "result").map((e) => e.text),
+      before.events.filter((e) => e.kind === "result").map((e) => e.text),
+    );
+    assert.deepEqual(after.events, before.events);
+  });
+
+  it("leaves the structural fields exactly as they were", () => {
+    const [first, second, third] = redactLog(original)
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    for (const event of [first, second, third]) {
+      for (const key of ["uuid", "parentUuid", "sessionId", "timestamp"]) {
+        assert.equal(event[key], base[key as keyof typeof base]);
+      }
+    }
+    assert.equal(second.message.content[0].id, READ_ID);
+    assert.equal(third.message.content[0].tool_use_id, READ_ID);
+  });
+
+  it("still redacts a secret under a non-structural key", () => {
+    const line = JSON.stringify({ id: READ_ID, note: `key ${FAKE_SK}` });
+    assert.deepEqual(JSON.parse(redactLog(line)), { id: READ_ID, note: "key [REDACTED]" });
   });
 });
 

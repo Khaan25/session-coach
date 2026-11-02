@@ -2,13 +2,15 @@
 
 import { gzipSync } from "node:zlib";
 
+import { redact } from "@session-coach/shared/redact";
+
 /** Storage's per-file limit, mirrored from the server (`MAX_UPLOAD_BYTES` in apps/web/src/lib/sessions/upload.ts). */
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 export type SessionMetadata = {
   external_id: string;
   size_bytes: number;
-  title: null;
+  title: string | null;
   started_at?: string;
 };
 
@@ -50,17 +52,19 @@ export function firstTimestamp(jsonl: string): string | undefined {
  * @param jsonl - The log's text.
  * @param fileName - The log's file name or path; `.jsonl` is dropped to make the external id.
  * @param gzippedSize - Byte length of the gzipped log, which is what gets uploaded.
+ * @param title - The session's title, if there is one; redacted before it goes in the metadata.
  */
 export function sessionMetadata(
   jsonl: string,
   fileName: string,
   gzippedSize: number,
+  title: string | null = null,
 ): SessionMetadata {
   const base = fileName.split(/[\\/]/).pop() ?? fileName;
   const meta: SessionMetadata = {
     external_id: base.replace(/\.jsonl$/, ""),
     size_bytes: gzippedSize,
-    title: null,
+    title: title === null ? null : redact(title),
   };
   const startedAt = firstTimestamp(jsonl);
   if (startedAt) meta.started_at = startedAt;
@@ -122,11 +126,68 @@ export function validateFileName(fileName: string): string | null {
 }
 
 /**
- * Gzips the log's raw bytes, so a byte that isn't valid UTF-8 still arrives unchanged, and decodes a string only for
- * the metadata.
+ * Keys whose string values are the log's structure: ids that link a tool_use to its tool_result, and the event's
+ * type, role and time. They are never secrets, and a uuid would match the long-token rule and break the links.
+ */
+const STRUCTURAL_KEYS = new Set([
+  "id",
+  "tool_use_id",
+  "uuid",
+  "parentUuid",
+  "sessionId",
+  "requestId",
+  "timestamp",
+  "type",
+  "role",
+]);
+
+/**
+ * Redacts every string inside a parsed JSON value except the string values of STRUCTURAL_KEYS. Keys, numbers,
+ * booleans and null are left as they are.
+ */
+function redactValue(value: unknown): unknown {
+  if (typeof value === "string") return redact(value);
+  if (Array.isArray(value)) return value.map(redactValue);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [
+        k,
+        STRUCTURAL_KEYS.has(k) && typeof v === "string" ? v : redactValue(v),
+      ]),
+    );
+  }
+  return value;
+}
+
+/**
+ * Redacts a log line by line, so every line that was JSON is still JSON. A line is parsed, its string values are
+ * redacted and it is serialized again; the rules never run over raw JSON text. A line that doesn't parse is kept
+ * in place and redacted as plain text. Blank lines are kept.
+ *
+ * @param text - The log's text, one JSON object per line.
+ */
+export function redactLog(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => {
+      if (!line.trim()) return line;
+      try {
+        return JSON.stringify(redactValue(JSON.parse(line)));
+      } catch {
+        return redact(line);
+      }
+    })
+    .join("\n");
+}
+
+/**
+ * Redacts the log, then gzips it. The bytes are decoded as UTF-8 first, so an invalid byte arrives as U+FFFD.
+ *
+ * @returns The gzip that gets uploaded, and the redacted text for the metadata.
  */
 export function prepareLog(bytes: Uint8Array): { gzipped: Buffer; text: string } {
-  return { gzipped: gzipSync(bytes), text: Buffer.from(bytes).toString("utf8") };
+  const text = redactLog(Buffer.from(bytes).toString("utf8"));
+  return { gzipped: gzipSync(text), text };
 }
 
 /** Messages shared by steps ① and ③. Never includes the token or the upload URL. */

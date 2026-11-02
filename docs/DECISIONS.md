@@ -120,6 +120,13 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Rejected:** a generic secret scanner (misses our own shapes such as home paths and emails, and flags path segments); redacting at display time instead of before storing (the raw text would sit in storage and in the repo); applying the full rule set to Read paths (the long-token rule would mangle path segments).
 - **Known gaps:** a secret immediately after a "/" is skipped (so path segments aren't mistaken for tokens); Windows paths not covered; passwords embedded in URLs (`postgres://user:pass@host`) are not caught; a secret that is exactly 40 or 64 hex characters with no known prefix won't be caught, since those runs are skipped. Verified on the real Rapporteur log: 0 emails or user paths left in the events.
 
+## 2026-11-02 · The CLI redacts before upload
+
+- **Decision:** `redact.ts` moved to `packages/shared` (`@session-coach/shared/redact`). `push` redacts before gzip: each line is parsed, its string values (not keys) are redacted, and it is serialized again, so a JSON line stays JSON. A line that doesn't parse is kept in place and redacted as plain text.
+- **Why:** the setup page says secrets are redacted on the laptop. Running the rules over raw JSON text could break escapes; per-line parsing can't.
+- **Structural fields** (`id`, `tool_use_id`, `uuid`, `parentUuid`, `sessionId`, `requestId`, `timestamp`, `type`, `role`) are not redacted, because a uuid matched the long-token rule and the parser needs those fields; every other string is redacted.
+- **Rejected:** regexes over the raw text (can corrupt a line). **Trade-off:** the log is decoded as UTF-8, so an invalid byte now arrives as U+FFFD.
+
 ## 2026-10-28 · `flagged` and `hidden` on decision cards
 
 - **Decision:** `flagged = true` when any evidence item has `verified: false`. `hidden = true` when no evidence item is verified; the row is kept and learners never see it.

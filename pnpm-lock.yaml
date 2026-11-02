@@ -277,6 +277,10 @@ importers:
         version: 4.3.3
 
   packages/cli:
+    dependencies:
+      '@session-coach/shared':
+        specifier: workspace:*
+        version: link:../shared
     devDependencies:
       '@types/node':
         specifier: ^22
