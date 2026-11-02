@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-02 · The CLI redacts before upload
+
+- **Decision:** `redact.ts` moved to `packages/shared` (`@session-coach/shared/redact`). `push` redacts before gzip: each line is parsed, its string values (not keys) are redacted, and it is serialized again, so a JSON line stays JSON. A line that doesn't parse is kept in place and redacted as plain text.
+- **Why:** the setup page says secrets are redacted on the laptop. Running the rules over raw JSON text could break escapes; per-line parsing can't.
+- **Structural fields** are exempt only at known structural locations, because a uuid matched the long-token rule and the parser needs those fields: the event's top level (`uuid`, `parentUuid`, `sessionId`, `requestId`, `timestamp`, `type`); `event.message` (`id`, `role`, `type`); and the items of `event.message.content` when it is an array (`type`, plus `id` on a `tool_use` block and `tool_use_id` on a `tool_result` block). Every other string value is passed through the redactor at every depth, including a `tool_use` block's whole `input`, a `tool_result`'s `content` and any `toolUseResult`.
+- **Rejected:** regexes over the raw text (can corrupt a line); exempting these key names at any depth (a secret under an `id` or `type` key inside a tool input would go through unredacted). **Trade-off:** the log is decoded as UTF-8, so an invalid byte now arrives as U+FFFD.
+- **Numbers** go through `JSON.parse`, so integers above 2^53 lose precision; the server parser has the same limit, so nothing downstream changes.
+
 ## 2026-11-01 · Big sessions: stay on the Groq free tier, send only the last ~9k characters
 
 - **Decision:** extraction stays on the Groq free tier (`MODEL_PROVIDER=groq`, `openai/gpt-oss-120b`), no paid plan. Every call has to fit the free tier's 8,000 tokens/minute, so the timeline sent to the model is cut to its **last 9,000 characters** (about 3,000 input tokens at the measured ~3 characters per token). The one retry adds the failed answer (about 1,000 tokens), so it sends about 4,000; either call leaves about 4,000 tokens of the minute for the answer and reasoning. Older events are dropped whole, newest kept, because the end of a session usually holds the decisions that shipped. If the newest event alone is over 9,000 characters (a long Bash command, which the parser keeps whole), it is cut to its first 9,000 characters and sent alone, so a call never goes over budget. The existing 60-second wait before the retry keeps it in a fresh minute. Follow-up code (not done yet): the 9,000-character cut before `extractCards`, replacing the planned 150,000; and cutting long Bash commands in the parser, so more events fit in the budget.
@@ -119,13 +127,6 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Why:** the repo is public and session logs carry emails and paths with the user's name. Second layer after "never paste secrets" + the pre-commit scan. The JWT rule goes first so a JWT whose signature starts with `sk-` is redacted whole. Git SHA-1/SHA-256 hashes are evidence, so they are kept; other hex lengths (such as 32) are still redacted.
 - **Rejected:** a generic secret scanner (misses our own shapes such as home paths and emails, and flags path segments); redacting at display time instead of before storing (the raw text would sit in storage and in the repo); applying the full rule set to Read paths (the long-token rule would mangle path segments).
 - **Known gaps:** a secret immediately after a "/" is skipped (so path segments aren't mistaken for tokens); Windows paths not covered; passwords embedded in URLs (`postgres://user:pass@host`) are not caught; a secret that is exactly 40 or 64 hex characters with no known prefix won't be caught, since those runs are skipped. Verified on the real Rapporteur log: 0 emails or user paths left in the events.
-
-## 2026-11-02 · The CLI redacts before upload
-
-- **Decision:** `redact.ts` moved to `packages/shared` (`@session-coach/shared/redact`). `push` redacts before gzip: each line is parsed, its string values (not keys) are redacted, and it is serialized again, so a JSON line stays JSON. A line that doesn't parse is kept in place and redacted as plain text.
-- **Why:** the setup page says secrets are redacted on the laptop. Running the rules over raw JSON text could break escapes; per-line parsing can't.
-- **Structural fields** (`id`, `tool_use_id`, `uuid`, `parentUuid`, `sessionId`, `requestId`, `timestamp`, `type`, `role`) are not redacted, because a uuid matched the long-token rule and the parser needs those fields; every other string is redacted.
-- **Rejected:** regexes over the raw text (can corrupt a line). **Trade-off:** the log is decoded as UTF-8, so an invalid byte now arrives as U+FFFD.
 
 ## 2026-10-28 · `flagged` and `hidden` on decision cards
 

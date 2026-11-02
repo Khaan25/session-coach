@@ -162,11 +162,9 @@ describe("redaction before upload", () => {
     });
   });
 
-  it("the metadata sees the redacted text and redacts a title", () => {
+  it("the metadata sees the redacted text", () => {
     const { text } = prepareLog(Buffer.from(secretLog));
     assert.equal(firstTimestamp(text), "2026-10-27T10:11:00.000Z");
-    assert.equal(sessionMetadata(text, "s.jsonl", 1, `fix ${FAKE_EMAIL}`).title, "fix [EMAIL]");
-    assert.equal(sessionMetadata(text, "s.jsonl", 1).title, null);
   });
 
   it("an invalid UTF-8 byte arrives as U+FFFD, and the rest of the line is kept", () => {
@@ -244,8 +242,58 @@ describe("redaction keeps the log's structure", () => {
   });
 
   it("still redacts a secret under a non-structural key", () => {
-    const line = JSON.stringify({ id: READ_ID, note: `key ${FAKE_SK}` });
-    assert.deepEqual(JSON.parse(redactLog(line)), { id: READ_ID, note: "key [REDACTED]" });
+    const line = JSON.stringify({ uuid: READ_ID, note: `key ${FAKE_SK}` });
+    assert.deepEqual(JSON.parse(redactLog(line)), { uuid: READ_ID, note: "key [REDACTED]" });
+  });
+
+  it("redacts structural-looking keys outside the structural locations", () => {
+    const bad = `${FAKE_SK} ${FAKE_EMAIL}`;
+    const want = "[REDACTED] [EMAIL]";
+    const nested = { id: bad, role: bad, type: bad, timestamp: bad, uuid: bad };
+    const event = {
+      ...base,
+      type: "assistant",
+      id: bad, // top-level id is not structural
+      message: {
+        id: "msg_01ABCdefGHIjklMNOpqrSTUv",
+        role: "assistant",
+        content: [
+          {
+            type: "tool_use",
+            id: BASH_ID,
+            name: "Bash",
+            input: { ...nested, deep: { ...nested } },
+          },
+          { type: "tool_result", tool_use_id: BASH_ID, content: [{ ...nested }] },
+          { type: "text", id: bad, tool_use_id: bad, text: "hi" },
+        ],
+      },
+      toolUseResult: { ...nested },
+    };
+    const out = JSON.parse(redactLog(JSON.stringify(event)));
+    const redacted = { id: want, role: want, type: want, timestamp: want, uuid: want };
+    const [use, result, text] = out.message.content;
+    assert.deepEqual(use.input, { ...redacted, deep: redacted });
+    assert.deepEqual(result.content, [redacted]);
+    assert.deepEqual(out.toolUseResult, redacted);
+    assert.equal(out.id, want);
+    assert.equal(text.id, want);
+    assert.equal(text.tool_use_id, want);
+    // The real structural fields at the known locations come through unchanged.
+    assert.equal(use.id, BASH_ID);
+    assert.equal(use.type, "tool_use");
+    assert.equal(result.tool_use_id, BASH_ID);
+    assert.equal(out.message.id, event.message.id);
+    assert.equal(out.message.role, "assistant");
+    for (const key of Object.keys(base)) assert.equal(out[key], event[key as keyof typeof base]);
+  });
+
+  it("redacts a secret in a message field that is not id, role or type", () => {
+    const line = JSON.stringify({ type: "user", message: { role: "user", model: FAKE_SK } });
+    assert.deepEqual(JSON.parse(redactLog(line)), {
+      type: "user",
+      message: { role: "user", model: "[REDACTED]" },
+    });
   });
 });
 

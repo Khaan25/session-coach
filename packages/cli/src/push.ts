@@ -10,7 +10,7 @@ export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 export type SessionMetadata = {
   external_id: string;
   size_bytes: number;
-  title: string | null;
+  title: null;
   started_at?: string;
 };
 
@@ -52,19 +52,17 @@ export function firstTimestamp(jsonl: string): string | undefined {
  * @param jsonl - The log's text.
  * @param fileName - The log's file name or path; `.jsonl` is dropped to make the external id.
  * @param gzippedSize - Byte length of the gzipped log, which is what gets uploaded.
- * @param title - The session's title, if there is one; redacted before it goes in the metadata.
  */
 export function sessionMetadata(
   jsonl: string,
   fileName: string,
   gzippedSize: number,
-  title: string | null = null,
 ): SessionMetadata {
   const base = fileName.split(/[\\/]/).pop() ?? fileName;
   const meta: SessionMetadata = {
     external_id: base.replace(/\.jsonl$/, ""),
     size_bytes: gzippedSize,
-    title: title === null ? null : redact(title),
+    title: null,
   };
   const startedAt = firstTimestamp(jsonl);
   if (startedAt) meta.started_at = startedAt;
@@ -125,38 +123,71 @@ export function validateFileName(fileName: string): string | null {
   return "Rename the file to letters, numbers, - and _ only (max 128 characters).";
 }
 
-/**
- * Keys whose string values are the log's structure: ids that link a tool_use to its tool_result, and the event's
- * type, role and time. They are never secrets, and a uuid would match the long-token rule and break the links.
- */
-const STRUCTURAL_KEYS = new Set([
-  "id",
-  "tool_use_id",
-  "uuid",
-  "parentUuid",
-  "sessionId",
-  "requestId",
-  "timestamp",
-  "type",
-  "role",
-]);
+/** Event top-level fields that are the log's structure: they link events and are never secrets. */
+const EVENT_KEYS = new Set(["uuid", "parentUuid", "sessionId", "requestId", "timestamp", "type"]);
+/** Fields of `event.message` that are structure. */
+const MESSAGE_KEYS = new Set(["id", "role", "type"]);
 
-/**
- * Redacts every string inside a parsed JSON value except the string values of STRUCTURAL_KEYS. Keys, numbers,
- * booleans and null are left as they are.
- */
-function redactValue(value: unknown): unknown {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Redacts every string inside a parsed JSON value, at any depth, with no exemption. */
+function redactAll(value: unknown): unknown {
   if (typeof value === "string") return redact(value);
-  if (Array.isArray(value)) return value.map(redactValue);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [
-        k,
-        STRUCTURAL_KEYS.has(k) && typeof v === "string" ? v : redactValue(v),
-      ]),
-    );
+  if (Array.isArray(value)) return value.map(redactAll);
+  if (isRecord(value)) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, redactAll(v)]));
   }
   return value;
+}
+
+/** Copies an object, leaving the string values of `keep` as they are and redacting everything else. */
+function redactExcept(
+  obj: Record<string, unknown>,
+  keep: (key: string) => boolean,
+  nested: (key: string, value: unknown) => unknown = (_, v) => redactAll(v),
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, keep(k) && typeof v === "string" ? v : nested(k, v)]),
+  );
+}
+
+/** A content block: `type` is structural, plus `id` on a tool_use and `tool_use_id` on a tool_result. */
+function redactBlock(block: unknown): unknown {
+  if (!isRecord(block)) return redactAll(block);
+  const { type } = block;
+  return redactExcept(
+    block,
+    (k) =>
+      k === "type" ||
+      (k === "id" && type === "tool_use") ||
+      (k === "tool_use_id" && type === "tool_result"),
+  );
+}
+
+function redactMessage(message: unknown): unknown {
+  if (!isRecord(message)) return redactAll(message);
+  return redactExcept(
+    message,
+    (k) => MESSAGE_KEYS.has(k),
+    (k, v) => (k === "content" && Array.isArray(v) ? v.map(redactBlock) : redactAll(v)),
+  );
+}
+
+/**
+ * Redacts a parsed log event. Only the known structural fields keep their string values: the event's own
+ * (EVENT_KEYS), `message.id`/`role`/`type`, and the `type`, tool_use `id` and tool_result `tool_use_id` of the
+ * blocks in `message.content`. Every other string, including a tool_use's whole `input`, a tool_result's `content`
+ * and `toolUseResult`, is redacted at every depth. Keys, numbers, booleans and null are left as they are.
+ */
+function redactEvent(event: unknown): unknown {
+  if (!isRecord(event)) return redactAll(event);
+  return redactExcept(
+    event,
+    (k) => EVENT_KEYS.has(k),
+    (k, v) => (k === "message" ? redactMessage(v) : redactAll(v)),
+  );
 }
 
 /**
@@ -172,7 +203,7 @@ export function redactLog(text: string): string {
     .map((line) => {
       if (!line.trim()) return line;
       try {
-        return JSON.stringify(redactValue(JSON.parse(line)));
+        return JSON.stringify(redactEvent(JSON.parse(line)));
       } catch {
         return redact(line);
       }
