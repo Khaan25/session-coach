@@ -37,6 +37,7 @@ test("other 4xx answers are not retried", () => {
 test("5xx, timeouts and non-JSON output wait the default", () => {
   assert.equal(retryWaitMs(http(500)), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(http(503)), RETRY_WAIT_MS);
+  assert.equal(retryWaitMs(http(408)), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(new DOMException("timed out", "TimeoutError")), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(new SyntaxError("Unexpected token")), RETRY_WAIT_MS);
 });

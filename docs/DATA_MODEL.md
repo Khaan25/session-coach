@@ -99,19 +99,19 @@ Bearer tokens the CLI uses to upload sessions. Created on `/setup` through `POST
 
 One uploaded Claude Code session and its processing status.
 
-| Column                                      | Stores                                                                                 | Written by        |
-| ------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------- |
-| `id`                                        | Session id.                                                                            | Default           |
-| `user_id`                                   | Owner.                                                                                 | Server            |
-| `external_id`                               | Claude Code's `session_id`. `unique (user_id, external_id)`: see repeat uploads below. | Server            |
-| `agent`                                     | `claude-code` or `codex`.                                                              | Server            |
-| `title`                                     | The agent's title for the session, if the log had one.                                 | Server            |
-| `repo`, `branch`                            | Where the work happened; the fallback name ("repo on branch").                         | Server            |
-| `started_at`, `duration_min`, `event_count` | Session facts from the log (non-negative checks).                                      | Server            |
-| `raw_path`                                  | Storage path of the redacted `.jsonl.gz`. Not empty.                                   | Server            |
-| `status`                                    | `pending`, `processing`, `ready` or `failed`.                                          | Server (pipeline) |
-| `error`                                     | A learner-readable reason when `failed`.                                               | Server (pipeline) |
-| `created_at`                                | Latest upload time. Indexed with `user_id` for the dashboard's newest-first list.      | Default; re-push  |
+| Column                                      | Stores                                                                                      | Written by        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------- |
+| `id`                                        | Session id.                                                                                 | Default           |
+| `user_id`                                   | Owner.                                                                                      | Server            |
+| `external_id`                               | Claude Code's `session_id`. `unique (user_id, external_id)`: see repeat uploads below.      | Server            |
+| `agent`                                     | `claude-code` or `codex`.                                                                   | Server            |
+| `title`                                     | The agent's title for the session, if the log had one.                                      | Server            |
+| `repo`, `branch`                            | Where the work happened; the fallback name ("repo on branch").                              | Server            |
+| `started_at`, `duration_min`, `event_count` | Session facts from the log (non-negative checks).                                           | Server            |
+| `raw_path`                                  | Storage path of the redacted `.jsonl.gz`. Not empty.                                        | Server            |
+| `status`                                    | `pending`, `processing`, `ready` or `failed`.                                               | Server (pipeline) |
+| `error`                                     | A learner-readable reason when `failed`.                                                    | Server (pipeline) |
+| `created_at`                                | Last upload, re-push or processing claim. Indexed with `user_id` for the newest-first list. | Default; re-push  |
 
 - **Policies:** `read own sessions`. **No learner delete:** the server deletes the Storage object first, then the row;
   a learner delete would orphan the log in Storage.
@@ -120,8 +120,8 @@ One uploaded Claude Code session and its processing status.
   run gets 409. `failed`, or `processing` for over 10 minutes, is retried: its cards are deleted, then the row goes
   back to `pending` with `error` cleared and `created_at` set to now, and the new upload replaces the log.
 - **Stuck sessions:** the daily cron marks rows `processing` for over 15 minutes (by `created_at`) as `failed` with a
-  retryable `error`. There is no `updated_at`, so `created_at` stands in for "processing since"; the CLI processes
-  right after uploading.
+  retryable `error`. There is no `updated_at`, so `created_at` stands in for "processing since": the process route
+  sets it to now when it claims a `pending` row.
 - Realtime publishes this table (see below).
 
 ### `decision_cards`

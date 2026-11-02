@@ -31,7 +31,7 @@ const HTTP_DATE = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} G
  * @param error - What the failed attempt threw.
  * @param now - The current time, for an HTTP-date `retry-after`; tests pass a fixed one.
  * @returns Milliseconds to wait, or null when a retry can't help: a 4xx other than 429 (bad key, bad request) will
- *   fail the same way again. A 429 waits for its `retry-after` seconds, capped at `MAX_RETRY_WAIT_MS`.
+ *   fail the same way again; 408 (a timeout) is retried. A 429 waits for its `retry-after` seconds, capped at `MAX_RETRY_WAIT_MS`.
  */
 export function retryWaitMs(error: unknown, now = Date.now()): number | null {
   if (!(error instanceof ProviderHttpError)) return RETRY_WAIT_MS;
@@ -49,6 +49,8 @@ export function retryWaitMs(error: unknown, now = Date.now()): number | null {
     if (!Number.isFinite(seconds) || seconds < 0) return RETRY_WAIT_MS;
     return Math.min(seconds * 1_000, MAX_RETRY_WAIT_MS);
   }
+  // 408 is the provider timing out (OpenRouter sends it): transient, like a 5xx.
+  if (error.status === 408) return RETRY_WAIT_MS;
   if (error.status >= 400 && error.status < 500) return null;
   return RETRY_WAIT_MS;
 }
