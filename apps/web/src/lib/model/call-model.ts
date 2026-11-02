@@ -7,7 +7,12 @@ import { ProviderHttpError, retryWaitMs } from "@/lib/model/retry";
 export type ModelTask = "extract" | "grade";
 
 /** `instructions` go in the system prompt; `data` is sent as JSON in the user message. */
-export type ModelInput = { instructions: string; data: Record<string, unknown> };
+export type ModelInput = {
+  instructions: string;
+  data: Record<string, unknown>;
+  /** Cancels the call and any retry, such as at the pipeline's deadline. */
+  signal?: AbortSignal;
+};
 
 /** The provider or model env vars are unset or wrong. Routes answer 503: grading isn't configured. */
 export class ModelConfigError extends Error {
@@ -78,10 +83,12 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
       // Some models wrap JSON in a markdown fence even when asked not to.
       return JSON.parse(text.trim().replace(/^```(?:json)?\s*|\s*```$/g, ""));
     } catch (error) {
+      if (input.signal?.aborted) throw error;
       lastError = error;
       const waitMs = retryWaitMs(error);
       if (waitMs === null || attempt === 1) break;
       await new Promise((resolve) => setTimeout(resolve, waitMs));
+      input.signal?.throwIfAborted();
     }
   }
   throw new ModelCallError(`${provider} ${task} call failed`, { cause: lastError });
@@ -100,7 +107,8 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
  */
 async function request(provider: Provider, model: string, key: string, input: ModelInput) {
   const user = JSON.stringify(input.data);
-  const signal = AbortSignal.timeout(TIMEOUT_MS);
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  const signal = input.signal ? AbortSignal.any([timeout, input.signal]) : timeout;
   if (provider === "gemini") {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,

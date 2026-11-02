@@ -1,11 +1,9 @@
 /**
- * GET /api/cron/daily-review: Vercel Cron, once a day at 13:00 UTC (apps/web/vercel.json): 8:00 in New York in winter
- * and 9:00 under daylight saving (Vercel cron is UTC only), 18:00 in Karachi. First marks sessions stuck in `processing` as `failed`, then emails every learner with reminders on who has
- * cards due today in their own time zone, at most once per local day.
- *   200 `{ sent, skipped, failed, swept }`: skipped were already emailed today; failed are logged by user id and can be
- *       retried by a rerun the same day; swept is how many stuck sessions were failed (left out if the sweep errored).
- *   401 missing or wrong `Authorization: Bearer <CRON_SECRET>`, 503 `RESEND_API_KEY` unset (the sweep still
- *   ran; `{ error, swept }`), 500 anything else.
+ * GET /api/cron/daily-review: Vercel Cron, daily at 13:00 UTC (apps/web/vercel.json). Fails stuck sessions, then emails
+ * every learner with reminders on who has cards due in their own time zone, at most once per local day.
+ *   200 `{ sent, skipped, failed, swept }`: `swept` is left out if the sweep errored.
+ *   401 wrong or missing `Authorization: Bearer <CRON_SECRET>`, 503 `RESEND_API_KEY` unset (`{ error, swept }`),
+ *   500 anything else.
  */
 import { NextResponse } from "next/server";
 
@@ -19,8 +17,9 @@ import {
   type ReviewRow,
   sendDailyReviews,
 } from "@/lib/email/daily-review";
-import { newCardsSince } from "@/lib/review/schedule";
 import { unsubscribeUrl } from "@/lib/email/unsubscribe";
+import { newCardsSince } from "@/lib/review/schedule";
+import { failStuckSessions } from "@/lib/sessions/stuck";
 import { siteUrl } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
@@ -31,29 +30,6 @@ const KIND = "daily_review";
 const DEFAULT_FROM = "Session Coach <noreply@coach.ziaa.me>";
 /** Learner ids per `in (...)` filter. */
 const ID_CHUNK = 100;
-/** A pipeline run lives at most 300 s; `processing` this long means the run was killed (docs/rules/error-handling.md). */
-const STUCK_MS = 15 * 60 * 1000;
-const STUCK_ERROR =
-  "Making cards from this session didn't finish. Run session-coach push again to retry.";
-
-/**
- * Marks sessions `processing` for over 15 minutes as `failed`, so a killed run doesn't spin on the dashboard forever.
- * `created_at` stands in for "processing since": the process route restarts it when it claims the session.
- *
- * @param admin - The service-role client.
- * @param now - The cron's current time.
- * @returns How many sessions were failed.
- */
-async function sweepStuckSessions(admin: ReturnType<typeof createAdminClient>, now: Date) {
-  const { data, error } = await admin
-    .from("sessions")
-    .update({ status: "failed", error: STUCK_ERROR })
-    .eq("status", "processing")
-    .lt("created_at", new Date(now.getTime() - STUCK_MS).toISOString())
-    .select("id");
-  if (error) throw new Error(error.message);
-  return data.length;
-}
 
 /** A `reviews` row with its card, before hidden cards are dropped. */
 type AnsweredRow = {
@@ -68,28 +44,25 @@ type AnsweredRow = {
  *
  * - Checks the cron secret before anything else, and the Resend key before claiming any `email_log` row, so a
  *   misconfigured deploy doesn't use up the day's claims.
- * - Sweeps stuck sessions first, even without Resend; a sweep error is logged and the emails still go out.
+ * - Fails stuck sessions first, even without Resend; a sweep error is logged and the emails still go out.
  * - Reads learners with reminders on, every answered card (for due, answered and mastered) and the visible cards
  *   from the last week never answered; who gets what is `dailyReviewRecipients`.
  *
  * @param request - Vercel Cron's request.
  */
 export async function GET(request: Request) {
-  if (!cronAuthorized(request.headers.get("authorization"), process.env.CRON_SECRET)) {
+  // Also signs the unsubscribe links.
+  const secret = process.env.CRON_SECRET;
+  if (!cronAuthorized(request.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const now = new Date();
-  // Before the Resend check: recovering stuck sessions doesn't need email. Inside the promise, so a client that can't
-  // be built is logged like any sweep error.
-  const swept = await Promise.resolve()
-    .then(() => sweepStuckSessions(createAdminClient(), now))
-    .catch((err: unknown) => {
-      console.error(
-        "[api/cron/daily-review] stuck-session sweep failed",
-        err instanceof Error ? err.message : err,
-      );
-      return undefined;
-    });
+  let swept: number | undefined;
+  try {
+    swept = await failStuckSessions(createAdminClient(), now);
+  } catch (err) {
+    console.error("[api/cron/daily-review] stuck-session sweep failed", errorMessage(err));
+  }
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("[api/cron/daily-review] RESEND_API_KEY is not set");
@@ -98,9 +71,6 @@ export async function GET(request: Request) {
       { status: 503 },
     );
   }
-
-  // cronAuthorized passed, so the secret is set; it also signs the unsubscribe links.
-  const secret = process.env.CRON_SECRET as string;
 
   try {
     const admin = createAdminClient();
@@ -193,7 +163,11 @@ export async function GET(request: Request) {
     );
     return NextResponse.json({ ...result, swept });
   } catch (err) {
-    console.error("[api/cron/daily-review] failed", err instanceof Error ? err.message : err);
+    console.error("[api/cron/daily-review] failed", errorMessage(err));
     return NextResponse.json({ error: "The daily review run failed." }, { status: 500 });
   }
+}
+
+function errorMessage(err: unknown) {
+  return err instanceof Error ? err.message : err;
 }

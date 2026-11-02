@@ -5,7 +5,7 @@
  */
 import { NextResponse } from "next/server";
 
-import { userRateLimit } from "@/lib/auth/rate-limit";
+import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
 import { callModel, ModelCallError, ModelConfigError } from "@/lib/model/call-model";
 import { answerRequestSchema, GRADE_INSTRUCTIONS, gradeData, parseGrade } from "@/lib/review/grade";
 import { isDue, nextReview, type Step } from "@/lib/review/schedule";
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
     // Here, not earlier: a 404 or 409 costs no model call, so it shouldn't spend one of the hour's grades.
     const limited = await userRateLimit("grade", user.id);
-    if (limited) return limited;
+    if (limited) return tooManyRequests(limited);
 
     const input = { instructions: GRADE_INSTRUCTIONS, data: gradeData(card, answer) };
     const grade =

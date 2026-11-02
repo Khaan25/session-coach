@@ -75,7 +75,10 @@ export type DailyReviewResult = { sent: number; skipped: number; failed: number 
  * @param header - The request's `Authorization` header, or null.
  * @param secret - `process.env.CRON_SECRET`.
  */
-export function cronAuthorized(header: string | null, secret: string | undefined): boolean {
+export function cronAuthorized(
+  header: string | null,
+  secret: string | undefined,
+): secret is string {
   if (!secret || !header?.startsWith("Bearer ")) return false;
   return constantTimeEqual(header.slice("Bearer ".length), secret);
 }

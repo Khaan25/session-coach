@@ -70,6 +70,8 @@ export type ExtractOptions = {
   retryDelayMs?: number;
   /** Does the waiting; tests pass a fake so they never wait. */
   sleep?: (ms: number) => Promise<void>;
+  /** Cancels the model calls; checked again after the wait. */
+  signal?: AbortSignal;
 };
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -99,24 +101,27 @@ function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: str
  *
  * @param events - The parsed timeline; `line` is not sent, the model has no use for it.
  * @param model - `callModel` in production, a fake in tests.
- * @param options - `retryDelayMs` (default `RETRY_DELAY_MS`) and `sleep`, to change the wait.
+ * @param options - `retryDelayMs` (default `RETRY_DELAY_MS`) and `sleep` change the wait; `signal` cancels.
  * @returns 0 to `MAX_CARDS` cards, unverified. Zero is a valid answer: a session can have no real decisions.
  * @throws ExtractError when both answers are invalid. Errors from `model` itself pass through.
  */
 export async function extractCards(
   events: readonly TimelineEvent[],
   model: ExtractModel,
-  { retryDelayMs = RETRY_DELAY_MS, sleep = wait }: ExtractOptions = {},
+  { retryDelayMs = RETRY_DELAY_MS, sleep = wait, signal }: ExtractOptions = {},
 ): Promise<ExtractedCard[]> {
   const timeline = events.map(({ id, kind, text }) => ({ id, kind, text }));
+  const cancel = signal ? { signal } : {};
   const firstAnswer = await model("extract", {
     instructions: EXTRACT_INSTRUCTIONS,
     data: { events: timeline },
+    ...cancel,
   });
   const first = parseAnswer(firstAnswer);
   if ("cards" in first) return first.cards;
 
   await sleep(retryDelayMs);
+  signal?.throwIfAborted();
   const second = parseAnswer(
     await model("extract", {
       instructions: EXTRACT_INSTRUCTIONS,
@@ -126,6 +131,7 @@ export async function extractCards(
         validation_error: first.error,
         fix: "Your previous_answer failed validation with the error above. Return the full JSON again with exactly those problems fixed.",
       },
+      ...cancel,
     }),
   );
   if ("cards" in second) return second.cards;

@@ -10,7 +10,7 @@
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { userRateLimit } from "@/lib/auth/rate-limit";
+import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
 import { processSession } from "@/lib/pipeline/process";
 import { bearerToken, MAX_UPLOAD_BYTES, SESSIONS_BUCKET } from "@/lib/sessions/upload";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,11 +18,7 @@ import { userForToken } from "@/lib/tokens/verify";
 
 const idSchema = z.uuid();
 
-/**
- * Seconds this route, and the `processSession` it runs in `after()`, may take. Set explicitly rather than trusting the
- * platform default: the slowest run is about 220 s, and `processSession` gives up at 280 s so it can still mark the
- * session failed.
- */
+/** Seconds for this route and its `after()` work; `processSession` gives up at 280 s to still mark failure. */
 export const maxDuration = 300;
 
 /**
@@ -54,7 +50,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       );
     }
     const limited = await userRateLimit("process", userId);
-    if (limited) return limited;
+    if (limited) return tooManyRequests(limited);
 
     const admin = createAdminClient();
     const { data: session, error: readError } = await admin
@@ -87,8 +83,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     const { data: claimed, error: claimError } = await admin
       .from("sessions")
-      // created_at restarts so the stuck check and the cron sweep time the run, not the upload.
-      .update({ status: "processing", error: null, created_at: new Date().toISOString() })
+      .update({
+        status: "processing",
+        error: null,
+        processing_started_at: new Date().toISOString(),
+      })
       .eq("id", session.id)
       .eq("status", "pending")
       .select("id");

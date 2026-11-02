@@ -26,11 +26,7 @@ class DeadlineError extends Error {
   name = "DeadlineError";
 }
 
-/**
- * How long a run may take before it gives up and marks the session failed: 20 s under the route's 300 s `maxDuration`,
- * so the catch still has time to write `failed` before the platform kills the function. The slowest normal run is two
- * extraction calls (each up to 30 s + a 20 s wait + 30 s) with the 60 s retry delay between them: about 220 s.
- */
+/** 20 s under the route's 300 s `maxDuration`, so the catch can still write `failed` before the platform kills it. */
 const DEADLINE_MS = 280_000;
 
 /** The log parsed to no events: nothing to ask the model about. */
@@ -64,7 +60,7 @@ function learnerMessage(error: unknown): string {
  */
 export async function processSession(sessionId: string): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  // The run can't be interrupted mid-call, so on the deadline it is told to stop and checks before each write.
+  // On the deadline the run's model calls are cancelled, and it checks before each write.
   const stop = new AbortController();
   const deadline = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
@@ -131,13 +127,11 @@ async function run(sessionId: string, signal: AbortSignal): Promise<void> {
 
   // The trimmed events feed both the model and the quote check, so event_index lines up.
   const { kept: timeline, cut } = trimTimeline(events);
-  const drafts = await extractCards(timeline, callModel);
+  const drafts = await extractCards(timeline, callModel, { signal });
   const cards = checkEvidence(drafts, timeline);
   const rows = buildCardRows(cards, sessionId, session.user_id);
 
   // Cards first, `ready` second: a failure in between leaves `failed`, never a ready session with no cards.
-  // If a re-run ever hits the (session_id, position) unique constraint, the run fails loudly; a retry route must
-  // decide how to clear cards safely (unanswered only, or in one transaction).
   signal.throwIfAborted();
   if (rows.length > 0) {
     const { error: insertError } = await admin.from("decision_cards").insert(rows);

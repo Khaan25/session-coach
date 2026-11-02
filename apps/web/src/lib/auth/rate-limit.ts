@@ -104,23 +104,21 @@ export async function authAttemptWait(action: AuthLimit): Promise<number> {
   }
 }
 
+/** A spent budget: what to tell the learner, and when they may try again. */
+export type UserLimited = { message: string; retryAfterSeconds: number };
+
 /**
- * Counts one `action` by this learner and, once their hourly budget is spent, answers for the route.
- *
- * Fails open like `authAttemptWait`: without Upstash or when Redis errors or times out, the call goes ahead.
- *
- * @example
- * const limited = await userRateLimit("process", userId);
- * if (limited) return limited;
+ * Counts one `action` by this learner. Fails open like `authAttemptWait`: without Upstash, or when Redis errors or
+ * times out, the call goes ahead.
  *
  * @param action - Which budget to spend.
  * @param userId - The authenticated learner's id (never an unchecked value from the request).
- * @returns null when the call may go ahead, otherwise a 429 `{ error }` with `Retry-After` in seconds.
+ * @returns null when the call may go ahead.
  */
 export async function userRateLimit(
   action: UserLimit,
   userId: string,
-): Promise<NextResponse | null> {
+): Promise<UserLimited | null> {
   if (!userLimiters) {
     warnUnconfigured();
     return null;
@@ -128,16 +126,20 @@ export async function userRateLimit(
   try {
     const { success, reset } = await userLimiters[action].limit(userId);
     if (success) return null;
-    const seconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
-    const minutes = Math.ceil(seconds / 60);
-    return NextResponse.json(
-      {
-        error: `${USER_LIMIT_ERROR[action]} Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
-      },
-      { status: 429, headers: { "Retry-After": String(seconds) } },
-    );
+    const retryAfterSeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+    const minutes = Math.ceil(retryAfterSeconds / 60);
+    const message = `${USER_LIMIT_ERROR[action]} Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
+    return { message, retryAfterSeconds };
   } catch (error) {
     console.error(`auth/rate-limit ${action}`, error);
     return null;
   }
+}
+
+/** The route's 429 for a spent budget: `{ error }` with `Retry-After` in seconds. */
+export function tooManyRequests({ message, retryAfterSeconds }: UserLimited): NextResponse {
+  return NextResponse.json(
+    { error: message },
+    { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } },
+  );
 }

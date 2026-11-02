@@ -212,3 +212,17 @@ test("an error thrown by the model itself passes through without a retry", async
   await assert.rejects(extractCards(events, model), /provider down/);
   assert.equal(calls.length, 1);
 });
+
+test("an abort during the retry wait stops before the second call, and the signal reaches the model", async () => {
+  const stop = new AbortController();
+  const signals: (AbortSignal | undefined)[] = [];
+  const model: ExtractModel = async (_task, input) => {
+    signals.push(input.signal);
+    return { decisions: "not a list" };
+  };
+  const sleep = async () => stop.abort();
+  await assert.rejects(extractCards(events, model, { sleep, signal: stop.signal }), {
+    name: "AbortError",
+  });
+  assert.deepEqual(signals, [stop.signal]);
+});
