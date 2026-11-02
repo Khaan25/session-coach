@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Icon } from "@phosphor-icons/react";
 import {
   CalendarCheckIcon,
+  CardsIcon,
   ChartLineUpIcon,
   MagnifyingGlassIcon,
   TerminalWindowIcon,
@@ -83,15 +84,48 @@ export function NoSessionsEmpty({ variant }: PresetProps) {
   );
 }
 
-/** Review queue with nothing due today. */
-export function NoCardsDueEmpty({ variant }: PresetProps) {
+/**
+ * First run on a card screen (review queue, progress): the learner has no cards at all, so the way forward is the CLI,
+ * not the queue.
+ */
+export function NoCardsYetEmpty({ variant }: PresetProps) {
+  return (
+    <EmptyState
+      variant={variant}
+      icon={CardsIcon}
+      sprite="pencil"
+      title="No cards yet"
+      description="Cards come from your Claude Code sessions. Set up the CLI, and each session that ends becomes 3 to 5 cards to explain back."
+      action={
+        <Link href="/setup" className={buttonVariants()}>
+          Set up the CLI
+        </Link>
+      }
+    />
+  );
+}
+
+/**
+ * All done: the learner has cards, but none is due today. `next` is when the next one is due, in words ("tomorrow",
+ * "on Thursday 5 November"); leave it out when nothing is scheduled.
+ */
+export function AllCaughtUpEmpty({ next, variant }: PresetProps & { next?: string }) {
   return (
     <EmptyState
       variant={variant}
       icon={CalendarCheckIcon}
       sprite="tea"
-      title="No cards due today"
-      description="Each card comes back on day 1, 3 and 7 after its session. New cards arrive when your next session ends."
+      title="All caught up"
+      description={
+        next
+          ? `Nothing is due today. Your next card is due ${next}, and new cards arrive when your next session ends.`
+          : "Nothing is due today, and no review is scheduled. New cards arrive when your next session ends."
+      }
+      action={
+        <Link href="/progress" className={buttonVariants({ variant: "secondary" })}>
+          See your progress
+        </Link>
+      }
     />
   );
 }

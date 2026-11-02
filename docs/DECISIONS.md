@@ -2,6 +2,12 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-02 · Empty states say why they are empty
+
+- **Decision:** each empty state names its reason and the next step. The review queue tells a first run (`NoCardsYetEmpty`: no cards at all, set up the CLI) from all caught up (`AllCaughtUpEmpty`: cards exist, none due, with when the next one is due). `/progress` with no cards shows the same first-run state; cards with no answer yet still show `NoReviewsEmpty`. The dashboard, review and progress error boundaries share `LoadErrorState`, which shows `OfflineState` when the browser is offline and retries by itself when it reconnects. `emptyQueue` (`lib/review/queries.ts`) is the second read that tells them apart; it runs only when the queue comes back empty.
+- **Why:** the queue said "No cards due today" both to a learner who had never sent a session and to one who had finished today's reviews, and progress sent a first-run learner to that empty queue. Each reason has a different way out.
+- **Rejected:** a no-access state for `/tracker`: a learner who isn't a member gets a 404 on purpose, so the page doesn't reveal itself. No-results and filtered-to-nothing: the app has no search or filters yet; `NoResultsEmpty` already exists for when it does.
+
 ## 2026-11-02 · The landing's demos loop in place, on motion.dev
 
 - **Decision:** the landing gets a product bento under the hero (`components/marketing/bento-*.tsx`, layout and timing cloned from a reference video, spec in `.reanimate/bento/spec.md`, which is git-ignored) and one looping demo per section: the review schedule, the quote check, the secret filter. Idle micro motion (bell, bars, dot, caret) and the demos' springs and enter/exit swaps use `motion` (pinned 14.3.0, client components only). Simple transitions stay Tailwind. Every demo idles in place; none waits for a scroll. `MotionConfig reducedMotion="user"` drops transforms and `useLoopStep` stops the loops under reduced motion.

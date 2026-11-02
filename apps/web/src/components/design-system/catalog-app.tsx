@@ -2,7 +2,8 @@ import { AppPageHeader } from "@/components/app/page-header";
 import { Container } from "@/components/app/container";
 import {
   EmptyState,
-  NoCardsDueEmpty,
+  AllCaughtUpEmpty,
+  NoCardsYetEmpty,
   NoResultsEmpty,
   NoReviewsEmpty,
   NoSessionsEmpty,
@@ -11,6 +12,7 @@ import {
   ErrorState,
   LoadFailedState,
   NotFoundState,
+  OfflineState,
   SessionFailedState,
 } from "@/components/app/error-state";
 import {
@@ -100,7 +102,9 @@ export function AppCatalog() {
       <Specimen label="EmptyState: presets and a custom one">
         <div className="grid w-full gap-3 md:grid-cols-2">
           <NoSessionsEmpty />
-          <NoCardsDueEmpty />
+          <NoCardsYetEmpty />
+          <AllCaughtUpEmpty next="tomorrow" />
+          <AllCaughtUpEmpty />
           <NoReviewsEmpty />
           <NoResultsEmpty query="parser" variant="framed" />
           <EmptyState title="TODO(zia)" description="A custom empty state with no icon." />
@@ -117,6 +121,7 @@ export function AppCatalog() {
             action={<Button variant="secondary">Try again</Button>}
           />
           <NotFoundState />
+          <OfflineState noun="your sessions" action={<Button>Try again</Button>} />
           <ErrorState
             title="Couldn't save your answer"
             message="Your answer is still in the box. Try again in a moment."
