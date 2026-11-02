@@ -27,3 +27,4 @@ supabase/.temp/
 
 # seed-demo manifests: ids of demo rows per learner
 scripts/.seed-demo/
+.reanimate/

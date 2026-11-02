@@ -14,6 +14,12 @@
   --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
 }
 
+/* skullet hides skeleton text with a transparent fill on its loading root, and the fill inherits, so it reaches
+   into a [skullet-own] subtree that skullet means to leave real. Paint the text there again (skullet 0.0.3). */
+[skullet-own] {
+  -webkit-text-fill-color: currentColor;
+}
+
 /* The chart series colours are emitted as real variables too, because chart configs read them with var().
    Declared again on every [data-surface], so a chart on a remapped surface takes that surface's hues. */
 :root,
@@ -70,6 +76,21 @@
 @theme {
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+}
+
+/*
+ * The landing bento (components/marketing/bento-*.tsx): the sprite's one-turn spin on click, and the soft
+ * blur on the checks that are not in focus. Reduced motion drops the spin at the call site.
+ */
+@theme {
+  --blur-row: 2px;
+  --animate-spin-y: spin-y 900ms cubic-bezier(0.45, 0, 0.55, 1);
+
+  @keyframes spin-y {
+    to {
+      transform: rotateY(360deg);
+    }
+  }
 }
 
 /*

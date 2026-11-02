@@ -8,8 +8,10 @@ import { ExtractError, extractCards } from "./extract.ts";
 import { parseSession } from "./parser.ts";
 import {
   buildCardRows,
+  durationMinutes,
   LogTooBigError,
   MAX_LOG_BYTES,
+  sessionTitle,
   trimTimeline,
   unzipLog,
 } from "./process-rows.ts";
@@ -103,7 +105,7 @@ async function run(sessionId: string, signal: AbortSignal): Promise<void> {
 
   const { data: session, error: readError } = await admin
     .from("sessions")
-    .select("user_id, raw_path")
+    .select("user_id, raw_path, title")
     .eq("id", sessionId)
     .single();
   if (readError || !session?.raw_path) {
@@ -141,10 +143,23 @@ async function run(sessionId: string, signal: AbortSignal): Promise<void> {
     const { error: insertError } = await admin.from("decision_cards").insert(rows);
     if (insertError) throw insertError;
   }
+
+  // Title and duration are optional: if computing them throws, the session is still marked ready.
+  let extras: { title?: string; duration_min?: number } = {};
+  try {
+    const title = session.title ? null : sessionTitle(events);
+    const duration = durationMinutes(raw);
+    extras = {
+      ...(title !== null && { title }),
+      ...(duration !== null && { duration_min: duration }),
+    };
+  } catch (error) {
+    console.error("[pipeline/process] title and duration skipped", sessionId, error);
+  }
   signal.throwIfAborted();
   const { data: readied, error: readyError } = await admin
     .from("sessions")
-    .update({ status: "ready", error: null })
+    .update({ status: "ready", error: null, ...extras })
     .eq("id", sessionId)
     .eq("status", "processing")
     .select("id");
@@ -156,6 +171,8 @@ async function run(sessionId: string, signal: AbortSignal): Promise<void> {
     extracted: drafts.length,
     kept: rows.length,
     cut_events: cut,
+    title_set: extras.title !== undefined,
+    duration_min: extras.duration_min ?? null,
     ms: Date.now() - started,
   });
 }

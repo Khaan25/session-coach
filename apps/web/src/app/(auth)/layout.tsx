@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { RouteAuthArt } from "@/components/auth/auth-art";
 import { BrandLink } from "@/components/auth/auth-parts";
+import { ForgetShapes } from "@/components/auth/forget-shapes";
 
 const links = [
   { href: "/privacy", label: "Privacy" },
@@ -14,6 +15,7 @@ const links = [
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="grid min-h-full flex-1 bg-page lg:grid-cols-2">
+      <ForgetShapes />
       <div className="flex flex-col">
         <header className="flex h-18 items-center px-(--gutter-sm) sm:h-20 sm:px-(--gutter)">
           <BrandLink />

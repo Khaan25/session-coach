@@ -2,7 +2,6 @@ import {
   CardsIcon,
   ChatTextIcon,
   ClockCountdownIcon,
-  LockKeyIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
   TerminalWindowIcon,
@@ -10,11 +9,15 @@ import {
 import Link from "next/link";
 
 import { FeatureCard } from "@/components/marketing/feature-card";
+import { QuoteCheck } from "@/components/marketing/quote-check";
+import { RedactionDemo } from "@/components/marketing/redaction-demo";
+import { ReviewSchedule } from "@/components/marketing/review-schedule";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // The landing's sections under the hero. Copy comes only from docs/plans/pages-and-dashboard.md and
-// docs/ARCHITECTURE.md; anything they don't say is a TODO(zia). No scroll reveals (the design system bans them).
+// docs/ARCHITECTURE.md; anything they don't say is a TODO(zia). No scroll reveals (the design system bans them): each
+// section has one demo that loops in place (the schedule, the quote check, the secret filter).
 
 function SectionHeading({ id, eyebrow, title }: { id: string; eyebrow: string; title: string }) {
   return (
@@ -80,6 +83,7 @@ export function LoopSection() {
           </li>
         ))}
       </ol>
+      <ReviewSchedule />
     </section>
   );
 }
@@ -106,12 +110,17 @@ export function CardSection() {
           eyebrow="What a card holds"
           title="Built from what the session shows."
         />
-        <div className="grid gap-4 md:grid-cols-2">
-          {cardFacts.map(({ icon, title, body }) => (
-            <FeatureCard key={title} icon={icon} title={title}>
-              <p className="type-body text-text-2">{body}</p>
-            </FeatureCard>
-          ))}
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="flex flex-col gap-4">
+            {cardFacts.map(({ icon, title, body }) => (
+              <FeatureCard key={title} icon={icon} title={title}>
+                <p className="type-body text-text-2">{body}</p>
+              </FeatureCard>
+            ))}
+          </div>
+          <div className="lg:col-span-2">
+            <QuoteCheck />
+          </div>
         </div>
       </div>
     </section>
@@ -119,11 +128,6 @@ export function CardSection() {
 }
 
 const trust = [
-  {
-    icon: LockKeyIcon,
-    title: "Secrets filtered twice",
-    body: "We try to remove them on your laptop before the log is sent, and again on the server before it is stored.",
-  },
   {
     icon: MapPinIcon,
     title: "Where it lives",
@@ -138,10 +142,13 @@ export function TrustSection() {
       className="mx-auto flex w-full max-w-(--container) flex-col gap-10 px-(--gutter-sm) py-20 sm:px-(--gutter) sm:py-30"
     >
       <SectionHeading id="trust-title" eyebrow="Your code" title="What happens to your sessions." />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <RedactionDemo />
+        </div>
         {/* Not a FeatureCard: the body sits in the header as a description, a denser card. */}
         {trust.map(({ icon: Icon, title, body }) => (
-          <Card key={title}>
+          <Card key={title} className="self-start">
             <CardHeader>
               <CardTitle>
                 <span className="flex items-center gap-3">
