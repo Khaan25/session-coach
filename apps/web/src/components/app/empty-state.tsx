@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Icon } from "@phosphor-icons/react";
 import {
   CalendarCheckIcon,
+  CardsIcon,
   ChartLineUpIcon,
   MagnifyingGlassIcon,
   TerminalWindowIcon,
@@ -9,6 +10,7 @@ import {
 
 import { Sprite, type SpriteName } from "@/components/art/sprite";
 import { buttonVariants } from "@/components/ui/button";
+import type { Cardless } from "@/lib/sessions/queries";
 import {
   Empty,
   EmptyContent,
@@ -83,15 +85,87 @@ export function NoSessionsEmpty({ variant }: PresetProps) {
   );
 }
 
-/** Review queue with nothing due today. */
-export function NoCardsDueEmpty({ variant }: PresetProps) {
+/** The copy and the way out for each reason a learner has no card; the failed session's link is filled in below. */
+const cardlessCopy = {
+  "no-sessions": {
+    title: "No cards yet",
+    description:
+      "Cards come from your Claude Code sessions. Set up the CLI, and each session that ends becomes 3 to 5 cards to explain back.",
+    action: { href: "/setup", label: "Set up the CLI", variant: "default" },
+  },
+  processing: {
+    title: "Cards on the way",
+    description: "Your latest session is still being read. Its cards appear here once it's ready.",
+    action: { href: "/dashboard", label: "See your sessions", variant: "secondary" },
+  },
+  failed: {
+    title: "No cards yet",
+    description: "Cards couldn't be made from your latest session. Open it to see why.",
+    action: { href: "/dashboard", label: "Open the session", variant: "secondary" },
+  },
+  "no-cards": {
+    title: "No cards yet",
+    description:
+      "Your sessions so far gave no cards: each card needs an exact quote from its session to back it. Sessions where you talk through options give the most.",
+    action: { href: "/dashboard", label: "See your sessions", variant: "secondary" },
+  },
+} as const;
+
+/**
+ * A card screen (review queue, progress) for a learner with no visible card. `cardless` (from `cardlessReason`) picks
+ * the way forward: set up the CLI, wait for the session being read, open the session that failed, or look at the
+ * sessions that gave none. Leave it out for a first run.
+ */
+export function NoCardsYetEmpty({
+  cardless = { reason: "no-sessions" },
+  variant,
+}: PresetProps & { cardless?: Cardless }) {
+  const { title, description, action } = cardlessCopy[cardless.reason];
+  const href = cardless.reason === "failed" ? `/s/${cardless.sessionId}` : action.href;
+  return (
+    <EmptyState
+      variant={variant}
+      icon={CardsIcon}
+      sprite="pencil"
+      title={title}
+      description={description}
+      action={
+        <Link href={href} className={buttonVariants({ variant: action.variant })}>
+          {action.label}
+        </Link>
+      }
+    />
+  );
+}
+
+/**
+ * All done: the learner has cards, but none is due today. `next` is when the next one is due, in words ("tomorrow",
+ * "on Thursday 5 November"); leave it out when nothing is scheduled. Then the way out is the sessions: a card never
+ * answered within 7 days leaves the queue but stays on its session's page.
+ */
+export function AllCaughtUpEmpty({ next, variant }: PresetProps & { next?: string }) {
   return (
     <EmptyState
       variant={variant}
       icon={CalendarCheckIcon}
       sprite="tea"
-      title="No cards due today"
-      description="Each card comes back on day 1, 3 and 7 after its session. New cards arrive when your next session ends."
+      title="All caught up"
+      description={
+        next
+          ? `Nothing is due today. Your next card is due ${next}, and new cards arrive when your next session ends.`
+          : "Nothing is due today, and no review is scheduled. A card you didn't answer within 7 days of its session stays on that session's page."
+      }
+      action={
+        next ? (
+          <Link href="/progress" className={buttonVariants({ variant: "secondary" })}>
+            See your progress
+          </Link>
+        ) : (
+          <Link href="/dashboard" className={buttonVariants({ variant: "secondary" })}>
+            See your sessions
+          </Link>
+        )
+      }
     />
   );
 }

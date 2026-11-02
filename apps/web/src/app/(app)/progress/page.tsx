@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
-import { NoReviewsEmpty } from "@/components/app/empty-state";
+import { NoCardsYetEmpty, NoReviewsEmpty } from "@/components/app/empty-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
 import { AnswersChart } from "@/components/progress/answers-chart";
@@ -20,6 +20,7 @@ import {
   type Progress as ProgressData,
 } from "@/lib/progress/progress";
 import { getProgress } from "@/lib/progress/queries";
+import { cardlessReason } from "@/lib/sessions/queries";
 
 export const metadata: Metadata = { title: "Progress" };
 
@@ -62,19 +63,25 @@ async function ProgressView() {
   const user = await getCurrentUser();
   const progress = user ? await load(user.id) : null;
 
-  if (
-    !progress ||
-    progress.totalCards === 0 ||
-    (progress.steps.new === progress.totalCards && answeredCount(progress) === 0)
-  ) {
-    return (
-      <Container>
-        <AppPageHeader title="Progress" description={description} />
-        <NoReviewsEmpty />
-      </Container>
-    );
+  // No card: `cardlessReason` picks the copy (first run points at the CLI; a session being read, a failed one, or
+  // sessions that gave none point at the sessions). Cards but no answer yet point at the queue.
+  if (!user || !progress) return <ProgressEmpty empty={<NoCardsYetEmpty />} />;
+  if (progress.totalCards === 0) {
+    return <ProgressEmpty empty={<NoCardsYetEmpty cardless={await cardlessReason(user.id)} />} />;
+  }
+  if (progress.steps.new === progress.totalCards && answeredCount(progress) === 0) {
+    return <ProgressEmpty empty={<NoReviewsEmpty />} />;
   }
   return <ProgressSummary progress={progress} />;
+}
+
+function ProgressEmpty({ empty }: { empty: React.ReactNode }) {
+  return (
+    <Container>
+      <AppPageHeader title="Progress" description={description} />
+      {empty}
+    </Container>
+  );
 }
 
 const answeredCount = (progress: ProgressData) =>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { NoCardsDueEmpty } from "@/components/app/empty-state";
+import { AllCaughtUpEmpty, NoCardsYetEmpty } from "@/components/app/empty-state";
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { AppPageHeader } from "@/components/app/page-header";
@@ -17,7 +17,9 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { reviewQueue, type QueueCard } from "@/lib/review/queries";
+import { emptyQueue, reviewQueue, type QueueCard } from "@/lib/review/queries";
+import { dueInWords } from "@/lib/review/schedule";
+import { cardlessReason } from "@/lib/sessions/queries";
 
 export const metadata: Metadata = { title: "Review" };
 
@@ -74,10 +76,15 @@ export default function ReviewPage() {
 
 async function Queue() {
   const user = await getCurrentUser();
-  if (!user) return <NoCardsDueEmpty />;
-  const queue = await load(user.id);
-  if (queue.length === 0) return <NoCardsDueEmpty />;
-  return <QueueList queue={queue} />;
+  if (!user) return <NoCardsYetEmpty />;
+  const { now, queue } = await load(user.id);
+  if (queue.length > 0) return <QueueList queue={queue} />;
+  // Only an empty queue pays for the second read: it tells a first run from a learner who is all caught up.
+  const empty = await emptyQueue(user.id, now);
+  if (!empty.hasCards) return <NoCardsYetEmpty cardless={await cardlessReason(user.id)} />;
+  return (
+    <AllCaughtUpEmpty next={empty.nextDue ? dueInWords(empty.nextDue, empty.today) : undefined} />
+  );
 }
 
 function QueueList({ queue }: { queue: QueueCard[] }) {
@@ -121,5 +128,6 @@ function QueueList({ queue }: { queue: QueueCard[] }) {
 
 /** Reads the clock outside render (cacheComponents and the compiler's purity rule). */
 async function load(userId: string) {
-  return reviewQueue(userId, new Date());
+  const now = new Date();
+  return { now, queue: await reviewQueue(userId, now) };
 }

@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-
-import { LoadFailedState } from "@/components/app/error-state";
 import { Container } from "@/components/app/container";
-import { Button } from "@/components/ui/button";
+import { LoadErrorState } from "@/components/errors/load-error-state";
 
 export default function ProgressError({ error, retry }: { error: unknown; retry: () => void }) {
-  useEffect(() => {
-    console.error(error);
-  }, [error]);
   return (
     <Container>
-      <LoadFailedState noun="your progress" action={<Button onClick={retry}>Try again</Button>} />
+      <LoadErrorState error={error} retry={retry} noun="your progress" />
     </Container>
   );
 }
