@@ -2,6 +2,8 @@
 
 import { gzipSync } from "node:zlib";
 
+import { redact } from "@session-coach/shared/redact";
+
 /** Storage's per-file limit, mirrored from the server (`MAX_UPLOAD_BYTES` in apps/web/src/lib/sessions/upload.ts). */
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
@@ -121,12 +123,102 @@ export function validateFileName(fileName: string): string | null {
   return "Rename the file to letters, numbers, - and _ only (max 128 characters).";
 }
 
+/** Event top-level fields that are the log's structure: they link events and are never secrets. */
+const EVENT_KEYS = new Set(["uuid", "parentUuid", "sessionId", "requestId", "timestamp", "type"]);
+/** Fields of `event.message` that are structure. */
+const MESSAGE_KEYS = new Set(["id", "role", "type"]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Redacts every string inside a parsed JSON value, at any depth, with no exemption. */
+function redactAll(value: unknown): unknown {
+  if (typeof value === "string") return redact(value);
+  if (Array.isArray(value)) return value.map(redactAll);
+  if (isRecord(value)) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, redactAll(v)]));
+  }
+  return value;
+}
+
+/** Copies an object, leaving the string values of `keep` as they are and redacting everything else. */
+function redactExcept(
+  obj: Record<string, unknown>,
+  keep: (key: string) => boolean,
+  nested: (key: string, value: unknown) => unknown = (_, v) => redactAll(v),
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, keep(k) && typeof v === "string" ? v : nested(k, v)]),
+  );
+}
+
+/** A content block: `type` is structural, plus `id` on a tool_use and `tool_use_id` on a tool_result. */
+function redactBlock(block: unknown): unknown {
+  if (!isRecord(block)) return redactAll(block);
+  const { type } = block;
+  return redactExcept(
+    block,
+    (k) =>
+      k === "type" ||
+      (k === "id" && type === "tool_use") ||
+      (k === "tool_use_id" && type === "tool_result"),
+  );
+}
+
+function redactMessage(message: unknown): unknown {
+  if (!isRecord(message)) return redactAll(message);
+  return redactExcept(
+    message,
+    (k) => MESSAGE_KEYS.has(k),
+    (k, v) => (k === "content" && Array.isArray(v) ? v.map(redactBlock) : redactAll(v)),
+  );
+}
+
 /**
- * Gzips the log's raw bytes, so a byte that isn't valid UTF-8 still arrives unchanged, and decodes a string only for
- * the metadata.
+ * Redacts a parsed log event. Only the known structural fields keep their string values: the event's own
+ * (EVENT_KEYS), `message.id`/`role`/`type`, and the `type`, tool_use `id` and tool_result `tool_use_id` of the
+ * blocks in `message.content`. Every other string, including a tool_use's whole `input`, a tool_result's `content`
+ * and `toolUseResult`, is redacted at every depth. Keys, numbers, booleans and null are left as they are.
+ */
+function redactEvent(event: unknown): unknown {
+  if (!isRecord(event)) return redactAll(event);
+  return redactExcept(
+    event,
+    (k) => EVENT_KEYS.has(k),
+    (k, v) => (k === "message" ? redactMessage(v) : redactAll(v)),
+  );
+}
+
+/**
+ * Redacts a log line by line, so every line that was JSON is still JSON. A line is parsed, its string values are
+ * redacted and it is serialized again; the rules never run over raw JSON text. A line that doesn't parse is kept
+ * in place and redacted as plain text. Blank lines are kept.
+ *
+ * @param text - The log's text, one JSON object per line.
+ */
+export function redactLog(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => {
+      if (!line.trim()) return line;
+      try {
+        return JSON.stringify(redactEvent(JSON.parse(line)));
+      } catch {
+        return redact(line);
+      }
+    })
+    .join("\n");
+}
+
+/**
+ * Redacts the log, then gzips it. The bytes are decoded as UTF-8 first, so an invalid byte arrives as U+FFFD.
+ *
+ * @returns The gzip that gets uploaded, and the redacted text for the metadata.
  */
 export function prepareLog(bytes: Uint8Array): { gzipped: Buffer; text: string } {
-  return { gzipped: gzipSync(bytes), text: Buffer.from(bytes).toString("utf8") };
+  const text = redactLog(Buffer.from(bytes).toString("utf8"));
+  return { gzipped: gzipSync(text), text };
 }
 
 /** Messages shared by steps ① and ③. Never includes the token or the upload URL. */

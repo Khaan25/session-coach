@@ -1,4 +1,4 @@
-import { redact, redactHomePath } from "./redact.ts";
+import { redact, redactHomePath } from "@session-coach/shared/redact";
 
 export type EventKind = "prompt" | "reply" | "write" | "edit" | "bash" | "read" | "result";
 

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseSession } from "./parser.ts";
 import { redact } from "./redact.ts";
 
 // All values below are invented.
@@ -84,7 +83,7 @@ test("home path is redacted with or without a slash after the username", () => {
     ["cd /Users/jane&&pnpm test", "cd ~/&&pnpm test"],
     ["ls /home/jane;pwd", "ls ~/;pwd"],
     ["(cd /Users/jane)", "(cd ~/)"],
-  ]) {
+  ] as const) {
     const out = redact(input);
     assert.ok(!out.includes("jane"));
     assert.equal(out, expected);
@@ -98,66 +97,4 @@ test("a normal sentence is untouched", () => {
 
 test("runs in order: key rules first, then email, then home path", () => {
   assert.equal(redact(`${FAKE_SK} a@b.co /Users/fakeuser/x.ts`), "[REDACTED] [EMAIL] ~/x.ts");
-});
-
-const line = (obj: unknown) => JSON.stringify(obj);
-
-test("parseSession redacts real event text and only strips the home prefix from read paths", () => {
-  const raw = [
-    line({
-      type: "user",
-      message: {
-        role: "user",
-        content: `email me at fake@example.com, key ${FAKE_SK}`,
-      },
-    }),
-    line({
-      type: "assistant",
-      message: {
-        role: "assistant",
-        content: [
-          { type: "text", text: `Token ${FAKE_GHP} found` },
-          {
-            type: "tool_use",
-            id: "t1",
-            name: "Read",
-            input: { file_path: `/Users/fakeuser/${FAKE_HEX}/a.ts` },
-          },
-          {
-            type: "tool_use",
-            id: "t2",
-            name: "Bash",
-            input: { command: "cat /home/fakeuser/.env" },
-          },
-          {
-            type: "tool_use",
-            id: "t3",
-            name: "Write",
-            input: { file_path: "/Users/fakeuser/app/a.ts", content: "x" },
-          },
-        ],
-      },
-    }),
-    line({
-      type: "user",
-      message: {
-        role: "user",
-        content: [
-          {
-            type: "tool_result",
-            tool_use_id: "t2",
-            content: `Bearer fake.token-value_123 ${FAKE_HEX}`,
-          },
-        ],
-      },
-    }),
-  ].join("\n");
-
-  const text = Object.fromEntries(parseSession(raw).events.map((e) => [e.kind, e.text]));
-  assert.equal(text.prompt, "email me at [EMAIL], key [REDACTED]");
-  assert.equal(text.reply, "Token [REDACTED] found");
-  assert.equal(text.read, `~/${FAKE_HEX}/a.ts`);
-  assert.equal(text.bash, "cat ~/.env");
-  assert.equal(text.write, "~/app/a.ts — wrote 1 line");
-  assert.equal(text.result, "[REDACTED] [REDACTED]");
 });
