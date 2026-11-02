@@ -9,7 +9,7 @@ export default function ConfirmationEmail() {
       heading="Confirm your email"
       cta="Confirm email"
       href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email"
-      footer="You get this because someone signed up for Session Coach with {{ .Email }}. If it wasn't you, ignore this email and no account is made."
+      footer="You get this because someone signed up for Session Coach with {{ .Email }}. If it wasn't you, ignore this email; without a click the address stays unconfirmed and can't sign in."
     >
       <AuthText>
         Confirm {"{{ .Email }}"} to finish making your Session Coach account. Then push a session
