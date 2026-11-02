@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import { SkeletonSuspense } from "skullet/react";
 
 import { Container } from "@/components/app/container";
-import { ReviewCardLoading } from "@/components/app/loading-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { QuizForm } from "@/components/review/quiz-form";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { answerRequestSchema } from "@/lib/review/grade";
-import { getQuizCard, reviewQueue } from "@/lib/review/queries";
+import { getQuizCard, reviewQueue, type QuizCard } from "@/lib/review/queries";
 
 export const metadata: Metadata = { title: "Explain it back" };
 
@@ -18,12 +17,25 @@ export const metadata: Metadata = { title: "Explain it back" };
 // layout's breadcrumb reads usePathname(), which can't prerender without a param, so the route blocks instead.
 export const instant = false;
 
+// Only the skeleton's shape comes from this: a decision that fits one display line on a laptop, as most do.
+const SAMPLE_CARD: QuizCard = {
+  id: "sample-card",
+  decision: "Rate limit uploads per token, not per IP",
+  question: "Why is the limit keyed on the token rather than the IP?",
+  sessionId: "sample-session",
+  sessionName: "Add rate limiting to the upload route",
+};
+
 export default function QuizPage({ params }: PageProps<"/review/[cardId]">) {
   return (
     <Container>
-      <Suspense fallback={<ReviewCardLoading />}>
+      {/* Skullet measures the real quiz, drawn from a sample card, so nothing moves when the card lands. */}
+      <SkeletonSuspense
+        label="Loading the card"
+        skeleton={<QuizView card={SAMPLE_CARD} nextHref={null} />}
+      >
         <Quiz params={params} />
-      </Suspense>
+      </SkeletonSuspense>
     </Container>
   );
 }
@@ -37,7 +49,10 @@ async function Quiz({ params }: Pick<PageProps<"/review/[cardId]">, "params">) {
   if (!card) notFound();
   // "Start review" walks the queue: after this card, the first other card still in it.
   const next = queue.find(({ id }) => id !== card.id);
+  return <QuizView card={card} nextHref={next ? `/review/${next.id}` : null} />;
+}
 
+function QuizView({ card, nextHref }: { card: QuizCard; nextHref: string | null }) {
   return (
     <>
       <AppPageHeader
@@ -51,12 +66,7 @@ async function Quiz({ params }: Pick<PageProps<"/review/[cardId]">, "params">) {
           </>
         }
       />
-      <QuizForm
-        key={card.id}
-        cardId={card.id}
-        question={card.question}
-        nextHref={next ? `/review/${next.id}` : null}
-      />
+      <QuizForm key={card.id} cardId={card.id} question={card.question} nextHref={nextHref} />
     </>
   );
 }
