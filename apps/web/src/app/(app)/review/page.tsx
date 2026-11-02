@@ -81,7 +81,7 @@ async function Queue() {
   if (queue.length > 0) return <QueueList queue={queue} />;
   // Only an empty queue pays for the second read: it tells a first run from a learner who is all caught up.
   const empty = await emptyQueue(user.id, now);
-  if (!empty.hasCards) return <NoCardsYetEmpty reason={await cardlessReason(user.id)} />;
+  if (!empty.hasCards) return <NoCardsYetEmpty cardless={await cardlessReason(user.id)} />;
   return (
     <AllCaughtUpEmpty next={empty.nextDue ? dueInWords(empty.nextDue, empty.today) : undefined} />
   );

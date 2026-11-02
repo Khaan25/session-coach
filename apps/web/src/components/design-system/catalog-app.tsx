@@ -103,8 +103,9 @@ export function AppCatalog() {
         <div className="grid w-full gap-3 md:grid-cols-2">
           <NoSessionsEmpty />
           <NoCardsYetEmpty />
-          <NoCardsYetEmpty reason="processing" />
-          <NoCardsYetEmpty reason="no-cards" />
+          <NoCardsYetEmpty cardless={{ reason: "processing" }} />
+          <NoCardsYetEmpty cardless={{ reason: "failed", sessionId: "sample" }} />
+          <NoCardsYetEmpty cardless={{ reason: "no-cards" }} />
           <AllCaughtUpEmpty next="tomorrow" />
           <AllCaughtUpEmpty />
           <NoReviewsEmpty />

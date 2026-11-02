@@ -63,10 +63,11 @@ async function ProgressView() {
   const user = await getCurrentUser();
   const progress = user ? await load(user.id) : null;
 
-  // First run (no cards) points at the CLI; cards but no answer yet point at the queue.
+  // No card: `cardlessReason` picks the copy (first run points at the CLI; a session being read, a failed one, or
+  // sessions that gave none point at the sessions). Cards but no answer yet point at the queue.
   if (!user || !progress) return <ProgressEmpty empty={<NoCardsYetEmpty />} />;
   if (progress.totalCards === 0) {
-    return <ProgressEmpty empty={<NoCardsYetEmpty reason={await cardlessReason(user.id)} />} />;
+    return <ProgressEmpty empty={<NoCardsYetEmpty cardless={await cardlessReason(user.id)} />} />;
   }
   if (progress.steps.new === progress.totalCards && answeredCount(progress) === 0) {
     return <ProgressEmpty empty={<NoReviewsEmpty />} />;

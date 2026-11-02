@@ -10,7 +10,7 @@ import {
 
 import { Sprite, type SpriteName } from "@/components/art/sprite";
 import { buttonVariants } from "@/components/ui/button";
-import type { CardlessReason } from "@/lib/sessions/queries";
+import type { Cardless } from "@/lib/sessions/queries";
 import {
   Empty,
   EmptyContent,
@@ -85,7 +85,8 @@ export function NoSessionsEmpty({ variant }: PresetProps) {
   );
 }
 
-const cardless = {
+/** The copy and the way out for each reason a learner has no card; the failed session's link is filled in below. */
+const cardlessCopy = {
   "no-sessions": {
     title: "No cards yet",
     description:
@@ -97,6 +98,11 @@ const cardless = {
     description: "Your latest session is still being read. Its cards appear here once it's ready.",
     action: { href: "/dashboard", label: "See your sessions", variant: "secondary" },
   },
+  failed: {
+    title: "No cards yet",
+    description: "Cards couldn't be made from your latest session. Open it to see why.",
+    action: { href: "/dashboard", label: "Open the session", variant: "secondary" },
+  },
   "no-cards": {
     title: "No cards yet",
     description:
@@ -106,14 +112,16 @@ const cardless = {
 } as const;
 
 /**
- * A card screen (review queue, progress) for a learner with no visible card. `reason` (from `cardlessReason`) picks
- * the way forward: set up the CLI, wait for the session being read, or look at the sessions that gave none.
+ * A card screen (review queue, progress) for a learner with no visible card. `cardless` (from `cardlessReason`) picks
+ * the way forward: set up the CLI, wait for the session being read, open the session that failed, or look at the
+ * sessions that gave none. Leave it out for a first run.
  */
 export function NoCardsYetEmpty({
-  reason = "no-sessions",
+  cardless = { reason: "no-sessions" },
   variant,
-}: PresetProps & { reason?: CardlessReason }) {
-  const { title, description, action } = cardless[reason];
+}: PresetProps & { cardless?: Cardless }) {
+  const { title, description, action } = cardlessCopy[cardless.reason];
+  const href = cardless.reason === "failed" ? `/s/${cardless.sessionId}` : action.href;
   return (
     <EmptyState
       variant={variant}
@@ -122,7 +130,7 @@ export function NoCardsYetEmpty({
       title={title}
       description={description}
       action={
-        <Link href={action.href} className={buttonVariants({ variant: action.variant })}>
+        <Link href={href} className={buttonVariants({ variant: action.variant })}>
           {action.label}
         </Link>
       }
