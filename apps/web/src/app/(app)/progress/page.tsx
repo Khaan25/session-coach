@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
 
 import { Container } from "@/components/app/container";
+import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoReviewsEmpty } from "@/components/app/empty-state";
-import { StatRowLoading } from "@/components/app/loading-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
 import { AnswersChart } from "@/components/progress/answers-chart";
@@ -14,7 +13,12 @@ import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { Stat, StatGroup, StatLabel, StatValue } from "@/components/ui/stat";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { REVIEW_STEPS, stepLabels } from "@/lib/progress/progress";
+import {
+  CHART_DAYS,
+  REVIEW_STEPS,
+  stepLabels,
+  type Progress as ProgressData,
+} from "@/lib/progress/progress";
 import { getProgress } from "@/lib/progress/queries";
 
 export const metadata: Metadata = { title: "Progress" };
@@ -22,18 +26,33 @@ export const metadata: Metadata = { title: "Progress" };
 const scores: Score[] = [2, 1, 0];
 const description = "Mastered cards, plus cards you explained in full in the last 7 days.";
 
+// Only the skeleton's shape comes from this: counts, days and session titles like a real learner's.
+const SAMPLE_PROGRESS: ProgressData = {
+  canStillExplain: 5,
+  totalCards: 9,
+  steps: { new: 2, "day-1": 2, "day-3": 1, "day-7": 1, mastered: 3 },
+  answersPerDay: Array.from({ length: CHART_DAYS }, (_, i) => ({
+    day: `Oct ${i + 1}`,
+    answers: (i * 7) % 4,
+  })),
+  scoreMix: { 2: 21, 1: 8, 0: 3 },
+  bySession: [
+    { id: "sample-0", title: "Add rate limiting to the upload route", mastered: 2, total: 4 },
+    { id: "sample-1", title: "Move auth emails to React Email", mastered: 1, total: 3 },
+    { id: "sample-2", title: "Stream the CLI upload", mastered: 0, total: 2 },
+  ],
+};
+
 export default function ProgressPage() {
+  // Skullet measures the real page, drawn from sample progress, so each card keeps its shape when the data lands. The
+  // session count isn't known until then, so the last list can still grow or shrink.
   return (
-    <Suspense
-      fallback={
-        <Container>
-          <AppPageHeader title="Progress" description={description} />
-          <StatRowLoading />
-        </Container>
-      }
+    <MeasuredSuspense
+      label="Loading your progress"
+      skeleton={<ProgressSummary progress={SAMPLE_PROGRESS} />}
     >
       <ProgressView />
-    </Suspense>
+    </MeasuredSuspense>
   );
 }
 
@@ -42,14 +61,11 @@ export default function ProgressPage() {
 async function ProgressView() {
   const user = await getCurrentUser();
   const progress = user ? await load(user.id) : null;
-  const answered = progress
-    ? scores.reduce<number>((sum, score) => sum + progress.scoreMix[score], 0)
-    : 0;
 
   if (
     !progress ||
     progress.totalCards === 0 ||
-    (progress.steps.new === progress.totalCards && answered === 0)
+    (progress.steps.new === progress.totalCards && answeredCount(progress) === 0)
   ) {
     return (
       <Container>
@@ -58,10 +74,30 @@ async function ProgressView() {
       </Container>
     );
   }
+  return <ProgressSummary progress={progress} />;
+}
 
+const answeredCount = (progress: ProgressData) =>
+  scores.reduce<number>((sum, score) => sum + progress.scoreMix[score], 0);
+
+function ProgressSummary({ progress }: { progress: ProgressData }) {
+  const answered = answeredCount(progress);
   return (
     <Container>
-      <AppPageHeader title="Progress" description={description}>
+      {/* skullet-own: static text stays real in the skeleton; only the learner's numbers are drawn as bars. The spans
+          set their own colour because skullet makes the colour they would inherit transparent. */}
+      <AppPageHeader
+        title={
+          <span skullet-own="" className="text-text-1">
+            Progress
+          </span>
+        }
+        description={
+          <span skullet-own="" className="text-text-2">
+            {description}
+          </span>
+        }
+      >
         <PageHeaderStats>
           <PageHeaderStat
             label="Decisions you can still explain"
@@ -74,7 +110,7 @@ async function ProgressView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
+          <CardTitle skullet-own="">
             <h2>Cards by step</h2>
           </CardTitle>
         </CardHeader>
@@ -91,7 +127,7 @@ async function ProgressView() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>
+            <CardTitle skullet-own="">
               <h2>Answers per day</h2>
             </CardTitle>
           </CardHeader>
@@ -101,7 +137,7 @@ async function ProgressView() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>
+            <CardTitle skullet-own="">
               <h2>Score mix</h2>
             </CardTitle>
             <CardDescription>
@@ -130,7 +166,7 @@ async function ProgressView() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
+          <CardTitle skullet-own="">
             <h2>By session</h2>
           </CardTitle>
         </CardHeader>

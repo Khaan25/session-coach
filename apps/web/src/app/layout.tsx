@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { SkulletProvider } from "skullet/react";
 
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { themeScript } from "@/components/theme/theme-script";
@@ -26,6 +27,16 @@ const instrumentSerif = Instrument_Serif({
   weight: "400",
   style: ["normal", "italic"],
 });
+
+// Skullet's measured skeletons in the design system's still block: the skeleton fill, the control radius and the pulse.
+// The tokens already flip with the theme class, so light and dark take the same values.
+const skeletonColors = { base: "var(--surface-skeleton)", highlight: "var(--cell-quiet)" };
+const skeletonTheme = {
+  light: skeletonColors,
+  dark: skeletonColors,
+  radius: "var(--radius-soft)",
+  animation: "pulse",
+} as const;
 
 const description =
   "Each Claude Code session becomes 3 to 5 decision cards. Explain them back in your own words on day 1, 3 and 7 until you know why your agent wrote what it wrote.";
@@ -59,10 +70,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
-          <PortalProvider>
-            {/* At the root so a toast survives navigation between groups (account deletion lands on /). */}
-            <Toaster>{children}</Toaster>
-          </PortalProvider>
+          <SkulletProvider theme={skeletonTheme}>
+            <PortalProvider>
+              {/* At the root so a toast survives navigation between groups (account deletion lands on /). */}
+              <Toaster>{children}</Toaster>
+            </PortalProvider>
+          </SkulletProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -4,6 +4,7 @@ import { GearIcon, SignOutIcon, SquaresFourIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 
 import { signOut } from "@/app/(auth)/actions";
+import { ForgetShapes } from "@/components/auth/forget-shapes";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -25,9 +26,12 @@ export type SiteNavUser = { name: string; email: string; initials: string };
 export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
   if (!user)
     return (
-      <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
-        Sign in
-      </Link>
+      <>
+        <ForgetShapes />
+        <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
+          Sign in
+        </Link>
+      </>
     );
 
   return (

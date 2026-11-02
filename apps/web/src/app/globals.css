@@ -14,6 +14,12 @@
   --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
 }
 
+/* skullet hides skeleton text with a transparent fill on its loading root, and the fill inherits, so it reaches
+   into a [skullet-own] subtree that skullet means to leave real. Paint the text there again (skullet 0.0.3). */
+[skullet-own] {
+  -webkit-text-fill-color: currentColor;
+}
+
 /* The chart series colours are emitted as real variables too, because chart configs read them with var().
    Declared again on every [data-surface], so a chart on a remapped surface takes that surface's hues. */
 :root,
