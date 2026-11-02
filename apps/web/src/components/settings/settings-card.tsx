@@ -19,10 +19,11 @@ export function SettingsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
+        {/* skullet-own: static text stays real in the settings skeleton; only the control is drawn as a bar. */}
+        <CardTitle skullet-own="">
           <h2>{title}</h2>
         </CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription skullet-own="">{description}</CardDescription>
         <CardAction>{children}</CardAction>
       </CardHeader>
     </Card>
