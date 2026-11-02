@@ -70,7 +70,8 @@ const CARD_COLUMNS = "id, decision, session_id, session:sessions(title, repo, br
  * The review queue (plan, Phase 6 step 4): cards due today, oldest due first, then cards from the last 7 days that
  * were never answered, oldest first.
  *
- * - Two queries in parallel: due `reviews` with their card embedded, and recent `decision_cards` with their review.
+ * - Two queries in parallel: due `reviews` with their card embedded (after the learner's today), and recent
+ *   `decision_cards` with their review (needs no today, so it starts at once).
  * - A card has no `reviews` row until its first answer, so new cards come from the second query, not the first.
  * - New cards older than 7 days are left out, so a learner back from a break isn't handed the whole backlog.
  *
@@ -80,18 +81,19 @@ const CARD_COLUMNS = "id, decision, session_id, session:sessions(title, repo, br
  */
 export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[]> {
   const supabase = await createClient();
-  const today = await learnerToday(supabase, userId, now);
   const weekAgo = newCardsSince(now);
   const [due, recent] = await Promise.all([
-    supabase
-      .from("reviews")
-      .select(`step, due_on, card:decision_cards(${CARD_COLUMNS})`)
-      .eq("user_id", userId)
-      .eq("mastered", false)
-      .lte("due_on", today)
-      .order("due_on")
-      .order("card_id")
-      .overrideTypes<{ step: Step; due_on: string; card: CardRow | null }[], { merge: false }>(),
+    learnerToday(supabase, userId, now).then((today) =>
+      supabase
+        .from("reviews")
+        .select(`step, due_on, card:decision_cards(${CARD_COLUMNS})`)
+        .eq("user_id", userId)
+        .eq("mastered", false)
+        .lte("due_on", today)
+        .order("due_on")
+        .order("card_id")
+        .overrideTypes<{ step: Step; due_on: string; card: CardRow | null }[], { merge: false }>(),
+    ),
     supabase
       .from("decision_cards")
       .select(`${CARD_COLUMNS}, reviews(card_id)`)

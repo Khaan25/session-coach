@@ -75,6 +75,10 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
     const rawPath = rawPathFor(userId, meta.external_id);
+    // The URL depends only on the path, so it is signed while the row is written. A processed repeat never awaits it,
+    // so a signing failure can't turn its 409 into a 500; the empty catch only marks that rejection handled.
+    const uploadUrl = signedUploadUrl(admin, rawPath);
+    uploadUrl.catch(() => {});
     const { data: created, error: insertError } = await admin
       .from("sessions")
       .insert({ ...meta, user_id: userId, raw_path: rawPath })
@@ -91,13 +95,11 @@ export async function POST(request: Request) {
       if (readError) throw new Error(readError.message);
       if (existing.status !== "pending")
         return NextResponse.json({ id: existing.id }, { status: 409 });
-      const uploadUrl = await signedUploadUrl(admin, rawPath);
-      return NextResponse.json({ id: existing.id, upload_url: uploadUrl }, { status: 409 });
+      return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 409 });
     }
     if (insertError) throw new Error(insertError.message);
 
-    const uploadUrl = await signedUploadUrl(admin, rawPath);
-    return NextResponse.json({ id: created.id, upload_url: uploadUrl }, { status: 201 });
+    return NextResponse.json({ id: created.id, upload_url: await uploadUrl }, { status: 201 });
   } catch (err) {
     console.error("[api/sessions] create failed", err instanceof Error ? err.message : err);
     return NextResponse.json(

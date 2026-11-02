@@ -16,7 +16,7 @@ const DAY_MS = 86_400_000;
 const RETENTION_DAYS = 120;
 
 /**
- * The headline counts, then retention. Counts run in Postgres (`count: "exact"`) so the 1000-row API limit can't cap
+ * The headline counts and retention, read in parallel. Counts run in Postgres (`count: "exact"`) so the 1000-row API limit can't cap
  * them; retention reads rows and is computed by `buildRetentionCohorts`.
  *
  * @param req - Must carry the dashboard bearer key.
@@ -34,6 +34,44 @@ export async function GET(req: NextRequest) {
       const query = supabase.from("profiles").select("id", { count: "exact", head: true });
       return since ? query.gte("created_at", since) : query;
     };
+    // Retention is the expensive, optional part: a failure omits it instead of failing the summary. It reads alongside
+    // the counts, and its catch keeps it from rejecting unhandled when a count fails first.
+    const since = daysAgo(RETENTION_DAYS);
+    const retentionRead = Promise.all([
+      fetchAll<{ id: string; created_at: string }>((from, to) =>
+        supabase
+          .from("profiles")
+          .select("id, created_at")
+          .gte("created_at", since)
+          .order("id")
+          .range(from, to),
+      ),
+      fetchAll<{ user_id: string; created_at: string }>((from, to) =>
+        supabase
+          .from("sessions")
+          .select("user_id, created_at")
+          .gte("created_at", since)
+          .order("id")
+          .range(from, to),
+      ),
+      fetchAll<{ user_id: string; created_at: string }>((from, to) =>
+        supabase
+          .from("answers")
+          .select("user_id, created_at")
+          .gte("created_at", since)
+          .order("id")
+          .range(from, to),
+      ),
+    ])
+      .then(([cohorts, uploads, answers]) =>
+        buildRetentionCohorts(cohorts, [...uploads, ...answers], now),
+      )
+      .catch((err: unknown) => {
+        console.error("[api/dashboard/v1/summary] retention omitted", err);
+        return [];
+      });
+
+    // Counts are checked before retention is awaited, so a failed count answers 500 without waiting on retention.
     const [total, last7, last30] = await Promise.all([
       countProfiles(),
       countProfiles(daysAgo(7)),
@@ -41,6 +79,7 @@ export async function GET(req: NextRequest) {
     ]);
     for (const result of [total, last7, last30]) if (result.error) throw result.error;
     const usersTotal = total.count ?? 0;
+    const retention = await retentionRead;
 
     const body: Record<string, unknown> = {
       play: PLAY,
@@ -50,41 +89,7 @@ export async function GET(req: NextRequest) {
       new_users_30d: last30.count ?? 0,
       generated_at: now.toISOString(),
     };
-
-    // Retention is the expensive, optional part: a failure omits it instead of failing the summary.
-    try {
-      const since = daysAgo(RETENTION_DAYS);
-      const [cohorts, uploads, answers] = await Promise.all([
-        fetchAll<{ id: string; created_at: string }>((from, to) =>
-          supabase
-            .from("profiles")
-            .select("id, created_at")
-            .gte("created_at", since)
-            .order("id")
-            .range(from, to),
-        ),
-        fetchAll<{ user_id: string; created_at: string }>((from, to) =>
-          supabase
-            .from("sessions")
-            .select("user_id, created_at")
-            .gte("created_at", since)
-            .order("id")
-            .range(from, to),
-        ),
-        fetchAll<{ user_id: string; created_at: string }>((from, to) =>
-          supabase
-            .from("answers")
-            .select("user_id, created_at")
-            .gte("created_at", since)
-            .order("id")
-            .range(from, to),
-        ),
-      ]);
-      const retention = buildRetentionCohorts(cohorts, [...uploads, ...answers], now);
-      if (retention.length > 0) body.retention = { cohorts: retention };
-    } catch (err) {
-      console.error("[api/dashboard/v1/summary] retention omitted", err);
-    }
+    if (retention.length > 0) body.retention = { cohorts: retention };
 
     return NextResponse.json(body);
   } catch (err) {

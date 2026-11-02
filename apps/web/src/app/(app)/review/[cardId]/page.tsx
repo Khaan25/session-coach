@@ -29,9 +29,8 @@ export default function QuizPage({ params }: PageProps<"/review/[cardId]">) {
 }
 
 async function Quiz({ params }: Pick<PageProps<"/review/[cardId]">, "params">) {
-  const { cardId } = await params;
+  const [{ cardId }, user] = await Promise.all([params, getCurrentUser()]);
   if (!answerRequestSchema.shape.cardId.safeParse(cardId).success) notFound();
-  const user = await getCurrentUser();
   if (!user) notFound();
   const [card, queue] = await load(user.id, cardId);
   if (!card) notFound();

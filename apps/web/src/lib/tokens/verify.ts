@@ -1,5 +1,7 @@
 import "server-only";
 
+import { after } from "next/server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashToken } from "@/lib/tokens/hash";
 
@@ -20,11 +22,14 @@ export async function userForToken(token: string): Promise<string | null> {
   if (error) throw new Error(`userForToken: ${error.message}`);
   if (!data) return null;
 
-  // Best effort: a failed stamp must not refuse a valid upload.
-  const { error: stampError } = await admin
-    .from("cli_tokens")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", data.id);
-  if (stampError) console.error("[tokens/verify] last_used_at not stamped", stampError.message);
+  // Best effort, after the response: a failed stamp must not refuse or slow a valid upload.
+  const usedAt = new Date().toISOString();
+  after(async () => {
+    const { error: stampError } = await admin
+      .from("cli_tokens")
+      .update({ last_used_at: usedAt })
+      .eq("id", data.id);
+    if (stampError) console.error("[tokens/verify] last_used_at not stamped", stampError.message);
+  });
   return data.user_id;
 }
