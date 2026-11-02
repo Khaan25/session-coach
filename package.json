@@ -1,5 +1,5 @@
 {
-  "name": "session-coach",
+  "name": "session-coach-monorepo",
   "private": true,
   "packageManager": "pnpm@12.16.1",
   "engines": {
