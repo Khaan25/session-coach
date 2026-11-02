@@ -32,17 +32,30 @@ export async function DELETE() {
     const admin = createAdminClient();
     const storage = admin.storage.from(SESSIONS_BUCKET);
 
-    const sessions = await fetchAll<{ raw_path: string }>((from, to) =>
-      admin.from("sessions").select("raw_path").eq("user_id", user.id).order("id").range(from, to),
-    );
     // Also list the learner's folder: an upload whose session row was never written still has to go.
-    const listed: { name: string; id: string | null }[] = [];
-    for (;;) {
-      const { data, error } = await storage.list(user.id, { limit: BATCH, offset: listed.length });
-      if (error) throw error;
-      listed.push(...data);
-      if (data.length < BATCH) break;
-    }
+    const listFolder = async () => {
+      const listed: { name: string; id: string | null }[] = [];
+      for (;;) {
+        const { data, error } = await storage.list(user.id, {
+          limit: BATCH,
+          offset: listed.length,
+        });
+        if (error) throw error;
+        listed.push(...data);
+        if (data.length < BATCH) return listed;
+      }
+    };
+    const [sessions, listed] = await Promise.all([
+      fetchAll<{ raw_path: string }>((from, to) =>
+        admin
+          .from("sessions")
+          .select("raw_path")
+          .eq("user_id", user.id)
+          .order("id")
+          .range(from, to),
+      ),
+      listFolder(),
+    ]);
 
     const paths = accountStoragePaths(
       user.id,

@@ -75,11 +75,15 @@ export async function POST(request: Request) {
 
     const admin = createAdminClient();
     const rawPath = rawPathFor(userId, meta.external_id);
-    const { data: created, error: insertError } = await admin
-      .from("sessions")
-      .insert({ ...meta, user_id: userId, raw_path: rawPath })
-      .select("id")
-      .single<{ id: string }>();
+    // The URL depends only on the path, so it is signed while the row is written; a processed repeat drops it unsent.
+    const [{ data: created, error: insertError }, uploadUrl] = await Promise.all([
+      admin
+        .from("sessions")
+        .insert({ ...meta, user_id: userId, raw_path: rawPath })
+        .select("id")
+        .single<{ id: string }>(),
+      signedUploadUrl(admin, rawPath),
+    ]);
 
     if (insertError?.code === UNIQUE_VIOLATION) {
       const { data: existing, error: readError } = await admin
@@ -91,12 +95,10 @@ export async function POST(request: Request) {
       if (readError) throw new Error(readError.message);
       if (existing.status !== "pending")
         return NextResponse.json({ id: existing.id }, { status: 409 });
-      const uploadUrl = await signedUploadUrl(admin, rawPath);
       return NextResponse.json({ id: existing.id, upload_url: uploadUrl }, { status: 409 });
     }
     if (insertError) throw new Error(insertError.message);
 
-    const uploadUrl = await signedUploadUrl(admin, rawPath);
     return NextResponse.json({ id: created.id, upload_url: uploadUrl }, { status: 201 });
   } catch (err) {
     console.error("[api/sessions] create failed", err instanceof Error ? err.message : err);
