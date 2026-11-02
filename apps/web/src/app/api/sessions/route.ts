@@ -2,13 +2,17 @@
  * POST /api/sessions: step ① of a CLI upload. Body: the session's metadata (`uploadRequestSchema`), never the log.
  *   201 `{ id, upload_url }`: the row is `pending`; PUT the gzipped log to `upload_url` (valid 2 hours), then call
  *       POST /api/sessions/<id>/process.
+ *       A repeat of a `failed` session, or of one stuck in `processing` for over 10 minutes, also gets 201: its cards
+ *       are deleted, it goes back to `pending` and the new upload replaces the old log, so a push retries it.
  *   409 `{ id, upload_url }`: this session was started before but never processed; upload again and process.
- *   409 `{ id }`: this session was already processed; nothing to do.
- *   400 bad body, 401 missing or unknown token, 413 `size_bytes` over 50 MB, 500 anything else.
+ *   409 `{ id }`: this session is `ready`, or `processing` right now; nothing to do.
+ *   400 bad body, 401 missing or unknown token, 413 `size_bytes` over 50 MB, 429 over 20 pushes an hour (`Retry-After`),
+ *   500 anything else.
  * Auth: `Authorization: Bearer sc_…`, a CLI token from /setup. Never log the token.
  */
 import { NextResponse } from "next/server";
 
+import { userRateLimit } from "@/lib/auth/rate-limit";
 import {
   bearerToken,
   MAX_UPLOAD_BYTES,
@@ -21,6 +25,12 @@ import { userForToken } from "@/lib/tokens/verify";
 
 /** Postgres unique_violation: the same (user_id, external_id) was uploaded before. */
 const UNIQUE_VIOLATION = "23505";
+
+/**
+ * A run lives at most 300 s (the process route's `after()` limit), so a session `processing` for longer than this was
+ * killed and may be pushed again.
+ */
+const STUCK_MS = 10 * 60 * 1000;
 
 /**
  * A signed URL the CLI PUTs the log to, straight into Storage. `upsert` lets a retry overwrite a half-finished upload.
@@ -42,7 +52,8 @@ async function signedUploadUrl(admin: ReturnType<typeof createAdminClient>, path
  * - Checks the token before reading the body, so an anonymous caller learns nothing about the contract.
  * - Refuses an oversized log by its declared size before any row exists.
  * - A repeat upload hits the `(user_id, external_id)` unique key: still `pending` means the earlier try died before
- *   processing, so it gets a fresh URL to finish; any other status means it's done.
+ *   processing, so it gets a fresh URL to finish. `failed`, or `processing` past `STUCK_MS`, is reset to `pending`
+ *   (cards deleted, `created_at` restarted) and answered like a new upload. `ready` or a live run is done: 409.
  *
  * @param request - JSON metadata, see `uploadRequestSchema`.
  */
@@ -58,6 +69,9 @@ export async function POST(request: Request) {
         { status: 401 },
       );
     }
+
+    const limited = await userRateLimit("push", userId);
+    if (limited) return limited;
 
     const body: unknown = await request.json().catch(() => null);
     const parsed = uploadRequestSchema.safeParse(body);
@@ -88,14 +102,38 @@ export async function POST(request: Request) {
     if (insertError?.code === UNIQUE_VIOLATION) {
       const { data: existing, error: readError } = await admin
         .from("sessions")
-        .select("id, status")
+        .select("id, status, created_at")
         .eq("user_id", userId)
         .eq("external_id", meta.external_id)
-        .single<{ id: string; status: string }>();
+        .single<{ id: string; status: string; created_at: string }>();
       if (readError) throw new Error(readError.message);
-      if (existing.status !== "pending")
+      if (existing.status === "pending")
+        return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 409 });
+      const stuck =
+        existing.status === "processing" && Date.now() - Date.parse(existing.created_at) > STUCK_MS;
+      if (existing.status !== "failed" && !stuck)
         return NextResponse.json({ id: existing.id }, { status: 409 });
-      return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 409 });
+
+      // Cards first: if the reset below then fails, a later push still finds it failed and retries from here.
+      const { error: cardsError } = await admin
+        .from("decision_cards")
+        .delete()
+        .eq("session_id", existing.id);
+      if (cardsError) throw new Error(cardsError.message);
+      // shortcut: `sessions` has no updated_at, so `created_at` restarts here and stands in for "processing since" in the
+      // stuck check and the cron's sweep (the CLI processes right after uploading). Add an updated_at column with a
+      // trigger if processing can ever start long after the upload.
+      // Compare-and-set on what was read, so two pushes racing can't both reset it.
+      const { data: reset, error: resetError } = await admin
+        .from("sessions")
+        .update({ ...meta, status: "pending", error: null, created_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .eq("status", existing.status)
+        .eq("created_at", existing.created_at)
+        .select("id");
+      if (resetError) throw new Error(resetError.message);
+      if (reset.length === 0) return NextResponse.json({ id: existing.id }, { status: 409 });
+      return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 201 });
     }
     if (insertError) throw new Error(insertError.message);
 

@@ -5,9 +5,10 @@
  */
 import { NextResponse } from "next/server";
 
+import { userRateLimit } from "@/lib/auth/rate-limit";
 import { callModel, ModelCallError, ModelConfigError } from "@/lib/model/call-model";
 import { answerRequestSchema, GRADE_INSTRUCTIONS, gradeData, parseGrade } from "@/lib/review/grade";
-import { nextReview, type Step } from "@/lib/review/schedule";
+import { isDue, nextReview, type Step } from "@/lib/review/schedule";
 import { localDate } from "@/lib/sessions/rows";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -27,13 +28,17 @@ type GradedCard = {
  *
  * - Validates the body before any query or model call, so bad input costs nothing.
  * - `getUser()` checks the session with the auth server, since grading writes data.
+ * - Spends one of the learner's 60 grades an hour (`userRateLimit`), since each costs a model call.
  * - Reads the card (with its answer key), its review row and the learner's time zone in parallel.
+ * - Refuses a card that has a review row but isn't due in the learner's today (mastered, or answered for this step
+ *   already), before the model call, so answering early can't move or un-master it. A never-answered card is always open.
  * - Grades with `callModel("grade")`, retrying once when the output doesn't fit `{ score, missing }`.
  * - Moves `reviews` with a compare-and-set on `updated_at`, then inserts the `answers` row.
  *
  * @param request - JSON body `{ cardId, answer }`.
  * @returns 200 `{ score, missing, modelAnswer, evidence, nextDue }`; 400 bad body; 401 signed out; 404 not the
- *   learner's card or hidden; 409 answered twice at once; 502 the model failed; 503 grading not configured; 500 else.
+ *   learner's card or hidden; 409 answered twice at once, or not due today; 429 over 60 answers an hour
+ *   (`Retry-After`); 502 the model failed; 503 grading not configured; 500 else.
  */
 export async function POST(request: Request) {
   const body: unknown = await request.json().catch(() => null);
@@ -50,6 +55,8 @@ export async function POST(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  const limited = await userRateLimit("grade", user.id);
+  if (limited) return limited;
 
   try {
     const admin = createAdminClient();
@@ -61,9 +68,14 @@ export async function POST(request: Request) {
         .maybeSingle<GradedCard>(),
       admin
         .from("reviews")
-        .select("step, updated_at")
+        .select("step, updated_at, due_on, mastered")
         .eq("card_id", cardId)
-        .maybeSingle<{ step: Step; updated_at: string }>(),
+        .maybeSingle<{
+          step: Step;
+          updated_at: string;
+          due_on: string | null;
+          mastered: boolean;
+        }>(),
       admin
         .from("profiles")
         .select("timezone")
@@ -77,6 +89,17 @@ export async function POST(request: Request) {
     // Decided here, not by the query: the service role sees every learner's cards.
     if (!card || card.user_id !== user.id || card.hidden)
       return NextResponse.json({ error: "Card not found" }, { status: 404 });
+    const today = localDate(profileResult.data?.timezone ?? "UTC", new Date());
+    if (reviewResult.data && !isDue(reviewResult.data, today)) {
+      return NextResponse.json(
+        {
+          error: reviewResult.data.mastered
+            ? "You've mastered this card, so it has no more reviews."
+            : `This card isn't due until ${reviewResult.data.due_on}. Come back then.`,
+        },
+        { status: 409 },
+      );
+    }
 
     const input = { instructions: GRADE_INSTRUCTIONS, data: gradeData(card, answer) };
     const grade =
@@ -90,11 +113,7 @@ export async function POST(request: Request) {
     }
 
     const step = reviewResult.data?.step ?? 0;
-    const next = nextReview(
-      step,
-      grade.score,
-      localDate(profileResult.data?.timezone ?? "UTC", new Date()),
-    );
+    const next = nextReview(step, grade.score, today);
     // Move the schedule first, and only from the state this request read: a second submit racing this one finds the
     // row changed (or already inserted) and gets 409, so one answer can't advance a card twice.
     const schedule = {

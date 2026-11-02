@@ -62,7 +62,7 @@ about a person (name, email) is copied here.
 | `display_name` | Trimmed, 1–100 characters, or null. Never `""`.                        | Trigger at sign-up; learner after        |
 | `avatar_url`   | `https://` only, from the provider's metadata.                         | Trigger                                  |
 | `timezone`     | IANA name, default `UTC`. Decides the learner's "today" for due dates. | Learner                                  |
-| `notify_email` | Whether the daily review email is sent. Default true.                  | Learner                                  |
+| `notify_email` | Whether the daily review email is sent. Default true.                  | Learner; server on one-click unsubscribe |
 | `created_at`   | Sign-up time; the Play Stats cohorts group by its UTC day.             | Default                                  |
 
 - **Policies:** `read own profile` (select where `id = auth.uid()`), `update own profile` (same, with check).
@@ -99,23 +99,29 @@ Bearer tokens the CLI uses to upload sessions. Created on `/setup` through `POST
 
 One uploaded Claude Code session and its processing status.
 
-| Column                                      | Stores                                                                                    | Written by        |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------- |
-| `id`                                        | Session id.                                                                               | Default           |
-| `user_id`                                   | Owner.                                                                                    | Server            |
-| `external_id`                               | Claude Code's `session_id`. `unique (user_id, external_id)`: a repeat upload returns 409. | Server            |
-| `agent`                                     | `claude-code` or `codex`.                                                                 | Server            |
-| `title`                                     | The agent's title for the session, if the log had one.                                    | Server            |
-| `repo`, `branch`                            | Where the work happened; the fallback name ("repo on branch").                            | Server            |
-| `started_at`, `duration_min`, `event_count` | Session facts from the log (non-negative checks).                                         | Server            |
-| `raw_path`                                  | Storage path of the redacted `.jsonl.gz`. Not empty.                                      | Server            |
-| `status`                                    | `pending`, `processing`, `ready` or `failed`.                                             | Server (pipeline) |
-| `error`                                     | A learner-readable reason when `failed`.                                                  | Server (pipeline) |
-| `created_at`                                | Upload time. Indexed with `user_id` for the dashboard's newest-first list.                | Default           |
+| Column                                      | Stores                                                                                 | Written by        |
+| ------------------------------------------- | -------------------------------------------------------------------------------------- | ----------------- |
+| `id`                                        | Session id.                                                                            | Default           |
+| `user_id`                                   | Owner.                                                                                 | Server            |
+| `external_id`                               | Claude Code's `session_id`. `unique (user_id, external_id)`: see repeat uploads below. | Server            |
+| `agent`                                     | `claude-code` or `codex`.                                                              | Server            |
+| `title`                                     | The agent's title for the session, if the log had one.                                 | Server            |
+| `repo`, `branch`                            | Where the work happened; the fallback name ("repo on branch").                         | Server            |
+| `started_at`, `duration_min`, `event_count` | Session facts from the log (non-negative checks).                                      | Server            |
+| `raw_path`                                  | Storage path of the redacted `.jsonl.gz`. Not empty.                                   | Server            |
+| `status`                                    | `pending`, `processing`, `ready` or `failed`.                                          | Server (pipeline) |
+| `error`                                     | A learner-readable reason when `failed`.                                               | Server (pipeline) |
+| `created_at`                                | Latest upload time. Indexed with `user_id` for the dashboard's newest-first list.      | Default; re-push  |
 
 - **Policies:** `read own sessions`. **No learner delete:** the server deletes the Storage object first, then the row;
   a learner delete would orphan the log in Storage.
 - `unique (id, user_id)` exists only as the target of the cards' composite foreign key.
+- **Repeat uploads** (`POST /api/sessions`): `pending` gets a fresh upload URL (409); `ready` or a live `processing`
+  run gets 409. `failed`, or `processing` for over 10 minutes, is retried: its cards are deleted, then the row goes
+  back to `pending` with `error` cleared and `created_at` set to now, and the new upload replaces the log.
+- **Stuck sessions:** the daily cron marks rows `processing` for over 15 minutes (by `created_at`) as `failed` with a
+  retryable `error`. There is no `updated_at`, so `created_at` stands in for "processing since"; the CLI processes
+  right after uploading.
 - Realtime publishes this table (see below).
 
 ### `decision_cards`
@@ -210,6 +216,8 @@ One row per email sent (the daily review email, planned).
 
 - `unique (user_id, kind, sent_on)`: the cron inserts this row **before** sending; a conflict means another run
   already claimed it, so a rerun or a crash never sends twice ([rules/error-handling.md](rules/error-handling.md)).
+  A send the provider refuses deletes its row again, so a rerun the same day retries it; the `Idempotency-Key`
+  (`daily_review/<user>/<day>`) stops a duplicate if that send did go out.
 - **No policies at all:** RLS is on, so learners can't read or write it.
 
 ### `tracker_members` and `tracker_tasks`

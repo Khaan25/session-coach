@@ -1,7 +1,9 @@
 /**
- * GET /api/cron/daily-review: Vercel Cron, once a day (apps/web/vercel.json). Emails every learner with reminders on
- * who has cards due today in their own time zone, at most once per local day.
- *   200 `{ sent, skipped, failed }`: skipped were already emailed today; failed are logged by user id.
+ * GET /api/cron/daily-review: Vercel Cron, once a day at 13:00 UTC (apps/web/vercel.json): 8:00 in New York, 18:00 in
+ * Karachi. First marks sessions stuck in `processing` as `failed`, then emails every learner with reminders on who has
+ * cards due today in their own time zone, at most once per local day.
+ *   200 `{ sent, skipped, failed, swept }`: skipped were already emailed today; failed are logged by user id and can be
+ *       retried by a rerun the same day; swept is how many stuck sessions were failed (left out if the sweep errored).
  *   401 missing or wrong `Authorization: Bearer <CRON_SECRET>`, 503 `RESEND_API_KEY` unset, 500 anything else.
  */
 import { NextResponse } from "next/server";
@@ -17,6 +19,7 @@ import {
   sendDailyReviews,
 } from "@/lib/email/daily-review";
 import { newCardsSince } from "@/lib/review/schedule";
+import { unsubscribeUrl } from "@/lib/email/unsubscribe";
 import { siteUrl } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
@@ -27,6 +30,29 @@ const KIND = "daily_review";
 const DEFAULT_FROM = "Session Coach <noreply@coach.ziaa.me>";
 /** Learner ids per `in (...)` filter. */
 const ID_CHUNK = 100;
+/** A pipeline run lives at most 300 s; `processing` this long means the run was killed (docs/rules/error-handling.md). */
+const STUCK_MS = 15 * 60 * 1000;
+const STUCK_ERROR =
+  "Making cards from this session didn't finish. Run session-coach push again to retry.";
+
+/**
+ * Marks sessions `processing` for over 15 minutes as `failed`, so a killed run doesn't spin on the dashboard forever.
+ * `created_at` stands in for "processing since": the CLI processes right after uploading, and a re-push restarts it.
+ *
+ * @param admin - The service-role client.
+ * @param now - The cron's current time.
+ * @returns How many sessions were failed.
+ */
+async function sweepStuckSessions(admin: ReturnType<typeof createAdminClient>, now: Date) {
+  const { data, error } = await admin
+    .from("sessions")
+    .update({ status: "failed", error: STUCK_ERROR })
+    .eq("status", "processing")
+    .lt("created_at", new Date(now.getTime() - STUCK_MS).toISOString())
+    .select("id");
+  if (error) throw new Error(error.message);
+  return data.length;
+}
 
 /** A `reviews` row with its card, before hidden cards are dropped. */
 type AnsweredRow = {
@@ -41,6 +67,7 @@ type AnsweredRow = {
  *
  * - Checks the cron secret before anything else, and the Resend key before claiming any `email_log` row, so a
  *   misconfigured deploy doesn't use up the day's claims.
+ * - Sweeps stuck sessions first; a sweep error is logged and the emails still go out.
  * - Reads learners with reminders on, every answered card (for due, answered and mastered) and the visible cards
  *   from the last week never answered; who gets what is `dailyReviewRecipients`.
  *
@@ -59,9 +86,19 @@ export async function GET(request: Request) {
     );
   }
 
+  // cronAuthorized passed, so the secret is set; it also signs the unsubscribe links.
+  const secret = process.env.CRON_SECRET as string;
+
   try {
     const admin = createAdminClient();
     const now = new Date();
+    const swept = await sweepStuckSessions(admin, now).catch((err: unknown) => {
+      console.error(
+        "[api/cron/daily-review] stuck-session sweep failed",
+        err instanceof Error ? err.message : err,
+      );
+      return undefined;
+    });
     const profiles = await fetchAll<ProfileRow>((from, to) =>
       admin
         .from("profiles")
@@ -117,7 +154,8 @@ export async function GET(request: Request) {
 
     const result = await sendDailyReviews(
       recipients,
-      (recipient) => composeDailyReview(recipient, siteUrl),
+      (recipient) =>
+        composeDailyReview(recipient, siteUrl, unsubscribeUrl(siteUrl, recipient.userId, secret)),
       {
         async claim(userId, sentOn) {
           const { error } = await admin
@@ -137,9 +175,18 @@ export async function GET(request: Request) {
             .eq("sent_on", sentOn);
           if (error) throw new Error(error.message);
         },
+        async release(userId, sentOn) {
+          const { error } = await admin
+            .from("email_log")
+            .delete()
+            .eq("user_id", userId)
+            .eq("kind", KIND)
+            .eq("sent_on", sentOn);
+          if (error) throw new Error(error.message);
+        },
       },
     );
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, swept });
   } catch (err) {
     console.error("[api/cron/daily-review] failed", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "The daily review run failed." }, { status: 500 });
