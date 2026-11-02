@@ -2,6 +2,12 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-02 · The landing's demos loop in place, on motion.dev
+
+- **Decision:** the landing gets a product bento under the hero (`components/marketing/bento-*.tsx`, layout and timing cloned from a reference video, spec in `.reanimate/bento/spec.md`, which is git-ignored) and one looping demo per section: the review schedule, the quote check, the secret filter. Idle micro motion (bell, bars, dot, caret) and the demos' springs and enter/exit swaps use `motion` (pinned 14.3.0, client components only). Simple transitions stay Tailwind. Every demo idles in place; none waits for a scroll. `MotionConfig reducedMotion="user"` drops transforms and `useLoopStep` stops the loops under reduced motion.
+- **Why:** Zia asked for micro animations with motion.dev. Springs, keyframe loops and exit animations are a few lines with it and a lot of hand CSS without. The design system bans scroll reveals, so the motion runs on its own clock.
+- **Rejected:** scroll-triggered entrances (banned); the reference's sliding tab pill (the segmented control cuts by design); a 3D glass asterisk (the watercolour cards sprite turns instead).
+
 ## 2026-11-02 · Measured skeletons with skullet on the dashboard, review, session and progress pages
 
 - **Decision:** the dashboard's session list, the review queue, a session's cards (`/s/[id]`), the quiz (`/review/[cardId]`) and `/progress` load behind a skullet skeleton (`skullet@0.0.3`). The skeleton is the real component rendered from sample rows, measured into bars, so each row's skeleton is the shape of a real row. The row count is a representative sample (4 sessions, 3 queue cards, 2 decision cards, 3 sessions on /progress), not the real count. No boundary knows the count, the dashboard's due banner or its page links before the query returns, so the list can still grow or shrink when the data lands, as it did with the old fixed 4-row skeleton. A learner with nothing yet (no sessions, no cards due, no answers) sees the populated skeleton give way to the empty state; `main` did the same with its fixed skeletons, and whether a learner is empty is only known after the query. `SkulletProvider` in the root layout points skullet at the design system's skeleton tokens: `--surface-skeleton` fill, `--radius-soft`, pulse. Static headings carry `skullet-own` so they stay real text, as the hand-built skeletons had them.

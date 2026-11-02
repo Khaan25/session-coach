@@ -79,6 +79,21 @@
 }
 
 /*
+ * The landing bento (components/marketing/bento-*.tsx): the sprite's one-turn spin on click, and the soft
+ * blur on the checks that are not in focus. Reduced motion drops the spin at the call site.
+ */
+@theme {
+  --blur-row: 2px;
+  --animate-spin-y: spin-y 900ms cubic-bezier(0.45, 0, 0.55, 1);
+
+  @keyframes spin-y {
+    to {
+      transform: rotateY(360deg);
+    }
+  }
+}
+
+/*
  * A toast that updates in place has nothing to animate, so this pulse is the "again" signal. Two
  * identical keyframes: re-running an animation needs the computed `animation-name` to change, so
  * Toast alternates even and odd on its update counter. It animates `scale`, not `transform`, because
