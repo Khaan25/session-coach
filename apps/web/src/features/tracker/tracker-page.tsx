@@ -1,24 +1,49 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
-
 import { Container } from "@/components/app/container";
+import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { AppPageHeader } from "@/components/app/page-header";
 import { TaskList } from "@/features/tracker/task-list";
-import { Skeleton } from "@/components/ui/skeleton";
 import { PROJECT_CONTEXT } from "@/features/tracker/context";
-import { getTrackerTasks } from "@/features/tracker/queries";
+import { getTrackerTasks, type TrackerTask } from "@/features/tracker/queries";
 
 export const metadata: Metadata = { title: "Tracker", robots: { index: false } };
+
+// Only the skeleton's shape comes from these: two sections, owners and notes like the real list.
+const sample = (
+  i: number,
+  section: string,
+  title: string,
+  owner: TrackerTask["owner"],
+  done: boolean,
+): TrackerTask => ({
+  id: `sample-${i}`,
+  section,
+  position: i,
+  owner,
+  title,
+  details: "Notes on the task.",
+  done_at: done ? "2026-11-01T00:00:00.000Z" : null,
+});
+const SAMPLE_TASKS: TrackerTask[] = [
+  sample(0, "Web app", "Skeletons for every data page", "zia", true),
+  sample(1, "Web app", "Email reminders on due days", "zia", false),
+  sample(2, "Web app", "Delete a session from its page", "both", false),
+  sample(3, "CLI", "Publish the CLI to npm", "kasam", true),
+  sample(4, "CLI", "Retry uploads from the outbox", "kasam", false),
+];
 
 export default function TrackerPage() {
   return (
     <Container>
       <AppPageHeader title="Tracker" description="What's left to ship, and who's on it." />
       {/* cacheComponents: the read uses cookies, so it streams inside Suspense. */}
-      <Suspense fallback={<TrackerLoading />}>
+      <MeasuredSuspense
+        label="Loading the tracker"
+        skeleton={<TaskList tasks={SAMPLE_TASKS} context="" />}
+      >
         <Tasks />
-      </Suspense>
+      </MeasuredSuspense>
     </Container>
   );
 }
@@ -29,15 +54,4 @@ async function Tasks() {
   // Suspense, so this renders the not-found page after the shell has streamed (status 200); RLS returns them no rows.
   if (!tasks) notFound();
   return <TaskList tasks={tasks} context={PROJECT_CONTEXT} />;
-}
-
-function TrackerLoading() {
-  return (
-    <div className="flex flex-col gap-4">
-      <output className="sr-only">Loading the tracker</output>
-      <Skeleton className="h-6" />
-      <Skeleton className="h-64" />
-      <Skeleton className="h-40" />
-    </div>
-  );
 }

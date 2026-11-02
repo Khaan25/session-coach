@@ -68,7 +68,8 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
     >
       <Card>
         <CardHeader>
-          <CardTitle>
+          {/* skullet-own: the heading is static, so it stays real in the settings skeleton. */}
+          <CardTitle skullet-own="">
             <h2>Profile</h2>
           </CardTitle>
         </CardHeader>
