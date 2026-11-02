@@ -20,7 +20,7 @@
   "scripts": {
     "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/cli.ts",
     "build": "node build.mjs",
-    "prepack": "pnpm run build",
+    "prepack": "node build.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "test": "node --test --experimental-strip-types src/*.test.ts"

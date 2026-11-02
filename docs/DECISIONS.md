@@ -6,7 +6,7 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 
 - **Decision:** `packages/cli` is named `session-coach` (version 0.1.0, MIT) and publishes only `dist/cli.js`, `README.md`, `LICENSE` and `package.json`. `esbuild` (pinned 0.28.2) bundles our code and `@session-coach/shared/redact` into that one ESM file for Node 20+; only `node:` builtins stay external, so `@session-coach/shared` is a devDependency and no workspace import is left at runtime. `prepack` runs the build. The root private package is renamed `session-coach-monorepo`.
 - **Why:** `npx session-coach` is the install the setup page promises; the shared package is not on npm, so it has to be inside the file. Two workspace packages named `session-coach` made `pnpm --filter session-coach` match both, so the root changed (agreed with Zia).
-- **Rejected:** publishing `@session-coach/shared` too (a second public package and contract to keep in step); a scoped name (the setup page already shows `npx session-coach`). **Not published yet:** the README says so.
+- **Rejected:** publishing `@session-coach/shared` too (a second public package and contract to keep in step); a scoped name (the setup page already shows `npx session-coach`). **Not published yet:** the PR publishes right after merge; until then `npx session-coach` will not resolve.
 
 ## 2026-11-02 · The CLI redacts before upload
 
