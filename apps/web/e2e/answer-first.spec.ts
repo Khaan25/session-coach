@@ -125,7 +125,7 @@ test("an unanswered card hides its why until the learner says they don't know ye
     .getByRole("button", { name: /I don.t know yet/ })
     .click();
   await expect(page.getByRole("heading", { name: "Here's the why" })).toBeVisible();
-  await expect(page.getByText(why)).toBeVisible();
+  await expect(page.getByText(why).first()).toBeVisible();
 
   const answer = await admin
     .from("answers")
@@ -142,7 +142,7 @@ test("an unanswered card hides its why until the learner says they don't know ye
 
   // Answered now, so the session page shows the whole card.
   await page.reload();
-  await expect(page.getByText(why)).toBeVisible();
+  await expect(page.getByText(why).first()).toBeVisible();
 });
 
 test("a skip keeps the card's step, and the day stops at 5 answers", async ({ page }) => {
