@@ -13,7 +13,8 @@ function Checkbox({ className, onClick, ...props }: CheckboxPrimitive.Root.Props
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
-      data-cuelume-toggle=""
+      // cuelume skips only `:disabled`, which this span root never matches, so drop the cue when the box cannot change.
+      data-cuelume-toggle={props.disabled || props.readOnly ? undefined : ""}
       onClick={(event) => {
         onClick?.(event);
         event.stopPropagation();

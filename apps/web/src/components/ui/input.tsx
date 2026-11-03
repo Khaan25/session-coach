@@ -13,7 +13,8 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
     <InputPrimitive
       type={type}
       data-slot="input"
-      data-cuelume-type=""
+      // cuelume plays on keys in a read-only field too, where nothing is typed.
+      data-cuelume-type={props.readOnly ? undefined : ""}
       className={cn(
         fieldControlVariants({ size: "default" }),
         "read-only:cursor-default",
