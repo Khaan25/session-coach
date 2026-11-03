@@ -7,7 +7,12 @@ import type { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createClient } from "@/lib/supabase/server";
 
-const viewSchema = profileSchema.omit({ created_at: true });
+const viewSchema = profileSchema.pick({
+  email: true,
+  display_name: true,
+  timezone: true,
+  notify_email: true,
+});
 
 /** The signed-in learner's profile as the app shows it. */
 export type ProfileView = z.infer<typeof viewSchema>;
@@ -25,7 +30,7 @@ export const getProfile = cache(async (): Promise<ProfileView | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, display_name, avatar_url, timezone, notify_email")
+    .select("email, display_name, timezone, notify_email")
     .eq("id", user.id)
     .maybeSingle();
   if (error) throw new Error(`getProfile: ${error.message}`);
