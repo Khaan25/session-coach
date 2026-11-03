@@ -26,7 +26,7 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 
 ## 2026-11-05 · `/design-system` is gated in production
 
-- **Decision:** `/design-system` calls `notFound()` when `VERCEL_ENV=production`, like `/canvas`. The ui kit keeps its gallery-only components. Zia approved.
+- **Decision:** `/design-system` calls `notFound()` when `VERCEL_ENV=production`. `/canvas` had the same gate until #61 made it public on purpose; the gallery stays internal because it is a contributor tool, not something to show. The ui kit keeps its gallery-only components. Zia approved.
 
 ## 2026-11-05 · Not done, on purpose
 
