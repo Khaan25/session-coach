@@ -53,30 +53,43 @@ export function QuoteCheck() {
                 &ldquo;{q.quote}&rdquo;
               </motion.blockquote>
             </AnimatePresence>
-            <figcaption className="flex min-h-6 items-center gap-2 type-body-sm text-text-2">
-              {scanning !== null ? (
-                <span>Looking for it in the session…</span>
-              ) : (
-                <motion.span
-                  key={`${q.quote}-verdict`}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 22 }}
-                  className="flex items-center gap-2"
-                >
-                  {found ? (
-                    <>
-                      <Badge variant="success">Found</Badge>
-                      Event {(q.line ?? 0) + 1} of the session
-                    </>
-                  ) : (
-                    <>
-                      <Badge variant="warning">Flagged</Badge>
-                      Not in the session, so the card says so
-                    </>
-                  )}
-                </motion.span>
-              )}
+            {/* One grid cell, so the outgoing caption fades out under the incoming one instead of snapping. */}
+            <figcaption className="grid min-h-6 items-center type-body-sm text-text-2">
+              <AnimatePresence initial={false}>
+                {scanning !== null ? (
+                  <motion.span
+                    key={`${q.quote}-scan`}
+                    className="col-start-1 row-start-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    Looking for it in the session…
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key={`${q.quote}-verdict`}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, transition: { duration: 0.2 } }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    className="col-start-1 row-start-1 flex origin-left items-center gap-2"
+                  >
+                    {found ? (
+                      <>
+                        <Badge variant="success">Found</Badge>
+                        Event {(q.line ?? 0) + 1} of the session
+                      </>
+                    ) : (
+                      <>
+                        <Badge variant="warning">Flagged</Badge>
+                        Not in the session, so the card says so
+                      </>
+                    )}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </figcaption>
           </figure>
           <ol aria-label="Session log (example)" className="flex flex-col gap-1">
@@ -84,11 +97,26 @@ export function QuoteCheck() {
               <li
                 key={line}
                 className={cn(
-                  "flex gap-3 rounded-inner px-2 py-1.5 type-code-sm transition-colors duration-150",
-                  scanning === i && "bg-hover text-text-1",
-                  found && q.line === i ? "bg-success-wash text-success-text" : "text-text-2",
+                  "relative isolate flex gap-3 px-2 py-1.5 type-code-sm transition-colors duration-150",
+                  found && q.line === i
+                    ? "text-success-text"
+                    : scanning === i
+                      ? "text-text-1"
+                      : "text-text-2",
                 )}
               >
+                {(scanning === i || (found && q.line === i)) && (
+                  // One highlight that slides down the log as it scans, then back up to the line it found.
+                  <motion.span
+                    aria-hidden
+                    layoutId="quote-check-line"
+                    className={cn(
+                      "absolute inset-0 -z-10 rounded-inner transition-colors duration-150",
+                      found ? "bg-success-wash" : "bg-hover",
+                    )}
+                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                )}
                 <span aria-hidden className="text-text-3">
                   {i + 1}
                 </span>
