@@ -185,17 +185,21 @@ function FieldSeparator({
     <div
       data-slot="field-separator"
       data-content={!!children}
-      className={cn("relative -my-2 flex h-5 items-center", className)}
+      className={cn("-my-2 flex min-h-5 items-center gap-2", className)}
       {...props}
     >
-      <div aria-hidden className="h-px w-full bg-line-row" />
+      <div aria-hidden className="h-px flex-1 bg-line-row" />
       {children && (
-        <span
-          className="absolute start-1/2 -translate-x-1/2 bg-page px-2 type-body-sm text-text-3 rtl:translate-x-1/2"
-          data-slot="field-separator-content"
-        >
-          {children}
-        </span>
+        <>
+          {/* In the row, not on top of the line, so long text wraps centred instead of into half the width. */}
+          <span
+            className="max-w-3/4 text-center text-balance type-body-sm text-text-3"
+            data-slot="field-separator-content"
+          >
+            {children}
+          </span>
+          <div aria-hidden className="h-px flex-1 bg-line-row" />
+        </>
       )}
     </div>
   );
