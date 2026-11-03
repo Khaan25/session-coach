@@ -1,7 +1,7 @@
 ---
 title: Privacy policy
 description: What Session Coach collects, where it is kept, who processes it and how to delete it.
-updated: "2026-10-31"
+updated: "2026-11-05"
 draft: true
 ---
 
@@ -13,15 +13,16 @@ Session Coach is built and run by Zia Ur Rehman Khan and Kasam Thapa Magar for t
 
 - **Your account:** your name, your email address, your profile picture if your sign-in provider has one, and how you signed in (email and password, or Google).
 - **Your sessions:** the log of each Claude Code session you send, after secrets are removed (see below), with its title, repository name, branch, start time and length.
-- **Your cards:** the 3 to 5 decision cards made from each session, with the quotes from the session that back them.
+- **Your cards:** up to 5 decision cards made from each session, with the quotes from the session that back them.
 - **Your answers:** what you write when you explain a card back, its score (0, 1 or 2) and your review schedule.
-- **Your settings:** your time zone and whether you want reminder emails.
+- **Your settings:** your time zone, whether you want reminder emails, and the question level (simple, hard or complex) you chose for each repository.
 - **Your CLI tokens:** a fingerprint (hash) of each token you create for the command-line tool, its label and when it was last used. The token itself is never stored.
+- **CLI sign-in requests:** when you run `session-coach login`, the name of the device (its hostname and operating system) and the IP address it asked from. The device name becomes the token's label. A request expires after 10 minutes, is kept for at least a day after that, and is then removed.
 - **Emails we send you:** a record of each email we send you, its kind and the day it was sent, so the same email is never sent twice.
 
 ## What we try to remove
 
-Session logs reach us only through the Session Coach command-line tool. It is not released yet, so no session log has been collected. When it is, it removes secrets on your laptop before a log is sent, and our server removes them again when it reads the log to make cards. Thinking blocks and attachments are dropped before cards are made.
+Session logs reach us only through the Session Coach command-line tool: when you run `session-coach push`, or through the `session-coach sync` hook if you add it to a project. The tool removes secrets on your laptop before a log is sent, and our server removes them again when it reads the log to make cards. Thinking blocks and attachments are dropped before cards are made.
 
 We replace:
 
@@ -44,6 +45,7 @@ Your data is stored in Supabase, in the ap-south-1 region (Mumbai). The app runs
 - **A language model provider** reads a session log to write its cards, and reads your answer to score it. The server uses one of Google Gemini, OpenRouter or Groq.
 - **Google Gemini (free tier), if used:** Google may use what is sent to it to improve its products. This is why we try to remove secrets before anything leaves your laptop; removal is not a guarantee.
 - **Resend** sends sign-in, password and reminder emails.
+- **Upstash** counts requests to limit how often each one can be made. It receives your IP address and, when you are signed in, your user id. The counts expire after a few hours.
 
 ## How long we keep it
 

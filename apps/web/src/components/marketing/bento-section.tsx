@@ -176,8 +176,8 @@ export function BentoSection() {
           Everything after the session ends.
         </h2>
         <p className="type-body-lg text-pretty text-text-2">
-          Install once. Each Claude Code session becomes cards, checked against its log, due again
-          on day 1, 3 and 7.
+          Set up once. Each session you send becomes cards, checked against its log, due again on
+          day 1, 3 and 7.
         </p>
       </div>
       <MotionProvider>

@@ -37,7 +37,8 @@ function ReviewLoop() {
               <Rule />
             </li>
             <li className="flex items-center gap-1.5">
-              <CardsIcon weight="duotone" className="size-4 text-text-1" aria-hidden />3 to 5 cards
+              <CardsIcon weight="duotone" className="size-4 text-text-1" aria-hidden />
+              Up to 5 cards
             </li>
           </ol>
           <ol aria-label="Review schedule" className="flex items-center gap-2">

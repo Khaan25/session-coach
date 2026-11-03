@@ -9,7 +9,7 @@ import { useLoopStep } from "@/hooks/use-loop-step";
 
 // One card's way through the schedule, played on a loop: every 2.2s it is answered, and the marker springs to
 // where the score sends it. A 2 moves it to the next gap, less moves it one step down, a 2 on day 7 masters it
-// (docs/ARCHITECTURE.md). The track is decorative; the rule is written out under it for everyone.
+// (lib/review/schedule.ts). The track is decorative; the rule is written out under it for everyone.
 const stops = ["Session", "Day 1", "Day 3", "Day 7", "Mastered"];
 
 const story: { at: number; score?: Score; note: string }[] = [

@@ -23,7 +23,7 @@ const checks: { kind: Kind; icon: typeof LockKeyIcon; label: string }[] = [
   { kind: "agent", icon: QuotesIcon, label: "Every quote found in the session" },
   { kind: "run", icon: FlagIcon, label: "A quote that doesn't match is flagged" },
   { kind: "model", icon: EyeSlashIcon, label: "No matching quote, card hidden" },
-  { kind: "deploy", icon: CardsIcon, label: "3 to 5 cards ready for you" },
+  { kind: "deploy", icon: CardsIcon, label: "Up to 5 cards ready for you" },
 ];
 
 const STEP_MS = 2600;

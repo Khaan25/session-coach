@@ -27,7 +27,7 @@ const jsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Web",
   description:
-    "Each Claude Code session becomes 3 to 5 decision cards. Explain them back in your own words on day 1, 3 and 7.",
+    "Each Claude Code session becomes up to 5 decision cards. Explain them back in your own words on day 1, 3 and 7.",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
@@ -66,7 +66,7 @@ export default function Home() {
           </h1>
 
           <p className="mt-8 max-w-lg type-body-lg text-pretty text-text-2 sm:mt-10">
-            Explain back the decisions your coding agent made. Each session becomes 3 to 5 decision
+            Explain back the decisions your coding agent made. Each session becomes up to 5 decision
             cards, due again on day 1, 3 and 7.
           </p>
 

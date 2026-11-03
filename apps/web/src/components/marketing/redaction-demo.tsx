@@ -15,8 +15,8 @@ const parts: ({ text: string } | { secret: string; mask: string; stage: number }
   { secret: "sk-ant-x7Qe9…", mask: "[REDACTED]", stage: 1 },
   { text: ", mail it to " },
   { secret: "ana@example.com", mask: "[EMAIL]", stage: 1 },
-  { text: " from " },
-  { secret: "db-pass-41", mask: "[REDACTED]", stage: 2 },
+  { text: ", " },
+  { secret: "DB_PASSWORD=hunter2", mask: "DB_PASSWORD=[REDACTED]", stage: 2 },
 ];
 
 const stages = [
