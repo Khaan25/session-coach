@@ -10,8 +10,8 @@ import type { TimelineEvent } from "./parser.ts";
 
 /**
  * The most timeline we send the model, in characters of the JSON it actually gets (ids, kinds, quotes and escapes
- * included). About 4 characters per token puts this near 4,000 tokens, which leaves room for the instructions and the
- * retry inside Groq's 8,000 tokens per minute.
+ * included). At about 3 characters per token this is near 5,300 of Groq's 8,000 tokens per minute, so room for the
+ * instructions, the answer and a retry is tight (docs/DECISIONS.md, "Timeline trim budget").
  */
 export const MAX_TIMELINE_CHARS = 16_000;
 
