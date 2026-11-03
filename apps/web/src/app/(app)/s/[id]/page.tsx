@@ -13,7 +13,7 @@ import { RefreshOnSettle } from "@/components/cards/refresh-on-settle";
 import { Code } from "@/components/ui/code-block";
 import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import type { CardView, SessionCard } from "@/lib/cards/columns";
+import type { SessionCard } from "@/lib/cards/columns";
 import { getSessionWithCards } from "@/lib/cards/queries";
 import type { SessionSummary } from "@/lib/sessions/rows";
 import { formatRelativeTime } from "@/lib/relative-time";
@@ -39,42 +39,23 @@ const SAMPLE_SESSION: SessionSummary = {
   error: null,
   created_at: SAMPLE_NOW.toISOString(),
 };
-const sample = (
-  position: number,
-  decision: string,
-  why: string,
-  question: string,
-): CardView & { locked: false } => ({
-  locked: false,
+// Locked, as most cards are on a learner's first visit to a session: no why or evidence until they answer.
+const sample = (position: number, decision: string, question: string): SessionCard => ({
+  locked: true,
   id: `sample-card-${position}`,
   position,
   decision,
-  why,
-  source: "stated",
-  evidence: [
-    {
-      event_index: position + 1,
-      quote: "Keyed on the token, so one learner on a shared IP doesn't block the others.",
-      file: "apps/web/src/app/api/sessions/route.ts",
-      lines: [12, 30],
-      verified: true,
-    },
-  ],
-  files: ["apps/web/src/app/api/sessions/route.ts"],
   question,
-  flagged: false,
 });
 const SAMPLE_CARDS = [
   sample(
     0,
     "Rate limit the upload route per token, not per IP",
-    "Learners behind one office IP would block each other; the token names the learner.",
     "Why is the limit keyed on the token rather than the IP?",
   ),
   sample(
     1,
     "Return 429 with a Retry-After header",
-    "The CLI already backs off on Retry-After, so no client change was needed.",
     "Why does the route send Retry-After instead of only a 429?",
   ),
 ];
