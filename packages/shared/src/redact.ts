@@ -21,10 +21,12 @@ const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}
 const HOME_PREFIX = /\/(?:Users|home)\/[^/\s'"`&|;<>()]+\/?/g;
 // Git SHA-1 and SHA-256 are evidence, not secrets.
 const GIT_SHA = /^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/;
+const LETTER = /[A-Za-z]/;
+const DIGIT = /\d/;
 
 /** Real secrets mix letters and digits; a long all-letter word or all-digit number is not one. */
 const looksSecret = (token: string): boolean =>
-  /[A-Za-z]/.test(token) && /\d/.test(token) && !GIT_SHA.test(token);
+  LETTER.test(token) && DIGIT.test(token) && !GIT_SHA.test(token);
 
 /** Replaces the home directory prefix only. Used on its own for file paths. */
 export function redactHomePath(text: string): string {

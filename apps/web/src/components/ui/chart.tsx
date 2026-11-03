@@ -13,6 +13,7 @@ import * as RechartsPrimitive from "recharts";
 const THEMES = { light: "", dark: ".dark" } as const;
 
 const INITIAL_DIMENSION = { width: 320, height: 200 } as const;
+const colons = /:/g;
 type TooltipValueType = number | string | Array<number | string>;
 type TooltipNameType = number | string;
 
@@ -60,7 +61,7 @@ function ChartContainer({
   };
 }) {
   const uniqueId = React.useId();
-  const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`;
+  const chartId = `chart-${id ?? uniqueId.replace(colons, "")}`;
 
   return (
     <ChartContext.Provider value={{ config }}>

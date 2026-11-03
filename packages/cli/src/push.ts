@@ -46,6 +46,10 @@ export function firstTimestamp(jsonl: string): string | undefined {
   return undefined;
 }
 
+/** Path separators, POSIX or Windows. */
+const PATH_SEPARATOR = /[\\/]/;
+const JSONL_EXTENSION = /\.jsonl$/;
+
 /**
  * The metadata for step ①.
  *
@@ -58,9 +62,9 @@ export function sessionMetadata(
   fileName: string,
   gzippedSize: number,
 ): SessionMetadata {
-  const base = fileName.split(/[\\/]/).pop() ?? fileName;
+  const base = fileName.split(PATH_SEPARATOR).pop() ?? fileName;
   const meta: SessionMetadata = {
-    external_id: base.replace(/\.jsonl$/, ""),
+    external_id: base.replace(JSONL_EXTENSION, ""),
     size_bytes: gzippedSize,
     title: null,
   };
@@ -118,8 +122,8 @@ const EXTERNAL_ID = /^[A-Za-z0-9_-]{1,128}$/;
  * @returns A message telling the user how to fix the name, or null when it is fine.
  */
 export function validateFileName(fileName: string): string | null {
-  const base = fileName.split(/[\\/]/).pop() ?? fileName;
-  if (EXTERNAL_ID.test(base.replace(/\.jsonl$/, ""))) return null;
+  const base = fileName.split(PATH_SEPARATOR).pop() ?? fileName;
+  if (EXTERNAL_ID.test(base.replace(JSONL_EXTENSION, ""))) return null;
   return "Rename the file to letters, numbers, - and _ only (max 128 characters).";
 }
 

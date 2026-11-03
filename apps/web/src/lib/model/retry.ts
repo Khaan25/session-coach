@@ -41,13 +41,14 @@ export const RETRY_WAIT_MS = 2_000;
 export const MAX_RETRY_WAIT_MS = 20_000;
 
 /** The HTTP-date form `retry-after` uses (RFC 9110 IMF-fixdate), so an ISO date or other text isn't read as one. */
+const SECONDS = /^\d+$/;
 const HTTP_DATE = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
 
 /** A `retry-after` value (seconds or an HTTP date) in milliseconds from `now`, or null when it isn't readable. */
 function parseRetryAfterMs(raw: string | null, now: number): number | null {
   const value = raw?.trim();
   if (!value) return null;
-  if (/^\d+$/.test(value)) return Number(value) * 1_000;
+  if (SECONDS.test(value)) return Number(value) * 1_000;
   if (!HTTP_DATE.test(value)) return null;
   const ms = Date.parse(value) - now;
   return ms >= 0 ? ms : null; // NaN (an impossible date) fails this too

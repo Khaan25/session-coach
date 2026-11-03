@@ -27,10 +27,12 @@ const largest = (values: readonly number[]) =>
 /** x rounded to `digits` decimals, the way toFixed rounds it. */
 const roundTo = (x: number, digits: number) => Number(x.toFixed(digits));
 
+const NEGATIVE_ZERO = /^-0(\.0+)?$/;
+
 /** toFixed without a sign on a value that rounds to zero. */
 export function fixed(x: number, digits: number) {
   const s = x.toFixed(digits);
-  return /^-0(\.0+)?$/.test(s) ? s.slice(1) : s;
+  return NEGATIVE_ZERO.test(s) ? s.slice(1) : s;
 }
 
 /**

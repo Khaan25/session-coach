@@ -112,6 +112,17 @@ const refPrefixes: Record<string, Kind> = {
 };
 const refPattern = /\b(run|agt|key|dpl|mdl)_[A-Za-z0-9]{4,}\b/g;
 
+const space = /\s/;
+const leadingSpace = /^\s+/;
+const digit = /\d/;
+const wordChar = /[\w$]/;
+const numberLiteral = /^\d[\d_.xXa-fA-FeEn]*/;
+const colonAhead = /^\s*:/;
+const listDash = /^-\s*/;
+const copyPrefix = /^Copy /;
+const trailingNewline = /\n$/;
+const trailingBackslashes = /\\*$/;
+
 type State = { block?: boolean; quote?: string };
 
 function tokenizeLine(line: string, lang: Language, state: State): Token[] {
@@ -151,7 +162,7 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
     if (
       c.line &&
       rest.startsWith(c.line) &&
-      (c.line !== "#" || i === 0 || /\s/.test(line[i - 1]))
+      (c.line !== "#" || i === 0 || space.test(line[i - 1]))
     ) {
       push("comment", rest);
       break;
@@ -174,18 +185,18 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
       const value = rest.slice(0, j + 1);
       i += value.length;
       // A JSON or YAML string followed by a colon is a key, which reads as ink.
-      const isKey = (lang === "json" || lang === "yaml") && /^\s*:/.test(line.slice(i));
+      const isKey = (lang === "json" || lang === "yaml") && colonAhead.test(line.slice(i));
       push(isKey ? "key" : "string", value);
       continue;
     }
-    if (/\s/.test(ch)) {
-      const m = rest.match(/^\s+/)![0];
+    if (space.test(ch)) {
+      const m = rest.match(leadingSpace)![0];
       push("plain", m);
       i += m.length;
       continue;
     }
-    if (lang !== "text" && /\d/.test(ch) && !/[\w$]/.test(line[i - 1] ?? "")) {
-      const m = rest.match(/^\d[\d_.xXa-fA-FeEn]*/)![0];
+    if (lang !== "text" && digit.test(ch) && !wordChar.test(line[i - 1] ?? "")) {
+      const m = rest.match(numberLiteral)![0];
       push("number", m);
       i += m.length;
       continue;
@@ -196,11 +207,11 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
       i += w.length;
       if (
         lang === "yaml" &&
-        /^\s*:/.test(line.slice(i)) &&
+        colonAhead.test(line.slice(i)) &&
         !line
           .slice(0, i - w.length)
           .trim()
-          .replace(/^-\s*/, "")
+          .replace(listDash, "")
       )
         push("key", w);
       else push(c.keywords.has(w) ? "keyword" : "plain", w);
@@ -413,7 +424,7 @@ function CopyCodeButton({
       forceState={forceState}
       value={text}
       aria-label={label}
-      label={label.replace(/^Copy /, "")}
+      label={label.replace(copyPrefix, "")}
       onCopy={onCopy as never}
       className={cn("bg-transparent", className)}
     />
@@ -429,7 +440,7 @@ type CommandLine = { kind: "command" | "output"; text: string };
  * that ends in a backslash; the rest is output.
  */
 function commandLines(code: string, prompt: string): CommandLine[] {
-  const lines = code.replace(/\n$/, "").split("\n");
+  const lines = code.replace(trailingNewline, "").split("\n");
   const marker = prompt ? `${prompt} ` : "";
   const anyPrompt = !!marker && lines.some((l) => l.startsWith(marker));
   const out: CommandLine[] = [];
@@ -441,7 +452,8 @@ function commandLines(code: string, prompt: string): CommandLine[] {
         : l.startsWith(marker)
           ? { kind: "command", text: l.slice(marker.length) }
           : // An odd run of trailing backslashes continues the line; an even run is escaped backslashes and does not.
-            prev?.kind === "command" && (prev.text.match(/\\*$/)?.[0].length ?? 0) % 2 === 1
+            prev?.kind === "command" &&
+              (prev.text.match(trailingBackslashes)?.[0].length ?? 0) % 2 === 1
             ? { kind: "command", text: l }
             : { kind: "output", text: l },
     );
@@ -587,7 +599,7 @@ function FileBlock({
   ...props
 }: CodeBlockProps) {
   const [wrap, setWrap] = useState(defaultWrap);
-  const source = code.replace(/\n$/, "");
+  const source = code.replace(trailingNewline, "");
   // The wrap toggle re-renders; a long log should not be tokenized again for it.
   const lines = useMemo(
     () => tokenize(source, language, { refs, detectRefs }),

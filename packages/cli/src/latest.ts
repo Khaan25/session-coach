@@ -19,12 +19,14 @@ export function resolveCwd(env: Record<string, string | undefined>, cwd: string)
   return env.INIT_CWD || cwd;
 }
 
+const NOT_DIR_CHAR = /[^a-zA-Z0-9-]/g;
+
 /**
  * Claude Code's folder name for a project: every character other than a letter, digit or `-` becomes `-`.
  * Verified for `/` and `_`; the rule for dots, spaces and other characters is a guess.
  */
 export function projectDirName(cwd: string): string {
-  return cwd.replace(/[^a-zA-Z0-9-]/g, "-");
+  return cwd.replace(NOT_DIR_CHAR, "-");
 }
 
 /** Formats a byte count as B, KB or MB. */
@@ -38,9 +40,11 @@ export function formatSize(bytes: number): string {
 const HEAD_BYTES = 64 * 1024;
 const HEAD_LINES = 50;
 
+const TRAILING_SLASHES = /\/+$/;
+
 /** Drops trailing slashes, so `/work/a/` and `/work/a` compare equal. The root stays `/`. */
 function trimSlash(path: string): string {
-  return path.replace(/\/+$/, "") || "/";
+  return path.replace(TRAILING_SLASHES, "") || "/";
 }
 
 /** The first `cwd` string in the head of a log, or null. Lines that don't parse (a cut last line) are skipped. */

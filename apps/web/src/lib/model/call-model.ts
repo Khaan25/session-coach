@@ -40,6 +40,9 @@ const CHAT_URL = {
 
 const TIMEOUT_MS = 30_000;
 
+/** A markdown fence around JSON, opening or closing. */
+const JSON_FENCE = /^```(?:json)?\s*|\s*```$/g;
+
 /**
  * The most tokens one reply may use. Five extraction cards fit in well under this; the cap keeps a runaway reply from
  * eating Groq's 8,000 tokens per minute that grading shares.
@@ -81,7 +84,7 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
     try {
       const text = await request(provider, model, key, input);
       // Some models wrap JSON in a markdown fence even when asked not to.
-      return JSON.parse(text.trim().replace(/^```(?:json)?\s*|\s*```$/g, ""));
+      return JSON.parse(text.trim().replace(JSON_FENCE, ""));
     } catch (error) {
       if (input.signal?.aborted) throw error;
       lastError = error;

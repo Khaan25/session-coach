@@ -1,3 +1,5 @@
+const WORD_BREAK = /[\s._-]+/;
+
 /**
  * Up to two initials for a learner's avatar: first and last word of the display name, else the start of the email,
  * so the header menu and the sidebar menu show the same letters for the same person.
@@ -10,7 +12,7 @@ export function initialsOf(
   name: string | null | undefined,
   email: string | null | undefined,
 ): string {
-  const words = (name || email?.split("@")[0] || "").split(/[\s._-]+/).filter(Boolean);
+  const words = (name || email?.split("@")[0] || "").split(WORD_BREAK).filter(Boolean);
   const letters = (words[0]?.[0] ?? "") + (words.length > 1 ? (words.at(-1)?.[0] ?? "") : "");
   return letters.toUpperCase() || "?";
 }

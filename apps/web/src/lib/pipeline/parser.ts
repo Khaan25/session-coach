@@ -207,6 +207,8 @@ function countUnknown(stats: ParseStats, item: Unknown): void {
   stats.unknownSkipped++;
 }
 
+const LINE_BREAK = /\r?\n/;
+
 export function parseSession(raw: string): { events: TimelineEvent[]; stats: ParseStats } {
   const events: TimelineEvent[] = [];
   const stats: ParseStats = {
@@ -222,7 +224,7 @@ export function parseSession(raw: string): { events: TimelineEvent[]; stats: Par
   // Calls are logged before their results, so one pass in file order is enough.
   const skippedToolIds = new Set<string>();
 
-  const lines = raw.split(/\r?\n/);
+  const lines = raw.split(LINE_BREAK);
   // A trailing newline leaves one empty string at the end; it is not a line.
   if (lines.at(-1) === "") lines.pop();
   stats.totalLines = lines.length;

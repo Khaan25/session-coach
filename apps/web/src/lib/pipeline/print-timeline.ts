@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { parseSession } from "./parser.ts";
 
 const SHOWN_CHARS = 100;
+const WHITESPACE = /\s+/g;
 
 const path = process.argv[2];
 if (!path) {
@@ -20,7 +21,7 @@ try {
 const { events, stats } = parseSession(raw);
 
 for (const event of events) {
-  const oneLine = event.text.replace(/\s+/g, " ").trim();
+  const oneLine = event.text.replace(WHITESPACE, " ").trim();
   const shown = oneLine.length > SHOWN_CHARS ? `${oneLine.slice(0, SHOWN_CHARS)}…` : oneLine;
   console.log(`${event.id.padEnd(6)}${event.kind.padEnd(8)}${shown}`);
 }
