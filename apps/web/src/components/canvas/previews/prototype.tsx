@@ -1908,7 +1908,7 @@ function SetupScreen({
           "$ npx session-coach login",
           "",
           `Approved. Signed in as sam@example.com (${name}).`,
-          "Token saved to ~/.config/session-coach/config.json",
+          "Token saved to ~/.session-coach/config.json",
         ];
 
   return (
