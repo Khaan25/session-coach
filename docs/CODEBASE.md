@@ -7,17 +7,21 @@ this guide connects them to the files. Choices and their rejected alternatives a
 
 ## The shape of the repo
 
-| Path                                                             | What lives there                                                               |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [`apps/web/src/app/`](../apps/web/src/app/)                      | Next.js 16 App Router: pages, layouts, Server Actions, route handlers.         |
-| [`apps/web/src/lib/`](../apps/web/src/lib/)                      | Domain logic and data access, one folder per area. Tests sit next to the code. |
-| [`apps/web/src/components/ui/`](../apps/web/src/components/ui/)  | The design system's primitives (shadcn on Base UI).                            |
-| [`apps/web/src/components/`](../apps/web/src/components/) (rest) | App components built from the primitives, one folder per area.                 |
-| [`apps/web/src/styles/`](../apps/web/src/styles/)                | Design tokens, base styles and utilities.                                      |
-| [`apps/web/src/proxy.ts`](../apps/web/src/proxy.ts)              | Runs before every request: session refresh and sign-in routing.                |
-| [`packages/shared/`](../packages/shared/)                        | Zod schemas the web app and the CLI share (decision, session, profile).        |
-| [`supabase/`](../supabase/)                                      | Migrations, local config and the auth email templates.                         |
-| [`scripts/`](../scripts/)                                        | Commit-message and secret checks, and the demo seed.                           |
+| Path                                                                    | What lives there                                                                                                                                                                                         |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`apps/web/src/app/`](../apps/web/src/app/)                             | Next.js 16 App Router: pages, layouts, Server Actions, route handlers.                                                                                                                                   |
+| [`apps/web/src/lib/`](../apps/web/src/lib/)                             | Domain logic and data access, one folder per area. Tests sit next to the code.                                                                                                                           |
+| [`apps/web/src/components/ui/`](../apps/web/src/components/ui/)         | The design system's primitives (shadcn on Base UI).                                                                                                                                                      |
+| [`apps/web/src/components/`](../apps/web/src/components/) (rest)        | App components built from the primitives, one folder per area.                                                                                                                                           |
+| [`apps/web/src/styles/`](../apps/web/src/styles/)                       | Design tokens, base styles and utilities.                                                                                                                                                                |
+| [`apps/web/src/proxy.ts`](../apps/web/src/proxy.ts)                     | Runs before every request: session refresh and sign-in routing.                                                                                                                                          |
+| [`packages/shared/`](../packages/shared/)                               | What the web app and the CLI share: decision, session, profile, project and upload schemas; `limits` (`MAX_UPLOAD_BYTES` and the device poll constants, no zod so the CLI bundle stays small); `redact`. |
+| [`packages/cli/`](../packages/cli/)                                     | The `session-coach` npm CLI: `login`, `push`, `sync` (see [CLI](#cli)).                                                                                                                                  |
+| [`apps/web/src/app/canvas/`](../apps/web/src/app/canvas/)               | `/canvas`, the team's ideas board. 404 in production (`VERCEL_ENV=production`).                                                                                                                          |
+| [`apps/web/src/app/design-system/`](../apps/web/src/app/design-system/) | `/design-system`, the component gallery. 404 in production, same gate.                                                                                                                                   |
+| [`apps/web/src/lib/api/http.ts`](../apps/web/src/lib/api/http.ts)       | Route handler helpers: `requireUser`, `requireCliUser`, `serverError`, `UNIQUE_VIOLATION`, `NO_STORE`.                                                                                                   |
+| [`supabase/`](../supabase/)                                             | Migrations, local config and the auth email templates.                                                                                                                                                   |
+| [`scripts/`](../scripts/)                                               | Commit-message and secret checks, and the demo seed.                                                                                                                                                     |
 
 Route groups split the app by who sees it: `(marketing)` is public and static, `(auth)` holds the sign-in forms,
 `(app)` is the signed-in app with the sidebar, `auth/` holds the email-link and OAuth endpoints, and `api/` holds the
@@ -26,9 +30,9 @@ route handlers.
 ## A request, end to end
 
 1. **`proxy.ts` refreshes the session.** [`proxy.ts`](../apps/web/src/proxy.ts) calls `updateSession()`
-   ([`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)) on every page and route except static files and
-   the Play Stats API. It calls `getClaims()`, which refreshes an expiring access token and writes the new cookies onto
-   the response. Signed-out visitors to `/dashboard`, `/s`, `/review`, `/progress`, `/settings`, `/setup` or `/cli` go to
+   ([`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)) on every page and route except static files, `api/dashboard` (Play Stats), `api/cron`, `api/sessions` (CLI
+   token) and `api/unsubscribe` (signed link). It calls `getClaims()`, which refreshes an expiring access token and writes the new cookies onto
+   the response. Signed-out visitors to `/dashboard`, `/s`, `/review`, `/progress`, `/settings`, `/setup`, `/tracker` or `/cli` go to
    `/login?next=...`; signed-in visitors to `/login` or `/sign-up` go on to `next`.
    - **Why only here:** Supabase refresh tokens are single-use with reuse detection. If a Server Component also
      refreshed, two refreshes of one token would sign the learner out (docs/plans/auth.md #19). Server Components can't
@@ -53,10 +57,16 @@ route handlers.
 3. **Client islands get plain props.** Only components that need state, effects or browser APIs are client components.
    They receive the rows the server read; the few that talk to Supabase directly (Realtime, see below) use the browser
    client from [`lib/supabase/client.ts`](../apps/web/src/lib/supabase/client.ts), which also runs under RLS.
-4. **Writes go through Server Actions or route handlers.** Profile settings use a Server Action
-   ([`(app)/settings/actions.ts`](<../apps/web/src/app/(app)/settings/actions.ts>)) through the RLS client, since
-   learners may write those columns. Everything else (grading, tokens, account deletion) is a route handler under
-   [`app/api/`](../apps/web/src/app/api/) that checks the caller and writes with the service role.
+4. **Writes go through Server Actions or route handlers.** Server Actions on the RLS client cover what learners may
+   write themselves: profile settings and the project level
+   ([`(app)/settings/actions.ts`](<../apps/web/src/app/(app)/settings/actions.ts>)) and the tracker
+   ([`features/tracker/actions.ts`](../apps/web/src/features/tracker/actions.ts)). Everything else (grading, tokens,
+   uploads, account deletion) is a route handler under [`app/api/`](../apps/web/src/app/api/) that checks the caller
+   and writes with the service role. Route handlers use [`lib/api/http.ts`](../apps/web/src/lib/api/http.ts):
+   `requireUser` (`getUser()`), `requireCliUser` (bearer CLI token), `serverError` (log with the route name, generic
+   500), `UNIQUE_VIOLATION` and `NO_STORE`. A guard returns the value or a `Response` to return as is. Every cookie and
+   CLI-token route authenticates before it parses the body, so a bad body from an unknown caller gets 401, not 400; the
+   pre-auth device-login routes (`api/cli/device`, `api/cli/device/token`) parse first, since the body is their credential.
 
 ## Auth flows
 
@@ -103,6 +113,13 @@ Rules every flow follows:
 
 ## Data access rules
 
+- **Typed by the generated schema.** All three clients take the generated `Database` type
+  ([`lib/supabase/database.types.ts`](../apps/web/src/lib/supabase/database.types.ts)). Run `pnpm db:types` after every
+  migration (it needs `supabase start`); CI's rls job regenerates it and fails on drift. Hand-written row casts
+  (`overrideTypes`, `.returns<T>()`, `.maybeSingle<T>()`) remain where a check constraint narrows a column the generator types as
+  plain `string` or `number`, and where an embedded join's shape is set by hand (`overrideTypes` in `lib/review/queries.ts`,
+  `lib/cards/queries.ts` and `lib/tokens/queries.ts`), such as `SessionSummary` in `lib/cards/queries.ts`, `features/tracker/queries.ts` and the
+  answers in `lib/progress/queries.ts`.
 - **Two server clients, chosen per job.**
   - [`lib/supabase/server.ts`](../apps/web/src/lib/supabase/server.ts) `createClient()`: the learner's own client.
     RLS applies. Use it for every learner read and for the writes learners are allowed.
@@ -168,9 +185,9 @@ shape, evidence rules and quote check are the same at every level. `processSessi
 
 `POST /api/review/answer` ([route](../apps/web/src/app/api/review/answer/route.ts)) grades one explanation:
 
-1. Validate `{ cardId, answer }` or `{ cardId, dontKnow: true }` (exactly one) with zod ([`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts)) before any
-   query or model call. 400 names the field.
-2. `getUser()`. 401 when signed out.
+1. `requireUser()` (`getUser()`). 401 when signed out.
+2. Validate `{ cardId, answer }` or `{ cardId, dontKnow: true }` (exactly one) with zod
+   ([`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts)) before any query or model call. 400 names the field.
 3. Read the card with the service role (it needs `model_answer`), its `reviews` row, the learner's time zone and their
    answers of the last 26 hours, in parallel. A card that isn't theirs, or is hidden, is 404. A card with a `reviews`
    row that isn't due today is 409, and so is any card once 5 answers are in today (`DAILY_CAP`, the same rule as the
@@ -253,6 +270,113 @@ Why it is built this way:
 - **Cleanup:** each start deletes rows that expired more than a day ago; a day of grace lets the page say "expired"
   instead of "no such code".
 
+## Rate limits
+
+[`lib/auth/rate-limit.ts`](../apps/web/src/lib/auth/rate-limit.ts), on Upstash Redis sliding windows.
+
+| Budget         | Window       | Keyed on | Guards                                           |
+| -------------- | ------------ | -------- | ------------------------------------------------ |
+| `signIn`       | 10 per 10 m  | IP       | Sign-in                                          |
+| `signUp`       | 5 per 1 h    | IP       | Sign-up                                          |
+| `email`        | 5 per 1 h    | IP       | Reset and resend emails (shared)                 |
+| `deviceStart`  | 10 per 10 m  | IP       | `POST /api/cli/device`                           |
+| `devicePoll`   | 300 per 10 m | IP       | `POST /api/cli/device/token`                     |
+| `push`         | 20 per 1 h   | Learner  | `POST /api/sessions`                             |
+| `process`      | 20 per 1 h   | Learner  | `POST /api/sessions/[id]/process`                |
+| `grade`        | 60 per 1 h   | Learner  | `POST /api/review/answer`                        |
+| `deviceDecide` | 30 per 1 h   | Learner  | Approve, deny and code lookups on `/cli/approve` |
+| `tokenCreate`  | 10 per 1 h   | Learner  | `POST /api/cli/tokens`                           |
+
+- **A Redis error or a timeout (1 s) allows the call**, so an Upstash outage never locks people out.
+- **With no Upstash configured, calls are allowed**, except `grade` and `process` in production, which answer 503
+  ([`lib/auth/spend-limits.ts`](../apps/web/src/lib/auth/spend-limits.ts)). A deploy missing the env vars can't turn
+  model-spend protection off silently.
+- A spent budget answers 429 with `Retry-After` in seconds (`tooManyRequests`).
+
+## Upload
+
+The CLI uploads in three calls, so the log goes straight to Storage and never through a function.
+
+1. **`POST /api/sessions`** ([route](../apps/web/src/app/api/sessions/route.ts)) with the metadata
+   (`uploadRequestSchema` from `packages/shared/src/upload.ts`), never the log.
+   - 201 `{ id, upload_url }`: the row is `pending`; the signed upload URL is valid 2 hours.
+   - 409 `{ id, upload_url }`: started before but never processed; upload again and process.
+   - 409 `{ id }`: `ready`, or `processing` right now; nothing to do.
+   - 400 bad body, 401 missing or unknown token, 413 `size_bytes` over 50 MB (`MAX_UPLOAD_BYTES`), 429 over 20 pushes
+     an hour, 500 anything else.
+   - **Re-push:** a `failed` session, or one stuck in `processing` for over 10 minutes (`STUCK_MS`,
+     [`lib/sessions/stuck.ts`](../apps/web/src/lib/sessions/stuck.ts)), gets 201: its cards are deleted and it goes
+     back to `pending`.
+2. **`PUT`** the gzipped, redacted log to `upload_url`. `upsert` lets a retry overwrite a half-finished upload.
+3. **`POST /api/sessions/[id]/process`** ([route](../apps/web/src/app/api/sessions/[id]/process/route.ts)).
+   - 202 `{ id }`: claimed with a compare-and-set from `pending` to `processing`; `processSession` runs in `after()`.
+   - 409 `{ id, status }`: already processing, ready or failed.
+   - 422: the log isn't in Storage yet. A Storage failure is a 500, not a 422.
+   - 401 (checked first), 400 bad id, 404 not this learner's session (same as missing, so ids can't be probed), 413
+     the real object over 50 MB (the declared size isn't trusted), 429 over 20 runs an hour, 500 anything else.
+   - `maxDuration = 300`, and `after()` work counts inside it. `processSession` gives up at 280 s (`DEADLINE_MS` in
+     [`lib/pipeline/process.ts`](../apps/web/src/lib/pipeline/process.ts)) so it can still write `failed`.
+
+## Extraction pipeline
+
+`processSession` ([`lib/pipeline/process.ts`](../apps/web/src/lib/pipeline/process.ts)) starts at `processing` and
+always ends at `ready` or `failed`, with a learner-readable `error`.
+
+1. **Parse** ([`parser.ts`](../apps/web/src/lib/pipeline/parser.ts)): `parseSession` keeps prompts, replies,
+   Write/Edit summaries, Bash commands and Read paths; drops thinking blocks, attachments, sidechains and Read results;
+   cuts other tool results to 500 characters (`RESULT_MAX_CHARS`); and redacts every kept text again, though the CLI
+   already did.
+2. **Trim** (`trimTimeline` in [`process-rows.ts`](../apps/web/src/lib/pipeline/process-rows.ts)): each event is cut to
+   1,500 characters (`MAX_EVENT_CHARS`), then the newest events that fit in 16,000 (`MAX_TIMELINE_CHARS`) are kept and
+   older ones dropped whole. Event ids stay `E<n>`, so a timeline can start at E57.
+3. **Extract** (`extractCards` in [`extract.ts`](../apps/web/src/lib/pipeline/extract.ts)): one `callModel("extract")`
+   with the project's question level; 0 to 5 cards (`MAX_CARDS`). Each card is parsed alone, so one bad card can't sink
+   the rest. An invalid answer gets one more call after 60 s (`RETRY_DELAY_MS`, a fresh minute of Groq's free tier),
+   then throws.
+4. **Check evidence** (`checkEvidence` in [`evidence.ts`](../apps/web/src/lib/pipeline/evidence.ts)): a quote is
+   `verified` when it is in its cited event and has at least 5 words (`MIN_QUOTE_WORDS`). A card is kept only with a
+   grounded quote: verified and from a prompt, a reply, or the written words of a `DECISIONS.md` edit (DECISIONS.md,
+   2026-10-31).
+5. **Insert, then ready:** all cards in one insert, then `ready`, so a crash in between leaves `failed`, never a ready
+   session with no cards. Zero cards is still `ready` ("No decisions found").
+
+- **Known shortcut:** the insert isn't fenced by the run's start time. A run replaced mid-insert can leave stale cards,
+  and the newer run then fails on `(session_id, position)` until the next push clears them. Move insert and ready into
+  one RPC if that is ever seen.
+
+## Daily cron and email
+
+`GET /api/cron/daily-review` ([route](../apps/web/src/app/api/cron/daily-review/route.ts)) runs daily at 13:00 UTC
+([`apps/web/vercel.json`](../apps/web/vercel.json); Hobby fires within the hour), with `maxDuration = 300`.
+
+1. **Auth:** `Authorization: Bearer <CRON_SECRET>`, else 401.
+2. **Stuck sessions:** `failStuckSessions` marks rows `processing` for over 10 minutes `failed`, even without Resend. A
+   sweep error is logged and the emails still go out.
+3. **Resend check:** 503 when `RESEND_API_KEY` is unset, before any `email_log` row is claimed.
+4. **Recipients** (`dailyReviewRecipients` in [`lib/email/daily-review.ts`](../apps/web/src/lib/email/daily-review.ts)):
+   learners with `notify_email` on who have cards in today's queue in their own time zone, at most once per local day.
+5. **Send:** claim the `email_log` row first (a unique conflict means skip), then send with the Resend
+   `Idempotency-Key` `daily_review/<user>/<day>`. A refused send deletes its row so a rerun retries it. One learner's
+   failure never stops the batch.
+
+- **Unsubscribe:** one click, no login (RFC 8058 `List-Unsubscribe` and `List-Unsubscribe-Post`;
+  [`api/unsubscribe/route.ts`](../apps/web/src/app/api/unsubscribe/route.ts)). The link carries the learner's id and an
+  HMAC-SHA256 of it keyed by `CRON_SECRET` ([`lib/email/unsubscribe.ts`](../apps/web/src/lib/email/unsubscribe.ts)).
+  Rotating `CRON_SECRET` voids the links in old emails.
+
+## CLI
+
+The `session-coach` package in [`packages/cli/`](../packages/cli/); usage is in its
+[README](../packages/cli/README.md).
+
+- **Local files:** `~/.session-coach/config.json` (URL and token), `sync-state.json` (session ids `sync` already
+  handled) and `sync.log` (`sync` prints nothing, so every outcome goes here).
+- **Default URL:** `https://coach.ziaa.me` (`DEFAULT_URL` in `config.ts`); `login --url` points it elsewhere.
+- **Login:** the device-code flow above, or `login --token`.
+- **One upload path:** `push` and `sync` both call `uploadLog` (`upload.ts`): redact, gzip, then the three upload
+  calls.
+- **On 429** the CLI tells the learner when to try again from the server's `Retry-After`.
+
 ## Account deletion
 
 `DELETE /api/account` ([route](../apps/web/src/app/api/account/route.ts)) runs in this order:
@@ -323,26 +447,30 @@ open. `proxy.ts` skips these routes: they have no session. Retention maths is pu
      anon key, update `profiles.email`) and record the result in the PR ([rules/migrations.md](rules/migrations.md)).
 - **"No visual change" needs a before/after pixel diff** of every affected route.
 
+## Env vars
+
+[`.env.example`](../.env.example) at the repo root is the full list, with what each one is for.
+
 ## Where to change what
 
-| To change...                          | Edit                                                                                                                                                                                 |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Which pages need sign-in              | `PROTECTED` in [`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)                                                                                                      |
-| Where sign-in sends people by default | `DEFAULT_NEXT` in [`lib/auth/safe-next.ts`](../apps/web/src/lib/auth/safe-next.ts)                                                                                                   |
-| Auth form copy and rules              | [`app/(auth)/actions.ts`](<../apps/web/src/app/(auth)/actions.ts>), [`components/auth/`](../apps/web/src/components/auth/)                                                           |
-| Auth email wording                    | [`supabase/templates/`](../supabase/templates/) and the same templates in the Supabase dashboard                                                                                     |
-| The review gaps (1, 3, 7 days)        | `GAP_DAYS` in [`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts), with its test, ARCHITECTURE.md and PLAY_API.md                                                     |
-| What each question level asks         | `QUESTION_LEVELS` in [`lib/pipeline/extract.ts`](../apps/web/src/lib/pipeline/extract.ts) and its test; examples in [`lib/projects/level.ts`](../apps/web/src/lib/projects/level.ts) |
-| The grading prompt or output shape    | [`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts) and its test                                                                                                            |
-| Model provider or model               | Env vars only: `MODEL_PROVIDER`, `MODEL_<TASK>`, the provider key                                                                                                                    |
-| A new model provider                  | `KEY_ENV` and `request()` in [`lib/model/call-model.ts`](../apps/web/src/lib/model/call-model.ts)                                                                                    |
-| What "can still explain" means        | [`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts), its test and ARCHITECTURE.md                                                                                 |
-| "Due today" and the 5-a-day cap       | `todayQueue` and `DAILY_CAP` in [`lib/review/today.ts`](../apps/web/src/lib/review/today.ts), with its test                                                                          |
-| What a session is called              | [`lib/sessions/name.ts`](../apps/web/src/lib/sessions/name.ts)                                                                                                                       |
-| Session list columns or page size     | [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)                                                                                                                       |
-| Card columns shown on /s/[id]         | [`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts) (never `model_answer`)                                                                                                |
-| A table, column, policy or grant      | A new migration (team agreement first), `packages/shared`, and [DATA_MODEL.md](DATA_MODEL.md)                                                                                        |
-| Colours, spacing, type, motion        | [`styles/tokens.css`](../apps/web/src/styles/tokens.css)                                                                                                                             |
-| A component's look                    | A variant in its file under [`components/ui/`](../apps/web/src/components/ui/)                                                                                                       |
-| Security headers                      | [`apps/web/next.config.ts`](../apps/web/next.config.ts)                                                                                                                              |
-| Play Stats numbers                    | [PLAY_API.md](PLAY_API.md) first, then `app/api/dashboard/v1/` and `lib/play-stats.ts`                                                                                               |
+| To change...                          | Edit                                                                                                                                                                                                                                                                                                              |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Which pages need sign-in              | `PROTECTED` in [`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)                                                                                                                                                                                                                                   |
+| Where sign-in sends people by default | `DEFAULT_NEXT` in [`lib/auth/safe-next.ts`](../apps/web/src/lib/auth/safe-next.ts)                                                                                                                                                                                                                                |
+| Auth form copy and rules              | [`app/(auth)/actions.ts`](<../apps/web/src/app/(auth)/actions.ts>), [`components/auth/`](../apps/web/src/components/auth/)                                                                                                                                                                                        |
+| Auth email wording                    | [`supabase/templates/`](../supabase/templates/) and the same templates in the Supabase dashboard                                                                                                                                                                                                                  |
+| The review gaps (1, 3, 7 days)        | `GAP_DAYS` in [`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts), with its test, ARCHITECTURE.md, and the copy that hard-codes day 1, 3 and 7: `components/marketing/` (`bento-section.tsx`, `review-schedule.tsx`), `components/auth/auth-art.tsx` and the FAQ in `(marketing)/support/page.tsx` |
+| What each question level asks         | `QUESTION_LEVELS` in [`lib/pipeline/extract.ts`](../apps/web/src/lib/pipeline/extract.ts) and its test; examples in [`lib/projects/level.ts`](../apps/web/src/lib/projects/level.ts)                                                                                                                              |
+| The grading prompt or output shape    | [`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts) and its test                                                                                                                                                                                                                                         |
+| Model provider or model               | Env vars only: `MODEL_PROVIDER`, `MODEL_<TASK>`, the provider key                                                                                                                                                                                                                                                 |
+| A new model provider                  | `KEY_ENV` and `request()` in [`lib/model/call-model.ts`](../apps/web/src/lib/model/call-model.ts)                                                                                                                                                                                                                 |
+| What "can still explain" means        | [`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts), its test and ARCHITECTURE.md                                                                                                                                                                                                              |
+| "Due today" and the 5-a-day cap       | `todayQueue` and `DAILY_CAP` in [`lib/review/today.ts`](../apps/web/src/lib/review/today.ts), with its test                                                                                                                                                                                                       |
+| What a session is called              | [`lib/sessions/name.ts`](../apps/web/src/lib/sessions/name.ts)                                                                                                                                                                                                                                                    |
+| Session list columns or page size     | [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)                                                                                                                                                                                                                                                    |
+| Card columns shown on /s/[id]         | [`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts) (never `model_answer`)                                                                                                                                                                                                                             |
+| A table, column, policy or grant      | A new migration (team agreement first), `packages/shared`, and [DATA_MODEL.md](DATA_MODEL.md)                                                                                                                                                                                                                     |
+| Colours, spacing, type, motion        | [`styles/tokens.css`](../apps/web/src/styles/tokens.css)                                                                                                                                                                                                                                                          |
+| A component's look                    | A variant in its file under [`components/ui/`](../apps/web/src/components/ui/)                                                                                                                                                                                                                                    |
+| Security headers                      | [`apps/web/next.config.ts`](../apps/web/next.config.ts)                                                                                                                                                                                                                                                           |
+| Play Stats numbers                    | [PLAY_API.md](PLAY_API.md) first, then `app/api/dashboard/v1/` and `lib/play-stats.ts`                                                                                                                                                                                                                            |

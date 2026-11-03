@@ -12,6 +12,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
   (see [`tracker_members` and `tracker_tasks`](#tracker_members-and-tracker_tasks)).
 - [`20261103000000_session_processing_started.sql`](../supabase/migrations/20261103000000_session_processing_started.sql):
   `sessions.processing_started_at`, so stuck runs are timed from their claim and `created_at` stays the upload time.
+- [`20261104000000_answer_first_why_and_skips.sql`](../supabase/migrations/20261104000000_answer_first_why_and_skips.sql):
+  revokes learners' `select` on `decision_cards.why` and `evidence`, and adds `answers.skipped`.
 - [`20261104000100_cli_device_codes.sql`](../supabase/migrations/20261104000100_cli_device_codes.sql): the
   server-only `cli_device_codes` table for the CLI's device-code login.
 - [`20261104000200_projects.sql`](../supabase/migrations/20261104000200_projects.sql): `projects`, the question level
@@ -24,7 +26,7 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
 A learner's browser holds a JWT and the public anon key, and can send any query PostgREST allows. If a learner could
 write `answers.score`, `reviews.mastered` or `decision_cards.evidence`, they could fake progress or un-hide a card the
 evidence check rejected. So RLS grants learners `select` on their own rows and almost nothing else. Writes go through
-route handlers (and, later, the pipeline) using the service-role client, which bypasses RLS; those routes check the
+route handlers and the pipeline using the service-role client, which bypasses RLS; those routes check the
 caller in code first ([rules/authorization.md](rules/authorization.md)).
 
 The only learner writes:
@@ -87,14 +89,14 @@ Bearer tokens the CLI uses to upload sessions, listed on `/setup` as connected d
 `session-coach login` (device code, `POST /api/cli/device/token`, labelled with the device name) or on `/setup`
 through `POST /api/cli/tokens`.
 
-| Column         | Stores                                                                             | Written by                   |
-| -------------- | ---------------------------------------------------------------------------------- | ---------------------------- |
-| `id`           | Token id, used to revoke it.                                                       | Default                      |
-| `user_id`      | Owner.                                                                             | Server                       |
-| `token_hash`   | sha256 of the raw token, 64 hex characters. Unique. The raw token is never stored. | Server                       |
-| `label`        | Optional name ("work laptop"), at most 100 characters (route check).               | Server                       |
-| `last_used_at` | When the upload API last accepted it.                                              | Server (upload API, planned) |
-| `created_at`   | Creation time.                                                                     | Default                      |
+| Column         | Stores                                                                             | Written by |
+| -------------- | ---------------------------------------------------------------------------------- | ---------- |
+| `id`           | Token id, used to revoke it.                                                       | Default    |
+| `user_id`      | Owner.                                                                             | Server     |
+| `token_hash`   | sha256 of the raw token, 64 hex characters. Unique. The raw token is never stored. | Server     |
+| `label`        | Optional name ("work laptop"), at most 100 characters (route check).               | Server     |
+| `last_used_at` | When the upload API last accepted it (`lib/tokens/verify.ts`).                     | Server     |
+| `created_at`   | Creation time.                                                                     | Default    |
 
 - **Policies:** `read own tokens`, `delete own tokens`. No insert or update policy.
 - **Why hash:** a leaked database dump or log can't be replayed as a token. sha256 without a salt is enough here
@@ -239,14 +241,15 @@ One row per answered card: where it is in the day 1/3/7 schedule.
 
 ### `email_log`
 
-One row per email sent (the daily review email, planned).
+One row per email sent: the daily review email (`lib/email/daily-review.ts`).
 
-| Column      | Stores                                    | Written by |
-| ----------- | ----------------------------------------- | ---------- |
-| `user_id`   | Recipient.                                | Server     |
-| `kind`      | `lesson_ready` or `daily_review`.         | Server     |
-| `sent_on`   | The day it counts for.                    | Server     |
-| `resend_id` | The provider's message id, after sending. | Server     |
+| Column      | Stores                                                                       | Written by |
+| ----------- | ---------------------------------------------------------------------------- | ---------- |
+| `id`        | Row id.                                                                      | Default    |
+| `user_id`   | Recipient.                                                                   | Server     |
+| `kind`      | `daily_review`. `lesson_ready` is allowed by the check but nothing sends it. | Server     |
+| `sent_on`   | The day it counts for.                                                       | Server     |
+| `resend_id` | The provider's message id, after sending.                                    | Server     |
 
 - `unique (user_id, kind, sent_on)`: the cron inserts this row **before** sending; a conflict means another run
   already claimed it, so a rerun or a crash never sends twice ([rules/error-handling.md](rules/error-handling.md)).
@@ -261,10 +264,12 @@ exactly. A repo with no row, and every session with no repo, gets `simple`.
 
 | Column           | Stores                                                                         | Written by              |
 | ---------------- | ------------------------------------------------------------------------------ | ----------------------- |
+| `id`             | Row id.                                                                        | Default                 |
 | `user_id`        | The learner.                                                                   | Learner on insert (RLS) |
 | `repo`           | The repo name, as the CLI uploaded it on `sessions.repo`. Never blank.         | Learner on insert       |
 | `question_level` | `simple`, `hard` or `complex`. Default `simple`.                               | Learner (column grant)  |
 | `onboarded_at`   | When the learner last chose a level (or "Not now"); null shows the setup card. | Learner (column grant)  |
+| `created_at`     | Insert time.                                                                   | Default                 |
 
 - **Policies:** select and update own rows; insert only with `user_id = auth.uid()` **and** a session of theirs in
   that repo, so the table can't fill with made-up repos.
