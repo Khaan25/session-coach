@@ -45,10 +45,10 @@ flowchart LR
     d7 -- "scored 2" --> m([Mastered])
     d1 -- "0 or 1" --> d1
     d3 -- "0 or 1" --> d1
-    d7 -- "0 or 1" --> d1
+    d7 -- "0 or 1" --> d3
 ```
 
-2 is Explained, 1 Partly, 0 Missed. Anything below 2 restarts the card at day 1 (`nextReview` in `apps/web/src/lib/review/schedule.ts`).
+2 is Explained, 1 Partly, 0 Missed. Anything below 2 moves the card one step down (never below day 1) and it comes back tomorrow (`nextReview` in `apps/web/src/lib/review/schedule.ts`).
 
 ## Screens
 

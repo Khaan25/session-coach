@@ -50,7 +50,7 @@ const loop = [
     step: "3",
     icon: ClockCountdownIcon,
     title: "Explain it back on day 1, 3 and 7",
-    body: "You answer in your own words and get a score of 0, 1 or 2. A 2 moves the card to the next gap; less starts it again at day 1. Passing day 7 masters it.",
+    body: "You answer in your own words and get a score of 0, 1 or 2. A 2 moves the card to the next gap; less moves it one step down (never below day 1) and it comes back tomorrow. Passing the last review masters it.",
   },
 ] as const;
 

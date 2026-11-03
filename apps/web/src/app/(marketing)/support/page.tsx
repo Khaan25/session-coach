@@ -47,7 +47,7 @@ const faq = [
   {
     question: "How are my answers scored?",
     answer:
-      "Each answer gets 0, 1 or 2 against the card's reason, its quotes and a model answer. A 2 moves the card to the next review (day 1, 3, then 7); a 0 or 1 starts it again at day 1. Passing day 7 masters the card.",
+      "Each answer gets 0, 1 or 2 against the card's reason, its quotes and a model answer. A 2 moves the card to the next review (day 1, 3, then 7); a 0 or 1 moves it one step down (never below day 1) and it comes back tomorrow. Passing the last review masters the card.",
   },
 ] as const;
 

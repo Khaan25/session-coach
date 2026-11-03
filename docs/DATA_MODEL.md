@@ -200,7 +200,7 @@ One row per answered card: where it is in the day 1/3/7 schedule.
 - **Check:** `mastered = (due_on is null)`, so a card can't be both pending and undated, or mastered and still due.
 - **Policy:** `read own reviews`. **Attack prevented:** a learner setting `mastered = true` or pushing `due_on` away.
 - **Why one row per card, not a row per future review:** the step and due date are all the queue needs; future rows
-  would have to be deleted every time a low score restarts the card.
+  would have to be deleted every time a low score moves the card down.
 - A card has no row until its first answer. The queue finds new cards from `decision_cards` instead.
 - **Index:** `reviews_due_idx (user_id, due_on) where not mastered`, for the "due today" count.
 

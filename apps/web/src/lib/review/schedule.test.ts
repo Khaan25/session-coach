@@ -13,14 +13,40 @@ test("score 2 walks the card through day 1, 3 and 7 to mastered", () => {
   assert.deepEqual(nextReview(3, 2, today), { step: 3, due_on: null, mastered: true });
 });
 
-test("score 0 or 1 restarts at day 1 from any step", () => {
+test("score 0 or 1 moves the card one step down, never below 1, due tomorrow", () => {
+  const expected = { 0: 1, 1: 1, 2: 1, 3: 2 } as const;
   for (const step of [0, 1, 2, 3] as const)
     for (const score of [0, 1] as const)
       assert.deepEqual(nextReview(step, score, today), {
-        step: 1,
+        step: expected[step],
         due_on: "2026-10-30",
         mastered: false,
       });
+});
+
+test("a perfect run from Tue 2026-11-03 is due 4, 7 and 14 Nov, then mastered", () => {
+  let day = "2026-11-03";
+  let state = nextReview(0, 2, day);
+  assert.deepEqual(state, { step: 1, due_on: "2026-11-04", mastered: false });
+  day = state.due_on!;
+  state = nextReview(state.step, 2, day);
+  assert.deepEqual(state, { step: 2, due_on: "2026-11-07", mastered: false });
+  day = state.due_on!;
+  state = nextReview(state.step, 2, day);
+  assert.deepEqual(state, { step: 3, due_on: "2026-11-14", mastered: false });
+  day = state.due_on!;
+  state = nextReview(state.step, 2, day);
+  assert.deepEqual(state, { step: 3, due_on: null, mastered: true });
+});
+
+test("a slip on the last review keeps the progress: back one step, then on to day 7", () => {
+  const slipped = nextReview(3, 1, "2026-11-14");
+  assert.deepEqual(slipped, { step: 2, due_on: "2026-11-15", mastered: false });
+  assert.deepEqual(nextReview(slipped.step, 2, "2026-11-15"), {
+    step: 3,
+    due_on: "2026-11-22",
+    mastered: false,
+  });
 });
 
 test("addDays crosses month, year and leap day", () => {

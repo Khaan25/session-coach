@@ -157,7 +157,7 @@ The dashboard list, the sidebar and a processing session's page update as the pi
    parallel. A card that isn't theirs, or is hidden, is 404.
 4. `callModel("grade", ...)` and validate the output as `{ score: 0|1|2, missing }`; invalid twice is 502.
 5. `nextReview(step, score, today)` ([`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts)): score 2
-   moves to the next gap (day 1, 3, 7) and passing day 7 masters the card; a score below 2 restarts at day 1.
+   moves to the next gap (day 1, 3, 7) and passing day 7 masters the card; a score below 2 moves it one step down (never below day 1), due tomorrow.
 6. Move `reviews`, then insert `answers`, and return `{ score, missing, modelAnswer, evidence, nextDue }`. This
    response is the first time the answer key reaches the browser.
 

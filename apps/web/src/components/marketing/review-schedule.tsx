@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLoopStep } from "@/hooks/use-loop-step";
 
 // One card's way through the schedule, played on a loop: every 2.2s it is answered, and the marker springs to
-// where the score sends it. A 2 moves it to the next gap, less starts it again at day 1, a 2 on day 7 masters it
+// where the score sends it. A 2 moves it to the next gap, less moves it one step down, a 2 on day 7 masters it
 // (docs/ARCHITECTURE.md). The track is decorative; the rule is written out under it for everyone.
 const stops = ["Session", "Day 1", "Day 3", "Day 7", "Mastered"];
 
@@ -82,8 +82,9 @@ export function ReviewSchedule() {
             </AnimatePresence>
           </div>
           <p className="sr-only">
-            Each card is due on day 1, 3 and 7. A score of 2 moves it to the next day; less starts
-            it again at day 1. Passing day 7 masters it.
+            Each card is due on day 1, 3 and 7. A score of 2 moves it to the next day; less moves it
+            one step down (never below day 1) and it comes back tomorrow. Passing the last review
+            masters it.
           </p>
         </CardContent>
       </Card>

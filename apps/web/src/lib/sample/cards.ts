@@ -88,7 +88,7 @@ export function getQuizCard(cardId: string): QuizCard | undefined {
 
 export const quizCardIds = visibleCards.map(({ id }) => id);
 
-/** SAMPLE grading result for the mock submit. A score of 1 restarts the card at day 1, so it is due tomorrow. */
+/** SAMPLE grading result for the mock submit. A score of 1 moves the card one step down, so it is due tomorrow. */
 export const sampleGrade: { score: Score; missing: string; nextDue: string; nextDueLabel: string } =
   {
     score: 1,
