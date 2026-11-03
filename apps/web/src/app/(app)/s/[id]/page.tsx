@@ -8,12 +8,12 @@ import { SessionFailedState } from "@/components/app/error-state";
 import { ProcessingState } from "@/components/app/loading-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { StatusBadge } from "@/components/app/status-badge";
-import { DecisionCard } from "@/components/cards/decision-card";
+import { DecisionCard, LockedDecisionCard } from "@/components/cards/decision-card";
 import { RefreshOnSettle } from "@/components/cards/refresh-on-settle";
 import { Code } from "@/components/ui/code-block";
 import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import type { CardView } from "@/lib/cards/columns";
+import type { CardView, SessionCard } from "@/lib/cards/columns";
 import { getSessionWithCards } from "@/lib/cards/queries";
 import type { SessionSummary } from "@/lib/sessions/rows";
 import { formatRelativeTime } from "@/lib/relative-time";
@@ -39,7 +39,13 @@ const SAMPLE_SESSION: SessionSummary = {
   error: null,
   created_at: SAMPLE_NOW.toISOString(),
 };
-const sample = (position: number, decision: string, why: string, question: string): CardView => ({
+const sample = (
+  position: number,
+  decision: string,
+  why: string,
+  question: string,
+): CardView & { locked: false } => ({
+  locked: false,
   id: `sample-card-${position}`,
   position,
   decision,
@@ -103,7 +109,7 @@ function SessionView({
   userId,
 }: {
   session: SessionSummary;
-  cards: CardView[];
+  cards: SessionCard[];
   now: Date;
   /** Only a pending or processing session needs it, to refresh when it settles. */
   userId?: string;
@@ -149,9 +155,13 @@ function SessionView({
         />
       ) : (
         <div className="flex flex-col gap-6">
-          {cards.map((card) => (
-            <DecisionCard key={card.id} card={card} />
-          ))}
+          {cards.map((card) =>
+            card.locked ? (
+              <LockedDecisionCard key={card.id} card={card} />
+            ) : (
+              <DecisionCard key={card.id} card={card} />
+            ),
+          )}
         </div>
       )}
     </Container>

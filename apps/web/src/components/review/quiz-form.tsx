@@ -6,7 +6,14 @@ import type { Evidence } from "@session-coach/shared/decision";
 
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Code } from "@/components/ui/code-block";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
@@ -23,6 +30,7 @@ const MAX_ANSWER = 4000;
 type Grade = {
   score: Score;
   missing: string;
+  why: string;
   modelAnswer: string;
   evidence: Evidence[];
   /** YYYY-MM-DD, or null once the card is mastered. */
@@ -38,11 +46,15 @@ const formatDue = (date: string) =>
     timeZone: "UTC",
   }).format(new Date(`${date}T00:00:00Z`));
 
-async function postAnswer(cardId: string, answer: string): Promise<Grade> {
+/** Sends an explanation, or `{ dontKnow: true }` for an honest skip. */
+async function postAnswer(
+  cardId: string,
+  attempt: { answer: string } | { dontKnow: true },
+): Promise<Grade> {
   const response = await fetch("/api/review/answer", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ cardId, answer }),
+    body: JSON.stringify({ cardId, ...attempt }),
   }).catch(() => null);
   if (!response) throw new Error("Check your connection and try again.");
   const body = await response.json().catch(() => null);
@@ -52,7 +64,9 @@ async function postAnswer(cardId: string, answer: string): Promise<Grade> {
 
 /**
  * The quiz: the card's question, the learner's explanation and, after submit, the grade. Gets only the question; the
- * answer key reaches the browser only in the grading route's response, after the answer is in.
+ * why and the answer key reach the browser only in the grading route's response, after the answer is in.
+ * "I don't know yet" is an honest skip: no score to fear, the why is shown, and the card comes back tomorrow, so there
+ * is no reason to guess or paste the question into an AI.
  */
 export function QuizForm({
   cardId,
@@ -69,6 +83,7 @@ export function QuizForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [grade, setGrade] = useState<Grade | null>(null);
+  const [skipped, setSkipped] = useState(false);
   // The submit button unmounts when the result replaces the form, so focus moves to the result heading.
   const { target: resultHeading } = useFocusWhenReplaced<HTMLHeadingElement>(grade !== null);
 
@@ -81,7 +96,7 @@ export function QuizForm({
     setError(null);
     setPending(true);
     toast
-      .promise(postAnswer(cardId, trimmed), {
+      .promise(postAnswer(cardId, { answer: trimmed }), {
         loading: "Scoring your answer",
         success: (result) => {
           setGrade(result);
@@ -104,31 +119,59 @@ export function QuizForm({
       .finally(() => setPending(false));
   }
 
+  function skip() {
+    if (pending) return;
+    setError(null);
+    setPending(true);
+    postAnswer(cardId, { dontKnow: true })
+      .then((result) => {
+        setSkipped(true);
+        setGrade(result);
+      })
+      .catch((reason: unknown) => {
+        setError(reason instanceof Error ? reason.message : "Try again.");
+      })
+      .finally(() => setPending(false));
+  }
+
   if (grade)
     return (
       <Card size="lg">
         <CardHeader>
           <CardTitle>
             <h2 ref={resultHeading} tabIndex={-1}>
-              Your result
+              {skipped ? "Here's the why" : "Your result"}
             </h2>
           </CardTitle>
+          {skipped && (
+            <CardDescription>
+              Not knowing yet is fine. This card comes back tomorrow.
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent>
           <DataList>
+            {!skipped && (
+              <>
+                <DataListItem>
+                  <DataListLabel>Score</DataListLabel>
+                  <DataListValue>
+                    <ScoreBadge score={grade.score} />
+                  </DataListValue>
+                </DataListItem>
+                <DataListItem>
+                  <DataListLabel>Your answer</DataListLabel>
+                  <DataListValue>{answer.trim()}</DataListValue>
+                </DataListItem>
+                <DataListItem>
+                  <DataListLabel>What was missing</DataListLabel>
+                  <DataListValue>{grade.missing || "Nothing"}</DataListValue>
+                </DataListItem>
+              </>
+            )}
             <DataListItem>
-              <DataListLabel>Score</DataListLabel>
-              <DataListValue>
-                <ScoreBadge score={grade.score} />
-              </DataListValue>
-            </DataListItem>
-            <DataListItem>
-              <DataListLabel>Your answer</DataListLabel>
-              <DataListValue>{answer.trim()}</DataListValue>
-            </DataListItem>
-            <DataListItem>
-              <DataListLabel>What was missing</DataListLabel>
-              <DataListValue>{grade.missing || "Nothing"}</DataListValue>
+              <DataListLabel>Why</DataListLabel>
+              <DataListValue>{grade.why}</DataListValue>
             </DataListItem>
             <DataListItem>
               <DataListLabel>Model answer</DataListLabel>
@@ -233,9 +276,14 @@ export function QuizForm({
           </Field>
         </CardContent>
         <CardFooter>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Scoring" : "Submit answer"}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button type="submit" disabled={pending}>
+              {pending ? "Scoring" : "Submit answer"}
+            </Button>
+            <Button type="button" variant="secondary" disabled={pending} onClick={skip}>
+              I don&rsquo;t know yet
+            </Button>
+          </div>
         </CardFooter>
       </Card>
     </form>

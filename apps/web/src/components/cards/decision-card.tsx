@@ -14,7 +14,8 @@ import { Code } from "@/components/ui/code-block";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Item, ItemContent, ItemDescription, ItemGroup } from "@/components/ui/item";
 import { Status } from "@/components/ui/status";
-import type { CardView } from "@/lib/cards/columns";
+import { QuizForm } from "@/components/review/quiz-form";
+import type { CardHead, CardView } from "@/lib/cards/columns";
 
 /**
  * One decision card on /s/[id]: the decision, why, where the reason came from, the files, the evidence quotes and
@@ -105,5 +106,19 @@ export function DecisionCard({ card }: { card: CardView }) {
         </div>
       </CardFooter>
     </Card>
+  );
+}
+
+/**
+ * A card the learner hasn't answered yet: only the decision, the question and the answer box. The why and the
+ * evidence aren't on the page at all; they come back from the grading route once the learner answers or says they
+ * don't know yet (retrieval before reveal).
+ */
+export function LockedDecisionCard({ card }: { card: CardHead }) {
+  return (
+    <section aria-label={card.decision} className="flex flex-col gap-3">
+      <h2 className="type-heading-sm">{card.decision}</h2>
+      <QuizForm cardId={card.id} question={card.question} nextHref={null} />
+    </section>
   );
 }

@@ -150,16 +150,18 @@ The dashboard list, the sidebar and a processing session's page update as the pi
 
 `POST /api/review/answer` ([route](../apps/web/src/app/api/review/answer/route.ts)) grades one explanation:
 
-1. Validate `{ cardId, answer }` with zod ([`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts)) before any
+1. Validate `{ cardId, answer }` or `{ cardId, dontKnow: true }` (exactly one) with zod ([`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts)) before any
    query or model call. 400 names the field.
 2. `getUser()`. 401 when signed out.
 3. Read the card with the service role (it needs `model_answer`), its `reviews` row and the learner's time zone, in
    parallel. A card that isn't theirs, or is hidden, is 404.
-4. `callModel("grade", ...)` and validate the output as `{ score: 0|1|2, missing }`; invalid twice is 502.
+4. `callModel("grade", ...)` and validate the output as `{ score: 0|1|2, missing }`; invalid twice is 502. An honest
+   skip (`dontKnow`) skips the model and the rate limit: score 0, stored as the answer "I don't know yet".
 5. `nextReview(step, score, today)` ([`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts)): score 2
    moves to the next gap (day 1, 3, 7) and passing day 7 masters the card; a score below 2 moves it one step down (never below day 1), due tomorrow.
-6. Move `reviews`, then insert `answers`, and return `{ score, missing, modelAnswer, evidence, nextDue }`. This
-   response is the first time the answer key reaches the browser.
+6. Move `reviews`, then insert `answers`, and return `{ score, missing, why, modelAnswer, evidence, nextDue }`. This
+   response is the first time the why and the answer key reach the browser for a card. `/s/[id]` reads a card's why,
+   source, files and evidence only once it has a `reviews` row (`getSessionWithCards`, `lockUnanswered`).
 
 Why it is built this way:
 

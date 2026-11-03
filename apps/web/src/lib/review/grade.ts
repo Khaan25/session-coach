@@ -5,11 +5,26 @@ import { z } from "zod";
 /** The longest explanation accepted, in characters: enough for a paragraph, small enough to keep model calls cheap. */
 export const MAX_ANSWER = 4000;
 
-/** POST /api/review/answer body (plan, Phase 6 step 2). Checked before any query or model call. */
-export const answerRequestSchema = z.object({
-  cardId: z.uuid(),
-  answer: z.string().trim().min(1).max(MAX_ANSWER),
-});
+/** What an honest skip ("I don't know yet") is stored as in `answers.answer`, so it needs no new column. */
+export const DONT_KNOW_ANSWER = "I don't know yet";
+
+/**
+ * POST /api/review/answer body (plan, Phase 6 step 2): an explanation, or `dontKnow: true` for an honest skip. Exactly
+ * one of the two. Checked before any query or model call.
+ */
+export const answerRequestSchema = z
+  .object({
+    cardId: z.uuid(),
+    answer: z.string().trim().min(1).max(MAX_ANSWER).optional(),
+    dontKnow: z.literal(true).optional(),
+  })
+  .refine((body) => (body.answer === undefined) !== (body.dontKnow === undefined), {
+    message: "Send an answer or dontKnow, not both",
+    path: ["answer"],
+  });
+
+/** The grade of an honest skip: 0, so the card comes back tomorrow, with nothing to say is missing. No model call. */
+export const skipGrade = (): GradeOutput => ({ score: 0, missing: "" });
 
 /** What the grading model must return. Anything else is invalid output: retry once, then 502. */
 export const gradeOutputSchema = z.object({
