@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-04 · Question level per project
+
+- **Decision:** learners pick how hard questions are per repo: simple (one-step "why did we do X"), hard (the trade-off or rejected alternative, and what breaks if changed) or complex (reason across two decisions, or predict a change in a new scenario, still grounded in the session). Stored in a new `projects` table keyed by `(user_id, repo)`; the extraction prompt swaps only its question line by level. Default simple.
+- **Sessions with no repo** have no project and use simple. No `profiles.default_question_level`: nothing needed it yet.
+- **Onboarding:** a dashboard card per repo with sessions but no `onboarded_at`. "Not now" saves simple and sets `onboarded_at`, so nothing hides a prompt forever without a choice. /settings changes it later; changes apply to new sessions only, existing cards keep their questions.
+- **Writes:** learners insert their own row (RLS also requires a session in that repo) and may update only `question_level` and `onboarded_at` (column grants). The action updates, then inserts, because a PostgREST upsert writes `user_id` and `repo` on conflict.
+- **Rejected:** a level per learner (one repo can be new and another familiar); a level per session (too many prompts); regenerating existing cards on change (pipeline work, v2); a `security definer` upsert RPC (column grants already do the job).
+
 ## 2026-11-03 · A miss drops a card one level
 
 - **Decision:** a score below 2 moves the card one step down (never below step 1) and it is due tomorrow; a 2 is unchanged. Only the last review (step 3, day 7) behaves differently from the old "starts again at day 1": a miss there goes back to step 2. The level is the rung: 0 never answered, 1-3 the pending step, "owned" = mastered (`levelOf` and `countOwned` in `lib/review/level.ts`, pure). The 1/3/7 days are the gaps after each answer, so a perfect run is mastered about 11 days after the first answer (answers on day 0, 1, 4 and 11).

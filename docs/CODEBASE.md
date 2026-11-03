@@ -146,6 +146,23 @@ The dashboard list, the sidebar and a processing session's page update as the pi
   hidden ones). Settling on `ready` or `failed` raises one toast; a module-level set stops the dashboard and sidebar
   from toasting the same change twice.
 
+## Question level per project
+
+A project is one learner's repo (`projects`, see [DATA_MODEL.md](DATA_MODEL.md#projects)). Its `question_level`
+(simple, hard, complex; schema in `packages/shared/src/project.ts`) picks the question line of the extraction prompt
+(`extractInstructions(level)` in [`lib/pipeline/extract.ts`](../apps/web/src/lib/pipeline/extract.ts)); the output
+shape, evidence rules and quote check are the same at every level. `processSession` reads the level by
+`(user_id, repo)` and falls back to simple for no repo, no row or a failed read, so the level never fails a run.
+
+- **Choosing it:** the dashboard shows a setup card per repo that has sessions but no `onboarded_at`
+  ([`components/projects/project-setup.tsx`](../apps/web/src/components/projects/project-setup.tsx)); "Not now" saves
+  simple. /settings lists every repo with a picker that saves on change.
+- **Saving it:** the `setProjectLevel` Server Action in
+  [`(app)/settings/actions.ts`](<../apps/web/src/app/(app)/settings/actions.ts>) takes the user id from the session
+  and calls `saveProjectLevel` ([`lib/projects/save.ts`](../apps/web/src/lib/projects/save.ts)): validate with zod,
+  update, else insert, through the RLS client.
+- **Scope:** a change applies to sessions processed after it. Existing cards keep their questions.
+
 ## Grading pipeline
 
 `POST /api/review/answer` ([route](../apps/web/src/app/api/review/answer/route.ts)) grades one explanation:
@@ -264,23 +281,24 @@ open. `proxy.ts` skips these routes: they have no session. Retention maths is pu
 
 ## Where to change what
 
-| To change...                          | Edit                                                                                                                             |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Which pages need sign-in              | `PROTECTED` in [`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)                                                  |
-| Where sign-in sends people by default | `DEFAULT_NEXT` in [`lib/auth/safe-next.ts`](../apps/web/src/lib/auth/safe-next.ts)                                               |
-| Auth form copy and rules              | [`app/(auth)/actions.ts`](<../apps/web/src/app/(auth)/actions.ts>), [`components/auth/`](../apps/web/src/components/auth/)       |
-| Auth email wording                    | [`supabase/templates/`](../supabase/templates/) and the same templates in the Supabase dashboard                                 |
-| The review gaps (1, 3, 7 days)        | `GAP_DAYS` in [`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts), with its test, ARCHITECTURE.md and PLAY_API.md |
-| The grading prompt or output shape    | [`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts) and its test                                                        |
-| Model provider or model               | Env vars only: `MODEL_PROVIDER`, `MODEL_<TASK>`, the provider key                                                                |
-| A new model provider                  | `KEY_ENV` and `request()` in [`lib/model/call-model.ts`](../apps/web/src/lib/model/call-model.ts)                                |
-| What "can still explain" means        | [`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts), its test and ARCHITECTURE.md                             |
-| "Due today"                           | `dueTodayCount` in [`lib/review/queries.ts`](../apps/web/src/lib/review/queries.ts)                                              |
-| What a session is called              | [`lib/sessions/name.ts`](../apps/web/src/lib/sessions/name.ts)                                                                   |
-| Session list columns or page size     | [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)                                                                   |
-| Card columns learners read            | [`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts) (never `model_answer`)                                            |
-| A table, column, policy or grant      | A new migration (team agreement first), `packages/shared`, and [DATA_MODEL.md](DATA_MODEL.md)                                    |
-| Colours, spacing, type, motion        | [`styles/tokens.css`](../apps/web/src/styles/tokens.css)                                                                         |
-| A component's look                    | A variant in its file under [`components/ui/`](../apps/web/src/components/ui/)                                                   |
-| Security headers                      | [`apps/web/next.config.ts`](../apps/web/next.config.ts)                                                                          |
-| Play Stats numbers                    | [PLAY_API.md](PLAY_API.md) first, then `app/api/dashboard/v1/` and `lib/play-stats.ts`                                           |
+| To change...                          | Edit                                                                                                                                                                                 |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Which pages need sign-in              | `PROTECTED` in [`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)                                                                                                      |
+| Where sign-in sends people by default | `DEFAULT_NEXT` in [`lib/auth/safe-next.ts`](../apps/web/src/lib/auth/safe-next.ts)                                                                                                   |
+| Auth form copy and rules              | [`app/(auth)/actions.ts`](<../apps/web/src/app/(auth)/actions.ts>), [`components/auth/`](../apps/web/src/components/auth/)                                                           |
+| Auth email wording                    | [`supabase/templates/`](../supabase/templates/) and the same templates in the Supabase dashboard                                                                                     |
+| The review gaps (1, 3, 7 days)        | `GAP_DAYS` in [`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts), with its test, ARCHITECTURE.md and PLAY_API.md                                                     |
+| What each question level asks         | `QUESTION_LEVELS` in [`lib/pipeline/extract.ts`](../apps/web/src/lib/pipeline/extract.ts) and its test; examples in [`lib/projects/level.ts`](../apps/web/src/lib/projects/level.ts) |
+| The grading prompt or output shape    | [`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts) and its test                                                                                                            |
+| Model provider or model               | Env vars only: `MODEL_PROVIDER`, `MODEL_<TASK>`, the provider key                                                                                                                    |
+| A new model provider                  | `KEY_ENV` and `request()` in [`lib/model/call-model.ts`](../apps/web/src/lib/model/call-model.ts)                                                                                    |
+| What "can still explain" means        | [`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts), its test and ARCHITECTURE.md                                                                                 |
+| "Due today"                           | `dueTodayCount` in [`lib/review/queries.ts`](../apps/web/src/lib/review/queries.ts)                                                                                                  |
+| What a session is called              | [`lib/sessions/name.ts`](../apps/web/src/lib/sessions/name.ts)                                                                                                                       |
+| Session list columns or page size     | [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)                                                                                                                       |
+| Card columns learners read            | [`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts) (never `model_answer`)                                                                                                |
+| A table, column, policy or grant      | A new migration (team agreement first), `packages/shared`, and [DATA_MODEL.md](DATA_MODEL.md)                                                                                        |
+| Colours, spacing, type, motion        | [`styles/tokens.css`](../apps/web/src/styles/tokens.css)                                                                                                                             |
+| A component's look                    | A variant in its file under [`components/ui/`](../apps/web/src/components/ui/)                                                                                                       |
+| Security headers                      | [`apps/web/next.config.ts`](../apps/web/next.config.ts)                                                                                                                              |
+| Play Stats numbers                    | [PLAY_API.md](PLAY_API.md) first, then `app/api/dashboard/v1/` and `lib/play-stats.ts`                                                                                               |

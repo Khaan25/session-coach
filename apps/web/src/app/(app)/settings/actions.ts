@@ -3,6 +3,7 @@
 import { profileUpdateSchema } from "@session-coach/shared/profile";
 import { revalidatePath } from "next/cache";
 
+import { saveProjectLevel } from "@/lib/projects/save";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -36,4 +37,25 @@ export async function updateProfile(input: unknown): Promise<{ error: string | n
 
   revalidatePath("/settings");
   return { error: null };
+}
+
+/**
+ * Sets how hard the questions are for one of the learner's repos, from the dashboard prompt or /settings, and marks
+ * the project onboarded. Applies to sessions processed from now on; existing cards keep their questions.
+ *
+ * @param input - `{ repo, question_level }`.
+ * @returns `{ error }` with a learner-readable message, or `{ error: null }` when saved.
+ */
+export async function setProjectLevel(input: unknown): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims.sub;
+  if (!userId) return { error: "You're signed out. Sign in and try again." };
+
+  const result = await saveProjectLevel(supabase, userId, input);
+  if (!result.error) {
+    revalidatePath("/settings");
+    revalidatePath("/dashboard");
+  }
+  return result;
 }

@@ -7,6 +7,7 @@ import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { AppPageHeader } from "@/components/app/page-header";
+import { ProjectSetup } from "@/components/projects/project-setup";
 import { SessionRow } from "@/components/app/session-row";
 import { SessionList } from "@/components/sessions/session-list";
 import { buttonVariants } from "@/components/ui/button";
@@ -59,6 +60,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
         title="Dashboard"
         description="Explain back the decisions your coding agent made."
       />
+      <ProjectSetup />
       {/* Skullet measures the real rows, drawn from sample sessions, so each row keeps its shape when the data lands. The
           row count, due banner and page links aren't known until then, so the list can still grow or shrink. */}
       <MeasuredSuspense
