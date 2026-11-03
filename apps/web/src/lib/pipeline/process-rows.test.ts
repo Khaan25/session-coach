@@ -42,32 +42,75 @@ test("trimTimeline keeps everything that fits and cuts nothing", () => {
   assert.deepEqual(trimTimeline([]), { kept: [], cut: 0 });
 });
 
-test("trimTimeline stops at the first event over budget and counts the rest as cut", () => {
-  // 10 events of 1,500 chars: 10 x 1,500 = 15,000 fits; the 11th would reach 16,500.
+test("trimTimeline keeps the newest events that fit and counts the older ones as cut", () => {
+  // 10 events of 1,500 chars: 10 x 1,500 = 15,000 fits; an 11th would reach 16,500.
   const events = Array.from({ length: 12 }, (_, i) => event(i + 1, MAX_EVENT_CHARS));
   const { kept, cut } = trimTimeline(events);
   assert.equal(kept.length, 10);
   assert.equal(cut, 2);
+  assert.deepEqual(kept, events.slice(2));
+});
+
+test("trimTimeline keeps the original ids and chronological order", () => {
+  const events = Array.from({ length: 12 }, (_, i) => event(i + 1, MAX_EVENT_CHARS));
+  const { kept } = trimTimeline(events);
   assert.deepEqual(
     kept.map((e) => e.id),
-    events.slice(0, 10).map((e) => e.id),
+    ["E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10", "E11", "E12"],
+  );
+  assert.deepEqual(
+    kept.map((e) => e.line),
+    kept.map((e) => e.line).sort((a, b) => a - b),
   );
 });
 
 test("trimTimeline accepts an event that lands exactly on the budget", () => {
   const events = Array.from({ length: MAX_TIMELINE_CHARS / 1_000 }, (_, i) => event(i + 1, 1_000));
   assert.equal(trimTimeline(events).cut, 0);
-  assert.equal(trimTimeline([...events, event(99, 1)]).cut, 1);
+  // A 1-char older event no longer fits, so it is the one dropped.
+  const longer = [event(0, 1), ...events];
+  const { kept, cut } = trimTimeline(longer);
+  assert.equal(cut, 1);
+  assert.equal(kept[0].id, "E1");
 });
 
-test("trimTimeline caps a huge first event and keeps it, instead of cutting it", () => {
-  const huge = event(1, MAX_TIMELINE_CHARS + 5_000);
-  const { kept, cut } = trimTimeline([huge, event(2, 100)]);
+test("trimTimeline caps a huge newest event and still keeps older events that fit", () => {
+  const huge = event(2, MAX_TIMELINE_CHARS + 5_000);
+  const { kept, cut } = trimTimeline([event(1, 100), huge]);
   assert.equal(cut, 0);
-  assert.equal(kept.length, 2);
-  assert.equal(kept[0].id, "E1");
-  assert.equal(kept[0].text.length, MAX_EVENT_CHARS);
-  assert.equal(kept[0].text, huge.text.slice(0, MAX_EVENT_CHARS));
+  assert.deepEqual(
+    kept.map((e) => e.id),
+    ["E1", "E2"],
+  );
+  assert.equal(kept[1].text, huge.text.slice(0, MAX_EVENT_CHARS));
+});
+
+test("trimTimeline sends a newest event that is over budget alone, cut to its start", () => {
+  const newest: TimelineEvent = { ...event(3, 0), text: "abcdefghij" };
+  const { kept, cut } = trimTimeline([event(1, 5), event(2, 5), newest], 4);
+  assert.equal(cut, 2);
+  assert.deepEqual(kept, [{ ...newest, text: "abcd" }]);
+});
+
+test("trimTimeline cuts an oversized event by code points, never inside a surrogate pair", () => {
+  const newest: TimelineEvent = { ...event(1, 0), text: "😀😀😀😀" };
+  const { kept } = trimTimeline([newest], 3);
+  assert.equal(kept[0].text, "😀😀😀");
+  assert.equal(kept[0].text.length, 6);
+  // The per-event cap counts code points too.
+  const capped = trimTimeline([{ ...newest, text: "😀".repeat(MAX_EVENT_CHARS + 5) }]);
+  assert.equal([...capped.kept[0].text].length, MAX_EVENT_CHARS);
+});
+
+test("trimTimeline caps a multi-million-character event and a long emoji run exactly", () => {
+  const big = trimTimeline([event(1, 5_000_000)]).kept[0];
+  assert.equal(big.text.length, MAX_EVENT_CHARS);
+
+  const emoji: TimelineEvent = { ...event(2, 0), text: "😀".repeat(5_000) };
+  const { text } = trimTimeline([emoji]).kept[0];
+  assert.equal([...text].length, MAX_EVENT_CHARS);
+  assert.equal(text, "😀".repeat(MAX_EVENT_CHARS));
+  assert.equal([...text].at(-1), "😀");
 });
 
 test("trimTimeline does not change the events it was given", () => {
