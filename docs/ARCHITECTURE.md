@@ -29,7 +29,7 @@ Claude Code session ends
 ## Review loop (Zia, planned)
 
 - **Grading:** `callModel("grade", …)` returns `{ score: 0 | 1 | 2, missing, modelAnswer }` against the card's why, evidence and model answer.
-- **Schedule:** score 2 moves a card to the next gap (1, 3, 7 days); below 2 restarts at day 1; passing day 7 sets `mastered`.
+- **Schedule:** score 2 moves a card to the next gap (1, 3, 7 days); below 2 moves it one step down (never below day 1), due tomorrow; passing day 7 sets `mastered`.
 - **Emails:** Vercel Cron once a day (Hobby fires within the hour). `email_log` is unique per user, kind and day.
 - **Progress:** "decisions you can still explain" = mastered cards + cards scored 2 in the last 7 days.
 

@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-03 · A miss drops a card one level
+
+- **Decision:** a score below 2 moves the card one step down (never below step 1) and it is due tomorrow; a 2 is unchanged. Only the last review (step 3, day 7) behaves differently from the old "starts again at day 1": a miss there goes back to step 2. The level is the rung: 0 never answered, 1-3 the pending step, "owned" = mastered (`levelOf` and `countOwned` in `lib/review/level.ts`, pure). The 1/3/7 days are the gaps after each answer, so a perfect run is mastered about 11 days after the first answer (answers on day 0, 1, 4 and 11).
+- **Why:** one slip shouldn't erase the progress on a card (burnout risk).
+- **Callers:** `countOwned` takes visible cards only; the caller leaves hidden cards out (RLS client or an inner embed of `decision_cards`, or `hidden = false` with the service role), or their reviews would count toward both numbers.
+- **Rejected:** keeping the restart at day 1 for every miss.
+
 ## 2026-11-02 · Empty states say why they are empty
 
 - **Decision:** each empty state names its reason and the next step. The review queue tells a first run (`NoCardsYetEmpty`: no cards at all, set up the CLI) from all caught up (`AllCaughtUpEmpty`: cards exist, none due, with when the next one is due). `/progress` with no cards shows the same state. A learner with no card isn't always a first run, so `cardlessReason` (`lib/sessions/queries.ts`) picks the copy from the learner's latest session only (an older row left pending says nothing about now): none yet (set up the CLI), still being read (cards on the way), failed (open that session, which shows the pipeline's error), or ready with no card (each card needs a verified quote); cards with no answer yet still show `NoReviewsEmpty`. The dashboard, review and progress error boundaries share `LoadErrorState`, which shows `OfflineState` when the browser is offline and retries by itself when it reconnects. `emptyQueue` (`lib/review/queries.ts`) is the second read that tells them apart; it runs only when the queue comes back empty. A card never answered within 7 days of its session leaves the queue by design (`NEW_CARD_DAYS`, so a learner back from a break isn't handed the backlog), so a learner whose only cards are like that sees "All caught up" with "no review is scheduled", which says that card is still on its session's page and links to the sessions. `nextDue` counts only reviews of visible cards (an inner embed of `decision_cards`), so a hidden card never sets it.
