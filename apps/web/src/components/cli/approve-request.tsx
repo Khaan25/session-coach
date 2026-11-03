@@ -24,21 +24,24 @@ type Request = {
   requestedIp: string | null;
   /** "2 minutes ago", written by the server. */
   requestedAgo: string;
-  /** Seconds left when the server rendered, so the first paint needs no clock. */
+  /** Seconds left by the server's clock when it rendered. The countdown runs from this, never the browser's clock. */
   secondsLeft: number;
-  expiresAt: string;
 };
 
-/** Seconds until `expiresAt`, ticking once a second from the server's count. */
-function useSecondsLeft(expiresAt: string, initial: number): number {
+/**
+ * Counts down from the server's `initial` by monotonic time elapsed since mount, so a skewed browser clock can't
+ * expire the code early or make the timer jump.
+ */
+function useSecondsLeft(initial: number): number {
   const [left, setLeft] = useState(initial);
   useEffect(() => {
+    const mounted = performance.now();
     const id = setInterval(
-      () => setLeft(Math.ceil((Date.parse(expiresAt) - Date.now()) / 1000)),
+      () => setLeft(initial - Math.floor((performance.now() - mounted) / 1000)),
       1000,
     );
     return () => clearInterval(id);
-  }, [expiresAt]);
+  }, [initial]);
   return left;
 }
 
@@ -52,7 +55,7 @@ function clock(seconds: number): string {
  * link someone else sent can't sign their computer in to this account.
  */
 export function ApproveRequest({ request }: { request: Request }) {
-  const secondsLeft = useSecondsLeft(request.expiresAt, request.secondsLeft);
+  const secondsLeft = useSecondsLeft(request.secondsLeft);
   const [pending, setPending] = useState<"approve" | "deny" | null>(null);
   const [done, setDone] = useState<"approved" | "denied" | null>(null);
   const [error, setError] = useState<string | null>(null);

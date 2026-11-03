@@ -3,7 +3,6 @@ import type { Icon } from "@phosphor-icons/react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CodeBlock } from "@/components/ui/code-block";
-import { CopyButton } from "@/components/ui/copy-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AGENT_NAMES, setupPrompt, type SetupAgent } from "@/lib/setup/ai-prompt";
 
@@ -45,16 +44,14 @@ export function AiSetupCard() {
           </TabsList>
           {AGENTS.map((agent) => (
             <TabsContent key={agent} value={agent}>
-              <div className="flex flex-col items-start gap-3 pt-3">
+              <div className="pt-3">
                 <CodeBlock
-                  className="w-full"
                   code={setupPrompt(agent)}
                   filename={`Prompt for ${AGENT_NAMES[agent]}`}
                   lineNumbers={false}
                   defaultWrap
                   copyLabel={`Copy the ${AGENT_NAMES[agent]} prompt`}
                 />
-                <CopyButton value={setupPrompt(agent)} label="prompt" showLabel />
               </div>
             </TabsContent>
           ))}

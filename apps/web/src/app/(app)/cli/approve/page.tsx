@@ -180,7 +180,6 @@ async function Request({ searchParams }: Pick<PageProps<"/cli/approve">, "search
         requestedIp: row.requested_ip,
         requestedAgo: formatRelativeTime(row.requested_at, now) ?? "just now",
         secondsLeft: Math.ceil((Date.parse(row.expires_at) - now.getTime()) / 1000),
-        expiresAt: row.expires_at,
       }}
     />
   );
