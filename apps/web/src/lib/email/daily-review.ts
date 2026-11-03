@@ -1,5 +1,6 @@
 import { constantTimeEqual } from "../auth/constant-time.ts";
-import { isDue, newCardsSince } from "../review/schedule.ts";
+import { isDue } from "../review/schedule.ts";
+import { countAnsweredToday, todayQueue } from "../review/today.ts";
 import { localDate } from "../sessions/rows.ts";
 
 // The daily review email's pure core: who gets one, what it says, and the claim-then-send loop. The route
@@ -26,6 +27,9 @@ export type ReviewRow = {
 
 /** A visible card never answered (no `reviews` row), as the cron reads it. */
 export type NewCardRow = { user_id: string; decision: string; created_at: string };
+
+/** An `answers` row as the cron reads it: who answered and when, to count today's answers against the cap. */
+export type AnswerRow = { user_id: string; created_at: string };
 
 /**
  * A learner to email: `today` is their local date, which is also the `email_log.sent_on` the send claims. `due` and
@@ -84,13 +88,15 @@ export function cronAuthorized(
 }
 
 /**
- * The learners to remind today: reminders on, an email address, and at least one card to do. A card to do is either
- * due again in their own time zone, or new (never answered) and from the last `NEW_CARD_DAYS` days, the same window
- * the review queue offers new cards in. Older unanswered cards stop counting, so ignored reminders end after a week.
+ * The learners to remind today: reminders on, an email address, and at least one card left in today's queue. The
+ * queue is `todayQueue` (`lib/review/today.ts`), the same rule as /review and the dashboard: at most 5 cards a local
+ * day, answers already given today included, up to 2 new (never answered, last `NEW_CARD_DAYS` days) and the rest due
+ * again in their own time zone. Older unanswered cards stop counting, so ignored reminders end after a week.
  *
  * @param profiles - Learners, any `notify_email`; those with it off are left out here.
  * @param reviews - Answered cards. Rows of other learners or not yet due are ignored for `due`.
  * @param newCards - Never-answered visible cards; ones older than the window are ignored.
+ * @param answers - Answers since `answeredSince(now)`; those on each learner's today count against their cap.
  * @param now - The cron's current time. "Today" is each learner's date at this moment.
  * @returns One recipient per learner with something to do.
  */
@@ -98,25 +104,33 @@ export function dailyReviewRecipients(
   profiles: ProfileRow[],
   reviews: ReviewRow[],
   newCards: NewCardRow[],
+  answers: AnswerRow[],
   now: Date,
 ): Recipient[] {
   const reviewsByUser = Map.groupBy(reviews, (review) => review.user_id);
-  const since = newCardsSince(now);
-  const newByUser = Map.groupBy(
-    newCards.filter((card) => card.created_at >= since),
-    (card) => card.user_id,
-  );
+  const newByUser = Map.groupBy(newCards, (card) => card.user_id);
+  const answersByUser = Map.groupBy(answers, (answer) => answer.user_id);
   return profiles.flatMap(({ id, email, timezone, notify_email }) => {
     if (!notify_email || !email) return [];
     const today = localDate(timezone, now);
     const mine = reviewsByUser.get(id) ?? [];
-    const due = mine
-      .filter((review) => isDue(review, today))
-      .toSorted((a, b) => (a.due_on ?? "").localeCompare(b.due_on ?? ""))
-      .map((review) => review.decision);
-    const fresh = (newByUser.get(id) ?? [])
-      .toSorted((a, b) => a.created_at.localeCompare(b.created_at))
-      .map((card) => card.decision);
+    const queue = todayQueue({
+      due: mine
+        .filter((review) => isDue(review, today))
+        .map((review) => ({ dueOn: review.due_on, decision: review.decision })),
+      fresh: (newByUser.get(id) ?? []).map((card) => ({
+        createdAt: card.created_at,
+        decision: card.decision,
+      })),
+      answeredToday: countAnsweredToday(
+        (answersByUser.get(id) ?? []).map((answer) => answer.created_at),
+        timezone,
+        today,
+      ),
+      now,
+    });
+    const due = queue.due.map((card) => card.decision);
+    const fresh = queue.fresh.map((card) => card.decision);
     if (due.length + fresh.length === 0) return [];
     const mastered = mine.filter((review) => review.mastered).length;
     return [{ userId: id, email, today, due, fresh, answered: mine.length, mastered }];

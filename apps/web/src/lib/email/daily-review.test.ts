@@ -6,6 +6,7 @@ import {
   dailyReviewCopy,
   type DailyReviewDeps,
   dailyReviewRecipients,
+  type AnswerRow,
   type NewCardRow,
   type OutgoingEmail,
   type ProfileRow,
@@ -76,6 +77,7 @@ test("nothing due means no recipient and no send", async () => {
     [profile("a"), profile("b")],
     [review("a", "2026-11-02"), review("b", null, true)],
     [],
+    [],
     now,
   );
   assert.deepEqual(recipients, []);
@@ -99,6 +101,7 @@ test("counts due and overdue cards, not mastered or future ones", () => {
       review("other", "2026-10-31"),
     ],
     [],
+    [],
     now,
   );
   assert.deepEqual(recipients, [
@@ -119,7 +122,7 @@ test("notify_email = false and a missing address are skipped", () => {
   const off = profile("off", "UTC", false);
   const noEmail = { ...profile("none"), email: null };
   const reviews = [review("off", "2026-10-31"), review("none", "2026-10-31")];
-  assert.deepEqual(dailyReviewRecipients([off, noEmail], reviews, [], now), []);
+  assert.deepEqual(dailyReviewRecipients([off, noEmail], reviews, [], [], now), []);
 });
 
 test("due today is evaluated in the learner's time zone", () => {
@@ -127,6 +130,7 @@ test("due today is evaluated in the learner's time zone", () => {
   const recipients = dailyReviewRecipients(
     [profile("karachi", "Asia/Karachi"), profile("bogota", "America/Bogota")],
     reviews,
+    [],
     [],
     now,
   );
@@ -138,7 +142,13 @@ test("due today is evaluated in the learner's time zone", () => {
 });
 
 test("a rerun the same day sends nothing twice", async () => {
-  const recipients = dailyReviewRecipients([profile("a")], [review("a", "2026-10-31")], [], now);
+  const recipients = dailyReviewRecipients(
+    [profile("a")],
+    [review("a", "2026-10-31")],
+    [],
+    [],
+    now,
+  );
   const { deps, log, outbox } = fakeDeps();
   assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 1,
@@ -160,6 +170,7 @@ test("one learner's failure doesn't stop the others", async (t) => {
   const recipients = dailyReviewRecipients(
     [profile("a"), profile("b"), profile("c")],
     ["a", "b", "c"].map((id) => review(id, "2026-10-31")),
+    [],
     [],
     now,
   );
@@ -193,7 +204,13 @@ test("one learner's failure doesn't stop the others", async (t) => {
 
 test("a timeout keeps the claim, so a rerun the same day doesn't send again", async (t) => {
   t.mock.method(console, "error", () => {});
-  const recipients = dailyReviewRecipients([profile("a")], [review("a", "2026-10-31")], [], now);
+  const recipients = dailyReviewRecipients(
+    [profile("a")],
+    [review("a", "2026-10-31")],
+    [],
+    [],
+    now,
+  );
   const { deps, log, outbox } = fakeDeps();
   const send = deps.send;
   deps.send = async () => {
@@ -219,6 +236,7 @@ test("a failed release is logged and the batch goes on", async (t) => {
   const recipients = dailyReviewRecipients(
     [profile("a"), profile("b")],
     ["a", "b"].map((id) => review(id, "2026-10-31")),
+    [],
     [],
     now,
   );
@@ -253,6 +271,7 @@ test("new cards from the last 7 days count, older ones stop", () => {
       // 8 days before `now`: past the window, so ignored reminders end.
       newCard("old", "2026-10-23T20:00:00Z"),
     ],
+    [],
     now,
   );
   assert.deepEqual(recipients, [
@@ -261,7 +280,8 @@ test("new cards from the last 7 days count, older ones stop", () => {
       email: "a@example.test",
       today: "2026-10-31",
       due: [],
-      fresh: ["a new 2026-10-25T10:00:00Z", "a new 2026-10-30T10:00:00Z"],
+      // Newest first.
+      fresh: ["a new 2026-10-30T10:00:00Z", "a new 2026-10-25T10:00:00Z"],
       answered: 0,
       mastered: 0,
     },
@@ -314,7 +334,13 @@ test("one new card on a first session reads in the singular, with a first-time l
 
 test("a template error leaves the day unclaimed, so a rerun can still send", async (t) => {
   t.mock.method(console, "error", () => {});
-  const recipients = dailyReviewRecipients([profile("a")], [review("a", "2026-10-31")], [], now);
+  const recipients = dailyReviewRecipients(
+    [profile("a")],
+    [review("a", "2026-10-31")],
+    [],
+    [],
+    now,
+  );
   const { deps, log, outbox } = fakeDeps();
   const broken: typeof compose = async () => {
     throw new Error("render failed");
@@ -359,4 +385,25 @@ test("a signed unsubscribe link goes in the copy and the plain text", () => {
   );
   assert.equal(copy.unsubscribeUrl, link);
   assert.ok(copy.text.endsWith(`Unsubscribe: ${link}`));
+});
+
+test("the email's cards are today's queue: capped at 5 with answers given today, 2 kept for new cards", () => {
+  const due = Array.from({ length: 6 }, (_, i) => review("a", `2026-10-2${i}`));
+  const fresh = Array.from({ length: 4 }, (_, i) => newCard("a", `2026-10-2${i + 6}T10:00:00Z`));
+  const [full] = dailyReviewRecipients([profile("a")], due, fresh, [], now);
+  assert.deepEqual([full.due.length, full.fresh.length], [3, 2]);
+  // Answered twice today (UTC), once yesterday: 3 left, 2 of them new.
+  const answers: AnswerRow[] = [
+    "2026-10-31T08:00:00Z",
+    "2026-10-31T09:00:00Z",
+    "2026-10-30T09:00:00Z",
+  ].map((created_at) => ({ user_id: "a", created_at }));
+  const [partly] = dailyReviewRecipients([profile("a")], due, fresh, answers, now);
+  assert.deepEqual([partly.due.length, partly.fresh.length], [1, 2]);
+  // Five answers today: nothing left, so no email.
+  const done = Array.from({ length: 5 }, (_, i) => ({
+    user_id: "a",
+    created_at: `2026-10-31T0${i}:00:00Z`,
+  }));
+  assert.deepEqual(dailyReviewRecipients([profile("a")], due, fresh, done, now), []);
 });

@@ -35,7 +35,11 @@ type Grade = {
   evidence: Evidence[];
   /** YYYY-MM-DD, or null once the card is mastered. */
   nextDue: string | null;
+  /** True when a miss moved the card down a step. A skip never does. */
+  dropped: boolean;
 };
+
+const PASTE_OFF = "Paste is off here. Type it in your own words.";
 
 /** A calendar date as the learner reads it, e.g. "Fri, Oct 30". It has no time, so it is formatted in UTC. */
 const formatDue = (date: string) =>
@@ -65,8 +69,8 @@ async function postAnswer(
 /**
  * The quiz: the card's question, the learner's explanation and, after submit, the grade. Gets only the question; the
  * why and the answer key reach the browser only in the grading route's response, after the answer is in.
- * "I don't know yet" is an honest skip: no score to fear, the why is shown, and the card comes back tomorrow, so there
- * is no reason to guess or paste the question into an AI.
+ * "I don't know yet" is an honest skip: no score to fear, the why is shown, and the card comes back tomorrow at the
+ * same level, so there is no reason to guess or paste the question into an AI.
  */
 export function QuizForm({
   cardId,
@@ -81,7 +85,8 @@ export function QuizForm({
   const id = useId();
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  // Which request is in flight, so each button says what it is doing.
+  const [pending, setPending] = useState<"answer" | "skip" | null>(null);
   const [grade, setGrade] = useState<Grade | null>(null);
   const [skipped, setSkipped] = useState(false);
   // The submit button unmounts when the result replaces the form, so focus moves to the result heading.
@@ -89,12 +94,12 @@ export function QuizForm({
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (pending !== null) return;
     const trimmed = answer.trim();
     if (!trimmed) return setError("Write your explanation before you submit.");
     if (trimmed.length > MAX_ANSWER) return setError(`Keep it under ${MAX_ANSWER} characters.`);
     setError(null);
-    setPending(true);
+    setPending("answer");
     toast
       .promise(postAnswer(cardId, { answer: trimmed }), {
         loading: "Scoring your answer",
@@ -116,13 +121,13 @@ export function QuizForm({
         },
       })
       .catch(() => {})
-      .finally(() => setPending(false));
+      .finally(() => setPending(null));
   }
 
   function skip() {
-    if (pending) return;
+    if (pending !== null) return;
     setError(null);
-    setPending(true);
+    setPending("skip");
     postAnswer(cardId, { dontKnow: true })
       .then((result) => {
         setSkipped(true);
@@ -131,7 +136,14 @@ export function QuizForm({
       .catch((reason: unknown) => {
         setError(reason instanceof Error ? reason.message : "Try again.");
       })
-      .finally(() => setPending(false));
+      .finally(() => setPending(null));
+  }
+
+  // Client-side only: it nudges people to recall, it doesn't stop a determined one (devtools, typing it out). The
+  // keyboard and screen readers work as before; a blocked paste or drop says why in the field's error.
+  function blockPaste(event: React.ClipboardEvent | React.DragEvent) {
+    event.preventDefault();
+    setError(PASTE_OFF);
   }
 
   if (grade)
@@ -143,10 +155,14 @@ export function QuizForm({
               {skipped ? "Here's the why" : "Your result"}
             </h2>
           </CardTitle>
-          {skipped && (
+          {skipped ? (
             <CardDescription>
-              Not knowing yet is fine. This card comes back tomorrow.
+              Not knowing yet is fine. This card comes back tomorrow at the same level.
             </CardDescription>
+          ) : (
+            grade.dropped && (
+              <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
+            )
           )}
         </CardHeader>
         <CardContent>
@@ -243,7 +259,7 @@ export function QuizForm({
               rows={5}
               maxLength={MAX_ANSWER}
               // Read-only while scoring, so the answer shown with the result is the one that was scored.
-              readOnly={pending}
+              readOnly={pending !== null}
               value={answer}
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
@@ -252,6 +268,8 @@ export function QuizForm({
                 // The error is about the old text; submit checks again.
                 setError(null);
               }}
+              onPaste={blockPaste}
+              onDrop={blockPaste}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                   event.preventDefault();
@@ -260,7 +278,7 @@ export function QuizForm({
               }}
             />
             <FieldDescription id={`${id}-hint`}>
-              In your own words. Submit with{" "}
+              Type it in your own words. Paste is off here. Submit with{" "}
               <KbdGroup>
                 <Kbd>Cmd</Kbd>
                 <Kbd>Enter</Kbd>
@@ -277,11 +295,11 @@ export function QuizForm({
         </CardContent>
         <CardFooter>
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" disabled={pending}>
-              {pending ? "Scoring" : "Submit answer"}
+            <Button type="submit" disabled={pending !== null}>
+              {pending === "answer" ? "Scoring" : "Submit answer"}
             </Button>
-            <Button type="button" variant="secondary" disabled={pending} onClick={skip}>
-              I don&rsquo;t know yet
+            <Button type="button" variant="secondary" disabled={pending !== null} onClick={skip}>
+              {pending === "skip" ? "Showing the why" : "I don’t know yet"}
             </Button>
           </div>
         </CardFooter>

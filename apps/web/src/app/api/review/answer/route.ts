@@ -1,8 +1,8 @@
 /**
  * POST /api/review/answer { cardId, answer } or { cardId, dontKnow: true }: grades the learner's explanation of one
  * card, or records an honest skip, and moves it along the day 1/3/7 schedule (plan, Phase 6 step 2). Returns
- * { score, missing, why, modelAnswer, evidence, nextDue }: the why and the answer key reach the browser only here,
- * after the learner has tried.
+ * { score, missing, why, modelAnswer, evidence, nextDue, step, level, dropped }: the why and the answer key reach the
+ * browser only here, after the learner has tried.
  */
 import { NextResponse } from "next/server";
 
@@ -16,7 +16,14 @@ import {
   parseGrade,
   skipGrade,
 } from "@/lib/review/grade";
+import { levelOf } from "@/lib/review/level";
 import { isDue, nextReview, type Step } from "@/lib/review/schedule";
+import {
+  answeredSince,
+  countAnsweredToday,
+  DAILY_CAP,
+  DAILY_CAP_MESSAGE,
+} from "@/lib/review/today";
 import { localDate } from "@/lib/sessions/rows";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -38,17 +45,21 @@ type GradedCard = {
  * - `getUser()` checks the session with the auth server, since grading writes data.
  * - Reads the card (with its answer key), its review row and the learner's time zone in parallel.
  * - Refuses a card that has a review row but isn't due in the learner's today (mastered, or answered for this step
- *   already), before the model call, so answering early can't move or un-master it. A never-answered card is always open.
- * - An honest skip (`dontKnow`) is scored 0 with no model call and no rate limit, stored as "I don't know yet", so the
- *   card comes back tomorrow. It still passes the due check, so it can't be used to peek at a card twice a day.
+ *   already), before the model call, so answering early can't move or un-master it.
+ * - Refuses any card once the learner has given `DAILY_CAP` answers (skips included) in their today, the same cap
+ *   as the queue (`lib/review/today.ts`), so a new card opened from /s/[id] can't go past it. Nothing is written.
+ * - An honest skip (`dontKnow`) is scored 0 with no model call and no rate limit, stored with `answers.skipped`, and
+ *   keeps the card's step: it comes back tomorrow, no level lost. It still passes the due check, so it can't be used
+ *   to peek at a card twice a day.
  * - Otherwise spends one of the learner's 60 grades an hour (`userRateLimit`), since each costs a model call.
  * - Grades with `callModel("grade")`, retrying once when the output doesn't fit `{ score, missing }`.
  * - Moves `reviews` with a compare-and-set on `updated_at`, then inserts the `answers` row. If that insert fails, the
  *   schedule is put back, so the learner can answer again.
  *
  * @param request - JSON body `{ cardId, answer }` or `{ cardId, dontKnow: true }`.
- * @returns 200 `{ score, missing, why, modelAnswer, evidence, nextDue }`; 400 bad body; 401 signed out; 404 not the
- *   learner's card or hidden; 409 answered twice at once, or not due today; 429 over 60 answers an hour
+ * @returns 200 `{ score, missing, why, modelAnswer, evidence, nextDue, step, level, dropped }` (`step` and `level`
+ *   after this answer, `dropped` when a miss moved it down a step); 400 bad body; 401 signed out; 404 not the
+ *   learner's card or hidden; 409 answered twice at once, not due today, or the day's cap reached; 429 over 60 an hour
  *   (`Retry-After`); 502 the model failed; 503 grading not configured; 500 else.
  */
 export async function POST(request: Request) {
@@ -58,7 +69,8 @@ export async function POST(request: Request) {
     const field = parsed.error.issues[0]?.path.join(".") || "body";
     return NextResponse.json({ error: `Invalid ${field}`, field }, { status: 400 });
   }
-  const { cardId, dontKnow } = parsed.data;
+  const { cardId } = parsed.data;
+  const dontKnow = parsed.data.dontKnow === true;
   const answer = parsed.data.answer ?? DONT_KNOW_ANSWER;
 
   const supabase = await createClient();
@@ -70,7 +82,8 @@ export async function POST(request: Request) {
 
   try {
     const admin = createAdminClient();
-    const [cardResult, reviewResult, profileResult] = await Promise.all([
+    const now = new Date();
+    const [cardResult, reviewResult, profileResult, answersResult] = await Promise.all([
       admin
         .from("decision_cards")
         .select("user_id, hidden, question, why, evidence, model_answer")
@@ -93,15 +106,23 @@ export async function POST(request: Request) {
         .select("timezone")
         .eq("id", user.id)
         .maybeSingle<{ timezone: string }>(),
+      admin
+        .from("answers")
+        .select("created_at")
+        .eq("user_id", user.id)
+        .gte("created_at", answeredSince(now))
+        .overrideTypes<{ created_at: string }[], { merge: false }>(),
     ]);
     if (cardResult.error) throw cardResult.error;
     if (reviewResult.error) throw reviewResult.error;
     if (profileResult.error) throw profileResult.error;
+    if (answersResult.error) throw answersResult.error;
     const card = cardResult.data;
     // Decided here, not by the query: the service role sees every learner's cards.
     if (!card || card.user_id !== user.id || card.hidden)
       return NextResponse.json({ error: "Card not found" }, { status: 404 });
-    const today = localDate(profileResult.data?.timezone ?? "UTC", new Date());
+    const timeZone = profileResult.data?.timezone ?? "UTC";
+    const today = localDate(timeZone, now);
     if (reviewResult.data && !isDue(reviewResult.data, today)) {
       return NextResponse.json(
         {
@@ -112,6 +133,16 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
+
+    // shortcut: two answers racing past the 4th can both land, so the day can end at 6; move the count into the
+    // write (an RPC) if that matters.
+    const answeredToday = countAnsweredToday(
+      answersResult.data.map(({ created_at }) => created_at),
+      timeZone,
+      today,
+    );
+    if (answeredToday >= DAILY_CAP)
+      return NextResponse.json({ error: DAILY_CAP_MESSAGE }, { status: 409 });
 
     const grade = dontKnow ? skipGrade() : await gradeAnswer(user.id, card, answer);
     if (grade instanceof Response) return grade;
@@ -125,11 +156,7 @@ export async function POST(request: Request) {
 
     const step = reviewResult.data?.step ?? 0;
     // A fresh date: grading can cross the learner's midnight, and the schedule counts from the day it was answered.
-    const next = nextReview(
-      step,
-      grade.score,
-      localDate(profileResult.data?.timezone ?? "UTC", new Date()),
-    );
+    const next = nextReview(step, grade.score, localDate(timeZone, new Date()), dontKnow);
     // Move the schedule first, and only from the state this request read: a second submit racing this one finds the
     // row changed (or already inserted) and gets 409, so one answer can't advance a card twice.
     const schedule = {
@@ -165,6 +192,7 @@ export async function POST(request: Request) {
       answer,
       score: grade.score,
       missing: grade.missing || null,
+      skipped: dontKnow,
     });
     if (answerError) {
       // shortcut: two writes, not one transaction, so a failed answer row undoes the schedule move by hand; only from the
@@ -193,6 +221,9 @@ export async function POST(request: Request) {
       modelAnswer: card.model_answer,
       evidence: card.evidence,
       nextDue: next.due_on,
+      step: next.step,
+      level: levelOf(next),
+      dropped: next.step < step,
     });
   } catch (error) {
     if (error instanceof ModelConfigError) {

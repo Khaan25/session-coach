@@ -5,7 +5,7 @@ import { z } from "zod";
 /** The longest explanation accepted, in characters: enough for a paragraph, small enough to keep model calls cheap. */
 export const MAX_ANSWER = 4000;
 
-/** What an honest skip ("I don't know yet") is stored as in `answers.answer`, so it needs no new column. */
+/** The `answers.answer` text of an honest skip ("I don't know yet"). `answers.skipped` is what marks it a skip. */
 export const DONT_KNOW_ANSWER = "I don't know yet";
 
 /**
