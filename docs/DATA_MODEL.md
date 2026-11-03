@@ -14,6 +14,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
   `sessions.processing_started_at`, so stuck runs are timed from their claim and `created_at` stays the upload time.
 - [`20261104000100_cli_device_codes.sql`](../supabase/migrations/20261104000100_cli_device_codes.sql): the
   server-only `cli_device_codes` table for the CLI's device-code login.
+- [`20261104000200_projects.sql`](../supabase/migrations/20261104000200_projects.sql): `projects`, the question level
+  per repo, and `learner_repos()` (see [`projects`](#projects)).
 
 ## The one rule
 
@@ -27,10 +29,11 @@ caller in code first ([rules/authorization.md](rules/authorization.md)).
 
 The only learner writes:
 
-| Table        | Write                                             | Why it is safe                                                   |
-| ------------ | ------------------------------------------------- | ---------------------------------------------------------------- |
-| `profiles`   | update `display_name`, `timezone`, `notify_email` | Column grants: nothing that affects scores, identity or billing. |
-| `cli_tokens` | delete own rows                                   | Revoking a token can only remove access, never add it.           |
+| Table        | Write                                                   | Why it is safe                                                   |
+| ------------ | ------------------------------------------------------- | ---------------------------------------------------------------- |
+| `profiles`   | update `display_name`, `timezone`, `notify_email`       | Column grants: nothing that affects scores, identity or billing. |
+| `cli_tokens` | delete own rows                                         | Revoking a token can only remove access, never add it.           |
+| `projects`   | insert own row; update `question_level`, `onboarded_at` | Only shapes future questions; no score, card or other learner.   |
 
 Who's "server" in the tables below: a route handler or script using `createAdminClient()`
 ([`apps/web/src/lib/supabase/admin.ts`](../apps/web/src/lib/supabase/admin.ts)), or a Postgres trigger.
@@ -250,6 +253,27 @@ One row per email sent (the daily review email, planned).
   A send the provider refuses deletes its row again, so a rerun the same day retries it; the `Idempotency-Key`
   (`daily_review/<user>/<day>`) stops a duplicate if that send did go out.
 - **No policies at all:** RLS is on, so learners can't read or write it.
+
+### `projects`
+
+How hard a learner wants the questions for one repo. One row per `(user_id, repo)`; `repo` matches `sessions.repo`
+exactly. A repo with no row, and every session with no repo, gets `simple`.
+
+| Column           | Stores                                                                         | Written by              |
+| ---------------- | ------------------------------------------------------------------------------ | ----------------------- |
+| `user_id`        | The learner.                                                                   | Learner on insert (RLS) |
+| `repo`           | The repo name, as the CLI uploaded it on `sessions.repo`. Never blank.         | Learner on insert       |
+| `question_level` | `simple`, `hard` or `complex`. Default `simple`.                               | Learner (column grant)  |
+| `onboarded_at`   | When the learner last chose a level (or "Not now"); null shows the setup card. | Learner (column grant)  |
+
+- **Policies:** select and update own rows; insert only with `user_id = auth.uid()` **and** a session of theirs in
+  that repo, so the table can't fill with made-up repos.
+- **Grants:** insert `(user_id, repo, question_level, onboarded_at)`, update `(question_level, onboarded_at)` only, so
+  a row can't be moved to another learner or repo. Because of that, the app updates then inserts instead of a
+  PostgREST upsert (which would write `user_id` and `repo` on conflict).
+- **`learner_repos()`:** the caller's distinct non-blank `sessions.repo`, A to Z. Runs as the caller (RLS applies),
+  executable by `authenticated` only. The dashboard and /settings list projects from it without reading every session.
+- **Read by the pipeline** with the service role, to pick the extraction prompt's question level.
 
 ### `tracker_members` and `tracker_tasks`
 

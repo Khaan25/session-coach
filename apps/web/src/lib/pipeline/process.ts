@@ -1,6 +1,9 @@
 import "server-only";
 
+import { DEFAULT_QUESTION_LEVEL } from "@session-coach/shared/project";
+
 import { callModel, ModelCallError, ModelConfigError } from "@/lib/model/call-model";
+import { levelOrDefault } from "@/lib/projects/level";
 import { SESSIONS_BUCKET } from "@/lib/sessions/upload";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkEvidence } from "./evidence.ts";
@@ -114,7 +117,7 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
 
   const { data: session, error: readError } = await admin
     .from("sessions")
-    .select("user_id, raw_path, title")
+    .select("user_id, raw_path, title, repo")
     .eq("id", sessionId)
     .single();
   if (readError || !session?.raw_path) {
@@ -140,7 +143,8 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
 
   // The trimmed events feed both the model and the quote check, so event_index lines up.
   const { kept: timeline, cut } = trimTimeline(events);
-  const drafts = await extractCards(timeline, callModel, { signal });
+  const level = await questionLevel(admin, session.user_id, session.repo);
+  const drafts = await extractCards(timeline, callModel, { signal, level });
   const cards = checkEvidence(drafts, timeline);
   const rows = buildCardRows(cards, sessionId, session.user_id);
 
@@ -179,6 +183,7 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
 
   console.log("[pipeline/process]", {
     session_id: sessionId,
+    level,
     extracted: drafts.length,
     kept: rows.length,
     cut_events: cut,
@@ -186,4 +191,24 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
     duration_min: extras.duration_min ?? null,
     ms: Date.now() - started,
   });
+}
+
+/**
+ * The question level of the session's project (learner + repo). A session with no repo, no project row, or a failed
+ * read gets the default: the level only shapes the questions, so it never fails the run.
+ */
+async function questionLevel(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  repo: string | null,
+) {
+  if (!repo) return DEFAULT_QUESTION_LEVEL;
+  const { data, error } = await admin
+    .from("projects")
+    .select("question_level")
+    .eq("user_id", userId)
+    .eq("repo", repo)
+    .maybeSingle();
+  if (error) console.error("[pipeline/process] question level read failed", error.message);
+  return levelOrDefault(data?.question_level);
 }

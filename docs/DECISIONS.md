@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-04 · Question level per project
+
+- **Decision:** learners pick how hard questions are per repo: simple (one-step "why did we do X"), hard (the trade-off or rejected alternative, and what breaks if changed) or complex (reason across two decisions, or predict a change in a new scenario, still grounded in the session). Stored in a new `projects` table keyed by `(user_id, repo)`; the extraction prompt swaps only its question line by level. Default simple.
+- **Sessions with no repo** have no project and use simple. No `profiles.default_question_level`: nothing needed it yet.
+- **Onboarding:** a dashboard card per repo with sessions but no `onboarded_at`. "Not now" saves simple and sets `onboarded_at`, so nothing hides a prompt forever without a choice. /settings changes it later; changes apply to new sessions only, existing cards keep their questions.
+- **Writes:** learners insert their own row (RLS also requires a session in that repo) and may update only `question_level` and `onboarded_at` (column grants). The action updates, then inserts, because a PostgREST upsert writes `user_id` and `repo` on conflict.
+- **Rejected:** a level per learner (one repo can be new and another familiar); a level per session (too many prompts); regenerating existing cards on change (pipeline work, v2); a `security definer` upsert RPC (column grants already do the job).
+
 ## 2026-11-04 · Device-code login for the CLI
 
 - **Decision:** `session-coach login` uses the OAuth 2.0 Device Authorization Grant (RFC 8628): the CLI gets a device code and an 8-letter user code, opens `/cli/approve?code=…`, and polls until the learner approves; the server then mints a `cli_tokens` row labelled with the device name and hands the raw token to the CLI once. `/setup` lists tokens as connected devices and leads with a copyable "Set up with your AI" prompt per agent that runs this login, so no prompt ever holds a token. `login --token` keeps the paste path.
