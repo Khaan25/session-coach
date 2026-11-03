@@ -1,6 +1,7 @@
 import { gunzipSync } from "node:zlib";
 import { decisionSourceSchema, evidenceSchema } from "@session-coach/shared/decision";
 import { z } from "zod";
+import { cleanPromptTitle } from "../sessions/name.ts";
 import { MAX_UPLOAD_BYTES } from "../sessions/upload.ts";
 import type { CheckedCard } from "./evidence.ts";
 import type { TimelineEvent } from "./parser.ts";
@@ -121,23 +122,24 @@ export function durationMinutes(raw: string): number | null {
   return count < 2 ? null : Math.round((last - first) / 60_000);
 }
 
-const WHITESPACE = /\s+/g;
-
 /**
- * A session title from the first prompt: whitespace collapsed, cut to `MAX_TITLE_CHARS` with "…" when longer. The
- * parser has already redacted the text.
+ * A session title from the first prompt that still has text after `cleanPromptTitle` removes its injected tags and
+ * collapses its whitespace. The cleaned text is cut to `MAX_TITLE_CHARS` with "…" when longer. The parser has already
+ * redacted the text.
  *
  * @param events - The parsed timeline.
- * @returns The title, or null when there is no prompt or it is blank.
+ * @returns The title, or null when no prompt has any text left.
  */
 export function sessionTitle(events: readonly TimelineEvent[]): string | null {
-  const prompt = events.find((e) => e.kind === "prompt");
-  if (!prompt) return null;
-  const text = prompt.text.replace(WHITESPACE, " ").trim();
-  if (text === "") return null;
-  // Count and cut by code points, so an emoji at the limit is kept whole or dropped, never split in two.
-  const chars = [...text];
-  return chars.length > MAX_TITLE_CHARS ? `${chars.slice(0, MAX_TITLE_CHARS).join("")}…` : text;
+  for (const event of events) {
+    if (event.kind !== "prompt") continue;
+    const text = cleanPromptTitle(event.text);
+    if (text === "") continue;
+    // Clean first, then count and cut by code points, so an emoji at the limit is kept whole or dropped, never split.
+    const chars = [...text];
+    return chars.length > MAX_TITLE_CHARS ? `${chars.slice(0, MAX_TITLE_CHARS).join("")}…` : text;
+  }
+  return null;
 }
 
 /** A `decision_cards` insert row: what the pipeline writes. Postgres adds id and created_at and generates flagged/hidden. */

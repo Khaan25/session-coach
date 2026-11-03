@@ -44,11 +44,17 @@ export function addDays(date: string, days: number): string {
  * @param step - The card's current `reviews.step` (0 when it has no reviews row yet).
  * @param score - The grade: 2 advances the card, 0 or 1 moves it one step down (never below step 1), due tomorrow.
  * @param today - The learner's local date (YYYY-MM-DD), so "tomorrow" is their tomorrow.
+ * @param skipped - An honest "I don't know yet" (scored 0): it costs nothing, so the card keeps its step (at least 1)
+ *   and comes back tomorrow, where a wrong answer would drop it a step.
  * @returns The new step and due date; passing day 7 (step 3) masters the card.
  */
-export function nextReview(step: Step, score: Score, today: string): ReviewState {
+export function nextReview(step: Step, score: Score, today: string, skipped = false): ReviewState {
   if (score < 2)
-    return { step: Math.max(step - 1, 1) as Step, due_on: addDays(today, 1), mastered: false };
+    return {
+      step: Math.max(skipped ? step : step - 1, 1) as Step,
+      due_on: addDays(today, 1),
+      mastered: false,
+    };
   if (step === 3) return { step: 3, due_on: null, mastered: true };
   return { step: (step + 1) as Step, due_on: addDays(today, GAP_DAYS[step]), mastered: false };
 }
