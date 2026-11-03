@@ -22,7 +22,7 @@ export async function createToken(
     .from("cli_tokens")
     .insert({ user_id: userId, token_hash: hashToken(token), label })
     .select(TOKEN_COLUMNS)
-    .single<TokenRow>();
+    .single();
   if (error) throw new Error(`createToken: ${error.message}`);
   return { ...data, token };
 }

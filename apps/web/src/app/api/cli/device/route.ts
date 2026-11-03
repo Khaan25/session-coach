@@ -5,8 +5,9 @@
  *   polling secret (only its sha256 is stored); `userCode` is what the learner checks on /cli/approve.
  *   400 bad clientName, 429 too many starts from this IP (`Retry-After`), 500 else. Never cached, never logged.
  */
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 
+import { NO_STORE, serverError, UNIQUE_VIOLATION } from "@/lib/api/http";
 import { authAttemptWait } from "@/lib/auth/rate-limit";
 import { clientIp } from "@/lib/auth/client-ip";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,7 +19,6 @@ import {
   newUserCode,
   POLL_INTERVAL_SECONDS,
 } from "@/lib/tokens/device";
-import { NO_STORE } from "@/lib/tokens/device-codes";
 import { hashToken } from "@/lib/tokens/hash";
 
 /** Expired codes stay a day so /cli/approve can still say "expired" rather than "no such code". */
@@ -45,12 +45,15 @@ export async function POST(request: NextRequest) {
   try {
     const admin = createAdminClient();
     const requestedAt = new Date();
-    // Opportunistic cleanup: no cron needed for a table that only grows with logins.
-    const { error: cleanupError } = await admin
-      .from("cli_device_codes")
-      .delete()
-      .lt("expires_at", new Date(requestedAt.getTime() - KEEP_EXPIRED_MS).toISOString());
-    if (cleanupError) console.error("[api/cli/device] cleanup failed", cleanupError.message);
+    // Opportunistic cleanup: no cron needed for a table that only grows with logins. After the response, so a login
+    // start never waits on it.
+    after(async () => {
+      const { error: cleanupError } = await admin
+        .from("cli_device_codes")
+        .delete()
+        .lt("expires_at", new Date(requestedAt.getTime() - KEEP_EXPIRED_MS).toISOString());
+      if (cleanupError) console.error("[api/cli/device] cleanup failed", cleanupError.message);
+    });
 
     const deviceCode = newDeviceCode();
     const ip = clientIp(request.headers);
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
         expires_at: new Date(requestedAt.getTime() + DEVICE_CODE_TTL_SECONDS * 1000).toISOString(),
       });
       if (!error) userCode = candidate;
-      else if (error.code !== "23505") throw new Error(error.message);
+      else if (error.code !== UNIQUE_VIOLATION) throw new Error(error.message);
     }
     if (!userCode) throw new Error("no free user code after 3 tries");
 
@@ -86,10 +89,11 @@ export async function POST(request: NextRequest) {
       { headers: NO_STORE },
     );
   } catch (err) {
-    console.error("[api/cli/device] start failed", err instanceof Error ? err.message : err);
-    return NextResponse.json(
-      { error: "Couldn't start the login. Try again." },
-      { status: 500, headers: NO_STORE },
+    return serverError(
+      "[api/cli/device] start",
+      err,
+      "Couldn't start the login. Try again.",
+      NO_STORE,
     );
   }
 }
