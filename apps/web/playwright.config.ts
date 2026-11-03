@@ -1,5 +1,5 @@
 // Browser smoke test against the LOCAL Supabase stack: `pnpm test:e2e` (needs `supabase start` and
-// `pnpm exec playwright install chromium`, so not in `pnpm test` or CI). The dev server gets the local stack's URL
+// `pnpm exec playwright install chromium`, so not in `pnpm test`; CI runs it in its own e2e job). The dev server gets the local stack's URL
 // and keys from `supabase status` here, overriding apps/web/.env.local, and grades with the fake model.
 
 import { defineConfig, devices } from "@playwright/test";
