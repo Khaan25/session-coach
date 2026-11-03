@@ -76,6 +76,35 @@ async function recordedCwd(path: string): Promise<string | null> {
   return null;
 }
 
+type Candidate = { path: string; name: string; size: number; mtimeMs: number };
+
+/** The top-level `.jsonl` files of a project's folder, newest first, or null when the folder can't be read. */
+async function listCandidates(dir: string): Promise<Candidate[] | null> {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  const candidates: Candidate[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
+    const path = join(dir, entry.name);
+    const info = await stat(path).catch(() => null);
+    if (!info) continue;
+    candidates.push({ path, name: entry.name, size: info.size, mtimeMs: info.mtimeMs });
+  }
+  return candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+}
+
+/** The spellings of `cwd` a log may record: as given, and with symlinks resolved. */
+async function acceptedCwds(cwd: string): Promise<Set<string>> {
+  const accepted = new Set([trimSlash(cwd)]);
+  const real = await realpath(cwd).catch(() => null);
+  if (real) accepted.add(trimSlash(real));
+  return accepted;
+}
+
 /**
  * Finds the newest `.jsonl` (by modified time) directly inside the project's folder whose recorded `cwd` is the
  * current folder. Fails closed: two folders can encode to the same name (`/work/a-b` and `/work/a/b`), so a log
@@ -86,31 +115,42 @@ async function recordedCwd(path: string): Promise<string | null> {
  */
 export async function findLatestLog(projectsDir: string, cwd: string): Promise<LatestLog> {
   const dir = join(projectsDir, projectDirName(cwd));
-  let entries;
-  try {
-    entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return { error: `No Claude Code logs found in ${dir}.` };
-  }
-
-  const candidates: { path: string; name: string; size: number; mtimeMs: number }[] = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
-    const path = join(dir, entry.name);
-    const info = await stat(path).catch(() => null);
-    if (!info) continue;
-    candidates.push({ path, name: entry.name, size: info.size, mtimeMs: info.mtimeMs });
-  }
+  const candidates = await listCandidates(dir);
+  if (candidates === null) return { error: `No Claude Code logs found in ${dir}.` };
   if (candidates.length === 0) return { error: `No .jsonl logs found in ${dir}.` };
-  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
 
-  const accepted = new Set([trimSlash(cwd)]);
-  const real = await realpath(cwd).catch(() => null);
-  if (real) accepted.add(trimSlash(real));
-
+  const accepted = await acceptedCwds(cwd);
   for (const { path, name, size } of candidates) {
     const recorded = await recordedCwd(path);
     if (recorded !== null && accepted.has(trimSlash(recorded))) return { path, name, size };
   }
   return { error: `No log in ${dir} was recorded in this folder (${cwd}), so nothing was chosen.` };
+}
+
+export type LogFile = { path: string; name: string; size: number; mtimeMs: number };
+
+/**
+ * Every `.jsonl` directly inside the project's folder that was modified inside a time window and whose recorded
+ * `cwd` is the current folder, newest first. The same fail-closed matching as `findLatestLog`. An unreadable folder
+ * is an empty list.
+ *
+ * @param projectsDir - The folder that holds one folder per project.
+ * @param cwd - The project's working directory.
+ * @param window - Modified at or after `since` and at or before `until`, in epoch milliseconds.
+ */
+export async function findRecentLogs(
+  projectsDir: string,
+  cwd: string,
+  window: { since: number; until: number },
+): Promise<LogFile[]> {
+  const candidates = await listCandidates(join(projectsDir, projectDirName(cwd)));
+  if (candidates === null) return [];
+  const accepted = await acceptedCwds(cwd);
+  const found: LogFile[] = [];
+  for (const candidate of candidates) {
+    if (candidate.mtimeMs < window.since || candidate.mtimeMs > window.until) continue;
+    const recorded = await recordedCwd(candidate.path);
+    if (recorded !== null && accepted.has(trimSlash(recorded))) found.push(candidate);
+  }
+  return found;
 }

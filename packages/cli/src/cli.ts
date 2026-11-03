@@ -26,21 +26,19 @@ import {
   sessionMetadata,
   validateFileName,
 } from "./push.ts";
+import { API_TIMEOUT_MS, readStdin, runSync, UPLOAD_TIMEOUT_MS } from "./sync.ts";
 
 const USAGE = `Usage:
   session-coach login [--url <site url>]
   session-coach push <file.jsonl>
-  session-coach push --latest`;
+  session-coach push --latest
+  session-coach sync`;
 
 /** Prints a message and returns the exit code. */
 function say(message: string, exitCode = 0): number {
   if (message) (exitCode === 0 ? console.log : console.error)(message);
   return exitCode;
 }
-
-/** Timeouts: the log upload can be up to 50 MB, so it gets longer than the small JSON calls. */
-const API_TIMEOUT_MS = 15_000;
-const UPLOAD_TIMEOUT_MS = 120_000;
 
 async function login(args: string[]): Promise<number> {
   const parsed = parseLoginArgs(args);
@@ -128,10 +126,25 @@ async function pushFile(file: string): Promise<number> {
   return say(result.message, result.exitCode);
 }
 
+/**
+ * For a SessionStart hook: its stdout goes into Claude's context, so this prints nothing, always exits 0, and exits
+ * itself because an upload cut off by the deadline would otherwise keep the process alive.
+ */
+async function sync(): Promise<never> {
+  try {
+    const stdin = process.stdin.isTTY ? null : await readStdin(process.stdin);
+    await runSync({ stdin, env: process.env, cwd: process.cwd() });
+  } catch {
+    // runSync reports its own failures to sync.log; nothing may reach stdout or stderr
+  }
+  process.exit(0);
+}
+
 async function main(argv: string[]): Promise<number> {
   const [command, ...args] = argv;
   if (command === "login") return login(args);
   if (command === "push") return push(args);
+  if (command === "sync") return sync();
   return say(USAGE, command ? 1 : 0);
 }
 
