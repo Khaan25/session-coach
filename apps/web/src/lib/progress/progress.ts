@@ -1,4 +1,5 @@
 import type { Score } from "../../components/app/score-badge.tsx";
+import { sessionName } from "../sessions/name.ts";
 import { localDate } from "../sessions/rows.ts";
 
 // Pure progress maths for /progress (plan, Phase 7), so node --test runs it. Definitions from ARCHITECTURE.md:
@@ -136,7 +137,7 @@ export function computeProgress({
       const own = cards.filter((c) => c.session_id === id);
       return {
         id,
-        title: title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session",
+        title: sessionName({ title, repo, branch }),
         mastered: own.filter((c) => reviewOf.get(c.id)?.mastered).length,
         total: own.length,
       };

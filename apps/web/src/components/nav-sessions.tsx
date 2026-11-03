@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sidebar";
 import { sessionName } from "@/lib/sessions/name";
 import type { SessionListItem } from "@/lib/sessions/rows";
+import { isEmptyReady, sessionLabel } from "@/lib/sessions/status-label";
 import { useLiveSessions } from "@/lib/sessions/use-live-sessions";
 
 // What the badge says about the session's cards, one shape per meaning so it reads in grayscale too.
@@ -55,7 +56,16 @@ export function NavSessions({
           <SidebarMenu>
             {rows.map((session) => {
               const name = sessionName(session);
-              const badge = statusBadge[session.status];
+              const label = sessionLabel(session.status, session.cardCount, {
+                ready: statusBadge.ready.label,
+              });
+              // A ready session with no cards is not "ready" to review: the plain outline, not the success badge.
+              const badge = {
+                label,
+                props: isEmptyReady(session.status, session.cardCount)
+                  ? statusBadge.pending.props
+                  : statusBadge[session.status].props,
+              };
               return (
                 <SidebarMenuItem key={session.id}>
                   <SidebarMenuButton

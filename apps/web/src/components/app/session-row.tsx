@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/item";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { sessionName } from "@/lib/sessions/name";
+import { isEmptyReady } from "@/lib/sessions/status-label";
 
 import { StatusBadge } from "./status-badge";
 
@@ -55,7 +56,7 @@ export function SessionRow({ session, cardCount, now }: SessionRowProps) {
           )
         )}
       </ItemContent>
-      {status === "ready" && cardCount !== undefined && (
+      {status === "ready" && cardCount !== undefined && !isEmptyReady(status, cardCount) && (
         <ItemMeta>
           {cardCount} {cardCount === 1 ? "card" : "cards"}
         </ItemMeta>
@@ -65,7 +66,7 @@ export function SessionRow({ session, cardCount, now }: SessionRowProps) {
           <time dateTime={created_at}>{when}</time>
         </ItemMeta>
       )}
-      <StatusBadge status={status} />
+      <StatusBadge status={status} cardCount={cardCount} />
     </Item>
   );
 }
