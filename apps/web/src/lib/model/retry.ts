@@ -13,6 +13,27 @@ export class ProviderHttpError extends Error {
   }
 }
 
+/**
+ * Resolves after `ms`, or rejects with the signal's reason as soon as it aborts, so a cancelled run never sits in a wait.
+ *
+ * @param ms - How long to wait.
+ * @param signal - Cancels the wait.
+ */
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    signal?.throwIfAborted();
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 /** The wait before a retry when the provider gives no `retry-after`: a timeout, a 5xx, non-JSON output. */
 export const RETRY_WAIT_MS = 2_000;
 

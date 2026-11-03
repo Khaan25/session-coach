@@ -10,6 +10,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
 - [`20261101000000_tracker.sql`](../supabase/migrations/20261101000000_tracker.sql) and
   [`20261102000000_tracker_edit.sql`](../supabase/migrations/20261102000000_tracker_edit.sql): the team's `/tracker`
   (see [`tracker_members` and `tracker_tasks`](#tracker_members-and-tracker_tasks)).
+- [`20261103000000_session_processing_started.sql`](../supabase/migrations/20261103000000_session_processing_started.sql):
+  `sessions.processing_started_at`, so stuck runs are timed from their claim and `created_at` stays the upload time.
 
 ## The one rule
 

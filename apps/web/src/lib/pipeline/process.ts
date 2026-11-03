@@ -57,8 +57,10 @@ function learnerMessage(error: unknown): string {
  * platform kills the function.
  *
  * @param sessionId - The session to process; its log is at `raw_path` in the `sessions` bucket.
+ * @param startedAt - The `processing_started_at` the route claimed with. The final status write matches it, so a run
+ *   that a re-push replaced can't mark the newer run failed or ready.
  */
-export async function processSession(sessionId: string): Promise<void> {
+export async function processSession(sessionId: string, startedAt: string): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   // On the deadline the run's model calls are cancelled, and it checks before each write.
   const stop = new AbortController();
@@ -69,16 +71,16 @@ export async function processSession(sessionId: string): Promise<void> {
     }, DEADLINE_MS);
   });
   try {
-    await Promise.race([run(sessionId, stop.signal), deadline]);
+    await Promise.race([run(sessionId, startedAt, stop.signal), deadline]);
   } catch (error) {
     console.error("[pipeline/process] failed", sessionId, error);
     try {
-      // Only from `processing`: if a re-push already reset the session, this run's failure is stale.
       const { error: updateError } = await createAdminClient()
         .from("sessions")
         .update({ status: "failed", error: learnerMessage(error) })
         .eq("id", sessionId)
-        .eq("status", "processing");
+        .eq("status", "processing")
+        .eq("processing_started_at", startedAt);
       if (updateError) {
         console.error("[pipeline/process] status not set", sessionId, updateError.message);
       }
@@ -95,7 +97,7 @@ export async function processSession(sessionId: string): Promise<void> {
  *
  * @param signal - Aborted at the deadline; no write happens after that.
  */
-async function run(sessionId: string, signal: AbortSignal): Promise<void> {
+async function run(sessionId: string, startedAt: string, signal: AbortSignal): Promise<void> {
   const started = Date.now();
   const admin = createAdminClient();
 
@@ -132,6 +134,9 @@ async function run(sessionId: string, signal: AbortSignal): Promise<void> {
   const rows = buildCardRows(cards, sessionId, session.user_id);
 
   // Cards first, `ready` second: a failure in between leaves `failed`, never a ready session with no cards.
+  // shortcut: the insert isn't fenced by `startedAt`; a run replaced mid-insert can leave stale cards, and the newer run
+  // then fails on the (session_id, position) key until the next push clears them. Move insert and ready into one RPC
+  // if that is ever seen.
   signal.throwIfAborted();
   if (rows.length > 0) {
     const { error: insertError } = await admin.from("decision_cards").insert(rows);
@@ -156,6 +161,7 @@ async function run(sessionId: string, signal: AbortSignal): Promise<void> {
     .update({ status: "ready", error: null, ...extras })
     .eq("id", sessionId)
     .eq("status", "processing")
+    .eq("processing_started_at", startedAt)
     .select("id");
   if (readyError) throw readyError;
   if (readied.length === 0) throw new Error("session left processing before the run finished");

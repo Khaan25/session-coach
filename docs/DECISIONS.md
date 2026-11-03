@@ -66,7 +66,7 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Why:** Groq's free tier allows 8,000 tokens per minute, and the instructions and the retry share that window. The per-event cap stops one huge event eating the budget; ids stay intact. Insert-then-ready means a crash in between leaves `failed`, never a `ready` session with no cards.
 - **Not aligned yet:** #32 chose to send the LAST ~9,000 characters (newest events kept); this keeps the FIRST 16,000 with each event capped at 1,500. Align in a follow-up (event ids must stay consistent between the cut timeline, `extractCards` and `checkEvidence`).
 - **Re-run:** pushing a `failed` session again (or one `processing` for over 10 minutes) deletes its cards, cascading to answers and reviews, and resets it to `pending` (POST /api/sessions).
-- **Known gaps:** insert and `ready` are separate writes (a transaction needs an RPC migration). A platform kill leaves a session in `processing` until the daily cron fails it after 15 minutes, or the learner pushes it again.
+- **Known gaps:** insert and `ready` are separate writes (a transaction needs an RPC migration). A platform kill leaves a session in `processing` until the daily cron fails it (stuck for over 10 minutes by `processing_started_at`, `lib/sessions/stuck.ts`), or the learner pushes it again.
 
 ## 2026-10-31 · Groq as temporary extraction backup, and prompt v2
 

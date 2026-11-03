@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MAX_RETRY_WAIT_MS, ProviderHttpError, RETRY_WAIT_MS, retryWaitMs } from "./retry.ts";
+import {
+  MAX_RETRY_WAIT_MS,
+  ProviderHttpError,
+  RETRY_WAIT_MS,
+  retryWaitMs,
+  sleep,
+} from "./retry.ts";
 
 const http = (status: number, retryAfter: string | null = null) =>
   new ProviderHttpError("groq", status, retryAfter);
@@ -40,4 +46,13 @@ test("5xx, timeouts and non-JSON output wait the default", () => {
   assert.equal(retryWaitMs(http(408)), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(new DOMException("timed out", "TimeoutError")), RETRY_WAIT_MS);
   assert.equal(retryWaitMs(new SyntaxError("Unexpected token")), RETRY_WAIT_MS);
+});
+
+test("sleep rejects as soon as its signal aborts", async () => {
+  const stop = new AbortController();
+  const started = Date.now();
+  const waiting = sleep(60_000, stop.signal);
+  stop.abort();
+  await assert.rejects(waiting, { name: "AbortError" });
+  assert.ok(Date.now() - started < 1_000);
 });

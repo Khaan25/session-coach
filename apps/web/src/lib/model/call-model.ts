@@ -1,7 +1,7 @@
 import "server-only";
 
 import { fakeModel } from "@/lib/model/fake";
-import { ProviderHttpError, retryWaitMs } from "@/lib/model/retry";
+import { ProviderHttpError, retryWaitMs, sleep } from "@/lib/model/retry";
 
 /** A model job. Each reads its model name from `MODEL_<TASK>` (`MODEL_GRADE`, `MODEL_EXTRACT`). */
 export type ModelTask = "extract" | "grade";
@@ -87,8 +87,7 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
       lastError = error;
       const waitMs = retryWaitMs(error);
       if (waitMs === null || attempt === 1) break;
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-      input.signal?.throwIfAborted();
+      await sleep(waitMs, input.signal);
     }
   }
   throw new ModelCallError(`${provider} ${task} call failed`, { cause: lastError });

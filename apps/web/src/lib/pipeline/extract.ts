@@ -1,6 +1,7 @@
 import { decisionSourceSchema } from "@session-coach/shared/decision";
 import { z } from "zod";
 import type { ModelInput } from "../model/call-model.ts";
+import { sleep as wait } from "../model/retry.ts";
 import type { TimelineEvent } from "./parser.ts";
 
 /** Same signature as `callModel`, injected so tests never call a real API. */
@@ -68,13 +69,11 @@ export const RETRY_DELAY_MS = 60_000;
 export type ExtractOptions = {
   /** Wait before the retry, in milliseconds. */
   retryDelayMs?: number;
-  /** Does the waiting; tests pass a fake so they never wait. */
-  sleep?: (ms: number) => Promise<void>;
-  /** Cancels the model calls; checked again after the wait. */
+  /** Does the waiting, cancelled by `signal`; tests pass a fake so they never wait. */
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Cancels the wait and the model calls. */
   signal?: AbortSignal;
 };
-
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
  * Keeps the valid cards of one answer, up to `MAX_CARDS`. Invalid cards are dropped. The answer counts as failed only
@@ -120,7 +119,7 @@ export async function extractCards(
   const first = parseAnswer(firstAnswer);
   if ("cards" in first) return first.cards;
 
-  await sleep(retryDelayMs);
+  await sleep(retryDelayMs, signal);
   signal?.throwIfAborted();
   const second = parseAnswer(
     await model("extract", {

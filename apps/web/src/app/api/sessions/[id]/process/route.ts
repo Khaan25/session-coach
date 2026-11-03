@@ -81,12 +81,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "The log is over 50 MB." }, { status: 413 });
     }
 
+    const startedAt = new Date().toISOString();
     const { data: claimed, error: claimError } = await admin
       .from("sessions")
       .update({
         status: "processing",
         error: null,
-        processing_started_at: new Date().toISOString(),
+        processing_started_at: startedAt,
       })
       .eq("id", session.id)
       .eq("status", "pending")
@@ -96,7 +97,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ id: session.id, status: "processing" }, { status: 409 });
     }
 
-    after(() => processSession(session.id));
+    after(() => processSession(session.id, startedAt));
     return NextResponse.json({ id: session.id }, { status: 202 });
   } catch (err) {
     console.error("[api/sessions/process] failed", err instanceof Error ? err.message : err);
