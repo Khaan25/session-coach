@@ -20,11 +20,7 @@ export async function getProgress(userId: string, now: Date): Promise<Progress> 
   const since = new Date(now.getTime() - (CHART_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
 
   const [profile, cards, reviews, answers, sessions] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("timezone")
-      .eq("id", userId)
-      .maybeSingle<{ timezone: string }>(),
+    supabase.from("profiles").select("timezone").eq("id", userId).maybeSingle(),
     fetchAll<ProgressInput["cards"][number]>((from, to) =>
       supabase
         .from("decision_cards")
@@ -48,7 +44,9 @@ export async function getProgress(userId: string, now: Date): Promise<Progress> 
         .eq("user_id", userId)
         .gte("created_at", since)
         .order("id")
-        .range(from, to),
+        .range(from, to)
+        // score has a check constraint (0, 1 or 2) that the generated types read as number.
+        .overrideTypes<ProgressInput["answers"], { merge: false }>(),
     ),
     fetchAll<ProgressInput["sessions"][number]>((from, to) =>
       supabase

@@ -27,7 +27,7 @@ async function learnerTimeZone(supabase: Supabase, userId: string) {
     .from("profiles")
     .select("timezone")
     .eq("id", userId)
-    .maybeSingle<{ timezone: string }>();
+    .maybeSingle();
   if (error) throw new Error(`learnerTimeZone: ${error.message}`);
   return data?.timezone ?? "UTC";
 }
@@ -189,7 +189,7 @@ export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue>
     .gt("due_on", today)
     .order("due_on")
     .limit(1)
-    .maybeSingle<{ due_on: string; card: { id: string } }>();
+    .maybeSingle();
   if (next.error) throw new Error(`emptyQueue: ${next.error.message}`);
   return {
     hasCards: (cards.count ?? 0) > 0,
