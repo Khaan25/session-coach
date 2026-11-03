@@ -16,5 +16,12 @@ test("the picker offers every level once, in order, each with an example", () =>
     QUESTION_LEVEL_OPTIONS.map((option) => option.value),
     questionLevelSchema.options,
   );
-  for (const option of QUESTION_LEVEL_OPTIONS) assert.ok(option.example.endsWith("?"));
+  assert.deepEqual(
+    QUESTION_LEVEL_OPTIONS.map((option) => option.label),
+    ["Simple", "Hard", "Complex"],
+  );
+  for (const option of QUESTION_LEVEL_OPTIONS) {
+    assert.ok(option.example.split(" ").length >= 5, `${option.value} example is a real sentence`);
+    assert.ok(option.example.endsWith("?"));
+  }
 });
