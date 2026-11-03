@@ -7,11 +7,22 @@ describe("parseLoginArgs", () => {
   it("accepts --url value, --url=value and no flag", () => {
     assert.deepEqual(parseLoginArgs(["--url", "http://localhost:3000"]), {
       url: "http://localhost:3000",
+      token: false,
     });
     assert.deepEqual(parseLoginArgs(["--url=http://localhost:3000"]), {
       url: "http://localhost:3000",
+      token: false,
     });
-    assert.deepEqual(parseLoginArgs([]), { url: null });
+    assert.deepEqual(parseLoginArgs([]), { url: null, token: false });
+  });
+
+  it("accepts --token once, with or without --url", () => {
+    assert.deepEqual(parseLoginArgs(["--token"]), { url: null, token: true });
+    assert.deepEqual(parseLoginArgs(["--token", "--url=https://a.test"]), {
+      url: "https://a.test",
+      token: true,
+    });
+    assert.deepEqual(parseLoginArgs(["--token", "--token"]), { error: "--token was given twice." });
   });
 
   it("rejects unknown arguments, a missing value and a repeated flag", () => {

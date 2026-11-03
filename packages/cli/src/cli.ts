@@ -11,6 +11,14 @@ import {
   saveConfig,
   validateToken,
 } from "./config.ts";
+import {
+  approveUrl,
+  clientName,
+  deviceStartRequest,
+  interpretStart,
+  openBrowser,
+  pollForToken,
+} from "./device.ts";
 import { interpretMe, meRequest, send, unreachable } from "./http.ts";
 import { defaultProjectsDir, findLatestLog, formatSize, resolveCwd } from "./latest.ts";
 import { promptHidden } from "./prompt.ts";
@@ -29,7 +37,7 @@ import {
 import { API_TIMEOUT_MS, readStdin, runSync, UPLOAD_TIMEOUT_MS } from "./sync.ts";
 
 const USAGE = `Usage:
-  session-coach login [--url <site url>]
+  session-coach login [--url <site url>] [--token]
   session-coach push <file.jsonl>
   session-coach push --latest
   session-coach sync`;
@@ -50,6 +58,8 @@ async function login(args: string[]): Promise<number> {
     url = cleaned;
   }
 
+  if (!parsed.token) return deviceLogin(url);
+
   const token = await promptHidden("CLI token (from the app's /setup page): ");
   const problem = validateToken(token);
   if (problem) return say(problem, 1);
@@ -61,6 +71,46 @@ async function login(args: string[]): Promise<number> {
 
   await saveConfig(configPath(), { token, url });
   return say(`${checked.message} Saved to ${configPath()}.`);
+}
+
+/** Login without a token to paste: approve in the browser, and the CLI collects its own token. */
+async function deviceLogin(url: string): Promise<number> {
+  const started = await send(deviceStartRequest(url, clientName()), {
+    timeoutMs: API_TIMEOUT_MS,
+    retry: false,
+  });
+  if ("error" in started) return say(unreachable(started.error, API_TIMEOUT_MS), 1);
+  const start = interpretStart(started.status, started.body);
+  if ("error" in start) return say(start.error, 1);
+
+  const page = approveUrl(url, start.userCode);
+  console.log(`Your code: ${start.userCode}`);
+  console.log(`Opening ${page}`);
+  console.log("If the browser doesn't open, visit that address and check the code matches.");
+  openBrowser(page);
+  console.log("Waiting for you to approve in the browser... (Ctrl+C to cancel)");
+
+  // Ctrl+C: stop polling and leave nothing behind; the code expires on its own.
+  const cancel = () => {
+    console.error("\nLogin cancelled. Nothing was saved.");
+    process.exit(130);
+  };
+  process.once("SIGINT", cancel);
+  const result = await pollForToken(url, start).finally(() => process.off("SIGINT", cancel));
+
+  if (result.kind === "expired") {
+    return say(
+      "The code expired after 10 minutes. Nothing was saved. Run session-coach login again.",
+      1,
+    );
+  }
+  if (result.kind === "denied")
+    return say("The login was denied in the browser. Nothing was saved.", 1);
+  if (result.kind === "error") return say(`${result.message} Nothing was saved.`, 1);
+
+  await saveConfig(configPath(), { token: result.token, url });
+  const who = result.email ? `Signed in as ${result.email}.` : `Signed in to ${url}.`;
+  return say(`${who} Saved to ${configPath()}.\nNext: session-coach push --latest`);
 }
 
 async function push(args: string[]): Promise<number> {
