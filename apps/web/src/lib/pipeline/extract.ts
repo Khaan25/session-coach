@@ -1,4 +1,5 @@
 import { decisionSourceSchema } from "@session-coach/shared/decision";
+import { DEFAULT_QUESTION_LEVEL, type QuestionLevel } from "@session-coach/shared/project";
 import { z } from "zod";
 import type { ModelInput } from "../model/call-model.ts";
 import { sleep as wait } from "../model/retry.ts";
@@ -7,7 +8,21 @@ import type { TimelineEvent } from "./parser.ts";
 /** Same signature as `callModel`, injected so tests never call a real API. */
 export type ExtractModel = (task: "extract", input: ModelInput) => Promise<unknown>;
 
-export const EXTRACT_INSTRUCTIONS = `You find the decisions an AI coding agent made in one working session.
+/** What the question asks at each level. Every level stays answerable from the timeline alone. */
+export const QUESTION_LEVELS: Record<QuestionLevel, string> = {
+  simple:
+    'question: one question that checks the developer understands WHY, not what. Level simple: a one-step "why did we do X" question, answerable in 1 to 2 sentences from the timeline.',
+  hard: "question: one question that checks the developer understands WHY, not what. Level hard: ask about the trade-off, or the alternative that was rejected, and what would break if the choice were changed. It must be answerable from the timeline.",
+  complex:
+    "question: one question that checks the developer understands WHY, not what. Level complex: ask the developer to reason across two decisions from this session, or to predict the effect of a change in a new scenario. Ground it only in evidence from the timeline; never ask about facts the timeline doesn't hold.",
+};
+
+/**
+ * The extraction prompt for one question level. Only the question line changes; the output shape and evidence rules
+ * are the same at every level.
+ */
+export function extractInstructions(level: QuestionLevel = DEFAULT_QUESTION_LEVEL): string {
+  return `You find the decisions an AI coding agent made in one working session.
 
 The timeline arrives as JSON in the user message: { "events": [ { "id": "E1", "kind": "prompt", "text": "..." } ] }.
 Each event has an id (E1, E2, ...), a kind and its text. The kinds are prompt, reply, write, edit, bash, read and result. Ids can start at any number because older events may have been cut, and evidence must cite only ids that appear in the timeline.
@@ -25,10 +40,11 @@ why: the reason in plain words.
 source: “stated” only if the user or the agent wrote the reason somewhere in the timeline. Otherwise “inferred”.
 evidence: 1 to 3 items. Each has event (the event id, like E2) and quote: 5 to 30 words copied exactly from that one event. Do not paraphrase, shorten with “...”, fix typos, or join text from two events. If source is “stated”, one quote must contain the reason. At least one quote must state the choice or its reason in words. A file-write line or a shell command does not count as that quote. If no quote states the reason, source must be “inferred” and the why must say the reason is inferred.
 files: file paths from write or edit events that belong to this decision, or [] if none.
-question: one question that checks the developer understands WHY, not what. It must be answerable from the timeline.
+${QUESTION_LEVELS[level]}
 model_answer: 1 to 2 sentences.
 
 Use only the timeline. Return at most 5 decisions, most important first. If the session has fewer real decisions, return fewer, or an empty list; never invent one to fill the list.`;
+}
 
 const modelCardSchema = z.object({
   decision: z.string().min(1),
@@ -73,6 +89,8 @@ export type ExtractOptions = {
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   /** Cancels the wait and the model calls. */
   signal?: AbortSignal;
+  /** How hard the questions are: the session's project level. Default simple. */
+  level?: QuestionLevel;
 };
 
 /**
@@ -100,19 +118,21 @@ function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: str
  *
  * @param events - The parsed timeline; `line` is not sent, the model has no use for it.
  * @param model - `callModel` in production, a fake in tests.
- * @param options - `retryDelayMs` (default `RETRY_DELAY_MS`) and `sleep` change the wait; `signal` cancels.
+ * @param options - `retryDelayMs` (default `RETRY_DELAY_MS`) and `sleep` change the wait; `signal` cancels; `level`
+ *   picks the question level (default simple).
  * @returns 0 to `MAX_CARDS` cards, unverified. Zero is a valid answer: a session can have no real decisions.
  * @throws ExtractError when both answers are invalid. Errors from `model` itself pass through.
  */
 export async function extractCards(
   events: readonly TimelineEvent[],
   model: ExtractModel,
-  { retryDelayMs = RETRY_DELAY_MS, sleep = wait, signal }: ExtractOptions = {},
+  { retryDelayMs = RETRY_DELAY_MS, sleep = wait, signal, level }: ExtractOptions = {},
 ): Promise<ExtractedCard[]> {
+  const instructions = extractInstructions(level);
   const timeline = events.map(({ id, kind, text }) => ({ id, kind, text }));
   const cancel = signal ? { signal } : {};
   const firstAnswer = await model("extract", {
-    instructions: EXTRACT_INSTRUCTIONS,
+    instructions,
     data: { events: timeline },
     ...cancel,
   });
@@ -123,7 +143,7 @@ export async function extractCards(
   signal?.throwIfAborted();
   const second = parseAnswer(
     await model("extract", {
-      instructions: EXTRACT_INSTRUCTIONS,
+      instructions,
       data: {
         events: timeline,
         previous_answer: firstAnswer,

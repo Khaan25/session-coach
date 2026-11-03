@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  EXTRACT_INSTRUCTIONS,
   ExtractError,
   MAX_CARDS,
   RETRY_DELAY_MS,
+  QUESTION_LEVELS,
   extractCards,
+  extractInstructions,
   type ExtractModel,
   type ExtractOptions,
 } from "./extract.ts";
@@ -66,7 +67,7 @@ test("valid on the first try: one call, task extract, timeline without line numb
   assert.deepEqual(cards, parsedThree);
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.[0], "extract");
-  assert.equal(calls[0]?.[1].instructions, EXTRACT_INSTRUCTIONS);
+  assert.equal(calls[0]?.[1].instructions, extractInstructions("simple"));
   assert.deepEqual(calls[0]?.[1].data, {
     events: [
       { id: "E1", kind: "prompt", text: events[0]?.text },
@@ -225,4 +226,49 @@ test("an abort during the retry wait stops before the second call, and the signa
     name: "AbortError",
   });
   assert.deepEqual(signals, [stop.signal]);
+});
+
+test("each level puts its own question instructions in the prompt, and nothing else changes", () => {
+  const simple = extractInstructions("simple");
+  assert.match(
+    simple,
+    /Level simple: a one-step "why did we do X" question, answerable in 1 to 2 sentences/,
+  );
+  assert.match(
+    extractInstructions("hard"),
+    /Level hard: ask about the trade-off, or the alternative that was rejected/,
+  );
+  assert.match(
+    extractInstructions("complex"),
+    /Level complex: ask the developer to reason across two decisions/,
+  );
+  for (const level of ["simple", "hard", "complex"] as const) {
+    const prompt = extractInstructions(level);
+    for (const [other, line] of Object.entries(QUESTION_LEVELS)) {
+      assert.equal(prompt.includes(line), other === level, `${level} prompt and ${other} line`);
+    }
+    // Same output shape and evidence rules at every level.
+    assert.equal(
+      prompt.replace(QUESTION_LEVELS[level], ""),
+      simple.replace(QUESTION_LEVELS.simple, ""),
+    );
+  }
+});
+
+test("the default level is simple, and extractCards sends the level it is given", async () => {
+  assert.equal(extractInstructions(), extractInstructions("simple"));
+  const { model, calls } = fakeModel({ decisions: [card] }, { decisions: [card] });
+  await extractCards(events, model);
+  await extractCards(events, model, { level: "complex" });
+  assert.equal(calls[0]?.[1].instructions, extractInstructions("simple"));
+  assert.equal(calls[1]?.[1].instructions, extractInstructions("complex"));
+});
+
+test("the retry keeps the level", async () => {
+  const { model, calls } = fakeModel(
+    { decisions: [{ ...card, source: "guess" }] },
+    { decisions: [card] },
+  );
+  await extractCards(events, model, { ...noWait().options, level: "hard" });
+  assert.equal(calls[1]?.[1].instructions, extractInstructions("hard"));
 });
