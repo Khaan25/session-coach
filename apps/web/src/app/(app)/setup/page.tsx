@@ -5,7 +5,8 @@ import { LoadFailedState } from "@/components/app/error-state";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { AppPageHeader } from "@/components/app/page-header";
 import { RefreshButton } from "@/components/setup/refresh-button";
-import { TokenSection, type TokenListRow } from "@/components/setup/token-section";
+import { AiSetupCard } from "@/components/setup/ai-setup-card";
+import { DeviceSection, type DeviceListRow } from "@/components/setup/device-section";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Code, CodeBlock } from "@/components/ui/code-block";
@@ -19,7 +20,7 @@ export const metadata: Metadata = { title: "Setup" };
 const steps = [
   {
     command: "npx session-coach login",
-    what: "Signs the CLI in with a token from the list below.",
+    what: "Signs the CLI in: it opens your browser, and you approve the code it prints.",
   },
   {
     command: "npx session-coach push --latest",
@@ -31,10 +32,10 @@ const steps = [
   },
 ];
 
-// Only the skeleton's shape comes from these: two laptops, one never used.
-const SAMPLE_TOKENS: TokenListRow[] = [
-  { id: "sample-0", label: "Work laptop", created: "3 days ago", lastUsed: "2 hours ago" },
-  { id: "sample-1", label: "Home desktop", created: "2 weeks ago", lastUsed: null },
+// Only the skeleton's shape comes from these: two computers, one never used.
+const SAMPLE_DEVICES: DeviceListRow[] = [
+  { id: "sample-0", label: "sams-mbp (macOS)", created: "3 days ago", lastUsed: "2 hours ago" },
+  { id: "sample-1", label: "home-desktop (Linux)", created: "2 weeks ago", lastUsed: null },
 ];
 
 export default function SetupPage() {
@@ -45,12 +46,14 @@ export default function SetupPage() {
         description="Connect Claude Code, so each session you finish becomes decision cards."
       />
 
+      <AiSetupCard />
+
       <Card>
         <CardHeader>
           <CardTitle>
-            <h2>Install the CLI</h2>
+            <h2>Prefer a terminal?</h2>
           </CardTitle>
-          <CardDescription>Needs Node 20 or later.</CardDescription>
+          <CardDescription>The same steps by hand. Needs Node 20 or later.</CardDescription>
         </CardHeader>
         <CardContent>
           <ol className="flex flex-col gap-4">
@@ -95,33 +98,33 @@ export default function SetupPage() {
       </Card>
 
       <MeasuredSuspense
-        label="Loading your tokens"
-        skeleton={<TokenSection initialTokens={SAMPLE_TOKENS} />}
+        label="Loading your devices"
+        skeleton={<DeviceSection initialTokens={SAMPLE_DEVICES} />}
       >
-        <Tokens />
+        <Devices />
       </MeasuredSuspense>
     </Container>
   );
 }
 
-// Reads the signed-in learner's tokens through RLS, so it renders inside Suspense (cacheComponents).
-async function Tokens() {
+// Reads the signed-in learner's devices (CLI tokens) through RLS, so it renders inside Suspense (cacheComponents).
+async function Devices() {
   const user = await getCurrentUser();
-  if (!user) return <TokenSection initialTokens={[]} />;
+  if (!user) return <DeviceSection initialTokens={[]} />;
   const loaded = await load(user.id);
   if (!loaded) {
     return (
       <Card>
-        <LoadFailedState noun="your tokens" variant="plain" action={<RefreshButton />} />
+        <LoadFailedState noun="your devices" variant="plain" action={<RefreshButton />} />
       </Card>
     );
   }
   const { now, tokens } = loaded;
   return (
-    <TokenSection
+    <DeviceSection
       initialTokens={tokens.map(({ id, label, created_at, last_used_at }) => ({
         id,
-        label: label ?? "Untitled token",
+        label: label ?? "Unnamed computer",
         created: formatRelativeTime(created_at, now) ?? "None",
         lastUsed: last_used_at ? formatRelativeTime(last_used_at, now) : null,
       }))}

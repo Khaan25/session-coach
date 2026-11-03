@@ -1,5 +1,6 @@
 "use client";
 
+import { LaptopIcon } from "@phosphor-icons/react";
 import { useId, useState } from "react";
 
 import { EmptyState } from "@/components/app/empty-state";
@@ -37,12 +38,13 @@ import {
   ItemContent,
   ItemDescription,
   ItemGroup,
+  ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
 import { Spinner } from "@/components/ui/spinner";
 
-/** A token row with its times already written as words by the server. */
-export type TokenListRow = { id: string; label: string; created: string; lastUsed: string | null };
+/** A device (one CLI token) with its times already written as words by the server. */
+export type DeviceListRow = { id: string; label: string; created: string; lastUsed: string | null };
 
 /** The error message a failed route returns, or a generic one when there is no answer at all. */
 async function errorOf(response: Response | null) {
@@ -51,20 +53,21 @@ async function errorOf(response: Response | null) {
 }
 
 /**
- * CLI tokens: "Create token" calls POST /api/cli/tokens and shows the raw token once; each row revokes through
- * DELETE /api/cli/tokens?id= after a confirm.
+ * Connected devices: every computer the CLI signed in on is one cli_tokens row, named by `session-coach login` (its
+ * hostname and OS). Each row revokes through DELETE /api/cli/tokens?id= after a confirm. "Use a token instead" calls
+ * POST /api/cli/tokens and shows the raw token once, for `session-coach login --token`.
  */
-export function TokenSection({ initialTokens }: { initialTokens: TokenListRow[] }) {
+export function DeviceSection({ initialTokens }: { initialTokens: DeviceListRow[] }) {
   const [tokens, setTokens] = useState(initialTokens);
   return (
     <Card>
       <CardHeader>
         {/* skullet-own: static text stays real in the skeleton; only the tokens are drawn as bars. */}
         <CardTitle skullet-own="">
-          <h2>CLI tokens</h2>
+          <h2>Connected devices</h2>
         </CardTitle>
         <CardDescription skullet-own="">
-          Each laptop signs in with its own token. Revoke one to sign it out.
+          Each computer you run session-coach login on shows up here. Revoke one to sign it out.
         </CardDescription>
         <CardAction>
           <CreateTokenDialog
@@ -81,6 +84,9 @@ export function TokenSection({ initialTokens }: { initialTokens: TokenListRow[] 
             // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
             // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
             <Item key={token.id} role="listitem">
+              <ItemMedia variant="icon">
+                <LaptopIcon aria-hidden="true" />
+              </ItemMedia>
               <ItemContent>
                 <ItemTitle>{token.label}</ItemTitle>
                 <ItemDescription>
@@ -103,15 +109,15 @@ export function TokenSection({ initialTokens }: { initialTokens: TokenListRow[] 
       ) : (
         <EmptyState
           variant="plain"
-          title="No tokens yet"
-          description="Create a token, then sign the CLI in with it."
+          title="No computer connected yet"
+          description="Copy the setup prompt into your agent, or run npx session-coach login yourself."
         />
       )}
     </Card>
   );
 }
 
-function CreateTokenDialog({ onCreate }: { onCreate: (row: TokenListRow) => void }) {
+function CreateTokenDialog({ onCreate }: { onCreate: (row: DeviceListRow) => void }) {
   const id = useId();
   const [label, setLabel] = useState("");
   const [pending, setPending] = useState(false);
@@ -139,7 +145,7 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: TokenListRow) => void
     setToken(created.token);
     onCreate({
       id: created.id,
-      label: created.label ?? "Untitled token",
+      label: created.label ?? "Unnamed computer",
       created: "now",
       lastUsed: null,
     });
@@ -155,7 +161,9 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: TokenListRow) => void
         }
       }}
     >
-      <DialogTrigger render={<Button size="sm" />}>Create token</DialogTrigger>
+      <DialogTrigger render={<Button variant="secondary" size="sm" />}>
+        Use a token instead
+      </DialogTrigger>
       <DialogContent>
         {token ? (
           <>
@@ -163,11 +171,12 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: TokenListRow) => void
               <DialogTitle>Copy your token</DialogTitle>
               <DialogDescription>
                 It won&apos;t be shown again. Only a hash of it is stored, so if you lose it, revoke
-                it and create a new one.
+                it and create a new one. Run the command below and paste it when asked.
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
               <CodeBlock variant="command" command={token} prompt="" copyLabel="Copy token" />
+              <CodeBlock variant="command" command="npx session-coach login --token" />
             </DialogBody>
             <DialogFooter>
               <DialogClose render={<Button />}>Done</DialogClose>
@@ -183,7 +192,10 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: TokenListRow) => void
           >
             <DialogHeader>
               <DialogTitle>Create a CLI token</DialogTitle>
-              <DialogDescription>The CLI uses it to upload your sessions.</DialogDescription>
+              <DialogDescription>
+                For a computer where the browser approval can&apos;t work. The CLI uses it to upload
+                your sessions.
+              </DialogDescription>
             </DialogHeader>
             <DialogBody>
               <Field>
@@ -196,7 +208,7 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: TokenListRow) => void
                   onChange={(event) => setLabel(event.target.value)}
                 />
                 <FieldDescription>
-                  Name the laptop it is for, so you know which one to revoke.
+                  Name the computer it is for, so you know which one to revoke.
                 </FieldDescription>
               </Field>
             </DialogBody>
@@ -236,7 +248,7 @@ function RevokeTokenDialog({
     // 404: already gone (revoked in another tab), so the row goes either way.
     if (response?.ok || response?.status === 404) {
       onRevoke();
-      toast.add({ title: "Token revoked", description: `${label} is signed out.` });
+      toast.add({ title: "Device revoked", description: `${label} is signed out.` });
       return;
     }
     toast.add({
@@ -258,14 +270,13 @@ function RevokeTokenDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Revoke {label}?</AlertDialogTitle>
           <AlertDialogDescription>
-            The CLI signed in with this token can&apos;t upload sessions until you sign it in with a
-            new one.
+            This computer can&apos;t upload sessions until you run session-coach login on it again.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Keep token</AlertDialogCancel>
+          <AlertDialogCancel>Keep it</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={() => void revoke()}>
-            Revoke token
+            Revoke
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

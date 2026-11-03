@@ -1,14 +1,21 @@
 // Argument parsing for `login` and `push`. Pure, so node --test covers it without a terminal.
 
-export type LoginArgs = { url: string | null } | { error: string };
+/** `token`: sign in by pasting a token from /setup instead of approving in the browser. */
+export type LoginArgs = { url: string | null; token: boolean } | { error: string };
 export type PushArgs = { file: string } | { latest: true } | { error: string };
 
-/** Accepts `--url value` and `--url=value`; anything else is an error. */
+/** Accepts `--url value`, `--url=value` and `--token`; anything else is an error. */
 export function parseLoginArgs(args: string[]): LoginArgs {
   let url: string | null = null;
+  let token = false;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] as string;
     let value: string | undefined;
+    if (arg === "--token") {
+      if (token) return { error: "--token was given twice." };
+      token = true;
+      continue;
+    }
     if (arg === "--url") {
       value = args[++i];
       if (value === undefined) return { error: "--url needs a value." };
@@ -20,7 +27,7 @@ export function parseLoginArgs(args: string[]): LoginArgs {
     if (url !== null) return { error: "--url was given twice." };
     url = value;
   }
-  return { url };
+  return { url, token };
 }
 
 /** `push` takes one file, or `--latest` alone; no other flags. */

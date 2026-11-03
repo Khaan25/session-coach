@@ -28,7 +28,7 @@ route handlers.
 1. **`proxy.ts` refreshes the session.** [`proxy.ts`](../apps/web/src/proxy.ts) calls `updateSession()`
    ([`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)) on every page and route except static files and
    the Play Stats API. It calls `getClaims()`, which refreshes an expiring access token and writes the new cookies onto
-   the response. Signed-out visitors to `/dashboard`, `/s`, `/review`, `/progress`, `/settings` or `/setup` go to
+   the response. Signed-out visitors to `/dashboard`, `/s`, `/review`, `/progress`, `/settings`, `/setup` or `/cli` go to
    `/login?next=...`; signed-in visitors to `/login` or `/sign-up` go on to `next`.
    - **Why only here:** Supabase refresh tokens are single-use with reuse detection. If a Server Component also
      refreshed, two refreshes of one token would sign the learner out (docs/plans/auth.md #19). Server Components can't
@@ -205,9 +205,36 @@ Why it is built this way:
 - Only `sha256(token)` is stored, in `cli_tokens.token_hash`. The raw token is in the 201 response once and never
   logged; the UI shows it in a dialog with a copy button and says it won't be shown again. A database leak can't be
   replayed, and a lost token is replaced, not recovered.
-- The insert uses the service role (learners have no insert grant) after `getUser()`. Revoke uses the learner's own
-  client, so RLS and the `user_id` filter both limit it to their tokens; another learner's id is a 404, same as a
-  missing one.
+- The insert ([`lib/tokens/create.ts`](../apps/web/src/lib/tokens/create.ts), shared with the device flow) uses the
+  service role (learners have no insert grant) after `getUser()`. Revoke uses the learner's own client, so RLS and the
+  `user_id` filter both limit it to their tokens; another learner's id is a 404, same as a missing one.
+- `/setup` lists the tokens as **Connected devices** (one row per computer, named by `session-coach login`). Creating
+  a token by hand is the secondary "Use a token instead" for `session-coach login --token`.
+
+## CLI device login
+
+`session-coach login` with no flag signs in without copying a token (OAuth 2.0 Device Authorization Grant, RFC 8628;
+[`lib/tokens/device.ts`](../apps/web/src/lib/tokens/device.ts) holds the pure rules, with tests):
+
+1. The CLI posts its device name (hostname and OS) to `POST /api/cli/device`. The server stores a row in
+   `cli_device_codes` with `sha256(deviceCode)` and an 8-letter `userCode`, and returns both raw values once. 10
+   minutes, poll every 5 s.
+2. The CLI prints the code, opens `/cli/approve?code=XXXX-XXXX` with the platform opener and polls
+   `POST /api/cli/device/token`, which answers `authorization_pending`, `slow_down` (the interval grows by 5 s),
+   `expired_token` or `access_denied` with status 400.
+3. On `/cli/approve` (sign-in required) the learner sees the device name, requesting IP, age and a countdown, and
+   clicks Approve or Deny (`POST /api/cli/device/approve|deny`, same-origin only). The URL's code only fills the form.
+4. The next poll claims the approved row with a compare-and-set on `token_issued_at is null`, creates a `cli_tokens`
+   row labelled with the device name and returns `{ token, email }` once. The CLI saves it with the same config code
+   as `login --token`.
+
+- **Why:** copying a token from a web page into a terminal is the step people get wrong, and it puts the token in the
+  clipboard and sometimes in chat. Here the token goes straight from the server to the CLI.
+- **Rate limits** ([`lib/auth/rate-limit.ts`](../apps/web/src/lib/auth/rate-limit.ts)): starts 10 per 10 min and
+  polls 300 per 10 min per IP; approve, deny and page lookups share 30 an hour per learner, so a signed-in script
+  can't guess user codes.
+- **Cleanup:** each start deletes rows that expired more than a day ago; a day of grace lets the page say "expired"
+  instead of "no such code".
 
 ## Account deletion
 

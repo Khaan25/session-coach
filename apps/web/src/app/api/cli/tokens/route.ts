@@ -9,10 +9,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { hashToken, newToken } from "@/lib/tokens/hash";
-import { TOKEN_COLUMNS, type TokenRow } from "@/lib/tokens/queries";
+import { createToken } from "@/lib/tokens/create";
 
 const createSchema = z.object({
   label: z
@@ -54,15 +52,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const token = newToken();
-    // Learners have no insert grant on cli_tokens; the user was checked above, and user_id is theirs.
-    const { data, error } = await createAdminClient()
-      .from("cli_tokens")
-      .insert({ user_id: user.id, token_hash: hashToken(token), label: parsed.data.label })
-      .select(TOKEN_COLUMNS)
-      .single<TokenRow>();
-    if (error) throw new Error(error.message);
-    return NextResponse.json({ ...data, token }, { status: 201 });
+    // The user was checked above, and user_id is theirs.
+    const created = await createToken(user.id, parsed.data.label);
+    return NextResponse.json(created, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     console.error("[api/cli/tokens] create failed", err instanceof Error ? err.message : err);
     return NextResponse.json(
