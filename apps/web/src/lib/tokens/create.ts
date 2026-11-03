@@ -17,7 +17,7 @@ export async function createToken(
   label: string | null,
 ): Promise<TokenRow & { token: string }> {
   const token = newToken();
-  // Learners have no insert grant on cli_tokens, so this is the service role.
+  // cli_tokens has no insert policy, so RLS refuses learner inserts; the service role bypasses RLS.
   const { data, error } = await createAdminClient()
     .from("cli_tokens")
     .insert({ user_id: userId, token_hash: hashToken(token), label })

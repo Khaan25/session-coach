@@ -105,7 +105,13 @@ export async function POST(request: NextRequest) {
       );
     } catch (err) {
       // Release the claim so the next poll can try again; the code is still approved and unexpired.
-      await admin.from("cli_device_codes").update({ token_issued_at: null }).eq("id", row.id);
+      const { error: releaseError } = await admin
+        .from("cli_device_codes")
+        .update({ token_issued_at: null })
+        .eq("id", row.id);
+      // Logged on its own: the thrown error below is the token failure, and a stuck claim makes retries expired_token.
+      if (releaseError)
+        console.error("[api/cli/device/token] claim release failed", releaseError.message);
       throw err;
     }
   } catch (err) {

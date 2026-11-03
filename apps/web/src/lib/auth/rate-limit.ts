@@ -50,7 +50,7 @@ const USER_LIMIT_ERROR: Record<UserLimit, string> = {
   push: "Too many uploads in the last hour.",
   process: "Too many sessions processed in the last hour.",
   grade: "Too many answers in the last hour.",
-  deviceDecide: "Too many CLI login codes checked in the last hour.",
+  deviceDecide: "Too many CLI login requests in the last hour.",
 };
 
 /**
