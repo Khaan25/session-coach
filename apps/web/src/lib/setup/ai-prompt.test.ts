@@ -21,12 +21,13 @@ test("no prompt holds a token or a token-shaped value", () => {
   }
 });
 
-test("only Claude Code gets the SessionEnd hook, scoped to this project, skipping short sessions", () => {
+test("only Claude Code gets the sync hook, in this project's settings, pinned and async", () => {
   const claude = setupPrompt("claude");
-  assert.match(claude, /SessionEnd hook for this project only/);
-  assert.match(claude, /\.claude\/settings\.local\.json/);
-  assert.match(claude, /under 5 minutes/);
+  assert.match(claude, /"SessionStart"/);
+  assert.match(claude, /project's \.claude\/settings\.json/);
+  assert.match(claude, /session-coach@0\.2\.0 sync","async":true/);
+  assert.doesNotThrow(() => JSON.parse(claude.match(/\{"hooks".*\}/)?.[0] ?? ""));
   for (const agent of agents.filter((a) => a !== "claude")) {
-    assert.doesNotMatch(setupPrompt(agent), /SessionEnd/);
+    assert.doesNotMatch(setupPrompt(agent), /SessionStart|sync/);
   }
 });
