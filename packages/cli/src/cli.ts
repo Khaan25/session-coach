@@ -100,7 +100,7 @@ async function deviceLogin(url: string): Promise<number> {
 
   if (result.kind === "expired") {
     return say(
-      "The code expired after 10 minutes. Nothing was saved. Run session-coach login again.",
+      `The code expired after ${Math.round(start.expiresIn / 60)} minutes. Nothing was saved. Run session-coach login again.`,
       1,
     );
   }

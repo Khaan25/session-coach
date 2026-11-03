@@ -7,6 +7,7 @@ import {
   deviceStartRequest,
   interpretPoll,
   interpretStart,
+  openerFor,
   pollForToken,
   type DeviceStart,
 } from "./device.ts";
@@ -144,5 +145,28 @@ describe("requests and labels", () => {
     assert.equal(clientName("box\u0007", "linux"), "box (Linux)");
     assert.equal(clientName("", "freebsd"), "Unknown computer (freebsd)");
     assert.ok(clientName("x".repeat(500), "win32").length <= 100);
+  });
+});
+
+describe("openerFor", () => {
+  const page = "https://app.test/cli/approve?code=WDJB-MJHT";
+
+  it("uses each platform's opener with the URL as one argument, never a shell", () => {
+    assert.deepEqual(openerFor(page, "darwin"), ["open", [page]]);
+    assert.deepEqual(openerFor(page, "linux"), ["xdg-open", [page]]);
+    assert.deepEqual(openerFor(page, "win32"), ["rundll32", ["url.dll,FileProtocolHandler", page]]);
+  });
+
+  it("re-serialises the URL, so shell metacharacters can't break out on Windows", () => {
+    const opened = openerFor('https://app.test/a b"&calc|x^%PATH%', "win32");
+    assert.ok(opened);
+    assert.equal(opened[0], "rundll32");
+    assert.doesNotMatch(opened[1][1] ?? "", /[\s"]/);
+  });
+
+  it("refuses anything that isn't http(s)", () => {
+    assert.equal(openerFor("file:///etc/passwd", "darwin"), null);
+    assert.equal(openerFor("javascript:alert(1)", "win32"), null);
+    assert.equal(openerFor("not a url", "linux"), null);
   });
 });

@@ -151,19 +151,34 @@ export async function pollForToken(
 }
 
 /**
+ * The platform opener for a URL, or null unless it is http(s). Never a shell: on Windows `cmd /c start` would reparse
+ * the URL (`|`, `^`, `%`), so it goes to url.dll's protocol handler, which takes it as one argument. The URL is
+ * re-serialised by `new URL`, so it has no spaces or quotes.
+ */
+export function openerFor(url: string, os: string): [string, string[]] | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+  const href = parsed.href;
+  if (os === "darwin") return ["open", [href]];
+  if (os === "win32") return ["rundll32", ["url.dll,FileProtocolHandler", href]];
+  return ["xdg-open", [href]];
+}
+
+/**
  * Opens a URL in the default browser with the platform's opener, no shell. Best effort: when it fails (no desktop, an
  * SSH session) the printed URL is the way in.
  */
 export function openBrowser(url: string, os: string = platform()): void {
-  const [command, args] =
-    os === "darwin"
-      ? ["open", [url]]
-      : os === "win32"
-        ? // start's first quoted argument is the window title, so the URL goes second.
-          ["cmd", ["/c", "start", '""', url.replace(/&/g, "^&")]]
-        : ["xdg-open", [url]];
+  const opener = openerFor(url, os);
+  if (!opener) return;
+  const [command, args] = opener;
   try {
-    const child = spawn(command, args as string[], { stdio: "ignore", detached: true });
+    const child = spawn(command, args, { stdio: "ignore", detached: true });
     child.on("error", () => {});
     child.unref();
   } catch {
