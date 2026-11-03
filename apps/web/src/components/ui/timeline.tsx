@@ -203,7 +203,7 @@ function Timeline({
   );
   // A running clock moves bars every tick; easing at the clock's own pace makes it one smooth growth.
   const glide = running
-    ? "transition-[inset-inline-start,inset-inline-end,width] duration-1000 ease-linear motion-reduce:transition-none"
+    ? "transition-[inset-inline-start,inset-inline-end,width] duration-(--dur-progress) ease-linear motion-reduce:transition-none"
     : "";
 
   const row = (index: number, top: number) => {

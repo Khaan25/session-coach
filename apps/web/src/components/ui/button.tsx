@@ -36,7 +36,7 @@ const buttonVariants = cva(
           "touch-target bg-ghost text-text-1 hover:not-data-disabled:bg-ghost-hover active:not-data-disabled:bg-pressed aria-expanded:bg-ghost-hover",
         destructive:
           "key text-fail-text key-secondary [--frame-color:var(--fail-line)] hover:not-data-disabled:[--frame-color:var(--fail-text)] data-disabled:[--frame-color:var(--text-disabled)]",
-        link: "h-auto! min-h-6 gap-1 bg-transparent px-0! text-foreground decoration-1 underline-offset-4 hover:not-data-disabled:underline forced-colors:border-0 forced-colors:underline",
+        link: "h-auto! min-h-6 gap-1 bg-transparent px-0! text-text-1 decoration-1 underline-offset-4 hover:not-data-disabled:underline forced-colors:border-0 forced-colors:underline",
       },
       size: {
         default: `${controlHeight.default} px-4 has-data-[icon=inline-end]:pe-3 has-data-[icon=inline-start]:ps-3`,

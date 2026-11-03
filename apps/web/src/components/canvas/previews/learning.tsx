@@ -20,7 +20,7 @@ import {
   OfflineState,
   SessionFailedState,
 } from "@/components/app/error-state";
-import { ProcessingState, SessionListLoading } from "@/components/app/loading-state";
+import { ProcessingState } from "@/components/app/processing-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge } from "@/components/app/score-badge";
 import { SessionRow } from "@/components/app/session-row";
@@ -59,6 +59,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { CardView } from "@/lib/cards/columns";
 
 import { AppFrame, FRAME_SESSIONS } from "./frames";
+import { SessionListLoading } from "./loading";
 import { IdeaNote, NOW } from "./parts";
 
 const SESSION = FRAME_SESSIONS[0];

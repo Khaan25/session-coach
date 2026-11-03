@@ -209,23 +209,16 @@
   --tracking-text: 0em; /* 14px and below, where negative tracking closes the counters | body, body-sm, label, label-sm */
 
   /* == Space == */
-  --space-0-5: 2px; /* optical nudge | tag inner gap */
   --space-1: 4px; /* icon to label inside tags | tag, badge */
   --space-2: 8px; /* control inner gap, button arrow gap | button, input */
   --space-3: 12px; /* control padding, table cell padding | input, table */
   --space-4: 16px; /* card padding, mobile gutter, button padding | card, button */
-  --space-5: 20px; /* grid gap in the app | grid */
   --space-6: 24px; /* section padding in the app, desktop gutter | panel, docs */
-  --space-8: 32px; /* between app sections | docs sections */
   --space-10: 40px; /* marketing block gap | marketing */
-  --space-15: 60px; /* marketing sub-section gap | marketing */
-  --space-20: 80px; /* marketing section gap | marketing */
-  --space-30: 120px; /* hero top padding | hero */
 
   /* == Layout == */
   --container: 1120px; /* marketing and docs content width | page container */
   --sidebar: 248px; /* app and docs sidebar width | sidebar */
-  --toc: 200px; /* docs on-this-page column | docs layout */
   --topbar: 56px; /* app and docs top bar height | top bar */
   --gutter: 24px; /* page gutter at desktop | page */
   --gutter-sm: 16px; /* page gutter on phones | page */
@@ -239,12 +232,9 @@
   --overlay-lg: 640px; /* wide dialog for forms and previews | dialog lg */
   --popover: 288px; /* popover and picker panel width | popover, mode picker */
   --toast-width: 384px; /* toast stack width from 640px up; full width below | toaster */
-  --popover-sm: 256px; /* a short info panel opened from an info button | popover info */
   --tooltip-max: 256px; /* tooltip line length before it wraps | tooltip, chart tooltip */
-  --hint-width: 420px; /* widest a full-text hint grows; still capped at the viewport less the phone gutters | truncate hint */
   --menu-min: 192px; /* narrowest a menu opens, so short labels still give a usable target row | dropdown menu, filter bar menu, attachment row */
   --popup-max: 320px; /* tallest a list popup grows before it scrolls | select, combobox, command list, prompt-input menu, chart data table */
-  --menu-width: 320px; /* width the @ and / list opens at beside the caret; narrower on a phone | prompt-input menu */
   --field-max-height: calc(
     var(--control-lg) * 4
   ); /* tallest a wrapping chips field grows, four touch rows, before it scrolls | combobox chips */
@@ -253,29 +243,20 @@
   --row-lg: 56px; /* a row with a second line | table size lg, item with a description */
   --label-column: 160px; /* widest a description-list label column grows before it wraps | data list */
   --measure: 68ch; /* long-form reading measure | prose */
-  --tab-max: 220px; /* widest a document tab grows before its title truncates | tabs document variant */
   --sidebar-icon: calc(
     var(--control) + var(--space-4)
   ); /* collapsed sidebar width: one control plus 8px a side | sidebar icon mode */
-  --attachment-media: 40px; /* the media square in an attachment row; size sm uses 32px, --row-sm | attachment */
-  --attachment-max: 256px; /* widest an attachment chip in the composer grows before its name truncates | prompt-input attachment */
   --grab-size: 40px; /* length of a sheet's grab bar | sheet */
   --fade-edge: 24px; /* the mask fade at the clipped edge of a sideways scroller | suggestions scroll */
   --fade-line-end: 16px; /* the mask fade at the end of one line of text that overflows, in place of an ellipsis | segmented control label */
   --measure-hint: 60ch; /* a description under a title, a page lede or a field's hint, shorter than prose | field description, section description, page header description */
   --measure-short: 48ch; /* an empty state's title and line, set top-left in the body | empty state */
   --page-header-max: 720px; /* widest a page header's title block grows beside its actions | page header */
-  --search-min: 200px; /* narrowest the filter bar's search gets before the filters wrap under it | filter bar */
-  --search-max: 320px; /* widest the filter bar's search grows once the bar has room | filter bar */
-  --crumb-floor: 8ch; /* shortest the page crumb truncates to before the trail folds another crumb | breadcrumb trail */
-  --log-level: 5ch; /* the level column, as wide as the longest level word | log viewer */
   --status-column: 128px; /* a right-aligned status column, wide enough for the status "Waiting on you" | table, tool call, timeline */
   --timeline-name: 200px; /* the widest the name column of a timeline gets from 576px; narrower frames give it 40%, and never less than --timeline-name-min | timeline */
   --timeline-name-min: 120px; /* the least the name column of a timeline keeps, so a label never shrinks to a stub | timeline */
   --timeline-label-min: 10ch; /* the least a span name keeps before its figure is hidden, so a name never shrinks to a stub | timeline */
-  --time-column: 12ch; /* a column of relative times, wide enough for the first paint's date ("Sep 30, 2025") so the swap to "3m ago" never moves it | relative time column */
   --stat-placeholder: 4ch; /* the loading bar standing in for a stat's value, about four digits | stat */
-  --tool-detail-min: 6ch; /* the least of a tool call's detail kept before its status wraps to a second line | tool call */
   --line-box: 1lh; /* one line of the text it sits in; lh resolves where it is read | prose rhythm, stat, status, toast mark, date picker field, prompt input, tool call output */
   --skeleton-text: 0.7em; /* a text skeleton bar, about the cap height of the text it stands for | skeleton text */
   --code-inline: 0.9em; /* inline code, a step under the text around it so mono does not look larger | code */
@@ -295,8 +276,6 @@
   --line-frame-alpha: 0.14; /* the ink alpha of a frame's edge: a quiet grey line, so a screen of frames reads light | line-frame */
   --mark-size: 8px; /* the legend square and the menu radio dot | chart legend, radio item */
   --ring-cutout: 2px; /* the gap ring that cuts an overlapping avatar out of the surface | avatar group */
-  --chart-dash: 6 4; /* stroke-dasharray for a comparison or projected series | chart */
-  --chart-axis-gap: 8px; /* gap between a tick label and the plot; chart.tsx reads it into its layout | chart */
 
   /* == Motion == */
   --dur-press: 60ms; /* press feedback | button */
@@ -306,18 +285,11 @@
   --dur-spin: 800ms; /* one turn of a pending ring (--ease-spin) | spinner, button, input, progress ring, send button */
   --dur-run: 1000ms; /* one turn of the running status arc (animate-run) | status arc */
   --dur-slide: 1200ms; /* one pass of the indeterminate progress segment (animate-slide) | progress bar */
+  --dur-progress: 1000ms; /* a live span growing to its new length between updates, on linear | timeline */
   --ease-spin: linear; /* the pending ring turns smoothly | animate-spin */
   --thumb-lift: 0%; /* how much ink the selected segment takes beyond paper; the dark theme raises it | surface-thumb */
   --thumb-ring-alpha: 0; /* the ink alpha of the selected segment's 1px ring; the dark theme raises it | elev-thumb */
   --skeleton-step: 0%; /* how much ink the skeleton fill takes beyond the grey field; the dark theme raises it | skeleton */
-  --dur-skeleton-delay: 150ms; /* wait before a skeleton shows, so fast loads never flash one | skeleton swap */
-  --dur-skeleton-hold: 400ms; /* shortest time a shown skeleton stays, so it never blinks | skeleton swap */
-  --toast-read-base: 3000ms; /* reading time every toast gets | toast */
-  --toast-read-char: 60ms; /* reading time per character of title and description | toast */
-  --toast-read-action: 3000ms; /* extra time when the toast carries an action | toast */
-  --toast-read-min: 4000ms; /* shortest a toast stays | toast */
-  --toast-read-max: 12000ms; /* longest a toast stays before it waits for the person | toast */
-  --scale-press: 0.98; /* the scale a pressed button or chip settles at | button, chip */
   --ease-step: cubic-bezier(
     0.2,
     0,
@@ -327,10 +299,9 @@
   --sheet-shift: 8px; /* how far a sheet travels from its edge as it appears | sheet */
 
   /* == Layers == */
-  --z-raised: 10; /* a part lifted over its siblings inside one component | sticky table, data grid and dialog header and footer, focused tab, segment or grouped button, resize handles, item actions, avatar badge, select scroll arrows, code editor gutter, message time, conversation scroll button, attachment link */
-  --z-above: 20; /* a part that sits over a raised part | dialog close over its sticky header, resizable value label, attachment actions over its link, condensed page header */
+  --z-raised: 10; /* a part lifted over its siblings inside one component | sticky table, data grid and dialog header and footer, focused tab, segment or grouped button, resize handles, item actions, avatar badge, select scroll arrows, code editor gutter, message time, conversation scroll button, attachment link, calendar day, drawer handle, desktop sidebar */
+  --z-above: 20; /* a part that sits over a raised part | dialog close over its sticky header, resizable value label, attachment actions over its link, condensed page header, sidebar rail */
   --z-cover: 30; /* a layer over every part of its component | nested dialog dim, focused attachment link */
-  --z-drop: 40; /* a layer over a whole component while a file is dragged over it, or a bar floating over the page; under every overlay | attachment drop zone, bulk action bar */
   --z-overlay: 50; /* every portalled layer; one layer, so the one opened last sits on top by DOM order | dialog, sheet, popover, menu, select, combobox, tooltip, toast, chart tooltip, mobile sidebar, skip link */
 
   /* == Code == */
@@ -796,6 +767,7 @@
   :root {
     --dur-base: 0ms;
     --dur-slow: 0ms;
+    --dur-progress: 0ms;
     --dur-spin: 2400ms; /* a pending ring still turns, so loading stays visible, at a third of the speed */
     --sheet-shift: 0px;
   }
@@ -804,6 +776,7 @@
 :root [data-force-reduced-motion] {
   --dur-base: 0ms;
   --dur-slow: 0ms;
+  --dur-progress: 0ms;
   --dur-spin: 2400ms;
   --sheet-shift: 0px;
 }

@@ -59,7 +59,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-(--z-overlay) bg-overlay duration-200 ease-out-quint data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:duration-150 data-closed:fade-out-0",
+        "fixed inset-0 isolate z-(--z-overlay) bg-overlay duration-(--dur-slow) ease-out-quint data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:duration-(--dur-fast) data-closed:fade-out-0",
         className,
       )}
       {...props}
@@ -69,7 +69,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
 
 // Base UI's `--nested-dialogs` / `data-nested-dialog-open`: a parent recedes and dims rather than being covered.
 const NESTED_STACK =
-  "translate-y-[calc(1.25rem*var(--nested-dialogs))] scale-[calc(1-0.1*var(--nested-dialogs))] transition-[translate,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-200 data-nested-dialog-open:after:opacity-100";
+  "translate-y-[calc(1.25rem*var(--nested-dialogs))] scale-[calc(1-0.1*var(--nested-dialogs))] transition-[translate,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-(--dur-slow) data-nested-dialog-open:after:opacity-100";
 
 function DialogContent({
   className,
@@ -100,7 +100,7 @@ function DialogContent({
             // `overflow-y-auto` is the fallback; a child with `flex-auto min-h-0` scrolls instead, so there is only ever one scrollbar.
             "group/dialog relative flex max-h-full min-h-0 w-full flex-col overflow-y-auto overscroll-contain data-[size=default]:max-w-overlay data-[size=lg]:max-w-overlay-lg data-[size=sm]:max-w-overlay-sm *:data-[slot=scroll-area]:mx-1 *:data-[slot=scroll-area]:mt-1",
             overlayShellSurface,
-            "duration-200 ease-out-quint data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:duration-150 data-closed:fade-out-0 data-closed:zoom-out-95",
+            "duration-(--dur-slow) ease-out-quint data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:duration-(--dur-fast) data-closed:fade-out-0 data-closed:zoom-out-95",
             NESTED_STACK,
             className,
           )}

@@ -15,7 +15,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="input-group"
       className={cn(
-        "group/input-group relative flex h-(--control) w-full min-w-0 items-center rounded-soft bg-page type-label text-text-1 control-edge outline-none forced-colors:border pointer-coarse:text-base",
+        "group/input-group relative flex h-(--control) w-full min-w-0 items-center rounded-soft bg-page type-label text-text-1 control-edge outline-none forced-colors:border pointer-coarse:type-input-touch",
         "transition-[color,background-color,border-color,box-shadow] duration-(--dur-fast) ease-(--ease-step)",
         "has-[[data-slot=input-group-control]:focus-visible]:[--control-lift:var(--focus-halo)]! has-[[data-slot=input-group-control]:focus-visible]:[--frame-color:var(--border-focus)]!",
         "has-[[data-slot][aria-invalid=true]]:[--frame-color:var(--fail-line)]",

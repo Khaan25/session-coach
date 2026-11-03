@@ -22,10 +22,6 @@ const dataListVariants = cva("group/data-list min-w-0", {
     variant: {
       plain: "",
       framed: "frame bg-page px-4",
-      /** @deprecated Use framed. */
-      card: "frame bg-page px-4",
-      /** @deprecated Use framed. */
-      frame: "frame bg-page px-4",
     },
     orientation: {
       horizontal: "",
@@ -52,7 +48,7 @@ function DataList({
     <div
       data-slot="data-list-frame"
       // framed, frame and card are one look; the items key off "framed".
-      data-variant={variant === "card" || variant === "frame" ? "framed" : variant}
+      data-variant={variant}
       data-orientation={orientation}
       data-size={size}
       className={cn(

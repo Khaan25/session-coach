@@ -85,7 +85,7 @@ const cards = [
   },
 ];
 
-// The loop: a session ends, 3 to 5 decision cards are written, and the learner explains each back on these days.
+// The loop: a session ends, up to 5 decision cards are written, and the learner explains each back on these days.
 const REVIEW_DAYS = [1, 3, 7] as const;
 
 export { cards, REVIEW_DAYS, session };

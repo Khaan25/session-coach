@@ -3,7 +3,9 @@ import { cn } from "cn";
 
 // Helpers for the design system's components. Classes merge with the `cn` package, imported from its source.
 // shortcut: the type-* conflict group is not registered with cn, so a caller's type-* role is appended
-// rather than replacing the component's; register it with cn's engine if a call site needs that.
+// rather than replacing the component's. cn/config's createCn({ extend: { classGroups } }) can register it, but
+// only for callers of that instance, and the components import cn from "cn"; list the roles by name
+// (type-input-touch is a modifier, not a role) and switch the imports together if a call site needs it.
 
 type ClassValue = Parameters<typeof cn>[number];
 

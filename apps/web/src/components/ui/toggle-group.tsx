@@ -74,7 +74,7 @@ function ToggleGroupItem({
       data-size={context.size || size}
       data-spacing={context.spacing}
       className={cn(
-        "shrink-0 group-data-[spacing=0]/toggle-group:rounded-none focus:z-10 focus-visible:z-10 group-data-[spacing=0]/toggle-group:focus-visible:focus-ring-inset group-data-[spacing=0]/toggle-group:data-pressed:focus-visible:focus-ring-ink",
+        "shrink-0 group-data-[spacing=0]/toggle-group:rounded-none focus:z-(--z-raised) focus-visible:z-(--z-raised) group-data-[spacing=0]/toggle-group:focus-visible:focus-ring-inset group-data-[spacing=0]/toggle-group:data-pressed:focus-visible:focus-ring-ink",
         "group-data-horizontal/toggle-group:data-[spacing=0]:first:rounded-s-soft group-data-vertical/toggle-group:data-[spacing=0]:first:rounded-t-soft group-data-horizontal/toggle-group:data-[spacing=0]:last:rounded-e-soft group-data-vertical/toggle-group:data-[spacing=0]:last:rounded-b-soft",
         "group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:frame-shared group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:shadow-none group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:frame-shared-y group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:shadow-none",
         toggleVariants({

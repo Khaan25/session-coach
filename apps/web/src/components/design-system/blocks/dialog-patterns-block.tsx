@@ -189,7 +189,7 @@ function InsideScrollDialog() {
                   <ItemTitle>{card.decision}</ItemTitle>
                   <ItemDescription>{card.question}</ItemDescription>
                 </ItemContent>
-                <Badge variant={card.flagged ? "warn" : "default"}>
+                <Badge status={card.flagged ? "warn" : undefined}>
                   {card.flagged ? "Flagged" : card.source}
                 </Badge>
               </Item>

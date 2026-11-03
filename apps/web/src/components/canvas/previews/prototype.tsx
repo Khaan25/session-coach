@@ -26,13 +26,7 @@ import {
   OfflineState,
   SessionFailedState,
 } from "@/components/app/error-state";
-import {
-  DecisionCardLoading,
-  ProcessingState,
-  ReviewCardLoading,
-  SessionListLoading,
-  StatRowLoading,
-} from "@/components/app/loading-state";
+import { ProcessingState } from "@/components/app/processing-state";
 import { Container } from "@/components/app/container";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
@@ -72,6 +66,12 @@ import { initialsOf } from "@/lib/auth/initials";
 import { formatRelativeTime } from "@/lib/relative-time";
 
 import { AppFrame, FRAME_USER, type FrameNavItem, LEARN_NAV } from "./frames";
+import {
+  DecisionCardLoading,
+  ReviewCardLoading,
+  SessionListLoading,
+  StatRowLoading,
+} from "./loading";
 import { AGENTS, promptFor } from "./onboarding";
 import { IdeaNote, NOW, Terminal } from "./parts";
 import {
@@ -594,7 +594,7 @@ function DashboardScreen({
         <EmptyState
           icon={TerminalWindowIcon}
           title="No sessions yet"
-          description="Your sessions appear here once the CLI is set up. Each one becomes 3 to 5 decision cards to explain back on day 1, 3 and 7."
+          description="Your sessions appear here once the CLI is set up. Each one becomes up to 5 decision cards to explain back on day 1, 3 and 7."
           action={<Button onClick={() => go("setup")}>Set up the CLI</Button>}
         />
       </>
@@ -769,7 +769,7 @@ function ReviewScreen({
         <EmptyState
           icon={CardsIcon}
           title="No cards yet"
-          description="Cards come from your agent sessions. Set up the CLI, and each session that ends becomes 3 to 5 cards to explain back."
+          description="Cards come from your agent sessions. Set up the CLI, and each session you send becomes up to 5 cards to explain back."
           action={<Button onClick={() => go("setup")}>Set up the CLI</Button>}
         />
       </>

@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { Suspense } from "react";
 
 import { AppCatalog } from "@/components/design-system/catalog-app";
 import { ActionsCatalog } from "@/components/design-system/catalog-actions";
@@ -39,9 +42,23 @@ const SECTIONS = [
   { id: "app", label: "App blocks" },
 ];
 
-// Every file in components/ui, in every variant, size and state, on example data from the shared sample session.
-// Sections are plain #anchors, so the page needs no search params and stays static.
+/**
+ * /design-system: every file in components/ui, in every variant, size and state, on example data from the shared
+ * sample session. Sections are plain #anchors. Not served on the production deployment; local dev and preview
+ * deploys only.
+ */
 export default function DesignSystemPage() {
+  return (
+    <Suspense>
+      <ProductionGate />
+    </Suspense>
+  );
+}
+
+/** Checked per request, so a preview build promoted to production can't keep a baked-in answer. */
+async function ProductionGate() {
+  await connection();
+  if (process.env.VERCEL_ENV === "production") notFound();
   return (
     <TooltipProvider>
       <main className="mx-auto flex w-full max-w-(--container) flex-col gap-12 px-(--gutter-sm) py-6 sm:px-(--gutter)">
@@ -61,7 +78,7 @@ export default function DesignSystemPage() {
           <PageHeaderStats>
             <PageHeaderStat label="Session" value={session.duration_min} detail="min" />
             <PageHeaderStat label="Events" value={session.event_count} />
-            <PageHeaderStat label="Cards" value={cards.length} detail="3 to 5 per session" />
+            <PageHeaderStat label="Cards" value={cards.length} detail="up to 5 per session" />
           </PageHeaderStats>
         </PageHeader>
 
