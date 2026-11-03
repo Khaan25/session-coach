@@ -83,7 +83,8 @@ export function ReviewSchedule() {
           </div>
           <p className="sr-only">
             Each card is due on day 1, 3 and 7. A score of 2 moves it to the next day; less moves it
-            one step down and it comes back tomorrow. Passing day 7 masters it.
+            one step down (never below day 1) and it comes back tomorrow. Passing the last review
+            masters it.
           </p>
         </CardContent>
       </Card>

@@ -181,9 +181,9 @@ export default function Page() {
             </li>
             <li>
               A 2 moves the card to the next gap: day 1, then day 3, then day 7. A 0 or 1 moves it
-              one step down and it comes back tomorrow.
+              one step down (never below day 1) and it comes back tomorrow.
             </li>
-            <li>Passing day 7 marks the card mastered, and it stops coming back.</li>
+            <li>Passing the last review marks the card mastered, and it stops coming back.</li>
             <li>
               Your progress counts the decisions you can still explain: mastered cards plus cards
               you scored 2 on in the last 7 days.
