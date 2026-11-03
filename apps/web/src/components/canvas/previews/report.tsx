@@ -6,6 +6,7 @@
 
 import { EyeSlashIcon, ShieldCheckIcon } from "@phosphor-icons/react";
 import Link from "next/link";
+import { useId } from "react";
 
 import { Container } from "@/components/app/container";
 import { EmptyState } from "@/components/app/empty-state";
@@ -91,6 +92,8 @@ const DECISIONS: Decision[] = [
 
 /** /report: the learner turns the page on, picks repos and copies the link. */
 export function ReportSettingsPreview({ on }: { on: boolean }) {
+  // Two of these sit on the canvas at once, so every id is per instance.
+  const id = useId();
   return (
     <AppFrame path="/report" crumb="Report">
       <Container>
@@ -112,15 +115,15 @@ export function ReportSettingsPreview({ on }: { on: boolean }) {
           <CardContent>
             <FieldGroup>
               <Field orientation="horizontal">
-                <Switch id="report-on" defaultChecked={on} />
-                <FieldLabel htmlFor="report-on">Share my report</FieldLabel>
+                <Switch id={`${id}-on`} defaultChecked={on} />
+                <FieldLabel htmlFor={`${id}-on`}>Share my report</FieldLabel>
               </Field>
               {on && (
                 <>
                   <Field>
-                    <FieldLabel htmlFor="report-link">Your link</FieldLabel>
+                    <FieldLabel htmlFor={`${id}-link`}>Your link</FieldLabel>
                     <div className="flex gap-2">
-                      <Input id="report-link" readOnly value={LINK} />
+                      <Input id={`${id}-link`} readOnly value={LINK} />
                       <CopyButton value={LINK} label="Link" />
                     </div>
                     <FieldDescription>
@@ -134,9 +137,9 @@ export function ReportSettingsPreview({ on }: { on: boolean }) {
                   </Field>
                   {REPOS.map((r) => (
                     <Field key={r.repo} orientation="horizontal">
-                      <Checkbox id={`report-repo-${r.repo}`} defaultChecked={r.shown} />
+                      <Checkbox id={`${id}-repo-${r.repo}`} defaultChecked={r.shown} />
                       <FieldContent>
-                        <FieldLabel htmlFor={`report-repo-${r.repo}`}>{r.repo}</FieldLabel>
+                        <FieldLabel htmlFor={`${id}-repo-${r.repo}`}>{r.repo}</FieldLabel>
                         <FieldDescription>
                           {r.owned} owned · {r.defended} defended
                         </FieldDescription>
@@ -149,7 +152,7 @@ export function ReportSettingsPreview({ on }: { on: boolean }) {
           </CardContent>
           {on && (
             <CardFooter>
-              <Link href="/r/sam-rivera-7k2p" className={buttonVariants({ variant: "secondary" })}>
+              <Link href="#item-report-shared" className={buttonVariants({ variant: "secondary" })}>
                 See it as a visitor
               </Link>
             </CardFooter>
@@ -233,6 +236,7 @@ export function ReportPublicPreview() {
             ))}
           </section>
         ))}
+        <IdeaNote>A sample: four of the 17 decisions. The real page lists every one.</IdeaNote>
         <p className="type-body-sm text-text-3">
           Made with Session Coach. Sam chose to share this page and can turn it off at any time.
         </p>

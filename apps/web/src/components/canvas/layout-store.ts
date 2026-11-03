@@ -9,7 +9,8 @@ const KEY = "session-coach:ideas-canvas";
 // 2: items became full 1440x900 pages, so positions saved for the small previews would overlap.
 // 3: the report row grew from two pages to five; old saves put the new ones on top of the old.
 const VERSION = 3;
-export const MIN_ZOOM = 0.1;
+// Low enough that "Fit everything" fits the widest row (about 18,000px) on a laptop screen.
+export const MIN_ZOOM = 0.05;
 export const MAX_ZOOM = 3;
 /** Coordinates past this are a corrupt save, not a layout. */
 const LIMIT = 100_000;
@@ -69,7 +70,14 @@ export function loadLayout(ids: ReadonlySet<string>): SavedLayout {
 /** Writes the layout; a full or blocked storage just means it isn't remembered. */
 export function saveLayout(layout: SavedLayout) {
   try {
-    window.localStorage.setItem(KEY, JSON.stringify({ v: VERSION, ...layout }));
+    // Clamped to what `loadLayout` accepts, so an item dragged far out comes back at the edge, not at its default.
+    const clamp = (n: number) => Math.min(LIMIT, Math.max(-LIMIT, n));
+    const point = (p: Point) => ({ x: clamp(p.x), y: clamp(p.y) });
+    const camera = layout.camera && { ...point(layout.camera), z: layout.camera.z };
+    const positions = Object.fromEntries(
+      Object.entries(layout.positions).map(([id, p]) => [id, point(p)]),
+    );
+    window.localStorage.setItem(KEY, JSON.stringify({ v: VERSION, camera, positions }));
   } catch {
     // Quota or privacy mode: the canvas still works, it just forgets.
   }

@@ -61,10 +61,10 @@ const STEPS = [
 const PROGRESS_DESCRIPTION = "Owned cards, plus cards you explained in full in the last 7 days.";
 
 const ANSWERS = Array.from({ length: 30 }, (_, i) => ({
-  day: `Oct ${i + 4}`,
+  day: `Oct ${i + 2}`,
   answers: [3, 0, 2, 4, 1, 5, 2][i % 7],
 }));
-const SCORE_MIX: Record<Score, number> = { 2: 41, 1: 17, 0: 6 };
+const SCORE_MIX: Record<Score, number> = { 2: 44, 1: 20, 0: 7 };
 const SCORES: Score[] = [2, 1, 0];
 const BY_SESSION = [
   { id: "7f3a2c91", title: "Add rate limiting to the upload route", owned: 3, total: 4 },

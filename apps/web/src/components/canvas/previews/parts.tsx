@@ -19,5 +19,5 @@ export function Terminal({ lines }: { lines: string[] }) {
 
 /** What this screen proposes, in one or two plain sentences, for the people reviewing the canvas. */
 export function IdeaNote({ children }: { children: React.ReactNode }) {
-  return <p className="border-l-2 border-accent-line ps-3 type-body-sm text-text-2">{children}</p>;
+  return <p className="border-s-2 border-accent-line ps-3 type-body-sm text-text-2">{children}</p>;
 }

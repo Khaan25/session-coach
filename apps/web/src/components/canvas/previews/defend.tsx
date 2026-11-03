@@ -57,16 +57,17 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2,
 /** Counts down from `seconds` while mounted. Paused on the canvas until someone presses Start. */
 function useCountdown(seconds: number, running: boolean) {
   const [left, setLeft] = useState(seconds);
+  const done = left === 0;
   useEffect(() => {
-    if (!running) return;
+    if (!running || done) return;
     const id = setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(id);
-  }, [running]);
+  }, [running, done]);
   return left;
 }
 
 /** A field that refuses paste and drop, and says why the moment someone tries. */
-function DefendField({ id, label }: { id: string; label: string }) {
+function DefendField({ id, label, disabled }: { id: string; label: string; disabled?: boolean }) {
   const [blocked, setBlocked] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
@@ -87,6 +88,7 @@ function DefendField({ id, label }: { id: string; label: string }) {
       <Textarea
         id={id}
         rows={4}
+        disabled={disabled}
         onPaste={refuse}
         onDrop={refuse}
         autoComplete="off"
@@ -111,6 +113,7 @@ function TimerBadge({ left }: { left: number }) {
     <Badge variant={left <= 30 ? "warning" : "outline"}>
       <TimerIcon aria-hidden="true" />
       <span className="tabular-nums">{clock(left)}</span>
+      <span className="sr-only"> left</span>
     </Badge>
   );
 }
@@ -169,7 +172,9 @@ export function DefendAnswerPreview({ followUp }: { followUp?: boolean }) {
       <span className="type-heading">{DECISION}</span>
       <Card size="lg">
         <CardHeader>
-          <CardTitle>{followUp ? FOLLOW_UP : QUESTION}</CardTitle>
+          <CardTitle>
+            <h2>{followUp ? FOLLOW_UP : QUESTION}</h2>
+          </CardTitle>
           {followUp && (
             <CardDescription>
               Asked by the AI from your first answer and the session evidence.
@@ -180,6 +185,7 @@ export function DefendAnswerPreview({ followUp }: { followUp?: boolean }) {
           <DefendField
             id={followUp ? "canvas-defend-follow" : "canvas-defend-answer"}
             label="Your answer"
+            disabled={left === 0}
           />
         </CardContent>
         <CardFooter>
@@ -219,7 +225,9 @@ export function DefendResultPreview({ state }: { state: "passed" | "time-up" | "
     <DefendPage>
       <Card size="lg">
         <CardHeader>
-          <CardTitle>{state === "passed" ? "Defended" : "Time's up"}</CardTitle>
+          <CardTitle>
+            <h2>{state === "passed" ? "Defended" : "Time's up"}</h2>
+          </CardTitle>
           <CardDescription>
             {state === "passed"
               ? "Timed, with a follow-up. Shown on your ownership report if you share it."

@@ -15,3 +15,9 @@ test("grade gives one point per key idea found, case-insensitive", () => {
   assert.deepEqual(grade(ideas, "the token"), { score: 1, missing: "A shared IP." });
   assert.deepEqual(grade(ideas, "no idea"), { score: 0, missing: "A shared IP." });
 });
+
+test("grade matches whole words, not fragments inside other words", () => {
+  const short = [{ words: ["id", "one"], missing: "Short ids." }];
+  assert.deepEqual(grade(short, "provide it to someone"), { score: 0, missing: "Short ids." });
+  assert.deepEqual(grade(short, "it cites short ids"), { score: 1, missing: null });
+});

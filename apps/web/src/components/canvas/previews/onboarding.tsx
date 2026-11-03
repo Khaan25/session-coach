@@ -22,6 +22,7 @@ import { AuthNotice } from "@/components/auth/auth-notice";
 import { AuthCard, AuthHeading, AuthStatus, AuthSwitch } from "@/components/auth/auth-parts";
 import { GoogleIcon } from "@/components/auth/google-icon";
 import { HandUnderline } from "@/components/marketing/hand-underline";
+import { MIN_PASSWORD } from "@/lib/auth/validate";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -147,7 +148,7 @@ export function SignUpPreview() {
               <Field>
                 <FieldLabel htmlFor="canvas-signup-password">Password</FieldLabel>
                 <Input id="canvas-signup-password" type="password" />
-                <FieldDescription>At least 8 characters.</FieldDescription>
+                <FieldDescription>At least {MIN_PASSWORD} characters.</FieldDescription>
               </Field>
               <Button size="lg">Create account</Button>
             </FieldGroup>
@@ -292,7 +293,7 @@ export function UpdatePasswordPreview() {
             <Field>
               <FieldLabel htmlFor="canvas-update-password">New password</FieldLabel>
               <Input id="canvas-update-password" type="password" />
-              <FieldDescription>At least 8 characters.</FieldDescription>
+              <FieldDescription>At least {MIN_PASSWORD} characters.</FieldDescription>
             </Field>
             <Button size="lg">Save password</Button>
           </FieldGroup>
@@ -320,7 +321,7 @@ export function CliLoginTerminal({ step }: { step: LoginStep }) {
     lines.push(
       "",
       "Approved. Signed in as sam@example.com (Sam Rivera).",
-      "Token saved to ~/.config/session-coach/config.json",
+      "Token saved to ~/.session-coach/config.json",
       "",
       "Next: session-coach push --latest",
     );
@@ -363,7 +364,10 @@ export function CliApprovePreview({ step }: { step: "ask" | "approved" | "signed
             <FieldGroup>
               <GoogleButton />
               <FieldSeparator>or</FieldSeparator>
-              <Link href="/login" className={buttonVariants({ size: "lg" })}>
+              <Link
+                href={`/login?next=${encodeURIComponent(`/cli/approve?code=${CODE}`)}`}
+                className={buttonVariants({ size: "lg" })}
+              >
                 Sign in with email
               </Link>
             </FieldGroup>
@@ -406,7 +410,7 @@ export function CliApprovePreview({ step }: { step: "ask" | "approved" | "signed
           </AuthHeading>
           <AuthStatus>
             <AuthNotice title="Signed in as Sam Rivera">
-              The terminal picks up its token on its next check, within 2 seconds.
+              The terminal picks up its token on its next check, within 5 seconds.
             </AuthNotice>
           </AuthStatus>
         </>
@@ -427,7 +431,7 @@ export const AGENTS: Agent[] = [
     id: "claude",
     name: "Claude Code",
     icon: AsteriskIcon,
-    file: "~/.claude/settings.json (SessionEnd hook)",
+    file: ".claude/settings.json in this project (SessionEnd hook)",
   },
   { id: "codex", name: "Codex", icon: OpenAiLogoIcon, file: "~/.codex/config.toml (notify hook)" },
   { id: "gemini", name: "Gemini CLI", icon: SparkleIcon, file: "~/.gemini/settings.json (hooks)" },

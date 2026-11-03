@@ -186,7 +186,16 @@ export function AppFrame({
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:inline-flex">
-                  <BreadcrumbLink href="/dashboard">Session Coach</BreadcrumbLink>
+                  <BreadcrumbLink
+                    {...(onNavigate
+                      ? {
+                          render: <button type="button" />,
+                          onClick: () => onNavigate("/dashboard"),
+                        }
+                      : { href: "/dashboard" })}
+                  >
+                    Session Coach
+                  </BreadcrumbLink>
                 </BreadcrumbItem>
                 {title && (
                   <>
@@ -237,7 +246,7 @@ function FrameSidebar({
       data-collapsible={state === "collapsed" ? "offcanvas" : ""}
       data-variant="inset"
       data-side="left"
-      className="group peer hidden text-sidebar-foreground md:block"
+      className="group peer text-sidebar-foreground"
     >
       {state === "expanded" && (
         <div className="flex h-full w-(--sidebar-width) bg-surface p-2">

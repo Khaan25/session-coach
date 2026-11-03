@@ -170,7 +170,7 @@ export function DashboardPreview({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-2" aria-label="Last 7 days: 5 practised">
+                  <div role="img" className="flex gap-2" aria-label="Last 7 days: 5 practised">
                     {WEEK.map((done, i) => (
                       <span
                         key={i}

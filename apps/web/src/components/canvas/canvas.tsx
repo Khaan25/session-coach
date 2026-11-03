@@ -399,7 +399,7 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     const g = gesture.current;
     if (!g || g.kind === "pinch" || g.pointerId !== e.pointerId) return;
     // After a pan, the release must not click, copy or follow a link.
-    if (g.kind === "pan" && g.moved) suppressClick.current = true;
+    if (e.type === "pointerup" && g.kind === "pan" && g.moved) suppressClick.current = true;
     if (shellRef.current?.hasPointerCapture(e.pointerId))
       shellRef.current.releasePointerCapture(e.pointerId);
     endGesture();
@@ -518,7 +518,7 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
           tabIndex={0}
           role="application"
           aria-describedby={helpId}
-          className="absolute inset-0 cursor-default overflow-hidden overscroll-none outline-none focus-visible:focus-ring-inset data-space:cursor-grab"
+          className="absolute inset-0 cursor-default touch-pan-x touch-pan-y overflow-hidden overscroll-none outline-none focus-visible:focus-ring-inset data-space:cursor-grab"
           onPointerDownCapture={onPointerDownCapture}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
