@@ -39,7 +39,8 @@ export function trimTimeline(
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
     // Code points, not UTF-16 units, so a surrogate pair is never split.
-    let chars = [...event.text];
+    // Slice first so one huge event isn't expanded whole: a code point is at most 2 UTF-16 units, so this keeps at least MAX_EVENT_CHARS of them.
+    let chars = [...event.text.slice(0, MAX_EVENT_CHARS * 2 + 1)];
     if (chars.length > MAX_EVENT_CHARS) chars = chars.slice(0, MAX_EVENT_CHARS);
     if (used + chars.length > budget) {
       if (kept.length > 0) break;

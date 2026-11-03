@@ -102,6 +102,17 @@ test("trimTimeline cuts an oversized event by code points, never inside a surrog
   assert.equal([...capped.kept[0].text].length, MAX_EVENT_CHARS);
 });
 
+test("trimTimeline caps a multi-million-character event and a long emoji run exactly", () => {
+  const big = trimTimeline([event(1, 5_000_000)]).kept[0];
+  assert.equal(big.text.length, MAX_EVENT_CHARS);
+
+  const emoji: TimelineEvent = { ...event(2, 0), text: "😀".repeat(5_000) };
+  const { text } = trimTimeline([emoji]).kept[0];
+  assert.equal([...text].length, MAX_EVENT_CHARS);
+  assert.equal(text, "😀".repeat(MAX_EVENT_CHARS));
+  assert.equal([...text].at(-1), "😀");
+});
+
 test("trimTimeline does not change the events it was given", () => {
   const huge = event(1, MAX_EVENT_CHARS + 10);
   trimTimeline([huge]);
