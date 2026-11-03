@@ -378,6 +378,15 @@ describe("step 3 responses", () => {
     assert.equal(out.exitCode, 1);
   });
 
+  it("503 shows the server's reason, or the generic line without one", () => {
+    const reason =
+      "This is switched off until rate limits are set up on our side. Try again later.";
+    const out = interpretProcess(503, { error: reason }, ID);
+    assert.equal(out.message, reason);
+    assert.equal(out.exitCode, 1);
+    assert.match(interpretProcess(503, null, ID).message, /HTTP 503/);
+  });
+
   it("maps 401, 413, 404 and 500", () => {
     assert.match(interpretProcess(401, null, ID).message, /session-coach login again/);
     assert.match(interpretProcess(413, null, ID).message, /over 50 MB/);
@@ -404,5 +413,18 @@ describe("secrets", () => {
         }
       }
     }
+  });
+});
+
+describe("429 with Retry-After", () => {
+  it("says when to try again, in the server's wording", () => {
+    const create = interpretCreate(429, { error: "x" }, 120);
+    assert.ok(create.action === "stop");
+    assert.equal(
+      create.message,
+      "Too many requests to the server in the last hour. Try again in 2 minutes.",
+    );
+    assert.match(interpretProcess(429, null, ID, 30).message, /Try again in 1 minute\.$/);
+    assert.match(interpretProcess(429, null, ID).message, /Wait a while/);
   });
 });

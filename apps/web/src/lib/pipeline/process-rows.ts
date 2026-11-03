@@ -1,8 +1,8 @@
 import { gunzipSync } from "node:zlib";
 import { decisionSourceSchema, evidenceSchema } from "@session-coach/shared/decision";
+import { MAX_UPLOAD_BYTES } from "@session-coach/shared/limits";
 import { z } from "zod";
 import { cleanPromptTitle } from "../sessions/name.ts";
-import { MAX_UPLOAD_BYTES } from "../sessions/upload.ts";
 import type { CheckedCard } from "./evidence.ts";
 import type { TimelineEvent } from "./parser.ts";
 

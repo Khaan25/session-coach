@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 
 import { parseLoginArgs, parsePushArgs } from "./args.ts";
@@ -22,19 +21,9 @@ import {
 import { interpretMe, meRequest, send, unreachable } from "./http.ts";
 import { defaultProjectsDir, findLatestLog, formatSize, resolveCwd } from "./latest.ts";
 import { promptHidden } from "./prompt.ts";
-import {
-  createRequest,
-  interpretCreate,
-  interpretProcess,
-  interpretPut,
-  MAX_UPLOAD_BYTES,
-  prepareLog,
-  processRequest,
-  putRequest,
-  sessionMetadata,
-  validateFileName,
-} from "./push.ts";
-import { API_TIMEOUT_MS, readStdin, runSync, UPLOAD_TIMEOUT_MS } from "./sync.ts";
+import { interpretProcess, interpretPut, validateFileName } from "./push.ts";
+import { readStdin, runSync } from "./sync.ts";
+import { API_TIMEOUT_MS, uploadLog } from "./upload.ts";
 
 const USAGE = `Usage:
   session-coach login [--url <site url>] [--token]
@@ -136,43 +125,16 @@ async function pushFile(file: string): Promise<number> {
   const config = await loadConfig(configPath());
   if (!config) return say("Not signed in. Run session-coach login first.", 1);
 
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(file);
-  } catch {
-    return say(`Couldn't read ${file}.`, 1);
-  }
-
-  const { gzipped, text } = prepareLog(bytes);
-  if (gzipped.length > MAX_UPLOAD_BYTES) return say("Log over 50 MB, too big to upload.", 1);
-
-  // ① register the session
-  const meta = sessionMetadata(text, basename(file), gzipped.length);
-  // Safe to repeat: a second POST for the same session gets a 409 with a fresh upload URL.
-  const api = { timeoutMs: API_TIMEOUT_MS, retry: true };
-  const created = await send(createRequest(config.url, config.token, meta), api);
-  if ("error" in created) return say(unreachable(created.error, API_TIMEOUT_MS), 1);
-  const next = interpretCreate(created.status, created.body);
-  if (next.action === "stop") return say(next.message, next.exitCode);
-
-  // ② PUT the log to the signed URL
-  // Safe to repeat: the PUT upserts the same object.
-  const put = await send(putRequest(next.uploadUrl, gzipped), {
-    timeoutMs: UPLOAD_TIMEOUT_MS,
-    retry: true,
-  });
-  if ("error" in put) return say(unreachable(put.error, UPLOAD_TIMEOUT_MS), 1);
-  const stored = interpretPut(put.status);
-  if (stored.exitCode !== 0) return say(stored.message, stored.exitCode);
-
-  // ③ start processing
-  // Not retried: it starts the pipeline, and push can simply be run again.
-  const processed = await send(processRequest(config.url, config.token, next.id), {
-    timeoutMs: API_TIMEOUT_MS,
-    retry: false,
-  });
-  if ("error" in processed) return say(unreachable(processed.error, API_TIMEOUT_MS), 1);
-  const result = interpretProcess(processed.status, processed.body, next.id);
+  const uploaded = await uploadLog(file, basename(file), config);
+  if (uploaded.kind === "unreadable") return say(`Couldn't read ${file}.`, 1);
+  if (uploaded.kind === "too_big") return say("Log over 50 MB, too big to upload.", 1);
+  if (uploaded.kind === "unreachable")
+    return say(unreachable(uploaded.error, uploaded.timeoutMs), 1);
+  if (uploaded.kind === "not_created")
+    return say(uploaded.result.message, uploaded.result.exitCode);
+  if (uploaded.kind === "not_stored") return say(interpretPut(uploaded.status).message, 1);
+  const { status, body, retryAfter } = uploaded.answer;
+  const result = interpretProcess(status, body, uploaded.id, retryAfter);
   return say(result.message, result.exitCode);
 }
 

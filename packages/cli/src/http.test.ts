@@ -99,3 +99,25 @@ describe("login token check", () => {
     assert.equal(interpretMe(500, null, "https://app.test").exitCode, 1);
   });
 });
+
+describe("send Retry-After", () => {
+  const reply = (headers: Record<string, string>) =>
+    (async () => new Response("{}", { status: 429, headers })) as unknown as typeof fetch;
+
+  it("returns Retry-After in seconds when the server sends a number", async () => {
+    const res = await send(REQ, {
+      timeoutMs: 1000,
+      retry: false,
+      fetchImpl: reply({ "retry-after": "120" }),
+    });
+    assert.deepEqual(res, { status: 429, body: {}, retryAfter: 120 });
+  });
+
+  it("leaves it out when missing or an HTTP date", async () => {
+    const dated = { "retry-after": "Wed, 21 Oct 2026 07:28:00 GMT" };
+    for (const headers of [{}, dated] as Record<string, string>[]) {
+      const res = await send(REQ, { timeoutMs: 1000, retry: false, fetchImpl: reply(headers) });
+      assert.deepEqual(res, { status: 429, body: {} });
+    }
+  });
+});

@@ -3,7 +3,10 @@
 
 import type { HttpRequest, Outcome } from "./push.ts";
 
-export type SendResult = { status: number; body: unknown } | { error: "timeout" | "network" };
+/** `retryAfter` is the `Retry-After` header in seconds, present only when the server sent a number. */
+export type SendResult =
+  | { status: number; body: unknown; retryAfter?: number }
+  | { error: "timeout" | "network" };
 
 export type SendOptions = {
   /** Abort the request after this long. */
@@ -15,6 +18,8 @@ export type SendOptions = {
   fetchImpl?: typeof fetch;
 };
 
+const DELTA_SECONDS = /^\d+$/;
+
 async function attempt(req: HttpRequest, timeoutMs: number, fetchImpl: typeof fetch) {
   try {
     const res = await fetchImpl(req.url, { ...req.init, signal: AbortSignal.timeout(timeoutMs) });
@@ -24,7 +29,11 @@ async function attempt(req: HttpRequest, timeoutMs: number, fetchImpl: typeof fe
         throw err;
       return null;
     });
-    return { status: res.status, body };
+    // Only the delta-seconds form; an HTTP date (which the server never sends) is ignored.
+    const retryAfter = res.headers.get("retry-after")?.trim();
+    return retryAfter && DELTA_SECONDS.test(retryAfter)
+      ? { status: res.status, body, retryAfter: Number(retryAfter) }
+      : { status: res.status, body };
   } catch (err) {
     const timedOut = err instanceof Error && err.name === "TimeoutError";
     return { error: timedOut ? ("timeout" as const) : ("network" as const) };

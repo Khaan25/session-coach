@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { bearerToken, MAX_UPLOAD_BYTES, rawPathFor, uploadRequestSchema } from "./upload.ts";
+import { MAX_UPLOAD_BYTES } from "@session-coach/shared/limits";
+import { uploadRequestSchema } from "@session-coach/shared/upload";
+
+import { bearerToken, rawPathFor } from "./upload.ts";
 
 const minimal = { external_id: "2f6c1e1a-0b7e-4c1a-9f3e-8d2b6a1c0e55", size_bytes: 1024 };
 

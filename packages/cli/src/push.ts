@@ -3,16 +3,11 @@
 import { gzipSync } from "node:zlib";
 
 import { redact } from "@session-coach/shared/redact";
+import type { SessionStatus } from "@session-coach/shared/session";
+import type { UploadRequestInput } from "@session-coach/shared/upload";
 
-/** Storage's per-file limit, mirrored from the server (`MAX_UPLOAD_BYTES` in apps/web/src/lib/sessions/upload.ts). */
-export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
-
-export type SessionMetadata = {
-  external_id: string;
-  size_bytes: number;
-  title: null;
-  started_at?: string;
-};
+/** The body of step ①, typed by the server's own schema. */
+export type SessionMetadata = UploadRequestInput;
 
 export type HttpRequest = { url: string; init: RequestInit };
 
@@ -225,17 +220,20 @@ export function prepareLog(bytes: Uint8Array): { gzipped: Buffer; text: string }
   return { gzipped: gzipSync(text), text };
 }
 
+/** When to try again after a 429: the server's `Retry-After` in whole minutes, its own wording, or "a while". */
+function rateLimited(retryAfter: number | undefined): string {
+  if (retryAfter === undefined) {
+    return "Too many requests to the server in the last hour. Wait a while, then run push again.";
+  }
+  const minutes = Math.max(1, Math.ceil(retryAfter / 60));
+  return `Too many requests to the server in the last hour. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
+}
+
 /** Messages shared by steps ① and ③. Never includes the token or the upload URL. */
-function commonFailure(status: number): Outcome | null {
+function commonFailure(status: number, retryAfter: number | undefined): Outcome | null {
   if (status === 401) return { message: "Run session-coach login again.", exitCode: 1 };
   if (status === 413) return { message: "Log over 50 MB, too big to upload.", exitCode: 1 };
-  if (status === 429) {
-    return {
-      message:
-        "Too many requests to the server in the last hour. Wait a while, then run push again.",
-      exitCode: 1,
-    };
-  }
+  if (status === 429) return { message: rateLimited(retryAfter), exitCode: 1 };
   return null;
 }
 
@@ -257,9 +255,10 @@ function badRequest(body: unknown): string {
  *
  * @param status - HTTP status.
  * @param body - Parsed JSON body, or null if it wasn't JSON.
+ * @param retryAfter - The `Retry-After` header in seconds, when the server sent one.
  */
-export function interpretCreate(status: number, body: unknown): CreateResult {
-  const common = commonFailure(status);
+export function interpretCreate(status: number, body: unknown, retryAfter?: number): CreateResult {
+  const common = commonFailure(status, retryAfter);
   if (common) return { action: "stop", ...common };
 
   const id = idOf(body);
@@ -294,13 +293,19 @@ export function interpretPut(status: number): Outcome {
  * @param status - HTTP status.
  * @param body - Parsed JSON body, or null if it wasn't JSON.
  * @param id - The session id from step ①, printed so the session can be found in the app and logs.
+ * @param retryAfter - The `Retry-After` header in seconds, when the server sent one.
  */
-export function interpretProcess(status: number, body: unknown, id: string): Outcome {
+export function interpretProcess(
+  status: number,
+  body: unknown,
+  id: string,
+  retryAfter?: number,
+): Outcome {
   if (status === 202) {
     return { message: `Uploaded. Cards will appear in the app.\nSession id: ${id}`, exitCode: 0 };
   }
   if (status === 409) {
-    const state = (body as { status?: unknown } | null)?.status;
+    const state = (body as { status?: SessionStatus } | null)?.status;
     const label = typeof state === "string" ? state : "unknown";
     if (state === "failed") {
       return {
@@ -313,9 +318,12 @@ export function interpretProcess(status: number, body: unknown, id: string): Out
   if (status === 422) {
     return { message: "Upload didn't land, run push again.", exitCode: 1 };
   }
-  const common = commonFailure(status);
+  const common = commonFailure(status, retryAfter);
   if (common) return common;
   if (status === 404)
     return { message: "The server doesn't know this session. Run push again.", exitCode: 1 };
+  // A 503 says why processing is switched off (such as rate limits not set up), so show the server's sentence.
+  const reason = (body as { error?: unknown } | null)?.error;
+  if (status === 503 && typeof reason === "string") return { message: reason, exitCode: 1 };
   return { message: `Processing couldn't start (HTTP ${status}). Try again.`, exitCode: 1 };
 }

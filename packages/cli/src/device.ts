@@ -5,6 +5,8 @@
 import { spawn } from "node:child_process";
 import { hostname, platform } from "node:os";
 
+import { MAX_POLL_INTERVAL_SECONDS, SLOW_DOWN_STEP_SECONDS } from "@session-coach/shared/limits";
+
 import { send } from "./http.ts";
 import type { HttpRequest } from "./push.ts";
 
@@ -22,9 +24,6 @@ export type PollResult =
   | { kind: "expired" }
   | { kind: "denied" }
   | { kind: "error"; message: string };
-
-/** Added to the interval on each slow_down (RFC 8628 section 3.5). */
-const SLOW_DOWN_STEP_SECONDS = 5;
 
 const USER_CODE = /^[A-Z]{4}-[A-Z]{4}$/;
 
@@ -122,7 +121,7 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
 
 /**
  * Polls until the learner decides or the code expires, waiting `interval` seconds between polls and 5 s longer after
- * each slow_down. A network error or 5xx is retried on the next tick.
+ * each slow_down, up to the server's 60 s ceiling. A network error or 5xx is retried on the next tick.
  */
 export async function pollForToken(
   baseUrl: string,
@@ -142,7 +141,7 @@ export async function pollForToken(
     const result = interpretPoll(res.status, res.body);
     if (result.kind === "pending") continue;
     if (result.kind === "slow_down") {
-      interval += SLOW_DOWN_STEP_SECONDS;
+      interval = Math.min(interval + SLOW_DOWN_STEP_SECONDS, MAX_POLL_INTERVAL_SECONDS);
       continue;
     }
     return result;
