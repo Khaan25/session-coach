@@ -31,6 +31,8 @@ const jsonLd = {
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
+const LESS_THAN = /</g;
+
 const enter = "animate-in fade-in fill-mode-both ease-out-quint motion-reduce:animate-none";
 
 export default function Home() {
@@ -39,7 +41,7 @@ export default function Home() {
       <script
         type="application/ld+json"
         // Static data built above, so there's nothing user-supplied to escape; < is escaped anyway.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(LESS_THAN, "\\u003c") }}
       />
       <section className="relative isolate overflow-hidden">
         {/* The lower layer: a grey field ruled like an index card, which the card stack overlaps. */}

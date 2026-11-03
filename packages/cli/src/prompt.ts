@@ -4,6 +4,8 @@ import { createInterface } from "node:readline";
 // oxlint-disable-next-line no-control-regex -- matching ESC is the point
 const ESCAPE_SEQUENCE = /\u001b(?:\[[0-?]*[ -/]*[@-~]|O[@-~]|.)?/gsu;
 
+const CONTROL_CHAR = /\p{Cc}/u;
+
 /**
  * Applies one chunk of typed keys to the secret. Escape sequences are dropped whole and control characters skipped, so
  * only printable text reaches the value.
@@ -18,7 +20,7 @@ export function applyKeys(
     if (char === "\r" || char === "\n") return { value, done: "enter" };
     if (char === "\u0003") return { value, done: "cancel" };
     if (char === "\u007f" || char === "\b") value = value.slice(0, -1);
-    else if (!/\p{Cc}/u.test(char)) value += char;
+    else if (!CONTROL_CHAR.test(char)) value += char;
   }
   return { value, done: null };
 }

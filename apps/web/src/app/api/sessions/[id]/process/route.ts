@@ -53,15 +53,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const admin = createAdminClient();
     const { data: session, error: readError } = await admin
       .from("sessions")
-      .select("id, user_id, status, raw_path")
+      .select("user_id, status, raw_path")
       .eq("id", id.data)
-      .maybeSingle<{ id: string; user_id: string; status: string; raw_path: string }>();
+      .maybeSingle<{ user_id: string; status: string; raw_path: string }>();
     if (readError) throw new Error(readError.message);
     if (!session || session.user_id !== userId) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
     if (session.status !== "pending") {
-      return NextResponse.json({ id: session.id, status: session.status }, { status: 409 });
+      return NextResponse.json({ id: id.data, status: session.status }, { status: 409 });
     }
 
     const { data: file } = await admin.storage.from(SESSIONS_BUCKET).info(session.raw_path);
@@ -75,7 +75,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       await admin
         .from("sessions")
         .update({ status: "failed", error: "This session's log is over 50 MB, too big to read." })
-        .eq("id", session.id);
+        .eq("id", id.data);
       return NextResponse.json({ error: "The log is over 50 MB." }, { status: 413 });
     }
 
@@ -91,16 +91,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         error: null,
         processing_started_at: startedAt,
       })
-      .eq("id", session.id)
+      .eq("id", id.data)
       .eq("status", "pending")
       .select("id");
     if (claimError) throw new Error(claimError.message);
     if (claimed.length === 0) {
-      return NextResponse.json({ id: session.id, status: "processing" }, { status: 409 });
+      return NextResponse.json({ id: id.data, status: "processing" }, { status: 409 });
     }
 
-    after(() => processSession(session.id, startedAt, invokedAt));
-    return NextResponse.json({ id: session.id }, { status: 202 });
+    after(() => processSession(id.data, startedAt, invokedAt));
+    return NextResponse.json({ id: id.data }, { status: 202 });
   } catch (err) {
     console.error("[api/sessions/process] failed", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Processing couldn't start. Try again." }, { status: 500 });

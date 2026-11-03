@@ -8,6 +8,11 @@ export type CheckedCard = Omit<
   "id" | "session_id" | "user_id" | "created_at" | "flagged" | "hidden"
 >;
 
+const SINGLE_QUOTES = /[\u2018\u2019\u201A\u201B\u2032]/g;
+const DOUBLE_QUOTES = /[\u201C\u201D\u201E\u201F\u2033]/g;
+const DASHES = /[\u2010-\u2015\u2212]/g;
+const WHITESPACE = /\s+/g;
+
 /**
  * The form both sides of a quote check are compared in: NFKC, curly quotes and dashes as ASCII, whitespace collapsed,
  * lower case. Models often "fix" typography and case when they copy, which is not paraphrase.
@@ -15,10 +20,10 @@ export type CheckedCard = Omit<
 const normalize = (text: string) =>
   text
     .normalize("NFKC")
-    .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
-    .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')
-    .replace(/[\u2010-\u2015\u2212]/g, "-")
-    .replace(/\s+/g, " ")
+    .replace(SINGLE_QUOTES, "'")
+    .replace(DOUBLE_QUOTES, '"')
+    .replace(DASHES, "-")
+    .replace(WHITESPACE, " ")
     .trim()
     .toLowerCase();
 
@@ -30,6 +35,8 @@ function fileOf(event: TimelineEvent | undefined): string | null {
 
 const isDecisionsFile = (file: string | null) => file?.split("/").at(-1) === "DECISIONS.md";
 
+const EDIT_TEXT = /^.* — replaced \d+ lines? with \d+: ([\s\S]*)$/;
+
 /**
  * The written words of a write or edit event, without the parser's metadata. Only an edit carries any: the parser
  * writes `<path> — replaced N lines with M: <first new line>`; a write is `<path> — wrote N lines`, all metadata.
@@ -38,7 +45,7 @@ const isDecisionsFile = (file: string | null) => file?.split("/").at(-1) === "DE
  * upgrade when the parser keeps the written text.
  */
 function writtenText(event: TimelineEvent): string {
-  return /^.* — replaced \d+ lines? with \d+: ([\s\S]*)$/.exec(event.text)?.[1] ?? "";
+  return EDIT_TEXT.exec(event.text)?.[1] ?? "";
 }
 
 /** The fewest words a quote needs to count as verified; the prompt asks for 5 to 30. */

@@ -23,6 +23,8 @@ export function validateToken(token: string): string | null {
 /** Hosts where plain http is allowed, so a token never crosses the network unencrypted. */
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+const TRAILING_SLASHES = /\/+$/;
+
 /**
  * Normalises a site URL: https, or http for a local host only; no trailing slash.
  *
@@ -38,7 +40,7 @@ export function normalizeUrl(input: string): string | null {
   if (url.protocol !== "https:" && !(url.protocol === "http:" && LOCAL_HOSTS.has(url.hostname))) {
     return null;
   }
-  return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
+  return `${url.origin}${url.pathname.replace(TRAILING_SLASHES, "")}`;
 }
 
 /** Writes the config readable by its owner only, even when the file already existed with looser permissions. */

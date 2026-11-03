@@ -104,13 +104,15 @@ function StatLabel({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+const afterSeparator = /(?<=[,.\s])/;
+
 /**
  * Breaks a figure only after a separator. "12,480,991,204" becomes the groups "12," "480," "991," "204",
  * each kept whole, with a break point after each, so a narrow box wraps between groups and never inside
  * one.
  */
 function groupsOf(text: string) {
-  return text.split(/(?<=[,.\s])/).map((part, i) => (
+  return text.split(afterSeparator).map((part, i) => (
     <Fragment key={i}>
       <span className="whitespace-nowrap">{part}</span>
       <wbr />

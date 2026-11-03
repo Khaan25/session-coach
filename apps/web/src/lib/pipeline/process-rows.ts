@@ -88,6 +88,8 @@ export function unzipLog(gzipped: Buffer, maxBytes = MAX_LOG_BYTES): string {
 /** A session title is cut to this many characters, then "…" is added. */
 export const MAX_TITLE_CHARS = 80;
 
+const LINE_BREAK = /\r?\n/;
+
 /**
  * The session's length in whole minutes, from the top-level `timestamp` of each log line. Lines that aren't JSON
  * objects, or have no valid timestamp, are skipped.
@@ -99,7 +101,7 @@ export function durationMinutes(raw: string): number | null {
   let first = Infinity;
   let last = -Infinity;
   let count = 0;
-  for (const line of raw.split(/\r?\n/)) {
+  for (const line of raw.split(LINE_BREAK)) {
     if (line.trim() === "") continue;
     let entry: unknown;
     try {
@@ -119,6 +121,8 @@ export function durationMinutes(raw: string): number | null {
   return count < 2 ? null : Math.round((last - first) / 60_000);
 }
 
+const WHITESPACE = /\s+/g;
+
 /**
  * A session title from the first prompt: whitespace collapsed, cut to `MAX_TITLE_CHARS` with "…" when longer. The
  * parser has already redacted the text.
@@ -129,7 +133,7 @@ export function durationMinutes(raw: string): number | null {
 export function sessionTitle(events: readonly TimelineEvent[]): string | null {
   const prompt = events.find((e) => e.kind === "prompt");
   if (!prompt) return null;
-  const text = prompt.text.replace(/\s+/g, " ").trim();
+  const text = prompt.text.replace(WHITESPACE, " ").trim();
   if (text === "") return null;
   // Count and cut by code points, so an emoji at the limit is kept whole or dropped, never split in two.
   const chars = [...text];

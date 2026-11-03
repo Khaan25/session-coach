@@ -15,18 +15,16 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     const reason = providerError === "access_denied" ? "access_denied" : "oauth_failed";
-    return NextResponse.redirect(new URL(`/auth/error?code=${reason}`, origin));
+    return NextResponse.redirect(`${origin}/auth/error?code=${reason}`);
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     console.error("auth/callback", error);
-    return NextResponse.redirect(new URL("/auth/error?code=oauth_failed", origin));
+    return NextResponse.redirect(`${origin}/auth/error?code=oauth_failed`);
   }
-  const response = NextResponse.redirect(
-    new URL(safeNext(searchParams.get("next"), origin), origin),
-  );
+  const response = NextResponse.redirect(`${origin}${safeNext(searchParams.get("next"), origin)}`);
   // It sets the session cookies, so no cache may keep it (docs/plans/auth.md #20).
   response.headers.set("Cache-Control", "private, no-store");
   return response;

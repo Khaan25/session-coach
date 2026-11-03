@@ -130,9 +130,11 @@ async function lastSeenByUser(supabase: ReturnType<typeof createAdminClient>, id
   return latest;
 }
 
+const POSITIVE_INT = /^[1-9]\d*$/;
+
 /** A query value as a positive integer: the fallback when absent, null when malformed. */
 function parsePositiveInt(value: string | null, fallback: number): number | null {
   if (value === null || value === "") return fallback;
-  if (!/^[1-9]\d*$/.test(value)) return null;
+  if (!POSITIVE_INT.test(value)) return null;
   return Number(value);
 }

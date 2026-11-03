@@ -4,7 +4,9 @@
 
 import { wordCount } from "../pipeline/evidence.ts";
 
-const words = (text: string) => new Set(text.toLowerCase().match(/[a-z0-9]{3,}/g) ?? []);
+const WORD = /[a-z0-9]{3,}/g;
+
+const words = (text: string) => new Set(text.toLowerCase().match(WORD) ?? []);
 
 /**
  * Grades by word overlap with the model answer: at least 60% of its words scores 2, at least 25% scores 1, else 0.
@@ -28,6 +30,8 @@ export function fakeGrade(data: { model_answer?: unknown; answer?: unknown }) {
 /** The most cards the fake returns: the real limit is 5, 3 is enough to click through. */
 const FAKE_CARDS = 3;
 
+const WHITESPACE = /\s+/;
+
 /**
  * Extracts one card per prompt or reply of at least 5 words, up to 3, quoting that event's first 12 words. The quote is
  * copied from the event, so every card passes `checkEvidence` and a local push ends `ready` with cards.
@@ -42,7 +46,7 @@ export function fakeExtract(data: { events?: unknown }) {
       if (event.kind !== "prompt" && event.kind !== "reply") return [];
       const quote = String(event.text ?? "")
         .trim()
-        .split(/\s+/)
+        .split(WHITESPACE)
         .slice(0, 12)
         .join(" ");
       // The same word count `checkEvidence` uses, so punctuation-only tokens don't make a card it then drops.
