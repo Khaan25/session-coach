@@ -33,6 +33,7 @@ export const maxDuration = 300;
  * @param context - The `[id]` route param.
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  const invokedAt = Date.now();
   const token = bearerToken(request.headers.get("authorization"));
   if (!token) return NextResponse.json({ error: "Missing CLI token" }, { status: 401 });
 
@@ -49,9 +50,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         { status: 401 },
       );
     }
-    const limited = await userRateLimit("process", userId);
-    if (limited) return tooManyRequests(limited);
-
     const admin = createAdminClient();
     const { data: session, error: readError } = await admin
       .from("sessions")
@@ -81,6 +79,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "The log is over 50 MB." }, { status: 413 });
     }
 
+    // Only a run that can really start spends the learner's budget.
+    const limited = await userRateLimit("process", userId);
+    if (limited) return tooManyRequests(limited);
+
     const startedAt = new Date().toISOString();
     const { data: claimed, error: claimError } = await admin
       .from("sessions")
@@ -97,7 +99,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ id: session.id, status: "processing" }, { status: 409 });
     }
 
-    after(() => processSession(session.id, startedAt));
+    after(() => processSession(session.id, startedAt, invokedAt));
     return NextResponse.json({ id: session.id }, { status: 202 });
   } catch (err) {
     console.error("[api/sessions/process] failed", err instanceof Error ? err.message : err);

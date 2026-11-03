@@ -26,7 +26,10 @@ class DeadlineError extends Error {
   name = "DeadlineError";
 }
 
-/** 20 s under the route's 300 s `maxDuration`, so the catch can still write `failed` before the platform kills it. */
+/**
+ * 20 s under the route's 300 s `maxDuration`, counted from the route's start, so the catch can still write `failed`
+ * before the platform kills the function.
+ */
 const DEADLINE_MS = 280_000;
 
 /** The log parsed to no events: nothing to ask the model about. */
@@ -59,16 +62,24 @@ function learnerMessage(error: unknown): string {
  * @param sessionId - The session to process; its log is at `raw_path` in the `sessions` bucket.
  * @param startedAt - The `processing_started_at` the route claimed with. The final status write matches it, so a run
  *   that a re-push replaced can't mark the newer run failed or ready.
+ * @param invokedAt - When the route started (`Date.now()`); its own work spends the same 300 s.
  */
-export async function processSession(sessionId: string, startedAt: string): Promise<void> {
+export async function processSession(
+  sessionId: string,
+  startedAt: string,
+  invokedAt: number,
+): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   // On the deadline the run's model calls are cancelled, and it checks before each write.
   const stop = new AbortController();
   const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      stop.abort();
-      reject(new DeadlineError(`over ${DEADLINE_MS} ms`));
-    }, DEADLINE_MS);
+    timer = setTimeout(
+      () => {
+        stop.abort();
+        reject(new DeadlineError(`over ${DEADLINE_MS} ms`));
+      },
+      DEADLINE_MS - (Date.now() - invokedAt),
+    );
   });
   try {
     await Promise.race([run(sessionId, startedAt, stop.signal), deadline]);
