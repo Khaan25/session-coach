@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-03 · A ready session with no cards says "No decisions found"
+
+- **Problem:** a session that finished with zero cards is still `ready`, so the dashboard row said "Ready" and the sidebar said "Cards ready". Nothing was ready to review.
+- **Decision:** the label comes from the status and the visible card count (`sessionLabel` in `lib/sessions/status-label.ts`). Ready with 0 cards says "No decisions found"; every other label is unchanged. The dashboard row also hides "0 cards". This is display only: `process.ts` still writes `ready`, and there is no migration and no change to `packages/shared`.
+- **Caveat:** a ready session whose cards are all hidden or flagged also reads 0 visible cards, so it shows "No decisions found" too.
+- **Rejected:** a new status or a saved "no decisions" flag (a schema change, and the pipeline's output is a shared contract).
+- **Known gaps:** the live toast still says "Cards ready" for zero cards, because the count arrives after the toast. `/s/[id]` still shows its own "Ready" badge until `zia/answer-first` merges, because that branch changes the page. A just-settled live row may show "Cards ready" for a moment before the count arrives.
+
 ## 2026-11-03 · Session titles are cleaned when shown, and only `pasted_content` is unwrapped
 
 - **Problem:** a title is saved from the first prompt, and it kept tags like `<pasted_content id="…">` or `<system-reminder>`. The dashboard and the sidebar showed the raw tags.
