@@ -119,7 +119,8 @@ Rules every flow follows:
   once. But a JWT stays valid until it expires (up to an hour) even after the user is deleted or banned. Grading,
   token creation and account deletion call `getUser()`, which asks the auth server (#18). Never trust `getSession()` on
   the server: it reads the cookie without verifying it.
-- **Select columns by name.** Learners can't read `decision_cards.model_answer`, so `select *` fails; the column lists
+- **Select columns by name.** Learners can't read `decision_cards.model_answer`, `why` or `evidence`, so `select *`
+  fails; the column lists
   live next to their queries ([`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts),
   [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts),
   [`lib/tokens/queries.ts`](../apps/web/src/lib/tokens/queries.ts)).
@@ -150,16 +151,32 @@ The dashboard list, the sidebar and a processing session's page update as the pi
 
 `POST /api/review/answer` ([route](../apps/web/src/app/api/review/answer/route.ts)) grades one explanation:
 
-1. Validate `{ cardId, answer }` with zod ([`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts)) before any
+1. Validate `{ cardId, answer }` or `{ cardId, dontKnow: true }` (exactly one) with zod ([`lib/review/grade.ts`](../apps/web/src/lib/review/grade.ts)) before any
    query or model call. 400 names the field.
 2. `getUser()`. 401 when signed out.
-3. Read the card with the service role (it needs `model_answer`), its `reviews` row and the learner's time zone, in
-   parallel. A card that isn't theirs, or is hidden, is 404.
-4. `callModel("grade", ...)` and validate the output as `{ score: 0|1|2, missing }`; invalid twice is 502.
-5. `nextReview(step, score, today)` ([`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts)): score 2
-   moves to the next gap (day 1, 3, 7) and passing day 7 masters the card; a score below 2 moves it one step down (never below day 1), due tomorrow.
-6. Move `reviews`, then insert `answers`, and return `{ score, missing, modelAnswer, evidence, nextDue }`. This
-   response is the first time the answer key reaches the browser.
+3. Read the card with the service role (it needs `model_answer`), its `reviews` row, the learner's time zone and their
+   answers of the last 26 hours, in parallel. A card that isn't theirs, or is hidden, is 404. A card with a `reviews`
+   row that isn't due today is 409, and so is any card once 5 answers are in today (`DAILY_CAP`, the same rule as the
+   queue): "You've done 5 cards today. This one comes back tomorrow." Nothing is written.
+4. `callModel("grade", ...)` and validate the output as `{ score: 0|1|2, missing }`; invalid twice is 502. An honest
+   skip (`dontKnow`) skips the model and the rate limit: score 0, `answers.skipped = true`.
+5. `nextReview(step, score, today, skipped)` ([`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts)):
+   score 2 moves to the next gap (day 1, 3, 7) and passing day 7 masters the card; a score below 2 moves it one step
+   down (never below day 1), due tomorrow. A skip keeps the step (at least 1) and is due tomorrow.
+6. Move `reviews`, then insert `answers`, and return
+   `{ score, missing, why, modelAnswer, evidence, nextDue, step, level, dropped }`. This response is the first time the
+   why, the evidence and the answer key reach the browser for a card. The page and the API withhold them, and so does
+   the database: learners have no `select` grant on `why`, `evidence` or `model_answer`. `/s/[id]` shows a card's why,
+   source, files and evidence only once it has a `reviews` row: `getSessionWithCards` finds the answered cards with the
+   learner's client, then `revealAnswered` reads them with the service role, checking owner, `hidden` and the
+   `reviews` row in code, and `lockUnanswered` keeps only the decision and question of the rest.
+
+Today's queue is one rule, `todayQueue()` in [`lib/review/today.ts`](../apps/web/src/lib/review/today.ts), pure and
+tested: at most 5 cards a local day, minus the answers (skips too) already given today in `profiles.timezone`; up to 2
+of them new cards (never answered, last 7 days, newest first) so they never starve behind a backlog; due cards oldest
+due first fill the rest. `/review` (`reviewQueue`), the dashboard banner and sidebar (`dueTodayCount`, the queue's
+length) and the daily email (`dailyReviewRecipients`) all use it. The answer textarea blocks paste and drop, client
+side only, as a nudge to recall.
 
 Why it is built this way:
 
@@ -275,10 +292,10 @@ open. `proxy.ts` skips these routes: they have no session. Retention maths is pu
 | Model provider or model               | Env vars only: `MODEL_PROVIDER`, `MODEL_<TASK>`, the provider key                                                                |
 | A new model provider                  | `KEY_ENV` and `request()` in [`lib/model/call-model.ts`](../apps/web/src/lib/model/call-model.ts)                                |
 | What "can still explain" means        | [`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts), its test and ARCHITECTURE.md                             |
-| "Due today"                           | `dueTodayCount` in [`lib/review/queries.ts`](../apps/web/src/lib/review/queries.ts)                                              |
+| "Due today" and the 5-a-day cap       | `todayQueue` and `DAILY_CAP` in [`lib/review/today.ts`](../apps/web/src/lib/review/today.ts), with its test                      |
 | What a session is called              | [`lib/sessions/name.ts`](../apps/web/src/lib/sessions/name.ts)                                                                   |
 | Session list columns or page size     | [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)                                                                   |
-| Card columns learners read            | [`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts) (never `model_answer`)                                            |
+| Card columns shown on /s/[id]         | [`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts) (never `model_answer`)                                            |
 | A table, column, policy or grant      | A new migration (team agreement first), `packages/shared`, and [DATA_MODEL.md](DATA_MODEL.md)                                    |
 | Colours, spacing, type, motion        | [`styles/tokens.css`](../apps/web/src/styles/tokens.css)                                                                         |
 | A component's look                    | A variant in its file under [`components/ui/`](../apps/web/src/components/ui/)                                                   |

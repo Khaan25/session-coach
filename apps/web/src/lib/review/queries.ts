@@ -7,50 +7,40 @@ import { localDate } from "@/lib/sessions/rows";
 import { createClient } from "@/lib/supabase/server";
 
 import { newCardsSince, type Step } from "./schedule";
+import { answeredSince, countAnsweredToday, DAILY_CAP, todayQueue } from "./today";
 
 // Learner reads through the RLS client: hidden cards and model_answer never come back. The caller passes the signed-in
 // learner's id, so access is decided before the query. The daily email cron, the dashboard banner and the queue share
-// this "due today" rule (plan, maintenance notes).
+// one "today" rule, `todayQueue` in lib/review/today.ts (plan, maintenance notes).
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type SessionName = Pick<Session, "title" | "repo" | "branch">;
 
 /**
- * The learner's today (YYYY-MM-DD) in their `profiles.timezone`, so a card due "tomorrow" turns up at their midnight,
- * not the server's.
+ * The learner's `profiles.timezone`, so a card due "tomorrow" turns up at their midnight, not the server's.
  *
  * @param supabase - The learner's RLS client.
  * @param userId - The signed-in learner.
- * @param now - The current time.
  */
-async function learnerToday(supabase: Supabase, userId: string, now: Date) {
+async function learnerTimeZone(supabase: Supabase, userId: string) {
   const { data, error } = await supabase
     .from("profiles")
     .select("timezone")
     .eq("id", userId)
     .maybeSingle<{ timezone: string }>();
-  if (error) throw new Error(`learnerToday: ${error.message}`);
-  return localDate(data?.timezone ?? "UTC", now);
+  if (error) throw new Error(`learnerTimeZone: ${error.message}`);
+  return data?.timezone ?? "UTC";
 }
 
 /**
- * Cards due today: `reviews.due_on <= today` in the learner's `profiles.timezone`, not mastered.
+ * How many cards are left for today: the length of `reviewQueue`, so the dashboard banner, the sidebar and the queue
+ * always show the same number.
  *
  * @param userId - The signed-in learner.
  * @param now - The current time; defaults to now.
- * @returns The count, 0 until reviews exist.
  */
 export async function dueTodayCount(userId: string, now = new Date()): Promise<number> {
-  const supabase = await createClient();
-  const today = await learnerToday(supabase, userId, now);
-  const { count, error } = await supabase
-    .from("reviews")
-    .select("card_id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("mastered", false)
-    .lte("due_on", today);
-  if (error) throw new Error(`dueTodayCount: ${error.message}`);
-  return count ?? 0;
+  return (await reviewQueue(userId, now)).length;
 }
 
 /** One row of the review queue. `step` 0 is a card never answered. */
@@ -61,19 +51,25 @@ export type QueueCard = {
   sessionName: string;
   step: Step;
   dueOn: string | null;
+  createdAt: string;
 };
 
-type CardRow = { id: string; decision: string; session_id: string; session: SessionName | null };
-const CARD_COLUMNS = "id, decision, session_id, session:sessions(title, repo, branch)";
+type CardRow = {
+  id: string;
+  decision: string;
+  session_id: string;
+  created_at: string;
+  session: SessionName | null;
+};
+const CARD_COLUMNS = "id, decision, session_id, created_at, session:sessions(title, repo, branch)";
 
 /**
- * The review queue (plan, Phase 6 step 4): cards due today, oldest due first, then cards from the last 7 days that
- * were never answered, oldest first.
+ * Today's review queue (plan, Phase 6 step 4), capped by `todayQueue` (`lib/review/today.ts`): at most 5 cards a local
+ * day, answers already given today included, up to 2 of them new cards, then due cards oldest due first.
  *
- * - Two queries in parallel: due `reviews` with their card embedded (after the learner's today), and recent
- *   `decision_cards` with their review (needs no today, so it starts at once).
+ * - Reads in parallel: the time zone, recent never-answered `decision_cards` with their review (needs no today), and
+ *   the learner's answers since `answeredSince`; then the due `reviews` with their card embedded (needs today).
  * - A card has no `reviews` row until its first answer, so new cards come from the second query, not the first.
- * - New cards older than 7 days are left out, so a learner back from a break isn't handed the whole backlog.
  *
  * @param userId - The signed-in learner.
  * @param now - The current time, from the page.
@@ -81,30 +77,36 @@ const CARD_COLUMNS = "id, decision, session_id, session:sessions(title, repo, br
  */
 export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[]> {
   const supabase = await createClient();
-  const weekAgo = newCardsSince(now);
-  const [due, recent] = await Promise.all([
-    learnerToday(supabase, userId, now).then((today) =>
-      supabase
-        .from("reviews")
-        .select(`step, due_on, card:decision_cards(${CARD_COLUMNS})`)
-        .eq("user_id", userId)
-        .eq("mastered", false)
-        .lte("due_on", today)
-        .order("due_on")
-        .order("card_id")
-        .overrideTypes<{ step: Step; due_on: string; card: CardRow | null }[], { merge: false }>(),
-    ),
+  const [timeZone, recent, answers] = await Promise.all([
+    learnerTimeZone(supabase, userId),
     supabase
       .from("decision_cards")
       .select(`${CARD_COLUMNS}, reviews(card_id)`)
       .eq("user_id", userId)
-      .gte("created_at", weekAgo)
-      .order("created_at")
+      .gte("created_at", newCardsSince(now))
+      .order("created_at", { ascending: false })
       .order("position")
       .overrideTypes<(CardRow & { reviews: unknown })[], { merge: false }>(),
+    supabase
+      .from("answers")
+      .select("created_at")
+      .eq("user_id", userId)
+      .gte("created_at", answeredSince(now))
+      .overrideTypes<{ created_at: string }[], { merge: false }>(),
   ]);
-  if (due.error) throw new Error(`reviewQueue: ${due.error.message}`);
   if (recent.error) throw new Error(`reviewQueue: ${recent.error.message}`);
+  if (answers.error) throw new Error(`reviewQueue: ${answers.error.message}`);
+  const today = localDate(timeZone, now);
+  const due = await supabase
+    .from("reviews")
+    .select(`step, due_on, card:decision_cards(${CARD_COLUMNS})`)
+    .eq("user_id", userId)
+    .eq("mastered", false)
+    .lte("due_on", today)
+    .order("due_on")
+    .order("card_id")
+    .overrideTypes<{ step: Step; due_on: string; card: CardRow | null }[], { merge: false }>();
+  if (due.error) throw new Error(`reviewQueue: ${due.error.message}`);
 
   const toQueue = (card: CardRow, step: Step, dueOn: string | null): QueueCard => ({
     id: card.id,
@@ -113,6 +115,7 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
     sessionName: sessionName(card.session ?? {}),
     step,
     dueOn,
+    createdAt: card.created_at,
   });
   // RLS drops a hidden card from the embed, leaving card null.
   const dueCards = due.data.flatMap(({ step, due_on, card }) =>
@@ -122,30 +125,61 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
   const fresh = recent.data
     .filter(({ reviews }) => reviews === null || (Array.isArray(reviews) && reviews.length === 0))
     .map((card) => toQueue(card, 0, null));
-  return [...dueCards, ...fresh];
+  const queue = todayQueue({
+    due: dueCards,
+    fresh,
+    answeredToday: countAnsweredToday(
+      answers.data.map(({ created_at }) => created_at),
+      timeZone,
+      today,
+    ),
+    now,
+  });
+  return [...queue.due, ...queue.fresh];
 }
 
-/** Why the queue is empty: no cards at all (first run), or all done for today and when the next one is due. */
-export type EmptyQueue = { hasCards: boolean; nextDue: string | null; today: string };
+/**
+ * Why the queue is empty: no cards at all (first run), the day's cap reached (`doneToday`), or all done and when the
+ * next one is due.
+ */
+export type EmptyQueue = {
+  hasCards: boolean;
+  doneToday: boolean;
+  nextDue: string | null;
+  today: string;
+};
 
 /**
  * Read only when the queue came back empty, to tell a first run from a learner who is all caught up.
  *
  * @param userId - The signed-in learner.
  * @param now - The current time, from the page.
- * @returns Whether the learner has any visible card, and the earliest `due_on` after today (null when none is
- *   scheduled: every answered card is mastered).
+ * @returns Whether the learner has any visible card, whether today's `DAILY_CAP` answers are in, and the earliest
+ *   `due_on` after today (null when none is scheduled: every answered card is mastered).
  */
 export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue> {
   const supabase = await createClient();
-  const [cards, today] = await Promise.all([
+  const [cards, timeZone, answers] = await Promise.all([
     supabase
       .from("decision_cards")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId),
-    learnerToday(supabase, userId, now),
+    learnerTimeZone(supabase, userId),
+    supabase
+      .from("answers")
+      .select("created_at")
+      .eq("user_id", userId)
+      .gte("created_at", answeredSince(now))
+      .overrideTypes<{ created_at: string }[], { merge: false }>(),
   ]);
+  const today = localDate(timeZone, now);
   if (cards.error) throw new Error(`emptyQueue: ${cards.error.message}`);
+  if (answers.error) throw new Error(`emptyQueue: ${answers.error.message}`);
+  const answeredToday = countAnsweredToday(
+    answers.data.map(({ created_at }) => created_at),
+    timeZone,
+    today,
+  );
   // Inner embed: RLS drops a hidden card, and with it its review, so nextDue never points at a card the queue can't show.
   const next = await supabase
     .from("reviews")
@@ -157,7 +191,12 @@ export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue>
     .limit(1)
     .maybeSingle<{ due_on: string; card: { id: string } }>();
   if (next.error) throw new Error(`emptyQueue: ${next.error.message}`);
-  return { hasCards: (cards.count ?? 0) > 0, nextDue: next.data?.due_on ?? null, today };
+  return {
+    hasCards: (cards.count ?? 0) > 0,
+    doneToday: answeredToday >= DAILY_CAP,
+    nextDue: next.data?.due_on ?? null,
+    today,
+  };
 }
 
 /** What the quiz shows before an answer: the decision and the question, never the why or the answer key. */

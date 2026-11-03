@@ -2,6 +2,18 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-04 · Answer first: why and evidence revoked, skips keep the step, 5 cards a day
+
+- **Decision:** learners lose the `select` grant on `decision_cards.why` and `evidence` (migration `20261104000000`; `model_answer` stays revoked). The server reads them with the service role only for a card of the learner's that has a `reviews` row (`revealAnswered` in `lib/cards/queries.ts`, owner, `hidden` and answer checked in code since the service role skips RLS), and `POST /api/review/answer` returns them with the grade. "I don't know yet" is stored with `answers.skipped = true` (same migration), scores 0, shows the why, and keeps the card's step (at least 1): it comes back tomorrow with no level lost, where a wrong answer drops a step. Each local day has at most 5 cards (`todayQueue`, `lib/review/today.ts`): 5 minus the answers already given today, skips included, up to 2 slots for new cards (newest session first), the rest due cards oldest due first. The queue, the dashboard count and the daily email use that one function, and the answer route refuses a 6th answer with 409 and writes nothing. The answer box blocks paste and drop in the browser.
+- **Why:** the grant let anyone with a session read the reason through Supabase's REST API before answering, which made "answer first" a UI rule only. A skip that cost a level would push people to guess or paste into an AI; it costs nothing so they say so instead. Five a day keeps the habit small enough to keep: a learner back from a break or with many sessions isn't handed 30 cards, and new cards keep flowing instead of waiting behind old ones. The skip is its own column, not a match on the stored text, so a learner who types "I don't know yet" isn't treated as a skip. Blocking paste is a nudge, not a control.
+- **Rejected:** an RPC that checks the `reviews` row (more SQL to keep in step with RLS than a service-role read beside the existing route); counting only graded answers toward the cap (a skip is still a card done today); a cap on the client only (a never-answered card opened from `/s/[id]` would pass it); a server check against pasted text (can't tell paste from typing).
+
+## 2026-11-03 · Answer first: the why stays off the page until the learner tries
+
+- **Decision:** on `/s/[id]` a card with no `reviews` row shows only its decision, its question and the answer box. Its why, source, files and evidence are not read for the page at all (`getSessionWithCards` reads them only for answered cards). `POST /api/review/answer` returns the why, the evidence and the model answer (not the source or files: the session page shows those once the card has a `reviews` row). "I don't know yet" is an honest skip: `{ cardId, dontKnow: true }` scores 0 with no model call, shows the why, and schedules the card for tomorrow, so a second skip the same day gets a 409 from the due check and can't be used to read a card twice a day. Superseded in part on 2026-11-04: skips are marked by `answers.skipped` and keep the step, and the columns are revoked.
+- **Why:** the why sat right above the question, so reading it felt like knowing it and nothing was remembered (retrieval before reveal). Hiding it with CSS or in client state wouldn't do: it would still be in the HTML and the RSC payload. The skip is there so people don't guess or paste the question into an AI.
+- **Rejected:** counting a skip against the hourly grade limit (it costs no model call).
+
 ## 2026-11-03 · A ready session with no cards says "No decisions found"
 
 - **Problem:** a session that finished with zero cards is still `ready`, so the dashboard row said "Ready" and the sidebar said "Cards ready". Nothing was ready to review.

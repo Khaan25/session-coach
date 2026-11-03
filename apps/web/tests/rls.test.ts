@@ -142,8 +142,14 @@ test("decision_cards: own visible cards only, no hidden cards, no other learner'
   }
 });
 
-test("decision_cards: model_answer is not readable, and select * fails", async () => {
+test("decision_cards: model_answer, why and evidence are not readable, and select * fails", async () => {
   for (const [me] of pairs()) {
+    // Answer first: the why and the evidence come only from the server, after an answer (migration 20261104000000).
+    for (const column of ["why", "evidence"]) {
+      const read = await me.client.from("decision_cards").select(`id, ${column}`);
+      assert.ok(read.error, `${column} was readable`);
+      assert.equal(read.error.code, "42501");
+    }
     const key = await me.client.from("decision_cards").select("id, model_answer");
     assert.ok(key.error, "model_answer was readable");
     assert.equal(key.error.code, "42501"); // insufficient_privilege
