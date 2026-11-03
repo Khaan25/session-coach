@@ -12,6 +12,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
   (see [`tracker_members` and `tracker_tasks`](#tracker_members-and-tracker_tasks)).
 - [`20261103000000_session_processing_started.sql`](../supabase/migrations/20261103000000_session_processing_started.sql):
   `sessions.processing_started_at`, so stuck runs are timed from their claim and `created_at` stays the upload time.
+- [`20261104000100_cli_device_codes.sql`](../supabase/migrations/20261104000100_cli_device_codes.sql): the
+  server-only `cli_device_codes` table for the CLI's device-code login.
 
 ## The one rule
 
@@ -104,21 +106,21 @@ through `POST /api/cli/tokens`.
 Pending CLI logins (device-code flow, RFC 8628). Server only: RLS on, no policies, and `anon`/`authenticated` have no
 grants. Written by `/api/cli/device*` with the service role.
 
-| Column             | Stores                                                                                  | Written by     |
-| ------------------ | --------------------------------------------------------------------------------------- | -------------- |
-| `id`               | Row id.                                                                                 | Default        |
-| `device_code_hash` | sha256 of the device code the CLI polls with. Unique. The raw code is never stored.     | Server (start) |
-| `user_code`        | 8 letters from `BCDFGHJKLMNPQRSTVWXZ`, shown as XXXX-XXXX. Unique.                      | Server (start) |
-| `client_name`      | The CLI's device label (hostname and OS), 1 to 100 characters. Becomes the token label. | Server (start) |
-| `requested_ip`     | The IP that started the login, shown to the approver.                                   | Server (start) |
-| `requested_at`     | When the login started.                                                                 | Server (start) |
-| `expires_at`       | At most 10 minutes after `requested_at` (check).                                        | Server (start) |
-| `poll_interval`    | Seconds between polls, 5 to 60; each `slow_down` adds 5.                                | Server (poll)  |
-| `approved_by`      | The learner who approved. Set together with `approved_at` (check).                      | Server         |
-| `approved_at`      | Approval time. Never set together with `denied_at` (check).                             | Server         |
-| `denied_at`        | Denial time.                                                                            | Server         |
-| `token_issued_at`  | When the poll collected the token; only after approval (check). Set once, by CAS.       | Server (poll)  |
-| `last_polled_at`   | Last poll, for `slow_down`.                                                             | Server (poll)  |
+| Column             | Stores                                                                                                           | Written by     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- | -------------- |
+| `id`               | Row id.                                                                                                          | Default        |
+| `device_code_hash` | sha256 of the device code the CLI polls with. Unique. The raw code is never stored.                              | Server (start) |
+| `user_code`        | 8 letters from `BCDFGHJKLMNPQRSTVWXZ`, shown as XXXX-XXXX. Unique.                                               | Server (start) |
+| `client_name`      | The CLI's device label (hostname and OS), 1 to 100 characters. Becomes the token label.                          | Server (start) |
+| `requested_ip`     | The IP that started the login, shown to the approver.                                                            | Server (start) |
+| `requested_at`     | When the login started.                                                                                          | Server (start) |
+| `expires_at`       | At most 10 minutes after `requested_at` (check).                                                                 | Server (start) |
+| `poll_interval`    | Seconds between polls, 5 to 60; each `slow_down` adds 5.                                                         | Server (poll)  |
+| `approved_by`      | The learner who approved. Set together with `approved_at` (check).                                               | Server         |
+| `approved_at`      | Approval time. Never set together with `denied_at` (check).                                                      | Server         |
+| `denied_at`        | Denial time.                                                                                                     | Server         |
+| `token_issued_at`  | When the poll collected the token; only after approval (check). Claimed by CAS; cleared if token creation fails. | Server (poll)  |
+| `last_polled_at`   | Last poll, for `slow_down`.                                                                                      | Server (poll)  |
 
 - **Cleanup:** `cli_device_codes_expires_idx`; each start deletes rows expired for more than a day.
 

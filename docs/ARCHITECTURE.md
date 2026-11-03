@@ -46,7 +46,7 @@ terminal                                   server                               
 ────────                                   ──────                                   ───────────────────
 session-coach login ──POST /api/cli/device──► cli_device_codes(sha256(deviceCode), userCode, 10 min)
   prints WDJB-MJHT, opens /cli/approve?code=WDJB-MJHT ─────────────────────────────► shows device, IP, countdown
-  polls /api/cli/device/token every 5 s ◄── 400 authorization_pending                 Approve ──► approved_by, approved_at
+  polls /api/cli/device/token (5 s, +5 s per slow_down) ◄── 400 authorization_pending                 Approve ──► approved_by, approved_at
   next poll ◄── 200 { token, email } once: compare-and-set token_issued_at, new cli_tokens row (label = device name)
   saves ~/.session-coach/config.json
 ```
