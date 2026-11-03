@@ -193,7 +193,7 @@ function FieldSeparator({
         <>
           {/* In the row, not on top of the line, so long text wraps centred instead of into half the width. */}
           <span
-            className="max-w-3/4 text-center text-balance type-body-sm text-text-3"
+            className="max-w-3/4 text-center type-body-sm text-balance text-text-3"
             data-slot="field-separator-content"
           >
             {children}
