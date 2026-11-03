@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { IdeasCanvas } from "@/components/canvas/registry";
+import { DecisionCardPreview } from "@/components/marketing/decision-card-preview";
 
 export const metadata: Metadata = {
   title: "Ideas canvas",
@@ -14,5 +15,5 @@ export const metadata: Metadata = {
  */
 export default function CanvasPage() {
   if (process.env.VERCEL_ENV === "production") notFound();
-  return <IdeasCanvas />;
+  return <IdeasCanvas heroCard={<DecisionCardPreview />} />;
 }

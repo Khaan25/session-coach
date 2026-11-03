@@ -10,15 +10,12 @@ import {
   ChartLineUpIcon,
   CheckCircleIcon,
   FireIcon,
-  GearSixIcon,
-  HouseIcon,
   LaptopIcon,
   ProhibitIcon,
   ShareNetworkIcon,
   ShieldCheckIcon,
   TerminalWindowIcon,
   TimerIcon,
-  type Icon,
 } from "@phosphor-icons/react";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 
@@ -36,6 +33,7 @@ import {
   SessionListLoading,
   StatRowLoading,
 } from "@/components/app/loading-state";
+import { Container } from "@/components/app/container";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
 import { StatRow } from "@/components/app/stat-row";
@@ -70,8 +68,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { initialsOf } from "@/lib/auth/initials";
 import { formatRelativeTime } from "@/lib/relative-time";
 
+import { AppFrame, FRAME_USER, type FrameNavItem, LEARN_NAV } from "./frames";
 import { AGENTS, promptFor } from "./onboarding";
 import { IdeaNote, NOW, Terminal } from "./parts";
 import {
@@ -113,15 +113,26 @@ type Answer = {
   next: string;
 };
 
-const NAV: { id: ScreenId; label: string; icon: Icon }[] = [
-  { id: "dashboard", label: "Dashboard", icon: HouseIcon },
-  { id: "review", label: "Review", icon: CardsIcon },
-  { id: "defend", label: "Defend it", icon: ShieldCheckIcon },
-  { id: "progress", label: "Progress", icon: ChartLineUpIcon },
-  { id: "report", label: "Report", icon: ShareNetworkIcon },
-  { id: "setup", label: "Setup", icon: TerminalWindowIcon },
-  { id: "settings", label: "Settings", icon: GearSixIcon },
+/** The real Learn nav, with the two proposed pages (Defend it, Report) where they would sit. */
+const NAV: FrameNavItem[] = [
+  LEARN_NAV[0],
+  LEARN_NAV[1],
+  { title: "Defend it", url: "/defend", icon: <ShieldCheckIcon /> },
+  LEARN_NAV[2],
+  { title: "Report", url: "/report", icon: <ShareNetworkIcon /> },
+  LEARN_NAV[3],
+  LEARN_NAV[4],
 ];
+
+const SCREEN_FOR: Record<string, ScreenId> = {
+  "/dashboard": "dashboard",
+  "/review": "review",
+  "/defend": "defend",
+  "/progress": "progress",
+  "/report": "report",
+  "/setup": "setup",
+  "/settings": "settings",
+};
 
 const o = (value: string, label: string): Option => ({ value, label });
 const FULL = o("full", "Full");
@@ -384,136 +395,48 @@ function PrototypeApp({ onReset }: { onReset: () => void }) {
   };
 
   const session = sessions.find((s) => s.id === sessionId) ?? sessions[0];
-  const active = screen === "session" ? "dashboard" : screen;
   const firstName = name.trim().split(" ")[0] || "there";
+
+  const bar = (
+    <div className="flex shrink-0 items-center gap-3 border-b border-dashed border-hair bg-well px-4 py-2">
+      <Badge variant="warning">Prototype control</Badge>
+      <span id="proto-state-label" className="type-label-sm text-text-2">
+        State
+      </span>
+      <SegmentedControl
+        size="xs"
+        aria-labelledby="proto-state-label"
+        value={screen === "setup" ? setupValue : mode}
+        onValueChange={pickState}
+      >
+        {STATES[screen].map((s) => (
+          <SegmentedControlItem key={s.value} value={s.value}>
+            {s.label}
+          </SegmentedControlItem>
+        ))}
+      </SegmentedControl>
+      <div className="ms-auto">
+        <Button variant="ghost" size="sm" onClick={onReset}>
+          <ArrowCounterClockwiseIcon aria-hidden="true" />
+          Reset prototype
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <ProtoContext.Provider value={{ go, announce, mode, setMode, retry }}>
-      <div className="flex h-full flex-col bg-page">
-        <div className="flex items-center gap-3 border-b border-dashed border-hair bg-well px-4 py-2">
-          <Badge variant="warning">Prototype control</Badge>
-          <span id="proto-state-label" className="type-label-sm text-text-2">
-            State
-          </span>
-          <SegmentedControl
-            size="xs"
-            aria-labelledby="proto-state-label"
-            value={screen === "setup" ? setupValue : mode}
-            onValueChange={pickState}
-          >
-            {STATES[screen].map((s) => (
-              <SegmentedControlItem key={s.value} value={s.value}>
-                {s.label}
-              </SegmentedControlItem>
-            ))}
-          </SegmentedControl>
-          <div className="ms-auto">
-            <Button variant="ghost" size="sm" onClick={onReset}>
-              <ArrowCounterClockwiseIcon aria-hidden="true" />
-              Reset prototype
-            </Button>
-          </div>
-        </div>
-
-        <header className="flex items-center gap-4 border-b border-hair px-4 py-2">
-          <span className="type-label text-text-1">Session Coach</span>
-          <nav aria-label="Main" className="flex flex-1 flex-wrap items-center gap-1">
-            {NAV.map(({ id, label, icon: NavIcon }) => (
-              <Button
-                key={id}
-                size="sm"
-                variant={active === id ? "secondary" : "ghost"}
-                aria-current={active === id ? "page" : undefined}
-                onClick={() => go(id)}
-              >
-                <NavIcon aria-hidden="true" />
-                {label}
-                {id === "review" && queue.length > 0 && <Badge size="sm">{queue.length}</Badge>}
-              </Button>
-            ))}
-          </nav>
-          <span className="type-body-sm text-text-2">{name}</span>
-        </header>
-
-        <div className="relative flex min-h-0 flex-1 flex-col">
-          <main className="min-h-0 flex-1 overflow-auto">
-            <div
-              key={`${screen}-${sessionId}`}
-              className={`mx-auto flex max-w-3xl flex-col gap-6 p-8 ${ENTER}`}
-            >
-              {screen === "dashboard" && (
-                <DashboardScreen
-                  firstName={firstName}
-                  sessions={sessions}
-                  cards={cards}
-                  meter={meter}
-                  ownedTotal={ownedTotal}
-                  cardTotal={cardTotal}
-                  gained={gainedCards.length}
-                  week={week}
-                  due={queue.length}
-                  doneToday={doneToday}
-                  explainedPercent={explainedPercent}
-                  onOpen={openSession}
-                />
-              )}
-              {screen === "review" && (
-                <ReviewScreen
-                  queue={queue}
-                  doneToday={doneToday}
-                  waiting={waiting}
-                  hasCards={cards.length > 0}
-                  answers={answers}
-                  cards={cards}
-                  ownedTotal={ownedTotal}
-                  cardTotal={cardTotal}
-                  gained={gainedCards.length}
-                  onRecord={record}
-                />
-              )}
-              {screen === "session" && (
-                <SessionScreen
-                  session={session}
-                  cards={cards.filter((c) => c.sessionId === session.id)}
-                  answers={answers}
-                  onRecord={record}
-                />
-              )}
-              {screen === "defend" && (
-                <DefendScreen
-                  owned={owned}
-                  onDefended={(id) => setDefended((prev) => [...prev, id])}
-                />
-              )}
-              {screen === "progress" && (
-                <ProgressScreen
-                  cards={cards}
-                  answers={answers}
-                  due={queue.length}
-                  sessionsThisWeek={sessions.length}
-                  explainedPercent={explainedPercent}
-                />
-              )}
-              {screen === "report" && (
-                <ReportScreen
-                  name={name}
-                  owned={owned}
-                  on={reportOn}
-                  onToggle={setReportOn}
-                  ownedTotal={ownedTotal}
-                />
-              )}
-              {screen === "setup" && (
-                <SetupScreen
-                  step={setup}
-                  onStep={toSetup}
-                  name={name}
-                  pushed={cards.some((c) => c.id === NEW_CARDS[0].id)}
-                />
-              )}
-              {screen === "settings" && <SettingsScreen name={name} onName={setName} />}
-            </div>
-          </main>
+      <AppFrame
+        path={screen === "session" ? `/s/${sessionId}` : `/${screen}`}
+        crumb={screen === "defend" ? "Defend it" : screen === "report" ? "Report" : undefined}
+        nav={NAV}
+        sessions={sessions}
+        dueCount={queue.length}
+        user={{ ...FRAME_USER, name, initials: initialsOf(name, FRAME_USER.detail) }}
+        onNavigate={(url) => go(SCREEN_FOR[url] ?? "dashboard")}
+        onOpenSession={openSession}
+        bar={bar}
+        overlay={
           <output
             aria-live="polite"
             className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center"
@@ -527,8 +450,79 @@ function PrototypeApp({ onReset }: { onReset: () => void }) {
               </span>
             )}
           </output>
-        </div>
-      </div>
+        }
+      >
+        <Container key={`${screen}-${sessionId}`} className={ENTER}>
+          {screen === "dashboard" && (
+            <DashboardScreen
+              firstName={firstName}
+              sessions={sessions}
+              cards={cards}
+              meter={meter}
+              ownedTotal={ownedTotal}
+              cardTotal={cardTotal}
+              gained={gainedCards.length}
+              week={week}
+              due={queue.length}
+              doneToday={doneToday}
+              explainedPercent={explainedPercent}
+              onOpen={openSession}
+            />
+          )}
+          {screen === "review" && (
+            <ReviewScreen
+              queue={queue}
+              doneToday={doneToday}
+              waiting={waiting}
+              hasCards={cards.length > 0}
+              answers={answers}
+              cards={cards}
+              ownedTotal={ownedTotal}
+              cardTotal={cardTotal}
+              gained={gainedCards.length}
+              onRecord={record}
+            />
+          )}
+          {screen === "session" && (
+            <SessionScreen
+              session={session}
+              cards={cards.filter((c) => c.sessionId === session.id)}
+              answers={answers}
+              onRecord={record}
+            />
+          )}
+          {screen === "defend" && (
+            <DefendScreen owned={owned} onDefended={(id) => setDefended((prev) => [...prev, id])} />
+          )}
+          {screen === "progress" && (
+            <ProgressScreen
+              cards={cards}
+              answers={answers}
+              due={queue.length}
+              sessionsThisWeek={sessions.length}
+              explainedPercent={explainedPercent}
+            />
+          )}
+          {screen === "report" && (
+            <ReportScreen
+              name={name}
+              owned={owned}
+              on={reportOn}
+              onToggle={setReportOn}
+              ownedTotal={ownedTotal}
+            />
+          )}
+          {screen === "setup" && (
+            <SetupScreen
+              step={setup}
+              onStep={toSetup}
+              name={name}
+              pushed={cards.some((c) => c.id === NEW_CARDS[0].id)}
+            />
+          )}
+          {screen === "settings" && <SettingsScreen name={name} onName={setName} />}
+        </Container>
+      </AppFrame>
     </ProtoContext.Provider>
   );
 }

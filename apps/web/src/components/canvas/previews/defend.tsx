@@ -5,7 +5,9 @@
 import { ProhibitIcon, ShieldCheckIcon, TimerIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
+import { Container } from "@/components/app/container";
 import { EmptyState } from "@/components/app/empty-state";
+import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge } from "@/components/app/score-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +23,28 @@ import { DataList, DataListItem, DataListLabel, DataListValue } from "@/componen
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 
-import { IdeaNote, Screen } from "./parts";
+import { AppFrame } from "./frames";
+import { IdeaNote } from "./parts";
+
+const DESCRIPTION = "Explain one decision you own against the clock, like an interview.";
+
+/** /defend, a proposed page: the app shell, the page header, then the step. */
+function DefendPage({
+  actions,
+  children,
+}: {
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <AppFrame path="/defend" crumb="Defend it">
+      <Container>
+        <AppPageHeader title="Defend it" description={DESCRIPTION} actions={actions} />
+        {children}
+      </Container>
+    </AppFrame>
+  );
+}
 
 const DECISION = "Rate limit uploads per CLI token, not per IP";
 const QUESTION =
@@ -94,14 +117,14 @@ function TimerBadge({ left }: { left: number }) {
 
 export function DefendStartPreview() {
   return (
-    <Screen path="/defend">
-      <Card>
+    <DefendPage>
+      <Card size="lg">
         <CardHeader>
           <CardTitle>
-            <span className="flex items-center gap-2">
+            <h2 className="flex items-center gap-2">
               <ShieldCheckIcon aria-hidden="true" />
               Defend a decision
-            </span>
+            </h2>
           </CardTitle>
           <CardDescription>
             We pick one decision you own at random. You get 3 minutes, no paste, and one follow-up
@@ -126,7 +149,7 @@ export function DefendStartPreview() {
           <Button>Start the timer</Button>
         </CardFooter>
       </Card>
-    </Screen>
+    </DefendPage>
   );
 }
 
@@ -135,13 +158,16 @@ export function DefendAnswerPreview({ followUp }: { followUp?: boolean }) {
   const [running, setRunning] = useState(false);
   const left = useCountdown(followUp ? 120 : 180, running);
   return (
-    <Screen path="/defend">
-      <div className="flex items-center justify-between gap-3">
-        <span className="type-label text-text-2">{followUp ? "Follow-up" : "Question 1 of 2"}</span>
-        <TimerBadge left={left} />
-      </div>
+    <DefendPage
+      actions={
+        <>
+          <Badge variant="outline">{followUp ? "Follow-up" : "Question 1 of 2"}</Badge>
+          <TimerBadge left={left} />
+        </>
+      }
+    >
       <span className="type-heading">{DECISION}</span>
-      <Card>
+      <Card size="lg">
         <CardHeader>
           <CardTitle>{followUp ? FOLLOW_UP : QUESTION}</CardTitle>
           {followUp && (
@@ -173,25 +199,25 @@ export function DefendAnswerPreview({ followUp }: { followUp?: boolean }) {
         stored evidence. Blocking paste only raises the bar: help off screen is still possible, so
         we never say &ldquo;verified&rdquo;.
       </IdeaNote>
-    </Screen>
+    </DefendPage>
   );
 }
 
 export function DefendResultPreview({ state }: { state: "passed" | "time-up" | "none-owned" }) {
   if (state === "none-owned")
     return (
-      <Screen path="/defend">
+      <DefendPage>
         <EmptyState
           icon={ShieldCheckIcon}
           title="Nothing to defend yet"
           description="Defend it picks from decisions you own: explained right on day 1, 3 and 7. Your first one is due in 5 days."
           action={<Button variant="secondary">Go to today&rsquo;s review</Button>}
         />
-      </Screen>
+      </DefendPage>
     );
   return (
-    <Screen path="/defend">
-      <Card>
+    <DefendPage>
+      <Card size="lg">
         <CardHeader>
           <CardTitle>{state === "passed" ? "Defended" : "Time's up"}</CardTitle>
           <CardDescription>
@@ -231,6 +257,6 @@ export function DefendResultPreview({ state }: { state: "passed" | "time-up" | "
           </div>
         </CardFooter>
       </Card>
-    </Screen>
+    </DefendPage>
   );
 }
