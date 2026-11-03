@@ -56,7 +56,7 @@ export const wordCount = (text: string) =>
  */
 export function checkQuotes(draft: ExtractedCard, events: readonly TimelineEvent[]) {
   return draft.evidence.map(({ event_index, quote }) => {
-    const event = events[event_index - 1];
+    const event = events.find((e) => e.id === `E${event_index}`);
     const normalized = normalize(quote);
     const verified =
       event !== undefined &&
@@ -82,7 +82,8 @@ const isGroundedQuote = ({ verified, event, file, normalized }: CheckedQuote) =>
  * agent did, not why.
  *
  * @param draft - A card from `extractCards`.
- * @param events - The same timeline the model saw; `event_index` is a 1-based position in it.
+ * @param events - The same timeline the model saw; `event_index` is the number in an event's id (E57 is 57), which
+ *   need not be its position.
  */
 export function isGrounded(draft: ExtractedCard, events: readonly TimelineEvent[]): boolean {
   return checkQuotes(draft, events).some(isGroundedQuote);
@@ -95,7 +96,8 @@ export function isGrounded(draft: ExtractedCard, events: readonly TimelineEvent[
  * relative paths, so a path matches when it equals the event's path or ends it after a "/").
  *
  * @param drafts - Cards from `extractCards`.
- * @param events - The same timeline the model saw; `event_index` is a 1-based position in it.
+ * @param events - The same timeline the model saw; `event_index` is the number in an event's id (E57 is 57), which
+ *   need not be its position.
  * @returns Surviving cards with `position` set to 0, 1, 2... after the drops; empty when every card is dropped. An
  *   out-of-range index gives `verified: false`.
  */

@@ -19,28 +19,43 @@ export const MAX_TIMELINE_CHARS = 16_000;
 export const MAX_EVENT_CHARS = 1_500;
 
 /**
- * Caps each event's text, then keeps events in order until the budget is spent. Each event costs its JSON as
- * `extractCards` sends it, plus one for the comma. An event that doesn't fit ends the timeline, so ids stay E1..En with
- * no gaps and `event_index` still points at the right event.
+ * Caps each event's text, then keeps the newest events that fit the budget (the end of a session holds the decisions
+ * that shipped) and drops the older ones whole. Each event costs its JSON as `extractCards` sends it, plus one for the
+ * comma. Kept events stay in time order and keep their original ids, so a timeline may start at E57: `event_index`
+ * still names the right event, but it is no longer a position in `kept`. If the newest event alone is over budget, its
+ * text is cut to `budget` code points and it is sent alone.
  *
  * Temporary: Zia's big-session decision (a bigger model, or chunks) replaces this.
  *
  * @param events - The parsed timeline.
- * @returns `kept`: the capped events to send and to check quotes against. `cut`: how many events were left out.
+ * @param budget - The most timeline to keep, in characters of the JSON sent.
+ * @returns `kept`: the capped events to send and to check quotes against. `cut`: how many older events were left out.
  */
-export function trimTimeline(events: readonly TimelineEvent[]): {
+export function trimTimeline(
+  events: readonly TimelineEvent[],
+  budget: number = MAX_TIMELINE_CHARS,
+): {
   kept: TimelineEvent[];
   cut: number;
 } {
   const kept: TimelineEvent[] = [];
   let used = 0;
-  for (const event of events) {
-    const text = event.text.slice(0, MAX_EVENT_CHARS);
-    const size = JSON.stringify({ id: event.id, kind: event.kind, text }).length + 1;
-    if (used + size > MAX_TIMELINE_CHARS) break;
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    // Code points, not UTF-16 units, so a surrogate pair is never split.
+    // Slice first so one huge event isn't expanded whole: a code point is at most 2 UTF-16 units, so this keeps at least MAX_EVENT_CHARS of them.
+    let chars = [...event.text.slice(0, MAX_EVENT_CHARS * 2 + 1)];
+    if (chars.length > MAX_EVENT_CHARS) chars = chars.slice(0, MAX_EVENT_CHARS);
+    const size =
+      JSON.stringify({ id: event.id, kind: event.kind, text: chars.join("") }).length + 1;
+    if (used + size > budget) {
+      if (kept.length > 0) break;
+      chars = chars.slice(0, budget);
+    }
     used += size;
-    kept.push({ ...event, text });
+    kept.push({ ...event, text: chars.join("") });
   }
+  kept.reverse();
   return { kept, cut: events.length - kept.length };
 }
 

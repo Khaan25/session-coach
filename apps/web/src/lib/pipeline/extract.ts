@@ -10,7 +10,7 @@ export type ExtractModel = (task: "extract", input: ModelInput) => Promise<unkno
 export const EXTRACT_INSTRUCTIONS = `You find the decisions an AI coding agent made in one working session.
 
 The timeline arrives as JSON in the user message: { "events": [ { "id": "E1", "kind": "prompt", "text": "..." } ] }.
-Each event has an id (E1, E2, ...), a kind and its text. The kinds are prompt, reply, write, edit, bash, read and result.
+Each event has an id (E1, E2, ...), a kind and its text. The kinds are prompt, reply, write, edit, bash, read and result. Ids can start at any number because older events may have been cut, and evidence must cite only ids that appear in the timeline.
 A prompt is the user's words. A reply is the agent's words. The others are what the agent did.
 
 Return JSON only, exactly this shape:

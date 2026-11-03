@@ -90,6 +90,34 @@ test("whitespace is collapsed on both sides before comparing", () => {
   assert.equal(card.evidence[0]?.verified, true);
 });
 
+test("event_index is the id's number, so a timeline that starts at E50 still resolves", () => {
+  const tail = [
+    event(50, "prompt", "Keep the shared styles in one tokens file."),
+    event(51, "reply", "I will put them in tokens.css so every page reuses them."),
+  ];
+  const quote = "shared styles in one tokens file";
+  const [card] = checkEvidence(
+    [
+      draft([
+        { event_index: 50, quote },
+        { event_index: 51, quote: "put them in tokens.css so every page reuses them" },
+        // Not in the timeline: E1 was trimmed away, E2 is a position not an id, E999 and NaN are made up.
+        { event_index: 1, quote },
+        { event_index: 2, quote },
+        { event_index: 999, quote },
+        { event_index: Number.NaN, quote },
+      ]),
+    ],
+    tail,
+  );
+  assert.ok(card);
+  assert.deepEqual(
+    card.evidence.map((e) => e.verified),
+    [true, true, false, false, false, false],
+  );
+  for (const item of card.evidence.slice(2)) assert.equal(item.file, null);
+});
+
 test("an out-of-range index is unverified with no file", () => {
   const card = check([
     { event_index: 99, quote: "anything" },
