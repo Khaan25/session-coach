@@ -7,8 +7,8 @@ import { join } from "node:path";
 export type LatestLog = { path: string; name: string; size: number } | { error: string };
 
 /** Where Claude Code keeps its per-project logs. */
-export function defaultProjectsDir(): string {
-  return join(homedir(), ".claude", "projects");
+export function defaultProjectsDir(home: string = homedir()): string {
+  return join(home, ".claude", "projects");
 }
 
 /**

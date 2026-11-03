@@ -32,8 +32,12 @@ export const SYNC_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export const SYNC_QUIET_MS = 10 * 60 * 1000;
 /** One log per run: each upload starts a model run, and the free tier's 8,000 tokens a minute can't take several. */
 export const SYNC_MAX_LOGS = 1;
-/** The whole run gives up after this, so a slow server can't keep a hook process alive for minutes. */
-export const SYNC_DEADLINE_MS = 100_000;
+/**
+ * The whole run gives up after this, so a slow server can't keep a hook process alive for long. It must outlast one
+ * log's slowest honest path: the register and start-processing calls (`API_TIMEOUT_MS` each) around an upload of up to
+ * `UPLOAD_TIMEOUT_MS`.
+ */
+export const SYNC_DEADLINE_MS = 180_000;
 
 const STDIN_TIMEOUT_MS = 1_000;
 const STDIN_MAX_BYTES = 64 * 1024;
@@ -41,7 +45,10 @@ const STDIN_MAX_BYTES = 64 * 1024;
 const PATH_SEPARATOR = /[\\/]/;
 const JSONL_EXTENSION = /\.jsonl$/;
 
-/** Reads a stream to the end, at most `maxBytes`, and gives up waiting after `timeoutMs`. Never rejects. */
+/**
+ * Reads a stream to the end, at most `maxBytes` (the last chunk is cut to fit), and gives up waiting after
+ * `timeoutMs`. Once it has finished it ignores the stream and pauses it. Never rejects.
+ */
 export function readStdin(
   stream: Readable,
   timeoutMs = STDIN_TIMEOUT_MS,
@@ -50,17 +57,26 @@ export function readStdin(
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
     let size = 0;
+    let done = false;
+    const onData = (chunk: Buffer | string) => {
+      if (done) return;
+      const buffer = Buffer.from(chunk);
+      const kept = buffer.subarray(0, maxBytes - size);
+      chunks.push(kept);
+      size += kept.length;
+      if (size >= maxBytes) finish();
+    };
     const finish = () => {
+      if (done) return;
+      done = true;
       clearTimeout(timer);
+      stream.off("data", onData);
+      stream.pause();
       resolve(Buffer.concat(chunks).toString("utf8"));
     };
     const timer = setTimeout(finish, timeoutMs);
-    stream.on("data", (chunk: Buffer | string) => {
-      const buffer = Buffer.from(chunk);
-      chunks.push(buffer);
-      size += buffer.length;
-      if (size > maxBytes) finish();
-    });
+    stream.on("data", onData);
+    // These stay attached after `finish`: an error on a stream nobody listens to would be thrown.
     stream.on("end", finish);
     stream.on("close", finish);
     stream.on("error", finish);
@@ -102,6 +118,7 @@ export type SyncDeps = {
   cwd: string;
   /** Where `.session-coach/` and `.claude/projects` live; the real home when unset. */
   home?: string;
+  /** Overrides `<home>/.claude/projects`. */
   projectsDir?: string;
   now?: () => number;
   fetchImpl?: typeof fetch;
@@ -201,7 +218,7 @@ async function syncProject(
   const now = (deps.now ?? Date.now)();
   const state = await loadState(paths.state);
 
-  const recent = await findRecentLogs(deps.projectsDir ?? defaultProjectsDir(), cwd, {
+  const recent = await findRecentLogs(deps.projectsDir ?? defaultProjectsDir(deps.home), cwd, {
     since: now - SYNC_MAX_AGE_MS,
     until: now - SYNC_QUIET_MS,
   });

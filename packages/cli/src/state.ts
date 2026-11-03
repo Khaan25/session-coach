@@ -1,6 +1,8 @@
 // The sync state: which sessions `sync` has already dealt with, so a session start doesn't redact and gzip the
-// same logs again. Only a convenience: the server dedupes on (user_id, external_id), so losing this file costs a
-// few repeated requests, never a duplicate session.
+// same logs again. The server dedupes on (user_id, external_id), so losing this file never duplicates a session, but
+// it is not always harmless: a lost `pushed` entry costs a repeat request the server answers with a 409, while a lost
+// `failed` (or stuck) entry makes the next POST reset the session on the server (201, its cards deleted, the pipeline
+// run again, which spends model quota).
 
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -53,10 +55,14 @@ export async function loadState(path: string): Promise<SyncState> {
 
 /**
  * Writes the state through a temporary file and a rename, so a run cut off mid-write leaves the old file whole.
- * Two syncs at once can overwrite each other's entries; the loser is asked about again and the server answers 409.
+ * Just before writing it re-reads the file and adds the entries another sync saved meanwhile (into `state` too);
+ * for the same id, `state` wins. A write by another sync between that read and the rename can still be lost.
  */
 export async function saveState(path: string, state: SyncState): Promise<void> {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  for (const [id, entry] of Object.entries((await loadState(path)).done)) {
+    if (!Object.hasOwn(state.done, id)) state.done[id] = entry;
+  }
   const temp = `${path}.${process.pid}.tmp`;
   await writeFile(temp, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
   await rename(temp, path);

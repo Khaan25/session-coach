@@ -8,20 +8,25 @@ import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, it } from "node:test";
+import { gunzipSync } from "node:zlib";
 
 import { configPath, saveConfig } from "./config.ts";
 import { projectDirName } from "./latest.ts";
 import { loadState, saveState, syncPaths } from "./state.ts";
 import {
+  API_TIMEOUT_MS,
   parseHookInput,
   readStdin,
   runSync,
+  SYNC_DEADLINE_MS,
   SYNC_MAX_AGE_MS,
   SYNC_MAX_LOGS,
   SYNC_QUIET_MS,
+  UPLOAD_TIMEOUT_MS,
   type SyncDeps,
 } from "./sync.ts";
 
+const FAKE_SK = "sk-FAKE0example0key0for0tests0only";
 const CWD = "/work/my_project";
 const NOW = Date.parse("2026-11-03T12:00:00.000Z");
 const MINUTE = 60_000;
@@ -44,7 +49,10 @@ const healthy: Handler = ({ method, url, json }) => {
 /** A fetch that records each request and answers from `handler`. */
 function fakeServer(handler: Handler = healthy) {
   const calls: Request[] = [];
+  /** The bodies of the PUTs: the gzipped logs. */
+  const puts: Uint8Array[] = [];
   const impl = (async (url: string, init: RequestInit) => {
+    if (init.method === "PUT") puts.push(init.body as Uint8Array);
     const json = typeof init.body === "string" ? JSON.parse(init.body) : null;
     const req = { method: init.method ?? "GET", url, json };
     calls.push(req);
@@ -55,6 +63,7 @@ function fakeServer(handler: Handler = healthy) {
   return {
     impl,
     calls,
+    puts,
     /** The session ids sent to step ①, in order, once each. */
     registered: () => [
       ...new Set(calls.filter((c) => c.json?.external_id).map((c) => c.json?.external_id)),
@@ -106,11 +115,34 @@ describe("readStdin", () => {
     assert.equal(await readStdin(stream, 20), "partial");
   });
 
-  it("stops reading past the byte limit", async () => {
+  it("stops at the byte limit on a stream that keeps sending, and lets go of it", async () => {
+    const stream = new PassThrough();
+    const sender = setInterval(() => stream.write("x".repeat(7)), 1);
+    try {
+      const text = await readStdin(stream, 5000, 10);
+      assert.equal(text, "x".repeat(10), "the last chunk is clipped to fit");
+      assert.equal(stream.listenerCount("data"), 0);
+      assert.equal(stream.isPaused(), true);
+      // Later chunks are ignored: nothing is collected after it finished.
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      assert.equal(stream.listenerCount("data"), 0);
+    } finally {
+      clearInterval(sender);
+      stream.destroy();
+    }
+  });
+
+  it("never returns more than the limit from one big chunk", async () => {
     const stream = new PassThrough();
     const text = readStdin(stream, 1000, 10);
-    stream.write("x".repeat(50));
-    assert.ok((await text).length >= 10);
+    stream.write("y".repeat(500));
+    assert.equal((await text).length, 10);
+  });
+});
+
+describe("the run deadline", () => {
+  it("is longer than one slow upload: the upload timeout plus two API calls", () => {
+    assert.ok(SYNC_DEADLINE_MS > UPLOAD_TIMEOUT_MS + 2 * API_TIMEOUT_MS);
   });
 });
 
@@ -312,14 +344,53 @@ describe("runSync", () => {
     assert.deepEqual(server.calls, []);
   });
 
-  it("falls back to INIT_CWD, then the process folder, when the hook gives no cwd", async () => {
+  it("uses the process folder when the hook JSON has no cwd", async () => {
     await log("a", HOUR);
     const server = fakeServer();
-    await sync(server, { stdin: null, env: { INIT_CWD: CWD } });
+    await sync(server, { stdin: JSON.stringify({ session_id: "now" }), env: {}, cwd: CWD });
     assert.deepEqual(server.registered(), ["a"]);
-    const other = fakeServer();
-    await sync(other, { stdin: "garbage", env: {}, cwd: "/elsewhere" });
-    assert.deepEqual(other.calls, []);
+  });
+
+  it("uses INIT_CWD over the process folder when there is no stdin", async () => {
+    await log("a", HOUR);
+    const server = fakeServer();
+    await sync(server, { stdin: null, env: { INIT_CWD: CWD }, cwd: "/elsewhere" });
+    assert.deepEqual(server.registered(), ["a"]);
+  });
+
+  it("finds nothing, and uploads nothing, when no folder points at the project", async () => {
+    await log("a", HOUR);
+    const server = fakeServer();
+    await sync(server, { stdin: "garbage", env: {}, cwd: "/elsewhere" });
+    assert.deepEqual(server.calls, []);
+  });
+
+  it("scans the given home when no projects folder is passed", async () => {
+    await log("a", HOUR);
+    const server = fakeServer();
+    await sync(server, { projectsDir: undefined });
+    assert.deepEqual(server.registered(), ["a"]);
+  });
+
+  it("redacts the log before uploading it", async () => {
+    await mkdir(dir, { recursive: true });
+    const path = join(dir, "a.jsonl");
+    const event = {
+      type: "user",
+      cwd: CWD,
+      timestamp: "2026-11-01T10:00:00.000Z",
+      message: { role: "user", content: `my key is ${FAKE_SK} please keep it` },
+    };
+    await writeFile(path, `${JSON.stringify(event)}\n`);
+    const seconds = (NOW - HOUR) / 1000;
+    await utimes(path, seconds, seconds);
+
+    const server = fakeServer();
+    await sync(server);
+    assert.equal(server.puts.length, 1);
+    const uploaded = gunzipSync(server.puts[0] as Uint8Array).toString("utf8");
+    assert.ok(!uploaded.includes(FAKE_SK), "the secret must not leave the machine");
+    assert.ok(uploaded.includes("please keep it"), "the rest of the text is still there");
   });
 
   it("skips a file name the server would refuse, without a request", async () => {
