@@ -217,6 +217,7 @@ function ComboboxVirtualizedItem({
   return (
     <ComboboxItem
       data-slot="combobox-virtualized-item"
+      data-cuelume-select=""
       data-index={virtualItem.index}
       index={virtualItem.index}
       ref={measureElement}

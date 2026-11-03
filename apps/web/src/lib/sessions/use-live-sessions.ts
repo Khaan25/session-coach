@@ -88,7 +88,12 @@ export function useLiveSessions(
               const name = sessionName(row);
               toast.add(
                 row.status === "ready"
-                  ? { type: "success", title: "Cards ready", description: name }
+                  ? {
+                      type: "success",
+                      title: "Cards ready",
+                      description: name,
+                      data: { cue: "ready" },
+                    }
                   : {
                       type: "error",
                       title: "Couldn't make cards",

@@ -112,6 +112,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
   return (
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
+      data-cuelume-select=""
       className={cn(
         "relative z-1 inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-inner bg-transparent px-3 type-label whitespace-nowrap text-text-2 transition-colors select-none",
         "group-data-[size=sm]/tabs-list:px-2.5 group-data-[size=sm]/tabs-list:type-label-sm group-data-[variant=line]/tabs-list:px-2",

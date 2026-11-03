@@ -40,7 +40,9 @@ function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
 }
 
 function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-  return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+  return (
+    <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" data-cuelume-open="" {...props} />
+  );
 }
 
 type DropdownMenuContentProps = MenuPrimitive.Popup.Props &
@@ -111,6 +113,7 @@ function DropdownMenuItem({
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
+      data-cuelume-select=""
       data-inset={inset || undefined}
       data-variant={variant}
       className={mergeClass(menuItemClass, className)}
@@ -150,6 +153,7 @@ function DropdownMenuSubTrigger({
   return (
     <MenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
+      data-cuelume-open=""
       data-inset={inset || undefined}
       className={mergeClass(
         [
@@ -198,6 +202,7 @@ function DropdownMenuCheckboxItem({
   return (
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
+      data-cuelume-toggle=""
       data-inset={inset || undefined}
       className={mergeClass(menuCheckItemClass, className)}
       {...props}
@@ -230,6 +235,7 @@ function DropdownMenuRadioItem({
   return (
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
+      data-cuelume-select=""
       data-inset={inset || undefined}
       className={mergeClass(menuCheckItemClass, className)}
       {...props}

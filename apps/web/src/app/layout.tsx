@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { SkulletProvider } from "skullet/react";
 
+import { UiSounds } from "@/components/sound/ui-sounds";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { themeScript } from "@/components/theme/theme-script";
 import { Toaster } from "@/components/ui/toast";
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="flex min-h-full flex-col">
+        <UiSounds />
         <ThemeProvider>
           <SkulletProvider theme={skeletonTheme}>
             <PortalProvider>
