@@ -174,6 +174,20 @@ test("sessionTitle is the first prompt with whitespace collapsed", () => {
   assert.equal(sessionTitle(events), "fix the login bug");
 });
 
+test("sessionTitle cleans injected tags first and takes the first prompt with text left", () => {
+  const events = [
+    promptEvent("<system-reminder>rules</system-reminder>"),
+    promptEvent('<pasted_content id="2bab"> Plan only. Do not edit…</pasted_content>'),
+    promptEvent("later"),
+  ];
+  assert.equal(sessionTitle(events), "Plan only. Do not edit…");
+});
+
+test("sessionTitle cuts after cleaning, so a tag does not use up the limit", () => {
+  const title = sessionTitle([promptEvent(`<pasted_content id="2bab">${"x".repeat(200)}`)]);
+  assert.equal(title, `${"x".repeat(MAX_TITLE_CHARS)}…`);
+});
+
 test("sessionTitle cuts a long prompt to the limit and adds an ellipsis", () => {
   const title = sessionTitle([promptEvent("x".repeat(200))]);
   assert.equal(title, `${"x".repeat(MAX_TITLE_CHARS)}…`);
