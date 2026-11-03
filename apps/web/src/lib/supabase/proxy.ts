@@ -43,12 +43,12 @@ export async function updateSession(request: NextRequest) {
   const signedIn = Boolean(data?.claims?.sub);
   const { pathname, search, origin } = request.nextUrl;
 
-  let target: URL | null = null;
+  let target: URL | string | null = null;
   if (!signedIn && matches(pathname, PROTECTED)) {
     target = new URL("/login", origin);
     target.searchParams.set("next", `${pathname}${search}`);
   } else if (signedIn && matches(pathname, SIGNED_OUT_ONLY)) {
-    target = new URL(safeNext(request.nextUrl.searchParams.get("next"), origin), origin);
+    target = `${origin}${safeNext(request.nextUrl.searchParams.get("next"), origin)}`;
   }
   if (!target) return response;
 

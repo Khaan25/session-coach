@@ -12,10 +12,11 @@ export const DEFAULT_NEXT = "/dashboard";
 export function safeNext(next: string | null | undefined, origin: string): string {
   if (!next) return DEFAULT_NEXT;
   try {
-    const base = new URL(origin);
-    const url = new URL(next, base);
-    // Dot segments can normalise to a "//host" path ("/.//evil.com"), which a later redirect reads as another origin.
-    if (url.origin !== base.origin || url.pathname.startsWith("//")) return DEFAULT_NEXT;
+    const url = new URL(next, origin);
+    // Compared to the raw origin: one written differently (a trailing slash, a default port) only falls back, never
+    // lets another origin through. Dot segments can normalise to a "//host" path ("/.//evil.com"), which a later
+    // redirect reads as another origin.
+    if (url.origin !== origin || url.pathname.startsWith("//")) return DEFAULT_NEXT;
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return DEFAULT_NEXT;
