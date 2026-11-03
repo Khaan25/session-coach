@@ -12,7 +12,7 @@ npx session-coach push --latest
 npx session-coach push <file.jsonl>
 ```
 
-`login` asks for a CLI token from the app's `/setup` page. `push --latest` uploads the newest log of the project in the folder you run it from, and only that project (see [push](#push)).
+`login` asks for a CLI token from the app's `/setup` page, checks it with the server and saves it only if it works. `push --latest` uploads the newest log of the project in the folder you run it from, and only that project (see [push](#push)).
 
 ## Run from the repo (contributors)
 

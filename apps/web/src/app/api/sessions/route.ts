@@ -2,13 +2,17 @@
  * POST /api/sessions: step ① of a CLI upload. Body: the session's metadata (`uploadRequestSchema`), never the log.
  *   201 `{ id, upload_url }`: the row is `pending`; PUT the gzipped log to `upload_url` (valid 2 hours), then call
  *       POST /api/sessions/<id>/process.
+ *       A repeat of a `failed` or stuck session also gets 201: its cards are deleted and it goes back to `pending`.
  *   409 `{ id, upload_url }`: this session was started before but never processed; upload again and process.
- *   409 `{ id }`: this session was already processed; nothing to do.
- *   400 bad body, 401 missing or unknown token, 413 `size_bytes` over 50 MB, 500 anything else.
+ *   409 `{ id }`: this session is `ready`, or `processing` right now; nothing to do.
+ *   400 bad body, 401 missing or unknown token, 413 `size_bytes` over 50 MB, 429 over 20 pushes an hour (`Retry-After`),
+ *   500 anything else.
  * Auth: `Authorization: Bearer sc_…`, a CLI token from /setup. Never log the token.
  */
 import { NextResponse } from "next/server";
 
+import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
+import { isStuck } from "@/lib/sessions/stuck";
 import {
   bearerToken,
   MAX_UPLOAD_BYTES,
@@ -42,7 +46,8 @@ async function signedUploadUrl(admin: ReturnType<typeof createAdminClient>, path
  * - Checks the token before reading the body, so an anonymous caller learns nothing about the contract.
  * - Refuses an oversized log by its declared size before any row exists.
  * - A repeat upload hits the `(user_id, external_id)` unique key: still `pending` means the earlier try died before
- *   processing, so it gets a fresh URL to finish; any other status means it's done.
+ *   processing, so it gets a fresh URL to finish. `failed` or stuck (`isStuck`) is reset to `pending` with its cards
+ *   deleted, and answered like a new upload. `ready` or a live run is done: 409.
  *
  * @param request - JSON metadata, see `uploadRequestSchema`.
  */
@@ -72,6 +77,9 @@ export async function POST(request: Request) {
         { status: 413 },
       );
     }
+    // After validation, so a malformed request doesn't spend the learner's budget.
+    const limited = await userRateLimit("push", userId);
+    if (limited) return tooManyRequests(limited);
 
     const admin = createAdminClient();
     const rawPath = rawPathFor(userId, meta.external_id);
@@ -88,14 +96,37 @@ export async function POST(request: Request) {
     if (insertError?.code === UNIQUE_VIOLATION) {
       const { data: existing, error: readError } = await admin
         .from("sessions")
-        .select("id, status")
+        .select("id, status, processing_started_at")
         .eq("user_id", userId)
         .eq("external_id", meta.external_id)
-        .single<{ id: string; status: string }>();
+        .single<{ id: string; status: string; processing_started_at: string | null }>();
       if (readError) throw new Error(readError.message);
-      if (existing.status !== "pending")
+      if (existing.status === "pending")
+        return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 409 });
+      if (existing.status !== "failed" && !isStuck(existing, new Date()))
         return NextResponse.json({ id: existing.id }, { status: 409 });
-      return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 409 });
+
+      // Compare-and-set on the status and run read, so of two racing pushes only one resets it and clears its cards,
+      // and a push that read an older run can't reset a newer one.
+      const reset = admin
+        .from("sessions")
+        .update({ ...meta, status: "pending", error: null, processing_started_at: null })
+        .eq("id", existing.id)
+        .eq("status", existing.status);
+      const { data: resetRows, error: resetError } = await (
+        existing.processing_started_at
+          ? reset.eq("processing_started_at", existing.processing_started_at)
+          : reset.is("processing_started_at", null)
+      ).select("id");
+      if (resetError) throw new Error(resetError.message);
+      if (resetRows.length === 0) return NextResponse.json({ id: existing.id }, { status: 409 });
+      // After the claim, so a losing push never deletes cards; before answering, so the new run can't start first.
+      const { error: cardsError } = await admin
+        .from("decision_cards")
+        .delete()
+        .eq("session_id", existing.id);
+      if (cardsError) throw new Error(cardsError.message);
+      return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 201 });
     }
     if (insertError) throw new Error(insertError.message);
 

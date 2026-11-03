@@ -1,8 +1,9 @@
 /**
- * GET /api/cron/daily-review: Vercel Cron, once a day (apps/web/vercel.json). Emails every learner with reminders on
- * who has cards due today in their own time zone, at most once per local day.
- *   200 `{ sent, skipped, failed }`: skipped were already emailed today; failed are logged by user id.
- *   401 missing or wrong `Authorization: Bearer <CRON_SECRET>`, 503 `RESEND_API_KEY` unset, 500 anything else.
+ * GET /api/cron/daily-review: Vercel Cron, daily at 13:00 UTC (apps/web/vercel.json). Fails stuck sessions, then emails
+ * every learner with reminders on who has cards due in their own time zone, at most once per local day.
+ *   200 `{ sent, skipped, failed, swept }`: `swept` is left out if the sweep errored.
+ *   401 wrong or missing `Authorization: Bearer <CRON_SECRET>`, 503 `RESEND_API_KEY` unset (`{ error, swept }`),
+ *   500 anything else.
  */
 import { NextResponse } from "next/server";
 
@@ -16,7 +17,9 @@ import {
   type ReviewRow,
   sendDailyReviews,
 } from "@/lib/email/daily-review";
+import { unsubscribeUrl } from "@/lib/email/unsubscribe";
 import { newCardsSince } from "@/lib/review/schedule";
+import { failStuckSessions } from "@/lib/sessions/stuck";
 import { siteUrl } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
@@ -41,27 +44,36 @@ type AnsweredRow = {
  *
  * - Checks the cron secret before anything else, and the Resend key before claiming any `email_log` row, so a
  *   misconfigured deploy doesn't use up the day's claims.
+ * - Fails stuck sessions first, even without Resend; a sweep error is logged and the emails still go out.
  * - Reads learners with reminders on, every answered card (for due, answered and mastered) and the visible cards
  *   from the last week never answered; who gets what is `dailyReviewRecipients`.
  *
  * @param request - Vercel Cron's request.
  */
 export async function GET(request: Request) {
-  if (!cronAuthorized(request.headers.get("authorization"), process.env.CRON_SECRET)) {
+  // Also signs the unsubscribe links.
+  const secret = process.env.CRON_SECRET;
+  if (!cronAuthorized(request.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const now = new Date();
+  let swept: number | undefined;
+  try {
+    swept = await failStuckSessions(createAdminClient(), now);
+  } catch (err) {
+    console.error("[api/cron/daily-review] stuck-session sweep failed", errorMessage(err));
   }
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error("[api/cron/daily-review] RESEND_API_KEY is not set");
     return NextResponse.json(
-      { error: "Email is not configured on this deployment" },
+      { error: "Email is not configured on this deployment", swept },
       { status: 503 },
     );
   }
 
   try {
     const admin = createAdminClient();
-    const now = new Date();
     const profiles = await fetchAll<ProfileRow>((from, to) =>
       admin
         .from("profiles")
@@ -117,7 +129,8 @@ export async function GET(request: Request) {
 
     const result = await sendDailyReviews(
       recipients,
-      (recipient) => composeDailyReview(recipient, siteUrl),
+      (recipient) =>
+        composeDailyReview(recipient, siteUrl, unsubscribeUrl(siteUrl, recipient.userId, secret)),
       {
         async claim(userId, sentOn) {
           const { error } = await admin
@@ -137,11 +150,24 @@ export async function GET(request: Request) {
             .eq("sent_on", sentOn);
           if (error) throw new Error(error.message);
         },
+        async release(userId, sentOn) {
+          const { error } = await admin
+            .from("email_log")
+            .delete()
+            .eq("user_id", userId)
+            .eq("kind", KIND)
+            .eq("sent_on", sentOn);
+          if (error) throw new Error(error.message);
+        },
       },
     );
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, swept });
   } catch (err) {
-    console.error("[api/cron/daily-review] failed", err instanceof Error ? err.message : err);
+    console.error("[api/cron/daily-review] failed", errorMessage(err));
     return NextResponse.json({ error: "The daily review run failed." }, { status: 500 });
   }
+}
+
+function errorMessage(err: unknown) {
+  return err instanceof Error ? err.message : err;
 }

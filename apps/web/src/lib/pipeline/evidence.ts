@@ -8,7 +8,19 @@ export type CheckedCard = Omit<
   "id" | "session_id" | "user_id" | "created_at" | "flagged" | "hidden"
 >;
 
-const squash = (text: string) => text.replace(/\s+/g, " ").trim();
+/**
+ * The form both sides of a quote check are compared in: NFKC, curly quotes and dashes as ASCII, whitespace collapsed,
+ * lower case. Models often "fix" typography and case when they copy, which is not paraphrase.
+ */
+const normalize = (text: string) =>
+  text
+    .normalize("NFKC")
+    .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')
+    .replace(/[\u2010-\u2015\u2212]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 
 /** The path of a write or edit event: the parser writes `<path> — <summary>`. */
 function fileOf(event: TimelineEvent | undefined): string | null {
@@ -18,37 +30,56 @@ function fileOf(event: TimelineEvent | undefined): string | null {
 
 const isDecisionsFile = (file: string | null) => file?.split("/").at(-1) === "DECISIONS.md";
 
+/**
+ * The written words of a write or edit event, without the parser's metadata. Only an edit carries any: the parser
+ * writes `<path> — replaced N lines with M: <first new line>`; a write is `<path> — wrote N lines`, all metadata.
+ *
+ * shortcut: the parser keeps only the first 60 characters of an edit, so a DECISIONS.md quote rarely grounds a card;
+ * upgrade when the parser keeps the written text.
+ */
+function writtenText(event: TimelineEvent): string {
+  return /^.* — replaced \d+ lines? with \d+: ([\s\S]*)$/.exec(event.text)?.[1] ?? "";
+}
+
 /** The fewest words a quote needs to count as verified; the prompt asks for 5 to 30. */
 const MIN_QUOTE_WORDS = 5;
 
-const wordCount = (text: string) => (text === "" ? 0 : text.split(" ").length);
+const words = new Intl.Segmenter(undefined, { granularity: "word" });
+
+/** Words by Unicode rules, so Chinese or Japanese text with no spaces still counts each word. */
+export const wordCount = (text: string) =>
+  [...words.segment(text)].filter((segment) => segment.isWordLike).length;
 
 /**
  * The checked quotes of one draft: each cited event, whether the quote is verified (in the event and at least
- * `MIN_QUOTE_WORDS` words once whitespace is collapsed), and the file it wrote.
+ * `MIN_QUOTE_WORDS` words once both are normalized, see `normalize`), and the file it wrote.
  */
 export function checkQuotes(draft: ExtractedCard, events: readonly TimelineEvent[]) {
   return draft.evidence.map(({ event_index, quote }) => {
     const event = events.find((e) => e.id === `E${event_index}`);
-    const squashed = squash(quote);
+    const normalized = normalize(quote);
     const verified =
       event !== undefined &&
-      wordCount(squashed) >= MIN_QUOTE_WORDS &&
-      squash(event.text).includes(squashed);
-    return { event_index, quote, file: fileOf(event), lines: null, verified, event };
+      wordCount(normalized) >= MIN_QUOTE_WORDS &&
+      normalize(event.text).includes(normalized);
+    return { event_index, quote, file: fileOf(event), lines: null, verified, event, normalized };
   });
 }
 
 type CheckedQuote = ReturnType<typeof checkQuotes>[number];
 
-const isGroundedQuote = ({ verified, event, file }: CheckedQuote) =>
+// A DECISIONS.md quote grounds only from the written words: "wrote 40 lines" is the parser's text, not a reason.
+const isGroundedQuote = ({ verified, event, file, normalized }: CheckedQuote) =>
   verified &&
   event !== undefined &&
-  (event.kind === "prompt" || event.kind === "reply" || isDecisionsFile(file));
+  (event.kind === "prompt" ||
+    event.kind === "reply" ||
+    (isDecisionsFile(file) && normalize(writtenText(event)).includes(normalized)));
 
 /**
- * Whether a draft has a verified quote (at least `MIN_QUOTE_WORDS` words) from a prompt, a reply, or a write or edit of
- * a DECISIONS.md file. Quotes from other writes, shell commands or reads show what the agent did, not why.
+ * Whether a draft has a verified quote (at least `MIN_QUOTE_WORDS` words) from a prompt, a reply, or the written words
+ * of a DECISIONS.md edit. Quotes from other writes, shell commands, reads or the parser's line counts show what the
+ * agent did, not why.
  *
  * @param draft - A card from `extractCards`.
  * @param events - The same timeline the model saw; `event_index` is the number in an event's id (E57 is 57), which

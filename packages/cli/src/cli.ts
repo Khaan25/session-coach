@@ -11,6 +11,7 @@ import {
   saveConfig,
   validateToken,
 } from "./config.ts";
+import { interpretMe, meRequest, send, unreachable } from "./http.ts";
 import { defaultProjectsDir, findLatestLog, formatSize, resolveCwd } from "./latest.ts";
 import { promptHidden } from "./prompt.ts";
 import {
@@ -24,7 +25,6 @@ import {
   putRequest,
   sessionMetadata,
   validateFileName,
-  type HttpRequest,
 } from "./push.ts";
 
 const USAGE = `Usage:
@@ -38,19 +38,9 @@ function say(message: string, exitCode = 0): number {
   return exitCode;
 }
 
-/** Sends a request; a network failure becomes a short message that carries neither the URL nor the token. */
-async function send(req: HttpRequest): Promise<{ status: number; body: unknown } | null> {
-  try {
-    const res = await fetch(req.url, req.init);
-    const body: unknown = await res.json().catch(() => null);
-    return { status: res.status, body };
-  } catch {
-    return null;
-  }
-}
-
-const NETWORK_ERROR =
-  "Couldn't reach the server. Check your connection and the --url, then try again.";
+/** Timeouts: the log upload can be up to 50 MB, so it gets longer than the small JSON calls. */
+const API_TIMEOUT_MS = 15_000;
+const UPLOAD_TIMEOUT_MS = 120_000;
 
 async function login(args: string[]): Promise<number> {
   const parsed = parseLoginArgs(args);
@@ -66,8 +56,13 @@ async function login(args: string[]): Promise<number> {
   const problem = validateToken(token);
   if (problem) return say(problem, 1);
 
+  const me = await send(meRequest(url, token), { timeoutMs: API_TIMEOUT_MS, retry: true });
+  if ("error" in me) return say(`${unreachable(me.error, API_TIMEOUT_MS)} Nothing was saved.`, 1);
+  const checked = interpretMe(me.status, me.body, url);
+  if (checked.exitCode !== 0) return say(checked.message, checked.exitCode);
+
   await saveConfig(configPath(), { token, url });
-  return say(`Saved to ${configPath()}. Signed in to ${url}.`);
+  return say(`${checked.message} Saved to ${configPath()}.`);
 }
 
 async function push(args: string[]): Promise<number> {
@@ -105,20 +100,30 @@ async function pushFile(file: string): Promise<number> {
 
   // ① register the session
   const meta = sessionMetadata(text, basename(file), gzipped.length);
-  const created = await send(createRequest(config.url, config.token, meta));
-  if (!created) return say(NETWORK_ERROR, 1);
+  // Safe to repeat: a second POST for the same session gets a 409 with a fresh upload URL.
+  const api = { timeoutMs: API_TIMEOUT_MS, retry: true };
+  const created = await send(createRequest(config.url, config.token, meta), api);
+  if ("error" in created) return say(unreachable(created.error, API_TIMEOUT_MS), 1);
   const next = interpretCreate(created.status, created.body);
   if (next.action === "stop") return say(next.message, next.exitCode);
 
   // ② PUT the log to the signed URL
-  const put = await send(putRequest(next.uploadUrl, gzipped));
-  if (!put) return say(NETWORK_ERROR, 1);
+  // Safe to repeat: the PUT upserts the same object.
+  const put = await send(putRequest(next.uploadUrl, gzipped), {
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+    retry: true,
+  });
+  if ("error" in put) return say(unreachable(put.error, UPLOAD_TIMEOUT_MS), 1);
   const stored = interpretPut(put.status);
   if (stored.exitCode !== 0) return say(stored.message, stored.exitCode);
 
   // ③ start processing
-  const processed = await send(processRequest(config.url, config.token, next.id));
-  if (!processed) return say(NETWORK_ERROR, 1);
+  // Not retried: it starts the pipeline, and push can simply be run again.
+  const processed = await send(processRequest(config.url, config.token, next.id), {
+    timeoutMs: API_TIMEOUT_MS,
+    retry: false,
+  });
+  if ("error" in processed) return say(unreachable(processed.error, API_TIMEOUT_MS), 1);
   const result = interpretProcess(processed.status, processed.body, next.id);
   return say(result.message, result.exitCode);
 }

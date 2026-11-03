@@ -3,18 +3,23 @@
  *   202 `{ id }`: the session moved to `processing`; cards follow, and the dashboard updates through Realtime.
  *   409 `{ id, status }`: already processing, ready or failed; nothing to do.
  *   422: the log isn't in Storage yet; start again at POST /api/sessions.
- *   400 bad id, 401 missing or unknown token, 404 not this learner's session, 413 log over 50 MB, 500 anything else.
+ *   400 bad id, 401 missing or unknown token, 404 not this learner's session, 413 log over 50 MB, 429 over 20 runs an
+ *   hour (`Retry-After` header, in seconds), 500 anything else.
  * Auth: `Authorization: Bearer sc_…`.
  */
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
 import { processSession } from "@/lib/pipeline/process";
 import { bearerToken, MAX_UPLOAD_BYTES, SESSIONS_BUCKET } from "@/lib/sessions/upload";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { userForToken } from "@/lib/tokens/verify";
 
 const idSchema = z.uuid();
+
+/** Seconds for this route and its `after()` work; `processSession` gives up at 280 s to still mark failure. */
+export const maxDuration = 300;
 
 /**
  * Starts extraction for one uploaded session.
@@ -28,6 +33,7 @@ const idSchema = z.uuid();
  * @param context - The `[id]` route param.
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+  const invokedAt = Date.now();
   const token = bearerToken(request.headers.get("authorization"));
   if (!token) return NextResponse.json({ error: "Missing CLI token" }, { status: 401 });
 
@@ -44,7 +50,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         { status: 401 },
       );
     }
-
     const admin = createAdminClient();
     const { data: session, error: readError } = await admin
       .from("sessions")
@@ -74,9 +79,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: "The log is over 50 MB." }, { status: 413 });
     }
 
+    // Only a run that can really start spends the learner's budget.
+    const limited = await userRateLimit("process", userId);
+    if (limited) return tooManyRequests(limited);
+
+    const startedAt = new Date().toISOString();
     const { data: claimed, error: claimError } = await admin
       .from("sessions")
-      .update({ status: "processing", error: null })
+      .update({
+        status: "processing",
+        error: null,
+        processing_started_at: startedAt,
+      })
       .eq("id", session.id)
       .eq("status", "pending")
       .select("id");
@@ -85,7 +99,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ id: session.id, status: "processing" }, { status: 409 });
     }
 
-    after(() => processSession(session.id));
+    after(() => processSession(session.id, startedAt, invokedAt));
     return NextResponse.json({ id: session.id }, { status: 202 });
   } catch (err) {
     console.error("[api/sessions/process] failed", err instanceof Error ? err.message : err);

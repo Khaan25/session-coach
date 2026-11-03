@@ -59,12 +59,16 @@ describe("config file", () => {
     }
   });
 
-  it("returns null when the file is missing or malformed", async () => {
+  it("returns null when the file is missing or malformed, and normalises the saved URL", async () => {
     const dir = await mkdtemp(join(tmpdir(), "sc-cli-"));
     try {
       assert.equal(await loadConfig(join(dir, "nope.json")), null);
       const path = join(dir, "bad.json");
       await writeFile(path, "{not json");
+      assert.equal(await loadConfig(path), null);
+      await writeFile(path, JSON.stringify({ token: "sc_x", url: "https://app.test//" }));
+      assert.deepEqual(await loadConfig(path), { token: "sc_x", url: "https://app.test" });
+      await writeFile(path, JSON.stringify({ token: "sc_x", url: "http://app.test" }));
       assert.equal(await loadConfig(path), null);
     } finally {
       await rm(dir, { recursive: true, force: true });

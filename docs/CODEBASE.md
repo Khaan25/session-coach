@@ -68,13 +68,14 @@ Supabase Auth with `@supabase/ssr` cookie sessions. The plan with all 29 edge ca
   "check your email". A taken address returns the same page, so sign-up can't be used to test which emails have
   accounts (#3). The address goes in a short-lived httpOnly cookie, not the URL, so the next page can offer a resend.
 - **Confirm** ([`auth/confirm/`](../apps/web/src/app/auth/confirm/)): the email links to a page with a Confirm button,
-  built from `{{ .RedirectTo }}&token_hash=...&type=email` ([`supabase/templates/`](../supabase/templates/)). The
+  built from `{{ .SiteURL }}/auth/confirm?next=/dashboard&token_hash=...&type=email` ([`supabase/templates/`](../supabase/templates/)). The
   button posts to `confirmEmail`, which calls `verifyOtp({ type, token_hash })`.
   - **Why a page with a button, not a GET handler:** mail security scanners open every link before the person does. A
     GET that spent the one-time token would leave the learner with "link expired" (#8).
   - **Why `token_hash`, not `{{ .ConfirmationURL }}`:** the PKCE flow needs a cookie from the browser that signed up;
     people often open the email on their phone. `token_hash` works in any browser (#9).
-  - **Why `{{ .RedirectTo }}`, not `{{ .SiteURL }}`:** a sign-up on a preview deploy confirms on that preview (#12).
+  - **Why `{{ .SiteURL }}`, not `{{ .RedirectTo }}`:** `RedirectTo` comes from the sign-up request, so a link built on
+    it can send the token hash to any allow-listed host. `SiteURL` is fixed in config (#12).
 - **Sign-in** (`signIn`): `signInWithPassword`. `email_not_confirmed` shows a resend button (#1); wrong credentials get
   one message for both fields.
 - **Reset** (`requestReset`, `updatePassword`): always "if an account exists, we sent a link" (#4). The link goes

@@ -10,6 +10,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
 - [`20261101000000_tracker.sql`](../supabase/migrations/20261101000000_tracker.sql) and
   [`20261102000000_tracker_edit.sql`](../supabase/migrations/20261102000000_tracker_edit.sql): the team's `/tracker`
   (see [`tracker_members` and `tracker_tasks`](#tracker_members-and-tracker_tasks)).
+- [`20261103000000_session_processing_started.sql`](../supabase/migrations/20261103000000_session_processing_started.sql):
+  `sessions.processing_started_at`, so stuck runs are timed from their claim and `created_at` stays the upload time.
 
 ## The one rule
 
@@ -62,7 +64,7 @@ about a person (name, email) is copied here.
 | `display_name` | Trimmed, 1–100 characters, or null. Never `""`.                        | Trigger at sign-up; learner after        |
 | `avatar_url`   | `https://` only, from the provider's metadata.                         | Trigger                                  |
 | `timezone`     | IANA name, default `UTC`. Decides the learner's "today" for due dates. | Learner                                  |
-| `notify_email` | Whether the daily review email is sent. Default true.                  | Learner                                  |
+| `notify_email` | Whether the daily review email is sent. Default true.                  | Learner; server on one-click unsubscribe |
 | `created_at`   | Sign-up time; the Play Stats cohorts group by its UTC day.             | Default                                  |
 
 - **Policies:** `read own profile` (select where `id = auth.uid()`), `update own profile` (same, with check).
@@ -99,28 +101,33 @@ Bearer tokens the CLI uses to upload sessions. Created on `/setup` through `POST
 
 One uploaded Claude Code session and its processing status.
 
-| Column                                      | Stores                                                                                    | Written by        |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------- | ----------------- |
-| `id`                                        | Session id.                                                                               | Default           |
-| `user_id`                                   | Owner.                                                                                    | Server            |
-| `external_id`                               | Claude Code's `session_id`. `unique (user_id, external_id)`: a repeat upload returns 409. | Server            |
-| `agent`                                     | `claude-code` or `codex`.                                                                 | Server            |
-| `title`                                     | The agent's title for the session, if the log had one.                                    | Server            |
-| `repo`, `branch`                            | Where the work happened; the fallback name ("repo on branch").                            | Server            |
-| `started_at`, `duration_min`, `event_count` | Session facts from the log (non-negative checks).                                         | Server            |
-| `raw_path`                                  | Storage path of the redacted `.jsonl.gz`. Not empty.                                      | Server            |
-| `status`                                    | `pending`, `processing`, `ready` or `failed`.                                             | Server (pipeline) |
-| `error`                                     | A learner-readable reason when `failed`.                                                  | Server (pipeline) |
-| `created_at`                                | Upload time. Indexed with `user_id` for the dashboard's newest-first list.                | Default           |
+| Column                                      | Stores                                                                                                | Written by                      |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `id`                                        | Session id.                                                                                           | Default                         |
+| `user_id`                                   | Owner.                                                                                                | Server                          |
+| `external_id`                               | Claude Code's `session_id`. `unique (user_id, external_id)`: see repeat uploads below.                | Server                          |
+| `agent`                                     | `claude-code` or `codex`.                                                                             | Server                          |
+| `title`                                     | The agent's title for the session, if the log had one.                                                | Server                          |
+| `repo`, `branch`                            | Where the work happened; the fallback name ("repo on branch").                                        | Server                          |
+| `started_at`, `duration_min`, `event_count` | Session facts from the log (non-negative checks).                                                     | Server                          |
+| `raw_path`                                  | Storage path of the redacted `.jsonl.gz`. Not empty.                                                  | Server                          |
+| `status`                                    | `pending`, `processing`, `ready` or `failed`.                                                         | Server (pipeline)               |
+| `error`                                     | A learner-readable reason when `failed`.                                                              | Server (pipeline)               |
+| `processing_started_at`                     | When the current run claimed the row; the stuck check reads it. Null until then, and after a re-push. | Server (process claim, re-push) |
+| `created_at`                                | Upload time. Indexed with `user_id` for the newest-first list.                                        | Default                         |
 
 - **Policies:** `read own sessions`. **No learner delete:** the server deletes the Storage object first, then the row;
   a learner delete would orphan the log in Storage.
 - `unique (id, user_id)` exists only as the target of the cards' composite foreign key.
+- **Repeat uploads** (`POST /api/sessions`): `pending` gets a fresh upload URL (409); `ready` or a live `processing`
+  run gets 409. `failed`, or stuck (`processing` for over 10 minutes by `processing_started_at`), is retried: its cards
+  are deleted, the row goes back to `pending` with `error` cleared, and the new upload replaces the log.
+- **Stuck sessions:** the daily cron marks stuck rows `failed` with a retryable `error` (`lib/sessions/stuck.ts`).
 - Realtime publishes this table (see below).
 
 ### `decision_cards`
 
-The 3–5 decisions extracted from a ready session, each with a question for the learner.
+The 0–5 decisions extracted from a ready session, each with a question for the learner.
 
 | Column                  | Stores                                                                          | Written by |
 | ----------------------- | ------------------------------------------------------------------------------- | ---------- |
@@ -210,6 +217,8 @@ One row per email sent (the daily review email, planned).
 
 - `unique (user_id, kind, sent_on)`: the cron inserts this row **before** sending; a conflict means another run
   already claimed it, so a rerun or a crash never sends twice ([rules/error-handling.md](rules/error-handling.md)).
+  A send the provider refuses deletes its row again, so a rerun the same day retries it; the `Idempotency-Key`
+  (`daily_review/<user>/<day>`) stops a duplicate if that send did go out.
 - **No policies at all:** RLS is on, so learners can't read or write it.
 
 ### `tracker_members` and `tracker_tasks`

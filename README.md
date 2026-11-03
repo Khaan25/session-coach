@@ -2,17 +2,17 @@
 
 ![Session Coach: Explain the code your agent wrote.](apps/web/src/app/opengraph-image.png)
 
-Turns each Claude Code session into 3–5 evidence-backed decision cards, then tests you on the why on day 1, 3 and 7 until you can explain the code your agent wrote.
+Turns each Claude Code session into up to 5 evidence-backed decision cards, then tests you on the why on day 1, 3 and 7 until you can explain the code your agent wrote.
 
 Built by Kasam Thapa Magar and Zia Ur Rehman Khan for the 8x Playmakers trial (cohort C2, Coding theme), 28 Oct – 6 Nov 2026. Live at [coach.ziaa.me](https://coach.ziaa.me).
 
 ## How it works
 
-The full flow. The CLI (steps 1 and 2), card making (step 3) and the daily email (step 6) aren't live yet: see [Status](#status).
+The full flow. The `SessionEnd` hook (step 1) isn't built yet, so for now you upload with `session-coach push --latest`: see [Status](#status).
 
 1. A Claude Code session ends. The `SessionEnd` hook starts a detached worker and exits, so Claude Code never waits.
 2. The worker redacts secrets, gzips the log and uploads it in three calls: register the session, `PUT` the log straight to Storage, start processing. `session-coach push --latest` does the same by hand.
-3. The server filters the log, numbers the events (E1, E2, …) and one model call extracts 3–5 decisions.
+3. The server filters the log, numbers the events (E1, E2, …) and one model call extracts up to 5 decisions (none when the session made no real choices).
 4. Plain code checks every quote exists in the cited event. Cards with no grounded quote (from a prompt, a reply or `DECISIONS.md`) are dropped.
 5. The learner explains each decision in their own words. A model grades it 0 / 1 / 2.
 6. The question returns on day 1, 3 and 7. A daily email brings the learner back.
@@ -69,25 +69,25 @@ Demo data from `pnpm seed:demo:local`; the graded answer is a real Groq call.
 
 ## Status
 
-| Part                                                                            | State       |
-| ------------------------------------------------------------------------------- | ----------- |
-| Web app: auth, dashboard, session pages, review and grading, progress, settings | live        |
-| Upload API (`POST /api/sessions`, `POST /api/sessions/[id]/process`)            | live        |
-| Extraction and the evidence check                                               | in review   |
-| `processSession`: parse, extract, store the cards                               | next        |
-| CLI: `login`, `push`, the `SessionEnd` hook and worker                          | in progress |
-| Daily reminder email                                                            | planned     |
+| Part                                                                            | State   |
+| ------------------------------------------------------------------------------- | ------- |
+| Web app: auth, dashboard, session pages, review and grading, progress, settings | live    |
+| Upload API (`POST /api/sessions`, `POST /api/sessions/[id]/process`)            | live    |
+| CLI: `login`, `push <file>`, `push --latest`, redaction on your machine         | live    |
+| Card making: parse, extract (Groq), evidence check                              | live    |
+| Daily reminder email                                                            | live    |
+| `SessionEnd` hook and background worker (upload with no command)                | planned |
 
 ## Repo layout
 
-| Path                  | What                                                             | Owner                          |
-| --------------------- | ---------------------------------------------------------------- | ------------------------------ |
-| `apps/web`            | Next.js app: pages, API routes, pipeline                         | both                           |
-| `packages/cli`        | stub; `init`, `login`, `push`, hook and worker planned           | Kasam                          |
-| `packages/shared`     | Decision and Session types + zod schemas, sample fixture         | shared, change after agreement |
-| `supabase/migrations` | every schema change as a migration file                          | shared, change after agreement |
-| `docs/`               | architecture, decisions, rules, plans, Play Stats API            | both                           |
-| `.claude/`            | agent hooks, settings; `.claude-logs/` holds session transcripts | both                           |
+| Path                  | What                                                              | Owner                          |
+| --------------------- | ----------------------------------------------------------------- | ------------------------------ |
+| `apps/web`            | Next.js app: pages, API routes, pipeline                          | both                           |
+| `packages/cli`        | the `session-coach` CLI: `login`, `push`; hook and worker planned | Kasam                          |
+| `packages/shared`     | Decision and Session types + zod schemas, sample fixture          | shared, change after agreement |
+| `supabase/migrations` | every schema change as a migration file                           | shared, change after agreement |
+| `docs/`               | architecture, decisions, rules, plans, Play Stats API             | both                           |
+| `.claude/`            | agent hooks, settings; `.claude-logs/` holds session transcripts  | both                           |
 
 ## Run it locally
 
@@ -130,7 +130,7 @@ Model keys still come from `.env.local`. Set `MODEL_PROVIDER=fake pnpm dev` to g
 | `pnpm test:rls` | two learners on the local stack: each reads only their own rows, can't write grades |
 | `pnpm test:e2e` | Playwright smoke: sign in, review a card, see a score (fake model, local stack)     |
 
-Neither runs in `pnpm test` or CI: both need the local stack. `pnpm test:e2e` also needs `pnpm --filter web exec playwright install chromium` once.
+Neither runs in `pnpm test`: both need the local stack. CI runs `pnpm test:rls` in its own job; e2e stays local. `pnpm test:e2e` also needs `pnpm --filter web exec playwright install chromium` once.
 
 ## Agreed before the repo
 

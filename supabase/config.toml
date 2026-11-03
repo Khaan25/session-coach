@@ -161,12 +161,10 @@ site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-# Vercel previews: the wildcard from docs/plans/auth.md, edge case 11.
 additional_redirect_urls = [
   "http://localhost:3000/**",
   "http://localhost:*/**",
   "http://127.0.0.1:3000/**",
-  "https://*-zia-ur-rehman-khans-projects.vercel.app/**",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -437,7 +435,4 @@ project_id = "cbmoddlxyrokahfodrme"
 
 [remotes.production.auth]
 site_url = "https://coach.ziaa.me"
-additional_redirect_urls = [
-  "https://coach.ziaa.me/**",
-  "https://*-zia-ur-rehman-khans-projects.vercel.app/**",
-]
+additional_redirect_urls = ["https://coach.ziaa.me/**"]

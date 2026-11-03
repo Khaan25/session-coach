@@ -1,5 +1,7 @@
+import { gunzipSync } from "node:zlib";
 import { decisionSourceSchema, evidenceSchema } from "@session-coach/shared/decision";
 import { z } from "zod";
+import { MAX_UPLOAD_BYTES } from "../sessions/upload.ts";
 import type { CheckedCard } from "./evidence.ts";
 import type { TimelineEvent } from "./parser.ts";
 
@@ -7,8 +9,9 @@ import type { TimelineEvent } from "./parser.ts";
 // `server-only` and the `@/` alias).
 
 /**
- * The most event text we send the model, in characters. About 4 characters per token puts this near 4,000 tokens, which
- * leaves room for the instructions and the retry inside Groq's 8,000 tokens per minute.
+ * The most timeline we send the model, in characters of the JSON it actually gets (ids, kinds, quotes and escapes
+ * included). At about 3 characters per token this is near 5,300 of Groq's 8,000 tokens per minute, so room for the
+ * instructions, the answer and a retry is tight (docs/DECISIONS.md, "Timeline trim budget").
  */
 export const MAX_TIMELINE_CHARS = 16_000;
 
@@ -17,14 +20,15 @@ export const MAX_EVENT_CHARS = 1_500;
 
 /**
  * Caps each event's text, then keeps the newest events that fit the budget (the end of a session holds the decisions
- * that shipped) and drops the older ones whole. Kept events stay in time order and keep their original ids, so a
- * timeline may start at E57: `event_index` still names the right event, but it is no longer a position in `kept`.
- * If the newest event alone is over budget, its start is cut to the budget and it is sent alone.
+ * that shipped) and drops the older ones whole. Each event costs its JSON as `extractCards` sends it, plus one for the
+ * comma. Kept events stay in time order and keep their original ids, so a timeline may start at E57: `event_index`
+ * still names the right event, but it is no longer a position in `kept`. If the newest event alone is over budget, its
+ * text is cut to `budget` code points and it is sent alone.
  *
  * Temporary: Zia's big-session decision (a bigger model, or chunks) replaces this.
  *
  * @param events - The parsed timeline.
- * @param budget - The most event text to keep, in characters; counted in code points.
+ * @param budget - The most timeline to keep, in characters of the JSON sent.
  * @returns `kept`: the capped events to send and to check quotes against. `cut`: how many older events were left out.
  */
 export function trimTimeline(
@@ -42,15 +46,43 @@ export function trimTimeline(
     // Slice first so one huge event isn't expanded whole: a code point is at most 2 UTF-16 units, so this keeps at least MAX_EVENT_CHARS of them.
     let chars = [...event.text.slice(0, MAX_EVENT_CHARS * 2 + 1)];
     if (chars.length > MAX_EVENT_CHARS) chars = chars.slice(0, MAX_EVENT_CHARS);
-    if (used + chars.length > budget) {
+    const size =
+      JSON.stringify({ id: event.id, kind: event.kind, text: chars.join("") }).length + 1;
+    if (used + size > budget) {
       if (kept.length > 0) break;
       chars = chars.slice(0, budget);
     }
-    used += chars.length;
+    used += size;
     kept.push({ ...event, text: chars.join("") });
   }
   kept.reverse();
   return { kept, cut: events.length - kept.length };
+}
+
+/** The most a log may unzip to: twice the 50 MB upload limit. A gzip bomb stops here instead of filling memory. */
+export const MAX_LOG_BYTES = 2 * MAX_UPLOAD_BYTES;
+
+/** The log unzips to more than `MAX_LOG_BYTES`. */
+export class LogTooBigError extends Error {
+  name = "LogTooBigError";
+}
+
+/**
+ * Unzips an uploaded log to text, refusing to grow past `maxBytes`.
+ *
+ * @param gzipped - The log as stored.
+ * @param maxBytes - The unzipped size limit; tests pass a small one.
+ * @throws LogTooBigError when the log unzips past `maxBytes`. Other zlib errors (not gzip, truncated) pass through.
+ */
+export function unzipLog(gzipped: Buffer, maxBytes = MAX_LOG_BYTES): string {
+  try {
+    return gunzipSync(gzipped, { maxOutputLength: maxBytes }).toString("utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ERR_BUFFER_TOO_LARGE") {
+      throw new LogTooBigError(`log unzips past ${maxBytes} bytes`, { cause: error });
+    }
+    throw error;
+  }
 }
 
 /** A session title is cut to this many characters, then "…" is added. */

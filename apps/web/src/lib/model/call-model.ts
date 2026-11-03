@@ -1,19 +1,25 @@
 import "server-only";
 
 import { fakeModel } from "@/lib/model/fake";
+import { ProviderHttpError, retryWaitMs, sleep } from "@/lib/model/retry";
 
 /** A model job. Each reads its model name from `MODEL_<TASK>` (`MODEL_GRADE`, `MODEL_EXTRACT`). */
 export type ModelTask = "extract" | "grade";
 
 /** `instructions` go in the system prompt; `data` is sent as JSON in the user message. */
-export type ModelInput = { instructions: string; data: Record<string, unknown> };
+export type ModelInput = {
+  instructions: string;
+  data: Record<string, unknown>;
+  /** Cancels the call and any retry, such as at the pipeline's deadline. */
+  signal?: AbortSignal;
+};
 
 /** The provider or model env vars are unset or wrong. Routes answer 503: grading isn't configured. */
 export class ModelConfigError extends Error {
   name = "ModelConfigError";
 }
 
-/** The provider failed, timed out or returned something that isn't JSON, twice. Routes answer 502. */
+/** The provider failed, timed out or returned something that isn't JSON, even after any retry. Routes answer 502. */
 export class ModelCallError extends Error {
   name = "ModelCallError";
 }
@@ -35,9 +41,16 @@ const CHAT_URL = {
 const TIMEOUT_MS = 30_000;
 
 /**
+ * The most tokens one reply may use. Five extraction cards fit in well under this; the cap keeps a runaway reply from
+ * eating Groq's 8,000 tokens per minute that grading shares.
+ */
+const MAX_OUTPUT_TOKENS = 2_048;
+
+/**
  * Calls the model configured for `task` and returns its JSON output, parsed but not validated: the caller checks the
  * shape with zod. The provider comes from `MODEL_PROVIDER` (gemini, openrouter, groq; `fake` in development and tests
- * only) and the model from `MODEL_<TASK>`, so switching either is config, not code. A failed call is retried once.
+ * only) and the model from `MODEL_<TASK>`, so switching either is config, not code. A failed call is retried once,
+ * after the wait `retryWaitMs` picks (the provider's `retry-after` on a 429); a 4xx other than 429 is not retried.
  *
  * Free tiers fail and rate-limit often, and the providers disagree on request shape, so one function hides both: a
  * route never names a provider, and a provider outage is a config change, not a deploy.
@@ -46,7 +59,7 @@ const TIMEOUT_MS = 30_000;
  * @param input - The system instructions and the data sent as the user message.
  * @returns The model's reply parsed as JSON; its shape is unchecked.
  * @throws ModelConfigError when the env vars are unset or name an unknown provider.
- * @throws ModelCallError when both attempts fail or return non-JSON.
+ * @throws ModelCallError when both attempts fail or return non-JSON, or the one attempt gets a non-429 4xx.
  */
 export async function callModel(task: ModelTask, input: ModelInput): Promise<unknown> {
   const provider = process.env.MODEL_PROVIDER;
@@ -70,10 +83,14 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
       // Some models wrap JSON in a markdown fence even when asked not to.
       return JSON.parse(text.trim().replace(/^```(?:json)?\s*|\s*```$/g, ""));
     } catch (error) {
+      if (input.signal?.aborted) throw error;
       lastError = error;
+      const waitMs = retryWaitMs(error);
+      if (waitMs === null || attempt === 1) break;
+      await sleep(waitMs, input.signal);
     }
   }
-  throw new ModelCallError(`${provider} ${task} call failed twice`, { cause: lastError });
+  throw new ModelCallError(`${provider} ${task} call failed`, { cause: lastError });
 }
 
 /**
@@ -85,11 +102,12 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
  * @param key - The provider's API key.
  * @param input - Instructions and data, as for `callModel`.
  * @returns The model's raw text, or "" when the reply has none.
- * @throws When the provider answers with a non-2xx status or the request times out.
+ * @throws ProviderHttpError when the provider answers with a non-2xx status. Also throws when the request times out.
  */
 async function request(provider: Provider, model: string, key: string, input: ModelInput) {
   const user = JSON.stringify(input.data);
-  const signal = AbortSignal.timeout(TIMEOUT_MS);
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  const signal = input.signal ? AbortSignal.any([timeout, input.signal]) : timeout;
   if (provider === "gemini") {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
@@ -99,12 +117,17 @@ async function request(provider: Provider, model: string, key: string, input: Mo
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: input.instructions }] },
           contents: [{ role: "user", parts: [{ text: user }] }],
-          generationConfig: { responseMimeType: "application/json" },
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+          },
         }),
         signal,
       },
     );
-    if (!response.ok) throw new Error(`gemini answered ${response.status}`);
+    if (!response.ok) {
+      throw new ProviderHttpError(provider, response.status, response.headers.get("retry-after"));
+    }
     const body = await response.json();
     return String(body?.candidates?.[0]?.content?.parts?.[0]?.text ?? "");
   }
@@ -118,10 +141,13 @@ async function request(provider: Provider, model: string, key: string, input: Mo
         { role: "user", content: user },
       ],
       response_format: { type: "json_object" },
+      max_tokens: MAX_OUTPUT_TOKENS,
     }),
     signal,
   });
-  if (!response.ok) throw new Error(`${provider} answered ${response.status}`);
+  if (!response.ok) {
+    throw new ProviderHttpError(provider, response.status, response.headers.get("retry-after"));
+  }
   const body = await response.json();
   return String(body?.choices?.[0]?.message?.content ?? "");
 }

@@ -1,5 +1,5 @@
-// Two-learner RLS check against the LOCAL Supabase stack: `pnpm test:rls` (needs `supabase start`, so not in
-// `pnpm test` or CI). Creates two throwaway learners with the admin API, gives each a full set of rows with the
+// Two-learner RLS check against the LOCAL Supabase stack: `pnpm test:rls` (needs `supabase start`; CI runs it in
+// its own job, not in `pnpm test`). Creates two throwaway learners with the admin API, gives each a full set of rows with the
 // service role, signs each in with the anon key, and checks they see only their own rows and can't write the
 // tables only the server writes. Deletes both learners at the end; their rows cascade.
 
@@ -200,5 +200,106 @@ test("a learner can't change another learner's profile or revoke their CLI token
     assert.notEqual(profile.data?.display_name, "hijacked");
     const token = await admin.from("cli_tokens").select("id").eq("id", other.tokenId);
     assert.equal(token.data?.length, 1, "other learner's token deleted");
+  }
+});
+
+test("tracker_tasks: members read, add and edit only the granted columns; others see and change nothing", async () => {
+  const [member, outsider] = learners;
+  const anon = createClient(stack.url, stack.anonKey, options);
+  // Every row this test writes, so the finally removes them even when setup fails halfway.
+  const added: string[] = [];
+
+  try {
+    const seeded = await admin
+      .from("tracker_tasks")
+      .insert({ section: "rls", position: 1, title: `rls task ${randomUUID()}`, details: "d" })
+      .select("id")
+      .single<{ id: string }>();
+    assert.ifError(seeded.error);
+    const taskId = seeded.data.id;
+    added.push(taskId);
+    const joined = await admin.from("tracker_members").insert({ user_id: member.id });
+    assert.ifError(joined.error);
+    const stored = async () =>
+      (
+        await admin
+          .from("tracker_tasks")
+          .select("title, details, owner, section, done_at, done_by")
+          .eq("id", taskId)
+          .single()
+      ).data;
+
+    // Reads: members see the list; a signed-in non-member and anon see no rows.
+    const mine = await member.client.from("tracker_tasks").select("id").eq("id", taskId);
+    assert.ifError(mine.error);
+    assert.equal(mine.data.length, 1, "member can't read the task");
+    for (const [who, client] of [
+      ["non-member", outsider.client],
+      ["anon", anon],
+    ] as const) {
+      const { data } = await client.from("tracker_tasks").select("id");
+      assert.equal(data?.length ?? 0, 0, `${who} read tracker tasks`);
+    }
+
+    // Inserts: members only, and only section, position and title.
+    const ok = await member.client
+      .from("tracker_tasks")
+      .insert({ section: "rls", position: 2, title: "added by a member" })
+      .select("id, done_by")
+      .single<{ id: string; done_by: string | null }>();
+    assert.ifError(ok.error);
+    added.push(ok.data.id);
+    for (const extra of [
+      { details: "x" },
+      { owner: "zia" },
+      { done_at: new Date().toISOString() },
+    ]) {
+      const bad = await member.client
+        .from("tracker_tasks")
+        .insert({ section: "rls", position: 3, title: "extra column", ...extra });
+      assert.equal(bad.error?.code, "42501", `member inserted ${Object.keys(extra)[0]}`);
+    }
+    for (const client of [outsider.client, anon]) {
+      const bad = await client
+        .from("tracker_tasks")
+        .insert({ section: "rls", position: 4, title: "x" });
+      assert.ok(bad.error, "non-member insert allowed");
+    }
+
+    // Updates: done_at, title and details only; the trigger writes done_by from the caller.
+    const ticked = await member.client
+      .from("tracker_tasks")
+      .update({ done_at: new Date().toISOString(), title: "edited", details: "new notes" })
+      .eq("id", taskId);
+    assert.ifError(ticked.error);
+    const afterTick = await stored();
+    assert.equal(afterTick?.title, "edited");
+    assert.equal(afterTick?.done_by, member.id, "trigger didn't set done_by");
+    for (const change of [
+      { owner: "kasam" },
+      { section: "moved" },
+      { position: 99 },
+      { done_by: outsider.id },
+    ]) {
+      const bad = await member.client.from("tracker_tasks").update(change).eq("id", taskId);
+      assert.equal(bad.error?.code, "42501", `member updated ${Object.keys(change)[0]}`);
+    }
+    const unticked = await member.client
+      .from("tracker_tasks")
+      .update({ done_at: null })
+      .eq("id", taskId);
+    assert.ifError(unticked.error);
+    assert.equal((await stored())?.done_by, null, "unticking kept done_by");
+
+    // Non-members and anon match no rows, so nothing moves.
+    for (const client of [outsider.client, anon]) {
+      await client.from("tracker_tasks").update({ title: "hijacked" }).eq("id", taskId);
+      await client.from("tracker_tasks").delete().eq("id", taskId);
+    }
+    const last = await stored();
+    assert.equal(last?.title, "edited", "non-member changed the task");
+  } finally {
+    await admin.from("tracker_tasks").delete().in("id", added);
+    await admin.from("tracker_members").delete().eq("user_id", member.id);
   }
 });

@@ -62,7 +62,7 @@ deploy, then `supabase db push`. Between those two steps only the Play Stats ros
 ## Flows (exact calls)
 
 - **Sign-up:** `auth.signUp({ email, password, options: { emailRedirectTo: <origin>/auth/confirm?next=/dashboard, data: { full_name } } })` → "check your email".
-- **Confirm:** `emailRedirectTo` already points at this deployment's `/auth/confirm?next=/dashboard`, so the email link is built on it: `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email` (reset: `type=recovery`, with `redirectTo` = `<origin>/auth/confirm?next=/update-password`). The page shows a button → `verifyOtp`, then redirects to `safeNext(next)`. No `{{ .SiteURL }}`, so preview sign-ups confirm on the preview and `next` is never nested.
+- **Confirm:** the email link is `{{ .SiteURL }}/auth/confirm?next=/dashboard&token_hash={{ .TokenHash }}&type=email` (reset: `next=/update-password`, `type=recovery`). Never `{{ .RedirectTo }}`: the caller picks it, so it could carry the `token_hash` to another host (edge cases 11 and 12). The page shows a button → `verifyOtp`, then redirects to `safeNext(next)`.
 - **Sign-in:** `auth.signInWithPassword({ email, password })`. Error code `email_not_confirmed` shows a resend button (`auth.resend({ type: "signup", email })`).
 - **Google:** a Server Action calls `auth.signInWithOAuth({ provider: "google", options: { redirectTo: <request origin>/auth/callback?next=… } })`, then `redirect(data.url)`.
 - **Reset:** `auth.resetPasswordForEmail(email, { redirectTo })`; the email link goes to `/auth/confirm?…&type=recovery&next=/update-password`; that page calls `auth.updateUser({ password })`.
@@ -81,8 +81,8 @@ deploy, then `supabase db push`. Between those two steps only the Play Stats ros
 8. **Link scanners use up one-time tokens:** confirm is a page with a button (POST), not a GET handler.
 9. **Email link opened in another browser:** `token_hash` + `verifyOtp` needs no PKCE cookie; don't use `{{ .ConfirmationURL }}`.
 10. **PKCE cookie lost across domains:** build OAuth `redirectTo` from the request's own origin, never from `NEXT_PUBLIC_SITE_URL`, so previews call back to themselves.
-11. **Preview redirect URLs:** allow-list `https://*-zia-ur-rehman-khans-projects.vercel.app/**` in Supabase; production uses exact URLs.
-12. **Email links on previews:** templates built on `{{ .RedirectTo }}` keep preview users on the preview.
+11. **Preview redirect URLs:** not allow-listed. Anyone can create a Vercel project whose `.vercel.app` name matches a team wildcard, and an OAuth `redirect_to` on it hands them the code. Production allows `https://coach.ziaa.me/**` only; previews sign in against a separate Supabase project if they need auth.
+12. **Email links:** built on `{{ .SiteURL }}`, never `{{ .RedirectTo }}`, so a caller-chosen `redirect_to` can't receive a `token_hash`.
 13. **Spoofed `x-forwarded-host`:** derive origins from `request.nextUrl.origin` only.
 14. **Google with the email of a confirmed password account:** Supabase links them to one user automatically. Nothing to build; test it.
 15. **Google with the email of an unconfirmed password account:** Supabase drops the unconfirmed identity. That blocks email squatting; document it on the support page.
@@ -108,7 +108,7 @@ deploy, then `supabase db push`. Between those two steps only the Play Stats ros
 **Supabase dashboard:**
 
 1. Auth → Providers → Google: enable, paste the client ID and secret.
-2. URL Configuration: Site URL = production; redirect URLs = production paths, `http://localhost:3000/**`, the Vercel preview wildcard.
+2. URL Configuration: Site URL = production; redirect URLs = `https://coach.ziaa.me/**` and `http://localhost:3000/**`, no Vercel preview wildcard (#11).
 3. Email: Confirm email on, Secure email change on, minimum password length 10 + character requirements.
 4. Email Templates: Confirm signup, Reset password and Change email use the `token_hash` links above. Confirm signup,
    Reset password and the Password changed notification are designed in `apps/web/src/emails/auth` and exported to
