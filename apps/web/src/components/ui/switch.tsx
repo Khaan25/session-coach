@@ -29,6 +29,7 @@ function Switch({
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
+      data-cuelume-toggle=""
       data-size={size}
       data-pending={pending || undefined}
       aria-busy={pending || undefined}

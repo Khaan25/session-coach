@@ -74,6 +74,7 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
+      data-cuelume-tap=""
       data-variant={variant}
       data-static={isStatic || undefined}
       className={cn(buttonVariants({ variant, size }), tapScale, className)}

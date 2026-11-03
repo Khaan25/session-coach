@@ -13,6 +13,7 @@ function Checkbox({ className, onClick, ...props }: CheckboxPrimitive.Root.Props
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
+      data-cuelume-toggle=""
       onClick={(event) => {
         onClick?.(event);
         event.stopPropagation();

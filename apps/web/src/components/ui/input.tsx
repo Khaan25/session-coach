@@ -13,6 +13,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
     <InputPrimitive
       type={type}
       data-slot="input"
+      data-cuelume-type=""
       className={cn(
         fieldControlVariants({ size: "default" }),
         "read-only:cursor-default",

@@ -9,6 +9,7 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
       data-slot="textarea"
+      data-cuelume-type=""
       className={cn(
         fieldControlVariants({ size: "default" }),
         "flex field-sizing-content h-auto min-h-16 w-full resize-none px-3 py-2 leading-5! read-only:cursor-default",
