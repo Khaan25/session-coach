@@ -11,6 +11,7 @@ import {
   XIcon,
 } from "@phosphor-icons/react";
 import { cn } from "cn";
+import { play, type SoundName } from "cuelume";
 
 import { Button } from "@/components/ui/button";
 import { tooltipPopupClass } from "@/components/ui/tooltip";
@@ -145,6 +146,7 @@ function ToastClose({
   return (
     <ToastPrimitive.Close
       data-slot="toast-close"
+      data-cuelume-close=""
       aria-label="Close toast"
       render={render}
       className={cn(
@@ -257,7 +259,24 @@ function pulseOf(updateKey: number | undefined) {
   return updateKey % 2 === 0 ? "even" : "odd";
 }
 
+const toastCues: Partial<Record<string, SoundName>> = {
+  success: "success",
+  error: "error",
+  warning: "warning",
+  loading: "loading",
+  info: "attention",
+};
+
+/** Sounds a toast's type when it appears and again when an update changes it (loading to success). `data.cue` overrides. */
+function useToastCue(toastItem: ToastPrimitive.Root.Props["toast"] | undefined) {
+  const cue: SoundName | undefined = toastItem?.data?.cue ?? toastCues[toastItem?.type ?? ""];
+  React.useEffect(() => {
+    if (cue) play(cue);
+  }, [cue]);
+}
+
 function ToastRow({ toast: toastItem }: { toast: ToastPrimitive.Root.Props["toast"] }) {
+  useToastCue(toastItem);
   return (
     <Toast
       toast={toastItem}
@@ -287,8 +306,13 @@ function ToastList() {
 function AnchoredToastList() {
   const { toasts } = ToastPrimitive.useToastManager();
 
-  return toasts.map((toastItem) => (
-    <ToastPositioner key={toastItem.id} toast={toastItem} {...toastItem.positionerProps}>
+  return toasts.map((toastItem) => <AnchoredToastRow key={toastItem.id} toast={toastItem} />);
+}
+
+function AnchoredToastRow({ toast: toastItem }: { toast: ToastPrimitive.Root.Props["toast"] }) {
+  useToastCue(toastItem);
+  return (
+    <ToastPositioner toast={toastItem} {...toastItem.positionerProps}>
       <AnchoredToast toast={toastItem}>
         <ToastContent className="items-center gap-2 p-0">
           <ToastIcon type={toastItem.type} />
@@ -296,7 +320,7 @@ function AnchoredToastList() {
         </ToastContent>
       </AnchoredToast>
     </ToastPositioner>
-  ));
+  );
 }
 
 type ToasterProps = Omit<ToastPrimitive.Provider.Props, "toastManager"> & {

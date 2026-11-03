@@ -15,11 +15,11 @@ function Popover({ ...props }: PopoverPrimitive.Root.Props) {
 }
 
 function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" data-cuelume-open="" {...props} />;
 }
 
 function PopoverClose({ ...props }: PopoverPrimitive.Close.Props) {
-  return <PopoverPrimitive.Close data-slot="popover-close" {...props} />;
+  return <PopoverPrimitive.Close data-slot="popover-close" data-cuelume-close="" {...props} />;
 }
 
 function PopoverContent({

@@ -17,7 +17,13 @@ function Collapsible({ className, ...props }: CollapsiblePrimitive.Root.Props) {
 }
 
 function CollapsibleTrigger({ ...props }: CollapsiblePrimitive.Trigger.Props) {
-  return <CollapsiblePrimitive.Trigger data-slot="collapsible-trigger" {...props} />;
+  return (
+    <CollapsiblePrimitive.Trigger
+      data-slot="collapsible-trigger"
+      data-cuelume-toggle=""
+      {...props}
+    />
+  );
 }
 
 type CollapsibleRowProps = CollapsiblePrimitive.Trigger.Props & {
@@ -43,6 +49,7 @@ function CollapsibleRow({
   return (
     <CollapsiblePrimitive.Trigger
       data-slot="collapsible-trigger"
+      data-cuelume-toggle=""
       data-size={size}
       className={cn(
         "group/collapsible-trigger inline-flex max-w-full items-center gap-3 self-start rounded-soft px-2 text-start text-text-1",

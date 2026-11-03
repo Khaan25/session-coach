@@ -29,6 +29,8 @@ function Switch({
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
+      // cuelume skips only `:disabled`, which this span root never matches, so drop the cue when the switch cannot change.
+      data-cuelume-toggle={props.disabled || readOnly || pending ? undefined : ""}
       data-size={size}
       data-pending={pending || undefined}
       aria-busy={pending || undefined}

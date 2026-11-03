@@ -9,6 +9,8 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
       data-slot="textarea"
+      // cuelume plays on keys in a read-only field too, where nothing is typed.
+      data-cuelume-type={props.readOnly ? undefined : ""}
       className={cn(
         fieldControlVariants({ size: "default" }),
         "flex field-sizing-content h-auto min-h-16 w-full resize-none px-3 py-2 leading-5! read-only:cursor-default",
