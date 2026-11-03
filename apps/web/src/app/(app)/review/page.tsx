@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { AllCaughtUpEmpty, NoCardsYetEmpty } from "@/components/app/empty-state";
+import { AllCaughtUpEmpty, DoneForTodayEmpty, NoCardsYetEmpty } from "@/components/app/empty-state";
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { AppPageHeader } from "@/components/app/page-header";
@@ -19,6 +19,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { emptyQueue, reviewQueue, type QueueCard } from "@/lib/review/queries";
 import { dueInWords } from "@/lib/review/schedule";
+import { DAILY_CAP } from "@/lib/review/today";
 import { cardlessReason } from "@/lib/sessions/queries";
 
 export const metadata: Metadata = { title: "Review" };
@@ -31,6 +32,7 @@ const sample = (i: number, decision: string, sessionName: string, step: QueueCar
   sessionName,
   step,
   dueOn: null,
+  createdAt: "2026-01-01T12:00:00Z",
 });
 const SAMPLE_QUEUE: QueueCard[] = [
   sample(
@@ -82,6 +84,7 @@ async function Queue() {
   // Only an empty queue pays for the second read: it tells a first run from a learner who is all caught up.
   const empty = await emptyQueue(user.id, now);
   if (!empty.hasCards) return <NoCardsYetEmpty cardless={await cardlessReason(user.id)} />;
+  if (empty.doneToday) return <DoneForTodayEmpty cap={DAILY_CAP} />;
   return (
     <AllCaughtUpEmpty next={empty.nextDue ? dueInWords(empty.nextDue, empty.today) : undefined} />
   );
@@ -97,7 +100,7 @@ function QueueList({ queue }: { queue: QueueCard[] }) {
           <h2>Due today</h2>
         </CardTitle>
         <CardDescription skullet-own="">
-          Cards due today, then new cards from the last 7 days.
+          Up to {DAILY_CAP} a day: cards due again, and new cards from the last 7 days.
         </CardDescription>
         {first && (
           <CardAction>

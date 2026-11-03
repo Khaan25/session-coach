@@ -38,3 +38,19 @@ Claude Code session ends
 - Vercel Hobby functions run at most 300s, and `after()` work counts inside that limit.
 - Hobby cron runs at most once per day.
 - Gemini free tier may use inputs to improve Google's products: redaction stays strict and the setup page says so.
+
+## CLI login (device code)
+
+```
+terminal                                   server                                   browser (signed in)
+────────                                   ──────                                   ───────────────────
+session-coach login ──POST /api/cli/device──► cli_device_codes(sha256(deviceCode), userCode, 10 min)
+  prints WDJB-MJHT, opens /cli/approve?code=WDJB-MJHT ─────────────────────────────► shows device, IP, countdown
+  polls /api/cli/device/token (5 s, +5 s per slow_down) ◄── 400 authorization_pending                 Approve ──► approved_by, approved_at
+  next poll ◄── 200 { token, email } once: compare-and-set token_issued_at, new cli_tokens row (label = device name)
+  saves ~/.session-coach/config.json
+```
+
+RFC 8628 with its error codes. The device code is a 32-byte secret stored only as its hash; the user code is 8 letters
+from `BCDFGHJKLMNPQRSTVWXZ`. A link with `?code=` never approves by itself: approving takes a click on a page that names
+the computer and its IP. `session-coach login --token` keeps the paste-a-token path for machines without a browser.

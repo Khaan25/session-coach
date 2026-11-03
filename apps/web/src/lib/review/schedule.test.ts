@@ -24,6 +24,17 @@ test("score 0 or 1 moves the card one step down, never below 1, due tomorrow", (
       });
 });
 
+test("a skip keeps the card's step (at least 1), due tomorrow, where a miss drops it", () => {
+  const expected = { 0: 1, 1: 1, 2: 2, 3: 3 } as const;
+  for (const step of [0, 1, 2, 3] as const)
+    assert.deepEqual(nextReview(step, 0, today, true), {
+      step: expected[step],
+      due_on: "2026-10-30",
+      mastered: false,
+    });
+  assert.equal(nextReview(3, 0, today).step, 2);
+});
+
 test("a perfect run from Tue 2026-11-03 is due 4, 7 and 14 Nov, then mastered", () => {
   let day = "2026-11-03";
   let state = nextReview(0, 2, day);

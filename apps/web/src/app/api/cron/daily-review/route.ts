@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 
 import { composeDailyReview } from "@/emails/daily-review-email";
 import {
+  type AnswerRow,
   cronAuthorized,
   dailyReviewRecipients,
   type NewCardRow,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/email/daily-review";
 import { unsubscribeUrl } from "@/lib/email/unsubscribe";
 import { newCardsSince } from "@/lib/review/schedule";
+import { answeredSince } from "@/lib/review/today";
 import { failStuckSessions } from "@/lib/sessions/stuck";
 import { siteUrl } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -45,8 +47,9 @@ type AnsweredRow = {
  * - Checks the cron secret before anything else, and the Resend key before claiming any `email_log` row, so a
  *   misconfigured deploy doesn't use up the day's claims.
  * - Fails stuck sessions first, even without Resend; a sweep error is logged and the emails still go out.
- * - Reads learners with reminders on, every answered card (for due, answered and mastered) and the visible cards
- *   from the last week never answered; who gets what is `dailyReviewRecipients`.
+ * - Reads learners with reminders on, every answered card (for due, answered and mastered), the visible cards
+ *   from the last week never answered and the last day's answers (for the daily cap); who gets what is
+ *   `dailyReviewRecipients`.
  *
  * @param request - Vercel Cron's request.
  */
@@ -89,7 +92,7 @@ export async function GET(request: Request) {
     const chunks = Array.from({ length: Math.ceil(ids.length / ID_CHUNK) }, (_, i) =>
       ids.slice(i * ID_CHUNK, (i + 1) * ID_CHUNK),
     );
-    // One chunk at a time (its two reads in parallel), like api/account's batches: a daily job can wait, the pool can't.
+    // One chunk at a time (its three reads in parallel), like api/account's batches: a daily job can wait, the pool can't.
     const reads = [];
     for (const chunk of chunks) {
       reads.push(
@@ -113,11 +116,21 @@ export async function GET(request: Request) {
               .order("id")
               .range(from, to),
           ),
+          fetchAll<AnswerRow>((from, to) =>
+            admin
+              .from("answers")
+              .select("user_id, created_at")
+              .in("user_id", chunk)
+              .gte("created_at", answeredSince(now))
+              .order("id")
+              .range(from, to),
+          ),
         ]),
       );
     }
     const answered = reads.flatMap(([rows]) => rows);
     const unanswered = reads.flatMap(([, rows]) => rows);
+    const answers = reads.flatMap(([, , rows]) => rows);
     const reviews: ReviewRow[] = answered.flatMap(({ card, ...review }) =>
       card && !card.hidden ? [{ ...review, decision: card.decision }] : [],
     );
@@ -125,7 +138,7 @@ export async function GET(request: Request) {
     const newCards: NewCardRow[] = unanswered
       .filter(({ reviews }) => reviews === null || (Array.isArray(reviews) && reviews.length === 0))
       .map(({ user_id, decision, created_at }) => ({ user_id, decision, created_at }));
-    const recipients = dailyReviewRecipients(profiles, reviews, newCards, now);
+    const recipients = dailyReviewRecipients(profiles, reviews, newCards, answers, now);
 
     const result = await sendDailyReviews(
       recipients,

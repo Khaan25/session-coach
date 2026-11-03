@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { fakeGrade } from "../model/fake.ts";
-import { answerRequestSchema, MAX_ANSWER, parseGrade } from "./grade.ts";
+import {
+  answerRequestSchema,
+  DONT_KNOW_ANSWER,
+  MAX_ANSWER,
+  parseGrade,
+  skipGrade,
+} from "./grade.ts";
 
 const cardId = "6f1c2c3e-8a4b-4c1d-9e2f-0a1b2c3d4e5f";
 
@@ -56,4 +62,22 @@ test("the fake grader scores by overlap with the model answer", () => {
   // Its output always passes the real schema.
   for (const answer of [model_answer, "postgres", "x"])
     assert.notEqual(parseGrade(fakeGrade({ model_answer, answer })), null);
+});
+
+test("answerRequestSchema takes an honest skip instead of an answer, never both or neither", () => {
+  assert.deepEqual(answerRequestSchema.parse({ cardId, dontKnow: true }), {
+    cardId,
+    dontKnow: true,
+  });
+  assert.equal(answerRequestSchema.safeParse({ cardId }).success, false);
+  assert.equal(
+    answerRequestSchema.safeParse({ cardId, answer: "a", dontKnow: true }).success,
+    false,
+  );
+  assert.equal(answerRequestSchema.safeParse({ cardId, dontKnow: false }).success, false);
+});
+
+test("skipGrade scores a skip 0 with nothing to grade, and stores it as the skip text", () => {
+  assert.deepEqual(skipGrade(), { score: 0, missing: "" });
+  assert.equal(DONT_KNOW_ANSWER, "I don't know yet");
 });

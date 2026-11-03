@@ -170,6 +170,24 @@ export function AllCaughtUpEmpty({ next, variant }: PresetProps & { next?: strin
   );
 }
 
+/** The review queue once the day's cards are done (`DAILY_CAP` in lib/review/today.ts), with cards still waiting. */
+export function DoneForTodayEmpty({ cap, variant }: PresetProps & { cap: number }) {
+  return (
+    <EmptyState
+      variant={variant}
+      icon={CalendarCheckIcon}
+      sprite="tea"
+      title="Done for today"
+      description={`You've done ${cap} cards today. The rest come back tomorrow.`}
+      action={
+        <Link href="/progress" className={buttonVariants({ variant: "secondary" })}>
+          See your progress
+        </Link>
+      }
+    />
+  );
+}
+
 /** Progress view before the first answer. */
 export function NoReviewsEmpty({ variant }: PresetProps) {
   return (

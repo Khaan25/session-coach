@@ -12,6 +12,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
   (see [`tracker_members` and `tracker_tasks`](#tracker_members-and-tracker_tasks)).
 - [`20261103000000_session_processing_started.sql`](../supabase/migrations/20261103000000_session_processing_started.sql):
   `sessions.processing_started_at`, so stuck runs are timed from their claim and `created_at` stays the upload time.
+- [`20261104000100_cli_device_codes.sql`](../supabase/migrations/20261104000100_cli_device_codes.sql): the
+  server-only `cli_device_codes` table for the CLI's device-code login.
 - [`20261104000200_projects.sql`](../supabase/migrations/20261104000200_projects.sql): `projects`, the question level
   per repo, and `learner_repos()` (see [`projects`](#projects)).
 
@@ -81,7 +83,9 @@ about a person (name, email) is copied here.
 
 ### `cli_tokens`
 
-Bearer tokens the CLI uses to upload sessions. Created on `/setup` through `POST /api/cli/tokens`.
+Bearer tokens the CLI uses to upload sessions, listed on `/setup` as connected devices. Created by
+`session-coach login` (device code, `POST /api/cli/device/token`, labelled with the device name) or on `/setup`
+through `POST /api/cli/tokens`.
 
 | Column         | Stores                                                                             | Written by                   |
 | -------------- | ---------------------------------------------------------------------------------- | ---------------------------- |
@@ -99,6 +103,29 @@ Bearer tokens the CLI uses to upload sessions. Created on `/setup` through `POST
 - **Why no learner insert:** the server must generate the token so it has enough entropy and the `sc_` prefix secret
   scanners recognise. The route returns `id, label, created_at, last_used_at` and the raw token once; never
   `token_hash`.
+
+### `cli_device_codes`
+
+Pending CLI logins (device-code flow, RFC 8628). Server only: RLS on, no policies, and `anon`/`authenticated` have no
+grants. Written by `/api/cli/device*` with the service role.
+
+| Column             | Stores                                                                                                           | Written by     |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- | -------------- |
+| `id`               | Row id.                                                                                                          | Default        |
+| `device_code_hash` | sha256 of the device code the CLI polls with. Unique. The raw code is never stored.                              | Server (start) |
+| `user_code`        | 8 letters from `BCDFGHJKLMNPQRSTVWXZ`, shown as XXXX-XXXX. Unique.                                               | Server (start) |
+| `client_name`      | The CLI's device label (hostname and OS), 1 to 100 characters. Becomes the token label.                          | Server (start) |
+| `requested_ip`     | The IP that started the login, shown to the approver.                                                            | Server (start) |
+| `requested_at`     | When the login started.                                                                                          | Server (start) |
+| `expires_at`       | At most 10 minutes after `requested_at` (check).                                                                 | Server (start) |
+| `poll_interval`    | Seconds between polls, 5 to 60; each `slow_down` adds 5.                                                         | Server (poll)  |
+| `approved_by`      | The learner who approved. Set together with `approved_at` (check).                                               | Server         |
+| `approved_at`      | Approval time. Never set together with `denied_at` (check).                                                      | Server         |
+| `denied_at`        | Denial time.                                                                                                     | Server         |
+| `token_issued_at`  | When the poll collected the token; only after approval (check). Claimed by CAS; cleared if token creation fails. | Server (poll)  |
+| `last_polled_at`   | Last poll, for `slow_down`.                                                                                      | Server (poll)  |
+
+- **Cleanup:** `cli_device_codes_expires_idx`; each start deletes rows expired for more than a day.
 
 ### `sessions`
 
@@ -138,9 +165,9 @@ The 0–5 decisions extracted from a ready session, each with a question for the
 | `session_id`, `user_id` | Parent session and owner (composite foreign key).                               | Server     |
 | `position`              | Order within the session, `unique (session_id, position)`.                      | Server     |
 | `decision`              | What the agent decided.                                                         | Server     |
-| `why`                   | The reason.                                                                     | Server     |
+| `why`                   | The reason. Not readable by learners (served after an answer).                  | Server     |
 | `source`                | `stated` (the agent said why) or `inferred` (the model's guess).                | Server     |
-| `evidence`              | JSON array, at least one item: `{ event_index, quote, file, lines, verified }`. | Server     |
+| `evidence`              | Quotes `{ event_index, quote, file, lines, verified }`. Not learner-readable.   | Server     |
 | `files`                 | Files the decision touched.                                                     | Server     |
 | `question`              | What the learner is asked.                                                      | Server     |
 | `model_answer`          | **The answer key.** Never readable by learners.                                 | Server     |
@@ -152,10 +179,12 @@ The 0–5 decisions extracted from a ready session, each with a question for the
   reason the evidence check couldn't prove. The row is kept (not deleted) so the accuracy check can count every
   extracted card (DECISIONS.md, 2026-10-28).
 - **Column grant:** `select` is revoked from `anon` and `authenticated`, then granted on every column except
-  `model_answer`. **Attack prevented:** reading the answer key from the browser before answering. Side effect:
+  `model_answer`, `why` and `evidence` (`why` and `evidence` revoked in `20261104000000`). **Attack prevented:**
+  reading the answer key, or the reason and its quotes, from the browser before answering (answer first). Side effect:
   `select *` fails for learners, so the app always names columns
-  ([`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts)). The key reaches the browser only in the response
-  of `POST /api/review/answer`, after the answer is saved.
+  ([`lib/cards/columns.ts`](../apps/web/src/lib/cards/columns.ts)). The three reach the browser only in the response
+  of `POST /api/review/answer`, after the answer is saved; `/s/[id]` reads `why` and `evidence` of answered cards with
+  the service role, checking owner, `hidden` and the `reviews` row in code (`lib/cards/queries.ts`).
 - **Evidence check constraint:** `evidence` must be a non-empty array of objects that each have a boolean `verified`.
   Without it, an item missing `verified` would read as "not true" in one rule and "not false" in the other, and the
   generated flags would disagree.
@@ -174,15 +203,16 @@ The 0–5 decisions extracted from a ready session, each with a question for the
 
 Every explanation a learner submitted and its grade. Append-only history.
 
-| Column               | Stores                                                                 | Written by |
-| -------------------- | ---------------------------------------------------------------------- | ---------- |
-| `id`                 | Answer id.                                                             | Default    |
-| `card_id`, `user_id` | The card and owner (composite foreign key).                            | Server     |
-| `review_step`        | The card's step when answered: 0 first try, 1–3 the day 1/3/7 reviews. | Server     |
-| `answer`             | The learner's text (1–4000 characters, checked by the route).          | Server     |
-| `score`              | 0 wrong, 1 partly, 2 got it.                                           | Server     |
-| `missing`            | What the grader said the answer left out, or null.                     | Server     |
-| `created_at`         | Answer time. Indexed with `user_id` for progress and Play Stats.       | Default    |
+| Column               | Stores                                                                  | Written by |
+| -------------------- | ----------------------------------------------------------------------- | ---------- |
+| `id`                 | Answer id.                                                              | Default    |
+| `card_id`, `user_id` | The card and owner (composite foreign key).                             | Server     |
+| `review_step`        | The card's step when answered: 0 first try, 1–3 the day 1/3/7 reviews.  | Server     |
+| `answer`             | The learner's text (1–4000 characters, checked by the route).           | Server     |
+| `score`              | 0 wrong, 1 partly, 2 got it.                                            | Server     |
+| `missing`            | What the grader said the answer left out, or null.                      | Server     |
+| `skipped`            | True for an honest "I don't know yet" (score 0, keeps the card's step). | Server     |
+| `created_at`         | Answer time. Indexed with `user_id` for progress and Play Stats.        | Default    |
 
 - **Policy:** `read own answers`. No learner writes: **attack prevented** is a learner inserting `score = 2` rows.
 
@@ -312,5 +342,6 @@ RLS query, which hides hidden cards.
 | `flagged`, `hidden`               | Postgres generated columns; `getEvidenceFlags()` mirrors them in code.                                                                     |
 | Next `step`, `due_on`, `mastered` | [`lib/review/schedule.ts`](../apps/web/src/lib/review/schedule.ts) `nextReview()`, in the learner's time zone.                             |
 | "Due today"                       | `reviews.due_on <= today` (learner's zone) and not mastered.                                                                               |
+| Today's queue (5 a day)           | `todayQueue()` in [`lib/review/today.ts`](../apps/web/src/lib/review/today.ts): 5 minus today's `answers`, up to 2 new cards, then due.    |
 | "Can still explain"               | Mastered cards plus cards scored 2 in the last 7 days, each once ([`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts)). |
 | Retention (Play Stats)            | Any session upload or answer counts as active ([`lib/play-stats.ts`](../apps/web/src/lib/play-stats.ts)).                                  |

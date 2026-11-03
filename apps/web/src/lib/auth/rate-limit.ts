@@ -7,14 +7,21 @@ import { NextResponse } from "next/server";
 
 import { clientIp } from "./client-ip";
 
-/** The auth actions with their own per-IP budget. Reset and resend share one: both send email to any address. */
-export type AuthLimit = "signIn" | "signUp" | "email";
+/**
+ * The signed-out actions with their own per-IP budget. Reset and resend share one: both send email to any address.
+ * deviceStart and devicePoll are the CLI's device-code login, which runs before the CLI has a token.
+ */
+export type AuthLimit = "signIn" | "signUp" | "email" | "deviceStart" | "devicePoll";
 
 // Per IP. Supabase's own limits (per address and per project) still apply behind these.
 const WINDOWS = {
   signIn: Ratelimit.slidingWindow(10, "10 m"),
   signUp: Ratelimit.slidingWindow(5, "1 h"),
   email: Ratelimit.slidingWindow(5, "1 h"),
+  // A login is one start; 10 in 10 minutes covers retries and a few laptops behind one NAT.
+  deviceStart: Ratelimit.slidingWindow(10, "10 m"),
+  // One code polled every 5 s for its 10 minutes is 120; 300 leaves room for a few logins at once from one address.
+  devicePoll: Ratelimit.slidingWindow(300, "10 m"),
 } as const;
 
 // Redis.fromEnv reads UPSTASH_REDIS_REST_URL/TOKEN, or the KV_REST_API_URL/TOKEN names the Vercel Marketplace sets.
@@ -24,7 +31,7 @@ const configured = Boolean(
 );
 
 /** The per-learner actions that cost model calls or storage, each with its own budget. */
-export type UserLimit = "push" | "process" | "grade";
+export type UserLimit = "push" | "process" | "grade" | "deviceDecide";
 
 // Per learner id, so a leaked CLI token or a looping script can't run up model and storage bills. A learner pushes a
 // few sessions a day; 20 an hour still covers a backfill burst. Each process is one extraction run, so it gets the same
@@ -33,6 +40,9 @@ const USER_WINDOWS = {
   push: Ratelimit.slidingWindow(20, "1 h"),
   process: Ratelimit.slidingWindow(20, "1 h"),
   grade: Ratelimit.slidingWindow(60, "1 h"),
+  // Approving or denying a CLI login, and looking a code up on /cli/approve: a person does a handful, so 30 an hour
+  // stops a signed-in script from guessing other people's user codes (20^8 of them).
+  deviceDecide: Ratelimit.slidingWindow(30, "1 h"),
 } as const;
 
 /** What a 429 says, by action. */
@@ -40,6 +50,7 @@ const USER_LIMIT_ERROR: Record<UserLimit, string> = {
   push: "Too many uploads in the last hour.",
   process: "Too many sessions processed in the last hour.",
   grade: "Too many answers in the last hour.",
+  deviceDecide: "Too many CLI login requests in the last hour.",
 };
 
 /**

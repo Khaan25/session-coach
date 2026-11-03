@@ -13,14 +13,14 @@ npx session-coach push <file.jsonl>
 npx session-coach sync
 ```
 
-`login` asks for a CLI token from the app's `/setup` page, checks it with the server and saves it only if it works. `push --latest` uploads the newest log of the project in the folder you run it from, and only that project (see [push](#push)). `sync` is for a Claude Code hook that uploads your finished sessions for you (see [sync](#sync)).
+`login` prints a code and opens the app's `/cli/approve` page; check the code matches, click Approve, and the CLI saves its own token (device-code login, RFC 8628). Nothing to copy. Ctrl+C cancels; the code expires after 10 minutes. On a machine without a browser, open the printed address anywhere you're signed in. `login --token` instead asks for a token from the app's `/setup` page, checks it with the server and saves it only if it works. `push --latest` uploads the newest log of the project in the folder you run it from, and only that project (see [push](#push)). `sync` is for a Claude Code hook that uploads your finished sessions for you (see [sync](#sync)).
 
 ## Run from the repo (contributors)
 
 ```sh
 # from the repo root
 pnpm install
-pnpm --filter session-coach start login [--url <site url>]
+pnpm --filter session-coach start login [--url <site url>] [--token]
 pnpm --filter session-coach start push <file.jsonl>
 pnpm --filter session-coach start push --latest
 pnpm --filter session-coach start sync
