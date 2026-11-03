@@ -276,6 +276,12 @@ test("the prompt is written for a learner on a phone, with the examples and the 
   }
 });
 
+test("the prompt tells the model not to make cards from the working rules in a prompt, at every level", () => {
+  for (const level of ["simple", "hard", "complex"] as const) {
+    assert.ok(extractInstructions(level).includes("never make a card from them"), level);
+  }
+});
+
 test("the example keeps its backticks around SYNC_DEADLINE_MS", () => {
   assert.ok(extractInstructions().includes("`SYNC_DEADLINE_MS`"));
 });

@@ -30,7 +30,7 @@ A prompt is the user's words. A reply is the agent's words. The others are what 
 
 Who reads the cards: that developer, a few days later, often on a phone, without the code open. They are learning to explain their own project out loud. So every card must make sense without reading code.
 
-Where reasons are in this timeline: mostly in prompts (the developer's plans, rules and constraints, often pasted as long lists) and in replies (the agent's plans and explanations). Write, edit, bash and result events show what happened, rarely why. Ids can jump: the first prompt is always kept, then events after it may have been cut (for example E1, then E57).
+Where reasons are in this timeline: mostly in prompts (the developer's plans, rules and constraints, often pasted as long lists) and in replies (the agent's plans and explanations). Write, edit, bash and result events show what happened, rarely why. Ids can jump: the first prompt is always kept, then events after it may have been cut (for example E1, then E57). Prompts often start with working rules for the agent (plan only, do not edit or commit, do not read env files, run the tests). Those are how the session was run, not decisions about the project: never make a card from them.
 
 Return JSON only, exactly this shape:
 { "decisions": [ { "decision": string, "why": string, "source": "stated" | "inferred", "evidence": [ { "event": string, "quote": string } ], "files": [string], "question": string, "model_answer": string } ] }

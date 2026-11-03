@@ -31,6 +31,7 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Why the first prompt:** reasons live mostly in prompts, and the newest-first trim had cut the sync session's clearest reason, which was in its first prompt. The first prompt counts toward the budget. If it alone is over the budget it is cut to the budget and sent alone.
 - **Cost:** the examples add about 400 tokens per call (estimate); the whole prompt adds about 700 to 800 tokens (estimate, 3.5 characters per token not verified).
 - **Supersedes "Budget stays 16,000":** `MAX_TIMELINE_CHARS` goes from 16,000 to 13,500 so one call stays about the size it was (the timeline drops about 700 tokens, the instructions grow about 750). Estimate: check the next real sessions for 429s. `MAX_EVENT_CHARS` stays 1,500.
+- **Working rules in the first prompt:** our own first prompts start with working rules for the agent (plan only, do not commit), so the prompt tells the model to ignore them. If tomorrow's eval still shows cards made from them, cap or skip a rules-only first prompt.
 - **Risk:** the model may copy the sync example's topic into cards for unrelated sessions. Look for it in the next real sessions.
 
 ## 2026-11-03 · Answer first: the why stays off the page until the learner tries
