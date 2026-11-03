@@ -67,14 +67,13 @@ export async function POST(request: Request) {
         .maybeSingle<GradedCard>(),
       admin
         .from("reviews")
-        .select("step, updated_at, due_on, mastered, last_score")
+        .select("step, updated_at, due_on, mastered")
         .eq("card_id", cardId)
         .maybeSingle<{
           step: Step;
           updated_at: string;
           due_on: string | null;
           mastered: boolean;
-          last_score: number | null;
         }>(),
       admin
         .from("profiles")
