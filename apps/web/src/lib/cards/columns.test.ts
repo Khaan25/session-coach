@@ -16,13 +16,8 @@ const full = (id: string): CardView => ({
 });
 
 test("lockUnanswered keeps only the decision and question of a card with no answer yet", () => {
-  const heads = [full("c0"), full("c1")].map(({ id, position, decision, question }) => ({
-    id,
-    position,
-    decision,
-    question,
-  }));
-  const cards = lockUnanswered(heads, [full("c1")]);
+  // Full rows as heads, so a leak of why or evidence from the head would fail the assertions below.
+  const cards = lockUnanswered([full("c0"), full("c1")], [full("c1")]);
   assert.deepEqual(cards[0], {
     id: "c0",
     position: 0,

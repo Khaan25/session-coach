@@ -1,8 +1,9 @@
 import type { DecisionCard } from "@session-coach/shared/decision";
 
 /**
- * The card columns a learner may read on /s/[id] (plan, Phase 5 step 1), by name. Never model_answer: the column
- * grant refuses it to learners, so `select *` fails.
+ * The card columns /s/[id] shows for an answered card (plan, Phase 5 step 1), by name. Learners can't read `why`,
+ * `evidence` or `model_answer` (column grants), so the server reads these with the service role after checking the
+ * card is the learner's and answered (`lib/cards/queries.ts`). Never model_answer.
  */
 export const CARD_COLUMNS =
   "id, position, decision, why, source, evidence, files, question, flagged";
@@ -30,8 +31,9 @@ export type SessionCard = (CardHead & { locked: true }) | (CardView & { locked: 
  */
 export function lockUnanswered(heads: CardHead[], revealed: CardView[]): SessionCard[] {
   const byId = new Map(revealed.map((card) => [card.id, card]));
-  return heads.map((head) => {
-    const card = byId.get(head.id);
-    return card ? { ...card, locked: false } : { ...head, locked: true };
+  return heads.map(({ id, position, decision, question }) => {
+    const card = byId.get(id);
+    // Only the head's own fields, by name: a wider row passed as a head can't carry its why onto the page.
+    return card ? { ...card, locked: false } : { id, position, decision, question, locked: true };
   });
 }
