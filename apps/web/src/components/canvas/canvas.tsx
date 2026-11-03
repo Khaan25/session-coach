@@ -351,7 +351,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
 
   const onPointerMove = (e: React.PointerEvent) => {
     const g = gesture.current;
-    if (e.pointerType === "touch" && touches.current.has(e.pointerId)) {
+    // A touch drag on a move handle is a move, not part of a pinch.
+    const ownMove = g?.kind === "move" && g.pointerId === e.pointerId;
+    if (e.pointerType === "touch" && !ownMove && touches.current.has(e.pointerId)) {
       touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (g?.kind === "pinch" && touches.current.size === 2) {
         const rect = shellRef.current!.getBoundingClientRect();
@@ -391,12 +393,13 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   };
 
   const onPointerEnd = (e: React.PointerEvent) => {
+    const g = gesture.current;
     if (e.pointerType === "touch") {
       touches.current.delete(e.pointerId);
-      if (gesture.current?.kind === "pinch" && touches.current.size < 2) endGesture();
-      return;
+      if (g?.kind === "pinch" && touches.current.size < 2) endGesture();
+      // A touch move on a handle ends like a mouse one, below.
+      if (g?.kind !== "move" || g.pointerId !== e.pointerId) return;
     }
-    const g = gesture.current;
     if (!g || g.kind === "pinch" || g.pointerId !== e.pointerId) return;
     // After a pan, the release must not click, copy or follow a link.
     if (e.type === "pointerup" && g.kind === "pan" && g.moved) suppressClick.current = true;
@@ -428,7 +431,8 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   };
 
   const onShellKeyDown = (e: React.KeyboardEvent) => {
-    if (e.target !== shellRef.current) return;
+    // Ctrl/Cmd/Alt combos stay with the browser, so its zoom and tab shortcuts keep working.
+    if (e.target !== shellRef.current || e.ctrlKey || e.metaKey || e.altKey) return;
     const { x, y, z } = camera.current;
     const keys: Record<string, () => void> = {
       ArrowLeft: () => setCamera({ x: x + KEY_PAN, y, z }),
