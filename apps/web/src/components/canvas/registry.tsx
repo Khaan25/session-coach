@@ -6,19 +6,19 @@
 import { Canvas, type CanvasItem } from "./canvas";
 import { DefendAnswerPreview, DefendResultPreview, DefendStartPreview } from "./previews/defend";
 import {
+  ReportPublicEmptyPreview,
+  ReportPublicOffPreview,
+  ReportPublicPreview,
+  ReportSettingsPreview,
+} from "./previews/report";
+import {
   DashboardPreview,
   ReviewAnswerPreview,
   ReviewQueuePreview,
   ReviewStatePreview,
   SessionPreview,
 } from "./previews/learning";
-import {
-  EmailPreview,
-  FlowPreview,
-  ProgressPreview,
-  ReportPreview,
-  SettingsPreview,
-} from "./previews/more";
+import { EmailPreview, FlowPreview, ProgressPreview, SettingsPreview } from "./previews/more";
 import {
   AiSetupPreview,
   CheckEmailPreview,
@@ -420,13 +420,31 @@ export const canvasItems: CanvasItem[] = [
         id: "report-off",
         name: "Report · off (opt-in)",
         ...PAGE,
-        render: () => <ReportPreview shared={false} />,
+        render: () => <ReportSettingsPreview on={false} />,
+      },
+      {
+        id: "report-on",
+        name: "Report · on, link and repos",
+        ...PAGE,
+        render: () => <ReportSettingsPreview on />,
       },
       {
         id: "report-shared",
-        name: "Report · shared link",
+        name: "Report · public page",
         ...PAGE,
-        render: () => <ReportPreview shared />,
+        render: () => <ReportPublicPreview />,
+      },
+      {
+        id: "report-public-empty",
+        name: "Report · public, nothing owned yet",
+        ...PAGE,
+        render: () => <ReportPublicEmptyPreview />,
+      },
+      {
+        id: "report-public-off",
+        name: "Report · public, turned off or wrong link",
+        ...PAGE,
+        render: () => <ReportPublicOffPreview />,
       },
       {
         id: "settings",

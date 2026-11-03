@@ -1,10 +1,9 @@
 "use client";
 
-// Progress, the ownership report, settings, the daily email, and the flow maps that link the screens together.
+// Progress, settings, the daily email, and the flow maps that link the screens together.
 // ProfileForm saves through a Server Action and DeleteAccountDialog calls the account route, so both looks are rebuilt
 // here; SettingsCard, AnswersChart and the state presets are the real components.
 
-import { ShieldCheckIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 
 import { Container } from "@/components/app/container";
@@ -15,7 +14,6 @@ import { ScoreBadge, type Score } from "@/components/app/score-badge";
 import { AnswersChart } from "@/components/progress/answers-chart";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { AlertDialogFooter, AlertDialogHeader } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -49,7 +47,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Stat, StatGroup, StatLabel, StatValue } from "@/components/ui/stat";
 import { Switch } from "@/components/ui/switch";
 
-import { AppFrame, PublicFrame } from "./frames";
+import { AppFrame } from "./frames";
 import { IdeaNote } from "./parts";
 
 const STEPS = [
@@ -213,72 +211,6 @@ export function ProgressPreview({ state }: { state: "full" | "empty" | "loading"
             </Card>
           </>
         )}
-      </Container>
-    </AppFrame>
-  );
-}
-
-const SHARED = [
-  { decision: "Rate limit uploads per CLI token, not per IP", defended: true },
-  { decision: "Keep the newest events when a session is too long", defended: true },
-  { decision: "Store CLI tokens hashed, show them once", defended: false },
-];
-
-export function ReportPreview({ shared }: { shared: boolean }) {
-  if (shared)
-    return (
-      <PublicFrame path="/r/sam-rivera">
-        <Container>
-          <AppPageHeader
-            title="Sam Rivera owns 17 decisions"
-            description="Shared by Sam · 2 repos · updated today"
-          >
-            <PageHeaderStats>
-              <PageHeaderStat label="Owned" value={17} />
-              <PageHeaderStat label="Defended" value={2} detail="timed, with a follow-up" />
-            </PageHeaderStats>
-          </AppPageHeader>
-          {SHARED.map((d) => (
-            <Card key={d.decision}>
-              <CardHeader>
-                <CardTitle>
-                  <h2>{d.decision}</h2>
-                </CardTitle>
-                <CardDescription>
-                  &ldquo;key it on the token so a shared office IP isn&rsquo;t blocked&rdquo;
-                </CardDescription>
-              </CardHeader>
-              <CardFooter>
-                {d.defended ? (
-                  <Badge variant="success">
-                    <ShieldCheckIcon aria-hidden="true" />
-                    Defended (timed, follow-up)
-                  </Badge>
-                ) : (
-                  <Badge variant="outline">Owned: explained on day 7</Badge>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
-          <IdeaNote>
-            Shows decisions and their quotes only: never the answer key, hidden cards or raw logs.
-          </IdeaNote>
-        </Container>
-      </PublicFrame>
-    );
-  return (
-    <AppFrame path="/report" crumb="Report">
-      <Container>
-        <AppPageHeader
-          title="Report"
-          description="A public page of the decisions you own, for a CV or a PR."
-        />
-        <SettingsCard
-          title="Your ownership report"
-          description="Off. Turn it on to get a link. You choose which repos it shows."
-        >
-          <Switch aria-label="Share my report" />
-        </SettingsCard>
       </Container>
     </AppFrame>
   );
