@@ -23,6 +23,11 @@ import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
 
 // MAX_ANSWER in lib/review/grade.ts; not imported, so zod stays out of the client bundle. The routes check it again.
 const MAX_ANSWER = 4000;
+const TIME_UP = {
+  empty: "Nothing was typed before the clock ran out, so this one ends here.",
+  late: "Time ran out before your answer arrived, so this one ends here.",
+  failed: "Your answer couldn't be sent before the clock ran out, so this one ends here.",
+} as const;
 const PASTE_OFF = "Paste is off in Defend it. Type it in your own words.";
 
 /** The routes' success bodies (see app/api/defend). Every time is the server's. */
@@ -40,10 +45,14 @@ type Step =
       offset: number;
     }
   | { kind: "graded"; result: Graded }
-  | { kind: "time-up" };
+  /** empty: nothing typed at 0:00; late: the answer reached the server after the deadline; failed: the send at 0:00 failed. */
+  | { kind: "time-up"; reason: "empty" | "late" | "failed" };
 
 /** Thrown for a 409 the learner can only answer by starting again: the time ran out, or the defense moved on. */
-class Conflict extends Error {}
+class Conflict extends Error {
+  /** Set when start found a defense still running, e.g. from before a reload. */
+  running = false;
+}
 
 async function post<T>(url: string, body?: unknown): Promise<T> {
   const response = await fetch(url, {
@@ -53,7 +62,11 @@ async function post<T>(url: string, body?: unknown): Promise<T> {
   }).catch(() => null);
   if (!response) throw new Error("Check your connection and try again.");
   const data = await response.json().catch(() => null);
-  if (response.status === 409) throw new Conflict(data?.error ?? "Start again.");
+  if (response.status === 409) {
+    const conflict = new Conflict(data?.error ?? "Start again.");
+    conflict.running = typeof data?.defenseId === "string";
+    throw conflict;
+  }
   if (!response.ok) throw new Error(data?.error ?? "Try again.");
   return data as T;
 }
@@ -115,7 +128,16 @@ export function DefendFlow({ defendable }: { defendable: number }) {
           offset: clockOffset(started.serverNow, Date.now()),
         });
       })
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Try again."))
+      .catch((reason: unknown) =>
+        setError(
+          // There's no route to resume it, so say how long until a new one can start.
+          reason instanceof Conflict && reason.running
+            ? "A defense from earlier is still running, maybe from before a reload. It ends within about 3 minutes; start again then."
+            : reason instanceof Error
+              ? reason.message
+              : "Try again.",
+        ),
+      )
       .finally(() => setPending(false));
   }
 
@@ -124,7 +146,10 @@ export function DefendFlow({ defendable }: { defendable: number }) {
     setError(null);
     const done = () => setPending(false);
     const failed = (reason: unknown) => {
-      if (reason instanceof Conflict) setStep({ kind: "time-up" });
+      if (reason instanceof Conflict) setStep({ kind: "time-up", reason: "late" });
+      // Past 0:00 the box is locked, so a failed send can't be retried here: end it with a way to start again.
+      else if (secondsLeft(current.dueAt, current.offset, Date.now()) === 0)
+        setStep({ kind: "time-up", reason: "failed" });
       else setError(reason instanceof Error ? reason.message : "Try again.");
     };
     if (current.kind === "answering") {
@@ -164,7 +189,7 @@ export function DefendFlow({ defendable }: { defendable: number }) {
     if (!timed || pending) return;
     const trimmed = answer.trim().slice(0, MAX_ANSWER);
     if (trimmed) send(timed, trimmed);
-    else setStep({ kind: "time-up" });
+    else setStep({ kind: "time-up", reason: "empty" });
   });
   useEffect(() => {
     if (!timed) return;
@@ -204,9 +229,7 @@ export function DefendFlow({ defendable }: { defendable: number }) {
             </DataListItem>
             <DataListItem>
               <DataListLabel>Counts as</DataListLabel>
-              <DataListValue>
-                Defended (timed, follow-up) when you score 2. Never &ldquo;verified&rdquo;.
-              </DataListValue>
+              <DataListValue>Defended (timed, follow-up) when you score 2.</DataListValue>
             </DataListItem>
             <DataListItem>
               <DataListLabel>Your reviews</DataListLabel>
@@ -238,7 +261,7 @@ export function DefendFlow({ defendable }: { defendable: number }) {
           </CardTitle>
           <CardDescription>
             {!result
-              ? "Nothing was sent before the clock ran out, so this one ends here. Start again for another decision."
+              ? `${TIME_UP[step.kind === "time-up" ? step.reason : "empty"]} Start again for another decision.`
               : defended
                 ? "Defended (timed, follow-up)."
                 : "Explain it again in your next review, then defend it again."}
