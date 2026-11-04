@@ -62,15 +62,13 @@ test.beforeAll(async () => {
         .insert({ card_id: card.data.id, user_id: userId, review_step: 0, answer: "a", score });
       if (answer.error) throw answer.error;
       if (score === 2) {
-        const review = await admin
-          .from("reviews")
-          .insert({
-            card_id: card.data.id,
-            user_id: userId,
-            step: 3,
-            mastered: true,
-            due_on: null,
-          });
+        const review = await admin.from("reviews").insert({
+          card_id: card.data.id,
+          user_id: userId,
+          step: 3,
+          mastered: true,
+          due_on: null,
+        });
         if (review.error) throw review.error;
       }
     }
