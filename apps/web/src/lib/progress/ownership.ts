@@ -1,21 +1,10 @@
-import { countOwned } from "../review/level.ts";
-import type { ReviewState } from "../review/schedule.ts";
+// The dashboard's ownership meter, shaped for the page; pure, so node --test runs it. The counting is
+// `learner_ownership()` in SQL. Definitions from the tracker task and DECISIONS (2026-11-04 review ladder): owned =
+// `reviews.mastered`, explained = answered 2 at least once, total = visible cards, grouped by `sessions.repo`. No card is
+// mastered before about 14 Nov, so "explained" carries the meter until then.
 
-// Pure ownership meter maths for the dashboard, so node --test runs it. Definitions from the tracker task and DECISIONS
-// (2026-11-04 review ladder): owned = `reviews.mastered`, explained = answered 2 at least once, total = visible cards,
-// grouped by `sessions.repo`. No card is mastered before about 14 Nov, so "explained" carries the meter until then.
-
-/** The learner's rows, read by `getOwnership()`. */
-export type OwnershipInput = {
-  /** The learner's visible cards (RLS drops hidden ones). Reviews and answers of other cards are ignored. */
-  cards: { id: string; session_id: string }[];
-  /** The learner's sessions, for each card's repo. */
-  sessions: { id: string; repo: string | null }[];
-  /** `reviews` rows. */
-  reviews: ({ card_id: string } & Pick<ReviewState, "step" | "mastered">)[];
-  /** Card ids of `answers` scored 2; a card may repeat. */
-  explainedIds: string[];
-};
+/** One row of `learner_ownership()`: a repo's counts, counted in Postgres. */
+export type OwnershipRow = { repo: string | null; explained: number; owned: number; total: number };
 
 /** Explained, owned and visible cards in one repo, or in all of them. */
 export type OwnershipCount = { explained: number; owned: number; total: number };
@@ -27,38 +16,22 @@ export type Ownership = {
 };
 
 /**
- * Counts explained, owned and visible cards, overall and per repo. Repos with no visible card are left out.
+ * Sums the per-repo counts into the overall line and orders the repos. Postgres only returns repos with a visible card.
  *
- * @param input - The learner's visible cards, sessions, reviews and the card ids answered 2.
+ * @param rows - `learner_ownership()`'s rows, in any order.
  * @returns See `Ownership`.
  */
-export function computeOwnership({
-  cards,
-  sessions,
-  reviews,
-  explainedIds,
-}: OwnershipInput): Ownership {
-  const repoOf = new Map(sessions.map(({ id, repo }) => [id, repo]));
-  const reviewOf = new Map(reviews.map((r) => [r.card_id, r]));
-  const explained = new Set(explainedIds);
-
-  const count = (own: OwnershipInput["cards"]): OwnershipCount => ({
-    explained: own.filter(({ id }) => explained.has(id)).length,
-    ...countOwned(own.map(({ id }) => reviewOf.get(id))),
-  });
-
-  const byRepo = new Map<string | null, OwnershipInput["cards"]>();
-  for (const card of cards) {
-    const repo = repoOf.get(card.session_id) ?? null;
-    const group = byRepo.get(repo);
-    if (group) group.push(card);
-    else byRepo.set(repo, [card]);
+export function computeOwnership(rows: readonly OwnershipRow[]): Ownership {
+  const overall = { explained: 0, owned: 0, total: 0 };
+  for (const row of rows) {
+    overall.explained += row.explained;
+    overall.owned += row.owned;
+    overall.total += row.total;
   }
-  const repos = [...byRepo]
-    .map(([repo, own]) => ({ repo, ...count(own) }))
+  const repos = rows
+    .map(({ repo, explained, owned, total }) => ({ repo, explained, owned, total }))
     .sort((a, b) =>
       a.repo === null ? 1 : b.repo === null ? -1 : a.repo.localeCompare(b.repo, "en"),
     );
-
-  return { overall: count(cards), repos };
+  return { overall, repos };
 }

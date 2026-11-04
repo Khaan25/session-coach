@@ -3,7 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
-import { computeOwnership, type Ownership, type OwnershipInput } from "./ownership";
+import { computeOwnership, type Ownership } from "./ownership";
 import { CHART_DAYS, computeProgress, type Progress, type ProgressInput } from "./progress";
 
 /**
@@ -73,55 +73,14 @@ export async function getProgress(userId: string, now: Date): Promise<Progress> 
 }
 
 /**
- * The dashboard's ownership meter from the learner's visible cards, their sessions' repos, reviews and answers scored 2.
- * Same reads as `getProgress`: RLS client, columns by name, `user_id` filters, every list through `fetchAll`.
+ * The dashboard's ownership meter: `learner_ownership()` counts explained, owned and visible cards per repo in Postgres
+ * (one row per repo, RLS applies since it runs as the learner), then `computeOwnership` adds the overall line.
  *
- * @param userId - The signed-in learner.
  * @returns See `computeOwnership`.
  */
-export async function getOwnership(userId: string): Promise<Ownership> {
+export async function getOwnership(): Promise<Ownership> {
   const supabase = await createClient();
-  const [cards, sessions, reviews, explained] = await Promise.all([
-    fetchAll<OwnershipInput["cards"][number]>((from, to) =>
-      supabase
-        .from("decision_cards")
-        .select("id, session_id")
-        .eq("user_id", userId)
-        .order("id")
-        .range(from, to),
-    ),
-    fetchAll<OwnershipInput["sessions"][number]>((from, to) =>
-      supabase
-        .from("sessions")
-        .select("id, repo")
-        .eq("user_id", userId)
-        .order("id")
-        .range(from, to),
-    ),
-    fetchAll<OwnershipInput["reviews"][number]>((from, to) =>
-      supabase
-        .from("reviews")
-        .select("card_id, step, mastered")
-        .eq("user_id", userId)
-        .order("card_id")
-        .range(from, to)
-        // step has a check constraint (0 to 3) that the generated types read as number.
-        .overrideTypes<OwnershipInput["reviews"], { merge: false }>(),
-    ),
-    fetchAll<{ card_id: string }>((from, to) =>
-      supabase
-        .from("answers")
-        .select("card_id")
-        .eq("user_id", userId)
-        .eq("score", 2)
-        .order("id")
-        .range(from, to),
-    ),
-  ]);
-  return computeOwnership({
-    cards,
-    sessions,
-    reviews,
-    explainedIds: explained.map(({ card_id }) => card_id),
-  });
+  const { data, error } = await supabase.rpc("learner_ownership");
+  if (error) throw error;
+  return computeOwnership(data);
 }

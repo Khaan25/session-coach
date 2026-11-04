@@ -8,10 +8,11 @@ Newest first. Each entry: what we decided, why, and what we rejected.
   ("Explained 9 · owned 2 of 30"). Cards from sessions with no repo are one "No project" row, last and not linked,
   because `?repo=` filters by name and a null repo isn't a project (`learner_repos()` skips it). The server component
   reads the data directly; no `GET /api/progress/ownership` yet, since nothing calls it and `ownedThisWeek` needs a
-  mastered-at time `reviews` doesn't store.
+  mastered-at time `reviews` doesn't store. The counting is one SQL function, `learner_ownership()`, run as the learner,
+  so the page reads one row per repo instead of every card, review and answer.
 - **Why:** no card is mastered before about 14 Nov (review ladder entry), so an owned bar would sit empty on demo day.
 - **Rejected:** hiding no-repo cards (the overall total would not add up); a `?repo=none` filter (a value a real repo
-  could be called).
+  could be called); counting in the app from four full reads (fine at trial scale, but it grows with every answer).
 
 ## 2026-11-05 · Generated Supabase types
 

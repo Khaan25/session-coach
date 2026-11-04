@@ -105,7 +105,7 @@ async function Ownership() {
   if (!user) return null;
   let ownership: Awaited<ReturnType<typeof getOwnership>>;
   try {
-    ownership = await getOwnership(user.id);
+    ownership = await getOwnership();
   } catch (error) {
     // A summary above the list: a failed read must not take the dashboard down. /progress shows the error.
     console.error("[dashboard/Ownership]", error);
