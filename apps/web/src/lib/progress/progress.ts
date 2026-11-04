@@ -6,14 +6,14 @@ import { localDate } from "../sessions/rows.ts";
 // "decisions you can still explain" = mastered cards + cards scored 2 in the last 7 days, each card counted once.
 
 /** Where a card sits in the review schedule: never reviewed, next due on day 1, 4 or 11, or mastered. */
-export type ReviewStep = "new" | "day-1" | "day-3" | "day-7" | "mastered";
+export type ReviewStep = "new" | "day-1" | "day-4" | "day-11" | "mastered";
 
 /** What the progress page calls each step. Its key order is the schedule's order, which `REVIEW_STEPS` relies on. */
 export const stepLabels: Record<ReviewStep, string> = {
   new: "New",
   "day-1": "Day 1",
-  "day-3": "Day 4",
-  "day-7": "Day 11",
+  "day-4": "Day 4",
+  "day-11": "Day 11",
   mastered: "Mastered",
 };
 
@@ -115,8 +115,8 @@ export function computeProgress({
   const steps: Record<ReviewStep, number> = {
     new: 0,
     "day-1": 0,
-    "day-3": 0,
-    "day-7": 0,
+    "day-4": 0,
+    "day-11": 0,
     mastered: 0,
   };
   for (const { id } of cards) steps[stepOf(reviewOf.get(id))] += 1;
