@@ -204,7 +204,7 @@ export function ReportPublicPreview() {
           description="Decisions an AI agent made in Sam's code, which Sam explained back in their own words. Updated today."
         >
           <PageHeaderStats>
-            <PageHeaderStat label="Owned" value={17} detail="explained on day 1, 3 and 7" />
+            <PageHeaderStat label="Owned" value={17} detail="explained on day 1, 4 and 11" />
             <PageHeaderStat label="Defended" value={2} detail="timed, with a follow-up" />
             <PageHeaderStat label="Repos" value={shown.length} />
           </PageHeaderStats>
@@ -258,7 +258,7 @@ export function ReportPublicEmptyPreview() {
           icon={ShieldCheckIcon}
           sprite="plant"
           title="Nothing owned yet"
-          description="A decision shows here once Sam has explained it back on day 1, 3 and 7."
+          description="A decision shows here once Sam has explained it back on day 1, 4 and 11."
         />
       </Container>
     </PublicFrame>

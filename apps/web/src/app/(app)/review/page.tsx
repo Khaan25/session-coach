@@ -55,14 +55,14 @@ const SAMPLE_QUEUE: QueueCard[] = [
   ),
 ];
 
-const stepLabels = ["New", "Day 1", "Day 3", "Day 7"] as const;
+const stepLabels = ["New", "Day 1", "Day 4", "Day 11"] as const;
 
 export default function ReviewPage() {
   return (
     <Container>
       <AppPageHeader
         title="Review"
-        description="Explain each decision back in your own words. Each card comes back on day 1, 3 and 7."
+        description="Explain each decision back in your own words. Each card comes back after 1 day, then 3, then 7."
       />
       {/* Skullet measures the real queue, drawn from sample cards, so each row keeps its shape when the data lands. The
           queue length isn't known until then, so the list can still grow or shrink. */}

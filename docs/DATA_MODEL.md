@@ -209,7 +209,7 @@ Every explanation a learner submitted and its grade. Append-only history.
 | -------------------- | ----------------------------------------------------------------------- | ---------- |
 | `id`                 | Answer id.                                                              | Default    |
 | `card_id`, `user_id` | The card and owner (composite foreign key).                             | Server     |
-| `review_step`        | The card's step when answered: 0 first try, 1–3 the day 1/3/7 reviews.  | Server     |
+| `review_step`        | The card's step when answered: 0 first try, 1–3 the day 1/4/11 reviews. | Server     |
 | `answer`             | The learner's text (1–4000 characters, checked by the route).           | Server     |
 | `score`              | 0 wrong, 1 partly, 2 got it.                                            | Server     |
 | `missing`            | What the grader said the answer left out, or null.                      | Server     |
@@ -220,16 +220,16 @@ Every explanation a learner submitted and its grade. Append-only history.
 
 ### `reviews`
 
-One row per answered card: where it is in the day 1/3/7 schedule.
+One row per answered card: where it is in the review schedule (gaps of 1, 3, then 7 days).
 
 | Column       | Stores                                                             | Written by |
 | ------------ | ------------------------------------------------------------------ | ---------- |
 | `card_id`    | Primary key: one row per card.                                     | Server     |
 | `user_id`    | Owner (composite foreign key with `card_id`).                      | Server     |
-| `step`       | 0–3: the next review is day 1, 3 or 7.                             | Server     |
+| `step`       | 0–3: the next review is on day 1, 4 or 11.                         | Server     |
 | `due_on`     | The learner-local date the card is next due; null once mastered.   | Server     |
 | `last_score` | The latest score.                                                  | Server     |
-| `mastered`   | Passed the day 7 review.                                           | Server     |
+| `mastered`   | Passed the day-11 review.                                          | Server     |
 | `updated_at` | Last change. The grading route uses it as a compare-and-set guard. | Server     |
 
 - **Check:** `mastered = (due_on is null)`, so a card can't be both pending and undated, or mastered and still due.

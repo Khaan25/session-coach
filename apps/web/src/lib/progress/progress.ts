@@ -5,15 +5,15 @@ import { localDate } from "../sessions/rows.ts";
 // Pure progress maths for /progress (plan, Phase 7), so node --test runs it. Definitions from ARCHITECTURE.md:
 // "decisions you can still explain" = mastered cards + cards scored 2 in the last 7 days, each card counted once.
 
-/** Where a card sits in the review schedule: never reviewed, next due on day 1, 3 or 7, or mastered. */
+/** Where a card sits in the review schedule: never reviewed, next due on day 1, 4 or 11, or mastered. */
 export type ReviewStep = "new" | "day-1" | "day-3" | "day-7" | "mastered";
 
 /** What the progress page calls each step. Its key order is the schedule's order, which `REVIEW_STEPS` relies on. */
 export const stepLabels: Record<ReviewStep, string> = {
   new: "New",
   "day-1": "Day 1",
-  "day-3": "Day 3",
-  "day-7": "Day 7",
+  "day-3": "Day 4",
+  "day-7": "Day 11",
   mastered: "Mastered",
 };
 
@@ -29,7 +29,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export type ProgressInput = {
   /** The learner's visible cards (RLS drops hidden ones). Reviews and answers of other cards are ignored. */
   cards: { id: string; session_id: string }[];
-  /** `reviews` rows: `step` 0 = not reviewed since the first try, 1-3 = next due on day 1/3/7. */
+  /** `reviews` rows: `step` 0 = not reviewed since the first try, 1-3 = next due on day 1/4/11. */
   reviews: { card_id: string; step: number; mastered: boolean }[];
   /** `answers` rows from at least the last CHART_DAYS days. */
   answers: { card_id: string; score: Score; created_at: string }[];

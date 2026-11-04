@@ -79,8 +79,8 @@ function ActionsCatalog() {
       <Specimen label="Button group">
         <ButtonGroup>
           <Button variant="secondary">Day 1</Button>
-          <Button variant="secondary">Day 3</Button>
-          <Button variant="secondary">Day 7</Button>
+          <Button variant="secondary">Day 4</Button>
+          <Button variant="secondary">Day 11</Button>
         </ButtonGroup>
         <ButtonGroup>
           <Button>Explain back</Button>
@@ -145,10 +145,10 @@ function ActionsCatalog() {
             <TextUnderlineIcon />
           </ToggleGroupItem>
         </ToggleGroup>
-        <ToggleGroup variant="outline" spacing={0} defaultValue={["3"]} aria-label="Review day">
+        <ToggleGroup variant="outline" spacing={0} defaultValue={["4"]} aria-label="Review day">
           <ToggleGroupItem value="1">Day 1</ToggleGroupItem>
-          <ToggleGroupItem value="3">Day 3</ToggleGroupItem>
-          <ToggleGroupItem value="7">Day 7</ToggleGroupItem>
+          <ToggleGroupItem value="4">Day 4</ToggleGroupItem>
+          <ToggleGroupItem value="11">Day 11</ToggleGroupItem>
         </ToggleGroup>
         <ToggleGroup
           variant="outline"

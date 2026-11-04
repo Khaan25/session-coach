@@ -53,8 +53,8 @@ import { IdeaNote } from "./parts";
 const STEPS = [
   { label: "New", count: 6 },
   { label: "Day 1", count: 5 },
-  { label: "Day 3", count: 7 },
-  { label: "Day 7", count: 4 },
+  { label: "Day 4", count: 7 },
+  { label: "Day 11", count: 4 },
   { label: "Owned", count: 17 },
 ];
 

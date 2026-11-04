@@ -75,7 +75,7 @@ export function NoSessionsEmpty({ variant }: PresetProps) {
       icon={TerminalWindowIcon}
       sprite="pencil"
       title="No sessions yet"
-      description="Your sessions appear here once the CLI is set up. Each session becomes up to 5 decision cards, and you explain them back on day 1, 3 and 7."
+      description="Your sessions appear here once the CLI is set up. Each session becomes up to 5 decision cards, and you explain them back after 1 day, then 3, then 7."
       action={
         <Link href="/setup" className={buttonVariants()}>
           Set up the CLI

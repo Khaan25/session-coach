@@ -5,7 +5,7 @@ updated: "2026-11-05"
 draft: true
 ---
 
-Session Coach turns your Claude Code sessions into decision cards and asks you to explain them back on day 1, 3 and 7. This page says what that takes.
+Session Coach turns your Claude Code sessions into decision cards and asks you to explain them back after 1 day, then 3, then 7. This page says what that takes.
 
 Session Coach is built and run by Zia Ur Rehman Khan and Kasam Thapa Magar for the 8x Playmakers trial. It is not run by a company. We are the people responsible for your data, and you can reach us at the email at the bottom of this page.
 

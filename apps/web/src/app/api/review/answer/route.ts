@@ -1,6 +1,6 @@
 /**
  * POST /api/review/answer { cardId, answer } or { cardId, dontKnow: true }: grades the learner's explanation of one
- * card, or records an honest skip, and moves it along the day 1/3/7 schedule (plan, Phase 6 step 2). Returns
+ * card, or records an honest skip, and moves it along the review schedule (day 1, 4, 11) (plan, Phase 6 step 2). Returns
  * { score, missing, why, modelAnswer, evidence, nextDue, step, level, dropped }: the why and the answer key reach the
  * browser only here, after the learner has tried.
  */

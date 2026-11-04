@@ -2,7 +2,7 @@
 
 ![Session Coach: Explain the code your agent wrote.](apps/web/src/app/opengraph-image.png)
 
-Turns each Claude Code session into up to 5 evidence-backed decision cards, then tests you on the why on day 1, 3 and 7 until you can explain the code your agent wrote.
+Turns each Claude Code session into up to 5 evidence-backed decision cards, then tests you on the why after 1 day, then 3, then 7 until you can explain the code your agent wrote.
 
 Built by Kasam Thapa Magar and Zia Ur Rehman Khan for the 8x Playmakers trial (cohort C2, Coding theme), 28 Oct – 6 Nov 2026. Live at [coach.ziaa.me](https://coach.ziaa.me).
 
@@ -15,7 +15,7 @@ The full flow. The `SessionEnd` hook (step 1) isn't built yet, so for now you up
 3. The server filters the log, numbers the events (E1, E2, …) and one model call extracts up to 5 decisions (none when the session made no real choices).
 4. Plain code checks every quote exists in the cited event. Cards with no grounded quote (from a prompt, a reply or `DECISIONS.md`) are dropped.
 5. The learner explains each decision in their own words. A model grades it 0 / 1 / 2.
-6. The question returns on day 1, 3 and 7. A daily email brings the learner back.
+6. The question returns after 1 day, then 3, then 7. A daily email brings the learner back.
 
 More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -40,8 +40,8 @@ The dashboard updates through Supabase Realtime, so a status change shows withou
 ```mermaid
 flowchart LR
     new([New card]) --> d1[Day 1]
-    d1 -- "scored 2" --> d3[Day 3]
-    d3 -- "scored 2" --> d7[Day 7]
+    d1 -- "scored 2" --> d3[Day 4]
+    d3 -- "scored 2" --> d7[Day 11]
     d7 -- "scored 2" --> m([Mastered])
     d1 -- "0 or 1" --> d1
     d3 -- "0 or 1" --> d1

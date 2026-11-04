@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 const included = [
   "A command-line tool that sends your sessions, with an opt-in hook per project, and secrets filtered out on your laptop first",
   "Up to 5 decision cards per session, each quote checked against the session",
-  "Review on day 1, 3 and 7, with each answer scored 0, 1 or 2",
+  "Review after 1 day, then 3, then 7, with each answer scored 0, 1 or 2",
   "A progress view of the decisions you can still explain",
   "A daily email when cards are due, which you can turn off",
 ] as const;

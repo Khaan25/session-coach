@@ -301,16 +301,16 @@ function PrototypeApp({ onReset }: { onReset: () => void }) {
   const record = (card: ProtoCard, text: string | null): Answer => {
     const result = text === null ? null : grade(card.ideas, text);
     const score = result?.score ?? null;
-    const isOwned = score === 2 && card.day === 7;
+    const isOwned = score === 2 && card.day === 11;
     const next =
       score === null
         ? "Tomorrow. No score, nothing lost."
         : score < 2
           ? "Tomorrow. A miss starts it again at day 1."
           : card.day === 1
-            ? "In 2 days (day 3)"
-            : card.day === 3
-              ? "In 4 days (day 7)"
+            ? "In 3 days (day 4)"
+            : card.day === 4
+              ? "In 7 days (day 11)"
               : "Owned. It comes back only when you defend it.";
     const answer: Answer = {
       score,
@@ -594,7 +594,7 @@ function DashboardScreen({
         <EmptyState
           icon={TerminalWindowIcon}
           title="No sessions yet"
-          description="Your sessions appear here once the CLI is set up. Each one becomes up to 5 decision cards to explain back on day 1, 3 and 7."
+          description="Your sessions appear here once the CLI is set up. Each one becomes up to 5 decision cards to explain back after 1 day, then 3, then 7."
           action={<Button onClick={() => go("setup")}>Set up the CLI</Button>}
         />
       </>
@@ -610,7 +610,7 @@ function DashboardScreen({
           <CardDescription>
             {gained > 0
               ? `+${gained} today. That's ${plural(gained, "decision")} you no longer lean on the agent for.`
-              : "Owned means you explained it right on day 7. The rest is debt you pay down a card at a time."}
+              : "Owned means you explained it right on day 11. The rest is debt you pay down a card at a time."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -1383,7 +1383,7 @@ function DefendScreen({
         <EmptyState
           icon={ShieldCheckIcon}
           title="Nothing to defend yet"
-          description="Defend it picks from decisions you own: explained right on day 1, 3 and 7. Your first one is due in 5 days."
+          description="Defend it picks from decisions you own: explained right on day 1, 4 and 11. Your first one is due in 5 days."
           action={
             <Button variant="secondary" onClick={() => go("review")}>
               Go to today&rsquo;s review
@@ -1635,12 +1635,12 @@ function DefendScreen({
 
 /* Progress */
 
-const STAGES = ["New", "Day 1", "Day 3", "Day 7", "Owned"] as const;
+const STAGES = ["New", "Day 1", "Day 4", "Day 11", "Owned"] as const;
 const STAGE_BASE: Record<(typeof STAGES)[number], number> = {
   New: 6,
   "Day 1": 5,
-  "Day 3": 7,
-  "Day 7": 4,
+  "Day 4": 7,
+  "Day 11": 4,
   Owned: 17,
 };
 
@@ -1693,7 +1693,7 @@ function ProgressScreen({
     if (!a || a.score === null) continue;
     const from = `Day ${card.day}` as const;
     const to =
-      a.score < 2 ? "Day 1" : card.day === 1 ? "Day 3" : card.day === 3 ? "Day 7" : "Owned";
+      a.score < 2 ? "Day 1" : card.day === 1 ? "Day 4" : card.day === 4 ? "Day 11" : "Owned";
     stages[from] -= 1;
     stages[to] += 1;
   }
@@ -1847,7 +1847,7 @@ function ReportScreen({
                     Defended (timed, follow-up)
                   </Badge>
                 ) : (
-                  <Badge variant="outline">Owned: explained on day 7</Badge>
+                  <Badge variant="outline">Owned: explained on day 11</Badge>
                 )}
               </CardFooter>
             </Card>
@@ -2066,7 +2066,7 @@ function SetupScreen({
                   <CardHeader>
                     <CardTitle>3 cards ready from &ldquo;{FIRST_PUSH.title}&rdquo;</CardTitle>
                     <CardDescription>
-                      Explain them back today, then again on day 3 and day 7.
+                      Explain them back today, then after 1 day, then 3, then 7.
                     </CardDescription>
                   </CardHeader>
                   <CardFooter>

@@ -24,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const metadata: Metadata = {
   title: "How it works | Session Coach",
   description:
-    "How a Claude Code session becomes up to 5 decision cards: signing in, the upload, extraction, the evidence check and review on day 1, 3 and 7.",
+    "How a Claude Code session becomes up to 5 decision cards: signing in, the upload, extraction, the evidence check and review after 1 day, then 3, then 7.",
 };
 
 const pipeline = [
@@ -51,7 +51,7 @@ const pipeline = [
   {
     icon: ArrowsClockwiseIcon,
     title: "Review",
-    body: "The cards appear on your dashboard when they are ready. You explain each decision back in your own words on day 1, 3 and 7, and a daily email tells you when cards are due.",
+    body: "The cards appear on your dashboard when they are ready. You explain each decision back in your own words after 1 day, then 3, then 7, and a daily email tells you when cards are due.",
   },
 ] as const;
 
@@ -103,8 +103,8 @@ export default function Page() {
   return (
     <div className="mx-auto flex w-full max-w-(--container) flex-col gap-20 px-(--gutter-sm) py-16 sm:px-(--gutter) sm:py-20">
       <MarketingPageHeader title="How it works">
-        Each Claude Code session you send becomes up to 5 decision cards. You explain them back on
-        day 1, 3 and 7 until each one is mastered.
+        Each Claude Code session you send becomes up to 5 decision cards. You explain them back
+        after 1 day, then 3, then 7, until each one is mastered.
       </MarketingPageHeader>
 
       <section aria-labelledby="pipeline-title" className="flex flex-col gap-8">
@@ -172,7 +172,11 @@ export default function Page() {
 
       <section aria-labelledby="review-title" className="flex flex-col gap-8">
         <SectionTitle id="review-title">The review</SectionTitle>
-        <FeatureCard size="lg" icon={ChatTextIcon} title="Explain it back on day 1, 3 and 7">
+        <FeatureCard
+          size="lg"
+          icon={ChatTextIcon}
+          title="Explain it back after 1 day, then 3, then 7"
+        >
           <ul className="flex max-w-3xl list-disc flex-col gap-3 ps-5 type-body text-text-2">
             <li>
               You answer each card&apos;s question in your own words. A model scores the answer 0, 1
@@ -180,8 +184,8 @@ export default function Page() {
               was missing.
             </li>
             <li>
-              A 2 moves the card to the next gap: day 1, then day 3, then day 7. A 0 or 1 moves it
-              one step down (never below day 1) and it comes back tomorrow.
+              A 2 moves the card to the next gap: 1 day, then 3, then 7. A 0 or 1 moves it one step
+              down (never below day 1) and it comes back tomorrow.
             </li>
             <li>Passing the last review marks the card mastered, and it stops coming back.</li>
             <li>

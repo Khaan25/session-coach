@@ -6,7 +6,7 @@ import { cards as sampleCards } from "@/components/design-system/sample";
 import type { KeyIdea } from "./prototype-grade";
 
 export type Repo = "session-coach" | "rapporteur";
-export type ReviewDay = 1 | 3 | 7;
+export type ReviewDay = 1 | 4 | 11;
 
 export type ProtoSession = {
   id: string;
@@ -29,7 +29,7 @@ export type ProtoCard = {
   why: string;
   evidence: string;
   file: string;
-  /** The review day this card is on. A right answer on day 7 makes it owned. */
+  /** The review day this card is on. A right answer on day 11 makes it owned. */
   day: ReviewDay;
   /** Due today. Not-due cards still show on their session's page. */
   due: boolean;
@@ -110,7 +110,7 @@ export const CARDS: ProtoCard[] = [
     why: "A shared office or VPN IP would block every learner behind it. A token is one learner on one device.",
     evidence: "key it on the token so a shared office IP isn't blocked",
     file: "apps/web/src/app/api/upload/route.ts",
-    day: 7,
+    day: 11,
     due: true,
     ideas: [
       {
@@ -132,7 +132,7 @@ export const CARDS: ProtoCard[] = [
     why: "The CLI already backs off and retries. Retry-After tells it when, and the server never holds a queue that grows under load.",
     evidence: "the CLI already backs off, so just tell it when",
     file: "apps/web/src/app/api/upload/route.ts",
-    day: 3,
+    day: 4,
     due: true,
     ideas: [
       {
@@ -176,7 +176,7 @@ export const CARDS: ProtoCard[] = [
     why: "Serverless instances don't share memory, so each one would keep its own count and the limit would leak.",
     evidence: "each function instance has its own memory",
     file: "apps/web/src/lib/rate-limit.ts",
-    day: 7,
+    day: 11,
     due: true,
     ideas: [
       {
@@ -198,7 +198,7 @@ export const CARDS: ProtoCard[] = [
     why: sampleCards[0].why,
     evidence: sampleCards[0].evidence[0].quote,
     file: sampleCards[0].files[0],
-    day: 7,
+    day: 11,
     due: true,
     ideas: [
       {
@@ -220,7 +220,7 @@ export const CARDS: ProtoCard[] = [
     why: strip(sampleCards[1].why),
     evidence: sampleCards[1].evidence[0].quote,
     file: sampleCards[1].files[0],
-    day: 3,
+    day: 4,
     due: true,
     ideas: [
       {

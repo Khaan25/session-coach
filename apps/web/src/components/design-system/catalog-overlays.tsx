@@ -379,7 +379,7 @@ function Disclosure() {
                   {cards[0].evidence[0].quote}
                 </TabsContent>
                 <TabsContent value="schedule" className="mt-3">
-                  Explain back on day 1, 3 and 7.
+                  Explain back after 1 day, then 3, then 7.
                 </TabsContent>
               </Tabs>
             )),

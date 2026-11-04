@@ -13,7 +13,7 @@ Claude Code session starts
                                                 └─ decision_cards, sessions(ready) ──Realtime──► dashboard
                                                                                         review: answer first
                                                                    grade 0/1/2 ◄──────── answer
-                                                                   reviews(day 1/3/7)
+                                                                   reviews(day 1/4/11)
                                             daily cron ─ fail stuck sessions, email ───────► back to review
 ```
 
@@ -61,7 +61,7 @@ hand. See DECISIONS.md, 2026-11-03, "`sync` uploads finished sessions from a Ses
 - **Grading:** `callModel("grade", …)` returns `{ score: 0 | 1 | 2, missing, modelAnswer }` against the card's why,
   evidence and model answer.
 - **Schedule:** score 2 moves a card to the next gap (1, 3, 7 days); a miss (0 or 1) drops it one step (never below
-  day 1), due tomorrow; "I don't know yet" keeps its step and brings it back tomorrow; passing day 7 sets `mastered`
+  day 1), due tomorrow; "I don't know yet" keeps its step and brings it back tomorrow; passing the day-11 review sets `mastered`
   (`lib/review/schedule.ts`).
 - **5 a day:** each local day offers at most 5 cards, up to 2 of them new (`lib/review/today.ts`).
 - **Emails:** Vercel Cron once a day (Hobby fires within the hour). The same run fails sessions stuck in
