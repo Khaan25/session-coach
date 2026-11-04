@@ -3,17 +3,21 @@
 // `reviews.mastered`, explained = answered 2 at least once, total = visible cards, grouped by `sessions.repo`. No card is
 // mastered before about 14 Nov, so "explained" carries the meter until then.
 
-/** One row of `learner_ownership()`: a repo's counts, counted in Postgres. */
-export type OwnershipRow = { repo: string | null; explained: number; owned: number; total: number };
+import type { Database, Tables } from "../supabase/database.types.ts";
+
+type Generated = Database["public"]["Functions"]["learner_ownership"]["Returns"][number];
+
+/**
+ * One row of `learner_ownership()`, from the generated types. The generator can't tell that a function's column can be
+ * null, so `repo` takes its type from `sessions.repo`, where the null comes from (sessions sent without a repo).
+ */
+export type OwnershipRow = Omit<Generated, "repo"> & { repo: Tables<"sessions">["repo"] };
 
 /** Explained, owned and visible cards in one repo, or in all of them. */
-export type OwnershipCount = { explained: number; owned: number; total: number };
+export type OwnershipCount = Omit<OwnershipRow, "repo">;
 
-/** The meter: the overall line, then one row per repo (null: sessions sent without one), A to Z, null last. */
-export type Ownership = {
-  overall: OwnershipCount;
-  repos: (OwnershipCount & { repo: string | null })[];
-};
+/** The meter: the overall line, then one row per repo, A to Z, null last. */
+export type Ownership = { overall: OwnershipCount; repos: OwnershipRow[] };
 
 /**
  * Sums the per-repo counts into the overall line and orders the repos. Postgres only returns repos with a visible card.
