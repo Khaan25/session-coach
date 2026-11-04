@@ -15,9 +15,14 @@ const words = (text: string) => new Set(text.toLowerCase().match(WORD) ?? []);
  * @param data - The grading call's data; only `model_answer` and `answer` are read.
  * @returns The same `{ score, missing }` shape the real grader must return.
  */
-export function fakeGrade(data: { model_answer?: unknown; answer?: unknown }) {
+export function fakeGrade(data: {
+  model_answer?: unknown;
+  answer?: unknown;
+  follow_up_answer?: unknown;
+}) {
   const key = words(String(data.model_answer ?? ""));
-  const answer = words(String(data.answer ?? ""));
+  // A defense grades both answers together; a review has no follow-up answer.
+  const answer = words(`${String(data.answer ?? "")} ${String(data.follow_up_answer ?? "")}`);
   const hits = [...key].filter((word) => answer.has(word)).length;
   const ratio = key.size === 0 ? 0 : hits / key.size;
   const score = ratio >= 0.6 ? 2 : ratio >= 0.25 ? 1 : 0;
@@ -67,6 +72,16 @@ export function fakeExtract(data: { events?: unknown }) {
 }
 
 /**
+ * The follow-up question for a defense, in the shape the real examiner must return. Fixed text, so a local run is
+ * repeatable.
+ */
+export function fakeFollowUp(data: { question?: unknown }) {
+  return {
+    question: `FAKE: what would break if "${String(data.question ?? "")}" had gone the other way?`,
+  };
+}
+
+/**
  * The fake model's output for a task, as a parsed JSON value like the real providers return.
  *
  * @param task - The model job: "grade" or "extract".
@@ -74,7 +89,8 @@ export function fakeExtract(data: { events?: unknown }) {
  * @throws For any other task, so a missing fake fails loudly instead of returning nonsense.
  */
 export function fakeModel(task: string, data: Record<string, unknown>): unknown {
-  if (task === "grade") return fakeGrade(data);
+  // A defense's follow-up rides the grade task, told apart by `mode`; every other grade call is a plain grade.
+  if (task === "grade") return data.mode === "follow_up" ? fakeFollowUp(data) : fakeGrade(data);
   if (task === "extract") return fakeExtract(data);
   throw new Error(`The fake model provider has no "${task}"`);
 }

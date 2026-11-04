@@ -211,6 +211,66 @@ export type Database = {
           },
         ];
       };
+      defenses: {
+        Row: {
+          answer: string | null;
+          answered_at: string | null;
+          card_id: string;
+          finished_at: string | null;
+          follow_up_answer: string | null;
+          follow_up_question: string | null;
+          follow_up_started_at: string | null;
+          id: string;
+          score: number | null;
+          started_at: string;
+          status: string;
+          user_id: string;
+        };
+        Insert: {
+          answer?: string | null;
+          answered_at?: string | null;
+          card_id: string;
+          finished_at?: string | null;
+          follow_up_answer?: string | null;
+          follow_up_question?: string | null;
+          follow_up_started_at?: string | null;
+          id?: string;
+          score?: number | null;
+          started_at?: string;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          answer?: string | null;
+          answered_at?: string | null;
+          card_id?: string;
+          finished_at?: string | null;
+          follow_up_answer?: string | null;
+          follow_up_question?: string | null;
+          follow_up_started_at?: string | null;
+          id?: string;
+          score?: number | null;
+          started_at?: string;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "defenses_card_id_user_id_fkey";
+            columns: ["card_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "decision_cards";
+            referencedColumns: ["id", "user_id"];
+          },
+          {
+            foreignKeyName: "defenses_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       email_log: {
         Row: {
           id: string;

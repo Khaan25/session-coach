@@ -18,6 +18,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
   server-only `cli_device_codes` table for the CLI's device-code login.
 - [`20261104000200_projects.sql`](../supabase/migrations/20261104000200_projects.sql): `projects`, the question level
   per repo, and `learner_repos()` (see [`projects`](#projects)).
+- [`20261105000100_defenses.sql`](../supabase/migrations/20261105000100_defenses.sql): the server-written `defenses`
+  table, one timed defense of a card per row (see [`defenses`](#defenses)).
 
 ## The one rule
 
@@ -50,6 +52,7 @@ profiles.id
        └─ decision_cards (session_id, user_id) → sessions (id, user_id)
             └─ answers (card_id, user_id) → decision_cards (id, user_id)
             └─ reviews (card_id, user_id) → decision_cards (id, user_id)
+            └─ defenses (card_id, user_id) → decision_cards (id, user_id)
 ```
 
 **Attack prevented:** a server bug (or a future pipeline stage) that writes a card under learner A's `user_id` for
@@ -279,6 +282,39 @@ exactly. A repo with no row, and every session with no repo, gets `simple`.
 - **`learner_repos()`:** the caller's distinct non-blank `sessions.repo`, A to Z. Runs as the caller (RLS applies),
   executable by `authenticated` only. The dashboard and /settings list projects from it without reading every session.
 - **Read by the pipeline** with the service role, to pick the extraction prompt's question level.
+
+### `defenses`
+
+"Defend it": a timed defense of one card the learner has answered 2 at least once. 180 s for the first answer, then
+one AI follow-up question with a fresh 120 s, then a 0, 1 or 2. A finished defense is labelled "defended (timed,
+follow-up)", never "verified". A defense never writes `answers` or `reviews`, so it doesn't move the review schedule.
+
+| Column                 | Stores                                                                          | Written by |
+| ---------------------- | ------------------------------------------------------------------------------- | ---------- |
+| `id`                   | Row id; the `[defenseId]` of the routes.                                        | Default    |
+| `user_id`              | The learner. Cascades on user delete.                                           | Server     |
+| `card_id`              | The card defended. With `user_id`, a composite foreign key to `decision_cards`. | Server     |
+| `status`               | `answering`, `follow_up`, `finished` or `expired`. Default `answering`.         | Server     |
+| `started_at`           | When the 180 s clock started, from the server clock.                            | Server     |
+| `answer`               | The first answer.                                                               | Server     |
+| `answered_at`          | When the first answer arrived.                                                  | Server     |
+| `follow_up_question`   | The model's follow-up question.                                                 | Server     |
+| `follow_up_started_at` | When the question was stored, which starts the 120 s clock.                     | Server     |
+| `follow_up_answer`     | The answer to the follow-up.                                                    | Server     |
+| `finished_at`          | When it was graded.                                                             | Server     |
+| `score`                | 0, 1 or 2 for the whole defense; null until `finished`.                         | Server     |
+
+- **Policies:** `read own defenses` (select where `user_id = auth.uid()`). No insert, update or delete policy, and
+  those privileges are revoked from `anon` and `authenticated`, so only the service role writes. No answer key lives
+  here (`model_answer` stays on `decision_cards`), so a learner can read their whole row.
+- **Checks:** `status` is one of the four values; `score` is 0, 1 or 2; a `follow_up` or `finished` row has its answer
+  and question; a row is `finished` exactly when it has `score`, `follow_up_answer` and `finished_at`.
+- **One unfinished defense per learner:** the partial unique index `defenses_one_unfinished_idx` on `(user_id)` where
+  `status in ('answering', 'follow_up')`. A defense past its deadline plus 5 s is marked `expired` by a late answer
+  or by the next `start`, so an abandoned tab never locks a learner out.
+- **Clocks:** every timestamp is written by the route from the server clock, never the browser; the routes refuse an
+  answer later than its deadline plus 5 s ([`lib/defend/defend.ts`](../apps/web/src/lib/defend/defend.ts)).
+- **Routes:** see [Defend it](CODEBASE.md#defend-it).
 
 ### `tracker_members` and `tracker_tasks`
 

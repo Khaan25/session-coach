@@ -34,6 +34,17 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Vercel Queues or Workflow in place of `after()`:** both are beta, and `after()` works. Revisit if the stale-card shortcut in `process.ts` is ever seen.
 - Zia approved both.
 
+## 2026-11-04 · Defend it: timed defenses on their own table
+
+- **Decision:** a `defenses` table (`20261105000100_defenses.sql`) holds one timed defense of a card per row: status `answering`, `follow_up`, `finished` or `expired`, both answers, the follow-up question, the 0/1/2 score and server timestamps. Routes: `POST /api/defend/start`, `POST /api/defend/[defenseId]/answer` (stores the answer, returns the follow-up, no grade) and `POST /api/defend/[defenseId]/follow-up` (grades and finishes). The learner gets 180 s for the first answer and a fresh 120 s for the follow-up; an answer is refused after its deadline plus 5 s. A finished defense is labelled "defended (timed, follow-up)", never "verified".
+- **Clock:** every timestamp is the API route's `new Date()`, never the browser's or a database default we rely on. The follow-up's 120 s starts when its question is stored, not when the first answer arrives, so a slow model call costs the learner nothing.
+- **One unfinished defense per learner:** a partial unique index on `(user_id)` where status is `answering` or `follow_up`. A late defense is marked `expired` (by the late answer, or by the next `start`), so an abandoned tab can't lock a learner out; `start` returns 409 with the running defense's id otherwise.
+- **Cards:** any visible card the learner has an answer of 2 on, not only owned ones (see the review-ladder entry below). Picked at random from the server; the card and its answer key never leave the server except `question`.
+- **Prompts:** the follow-up and the grade both use `callModel("grade", …)`, so `MODEL_GRADE` serves them and there are no new env vars. `data.mode` (`follow_up` or `defend_grade`) tells the two jobs apart; the fake provider (development only) branches on it. Both spend from the existing 60 model calls an hour.
+- **Writes:** server only. A learner can read their own rows (RLS); insert, update and delete are revoked, and there are no policies for them. A defense does not write `answers` or `reviews`, so it never moves the review schedule.
+- **`database.types.ts`:** the `defenses` block is hand-written, copied from the generator's shape, because no local Supabase stack was available. Replace it with the real `supabase gen types typescript --local` output if CI's rls job shows drift.
+- **Rejected:** a `defense` flag on `answers` (a defense is two answers and a question, and would break `answers.score`'s meaning on the review ladder); timing in the browser (the learner controls it); a model task of its own (a new env var for no gain); resuming a running defense (the screen can follow in a later change).
+
 ## 2026-11-04 · Sync hook pinned to 0.3.0
 
 - **Decision:** the hook snippet in `packages/cli/README.md` and the setup prompt (`apps/web/src/lib/setup/ai-prompt.ts`) now pin `session-coach@0.3.0` (device login, repo and branch, 5-minute quiet period).

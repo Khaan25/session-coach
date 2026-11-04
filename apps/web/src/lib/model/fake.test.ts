@@ -33,3 +33,26 @@ test("fake extraction skips short and non-conversation events, and returns no ca
 test("the fake model still refuses an unknown task", () => {
   assert.throws(() => fakeModel("summarize", {}), /no "summarize"/);
 });
+
+test("fake follow-up rides the grade task and fits { question }", () => {
+  const out = fakeModel("grade", { mode: "follow_up", question: "Why X?", answer: "because" });
+  assert.deepEqual(Object.keys(out as object), ["question"]);
+  assert.match((out as { question: string }).question, /^FAKE: .*Why X\?/);
+});
+
+test("fake defense grade reads the follow-up answer too", () => {
+  const model_answer = "cache the result because lookups are slow";
+  assert.deepEqual(
+    fakeModel("grade", {
+      mode: "defend_grade",
+      model_answer,
+      answer: "unrelated",
+      follow_up_answer: model_answer,
+    }),
+    { score: 2, missing: "" },
+  );
+  assert.equal(
+    (fakeModel("grade", { model_answer, answer: "unrelated" }) as { score: number }).score,
+    0,
+  );
+});
