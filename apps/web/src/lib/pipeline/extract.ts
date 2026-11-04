@@ -37,7 +37,7 @@ Return JSON only, exactly this shape:
 
 A decision is a choice between at least two real options that changed the code or the plan. A file write, a deletion, a command or a test result alone is not a decision. Examples: where shared styles live, whether a file may be touched, how data is stored. These are NOT decisions: running a command, reading a file, naming, formatting, writing a commit message. A bug fix is not a decision unless it chose between different approaches.
 
-First choose. Look for the choices a teammate would ask about in a code review ("why did you do it this way?"). Rank them by how much the project would change if the choice had gone the other way. Adding a test, a comment or a log line is not a decision; the choice the test protects can be.
+First choose. Look for the choices a teammate would ask about in a code review ("why did you do it this way?"). Rank them by how much the project would change if the choice had gone the other way. Adding a test, a comment or a log line is not a decision; the choice the test protects can be. Writing a test, a doc line or a DECISIONS.md entry that records a choice is never a card by itself; make the card about the choice it records, or make no card.
 
 Then write each card:
 
