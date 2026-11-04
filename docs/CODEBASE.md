@@ -192,7 +192,7 @@ shape, evidence rules and quote check are the same at every level. `processSessi
   Sessions with no repo are one unlinked "No project" row. Nothing shows before the first visible card.
 - **Filter:** `?repo=` (`parseRepo` in [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)) narrows
   `listSessions`; the links list `listProjects` repos, and a repo the learner has no session in goes back to
-  `/dashboard`. Page links keep `repo`. A filtered list doesn't prepend Realtime inserts (they carry every repo).
+  `/dashboard`. Page links keep `repo`. A filtered list prepends only Realtime inserts from its own repo (`applySessionChange`'s `repo` option).
 
 ## Grading pipeline
 
