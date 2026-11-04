@@ -72,7 +72,7 @@ The version is pinned so the hook doesn't run whatever is newest on npm at every
 What it does on each start:
 
 - Looks at the top level of the project's Claude Code log folder, with the same fail-closed `cwd` check as `push --latest` (see [push](#push)). The hook's own `cwd` is used when it gives one.
-- Skips the session that is starting, logs last modified more than 7 days ago, and logs modified in the last 10 minutes (they may still be written to; they are picked up on a later start).
+- Skips the session that is starting, logs last modified more than 7 days ago, and logs modified in the last 5 minutes (they may still be written to; they are picked up on a later start).
 - Skips sessions it has already dealt with (see below), then uploads up to 1 finished session per start, newest first, exactly like `push`, redaction included. The rest follow on the next starts.
 - A session the server already has (ready or processing) is skipped quietly. A session the server started but never got the log for is uploaded again.
 - Gives up after 180 seconds, longer than the 120 s upload timeout plus two 15 s API calls. `async: true` means Claude Code doesn't wait for it, and the hooks docs say `timeout` isn't enforced on an async hook, which is why `sync` has its own limit.
@@ -83,4 +83,4 @@ What it does on each start:
 
 **Turn it off** by removing the hook from `.claude/settings.json`.
 
-Known limits: a session you resume after more than 10 minutes keeps writing to a log that `sync` may already have uploaded, and the server keeps the first upload. Two sessions starting at the same moment can both upload the same log; the server keeps one.
+Known limits: a session you resume after more than 5 minutes keeps writing to a log that `sync` may already have uploaded, and the server keeps the first upload. Two sessions starting at the same moment can both upload the same log; the server keeps one.

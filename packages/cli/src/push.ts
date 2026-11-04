@@ -41,6 +41,41 @@ export function firstTimestamp(jsonl: string): string | undefined {
   return undefined;
 }
 
+/** The schema's cap on `repo` and `branch`; a longer value would fail the whole push with a 400. */
+const MAX_LABEL = 200;
+
+/**
+ * Where the session ran: the log's first `cwd` reduced to its folder name (the format the seed and `projects.repo`
+ * use), and the last non-empty `gitBranch`, since a branch can change mid-session.
+ *
+ * @param jsonl - The log's text, one JSON object per line.
+ * @returns `repo` and `branch`, each null when no line has one.
+ */
+export function sessionWhere(jsonl: string): { repo: string | null; branch: string | null } {
+  let cwd: string | undefined;
+  let branch: string | undefined;
+  for (const line of jsonl.split("\n")) {
+    if (!line.trim()) continue;
+    let event: { cwd?: unknown; gitBranch?: unknown } | null;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if (!cwd && typeof event?.cwd === "string" && event.cwd.trim()) cwd = event.cwd;
+    if (typeof event?.gitBranch === "string" && event.gitBranch.trim()) branch = event.gitBranch;
+  }
+  const repo = cwd
+    ?.split(PATH_SEPARATOR)
+    .filter((part) => part.trim())
+    .pop()
+    ?.trim();
+  return {
+    repo: repo ? repo.slice(0, MAX_LABEL) : null,
+    branch: branch ? branch.trim().slice(0, MAX_LABEL) : null,
+  };
+}
+
 /** Path separators, POSIX or Windows. */
 const PATH_SEPARATOR = /[\\/]/;
 const JSONL_EXTENSION = /\.jsonl$/;
@@ -62,6 +97,7 @@ export function sessionMetadata(
     external_id: base.replace(JSONL_EXTENSION, ""),
     size_bytes: gzippedSize,
     title: null,
+    ...sessionWhere(jsonl),
   };
   const startedAt = firstTimestamp(jsonl);
   if (startedAt) meta.started_at = startedAt;

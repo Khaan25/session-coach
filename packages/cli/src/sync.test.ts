@@ -234,7 +234,7 @@ describe("runSync", () => {
     assert.deepEqual(server.registered(), ["edge"]);
   });
 
-  it("leaves a log modified in the last 10 minutes for a later start", async () => {
+  it("leaves a log modified in the last 5 minutes for a later start", async () => {
     await log("busy", SYNC_QUIET_MS - MINUTE);
     await log("idle", SYNC_QUIET_MS + MINUTE);
     const server = fakeServer();
