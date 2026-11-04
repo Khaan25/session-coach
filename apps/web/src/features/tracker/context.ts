@@ -3,7 +3,7 @@ import "server-only";
 // The project context at the top of /tracker, from the build guide sent to Kasam on 31 Oct 2026, updated 5 Nov 2026.
 // Edit here when the plan changes; tasks live in the tracker_tasks table. Server-only: team-only text must not land in a public chunk.
 export const PROJECT_CONTEXT = `
-**Session Coach** turns a Claude Code session into up to 5 decision cards the developer explains back on day 1, 3 and 7; a model grades each answer 0, 1 or 2. Live at [coach.ziaa.me](https://coach.ziaa.me). 8x Playmakers trial: demo and submit **Fri 6 Nov**, V2 (teams) right after. The roadmap is the task list below; the architecture board is the team's Excalidraw.
+**Session Coach** turns a Claude Code session into up to 5 decision cards the developer explains back after 1 day, then 3, then 7 (reviews on days 1, 4 and 11); a model grades each answer 0, 1 or 2. Live at [coach.ziaa.me](https://coach.ziaa.me). 8x Playmakers trial: demo and submit **Fri 6 Nov**, V2 (teams) right after. The roadmap is the task list below; the architecture board is the team's Excalidraw.
 
 **Team:** Zia (lead, reviews every PR, web app, auth, screens, grading, email) and Kasam (CLI, parser, extraction, data).
 

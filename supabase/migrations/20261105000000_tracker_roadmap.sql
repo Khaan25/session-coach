@@ -13,13 +13,16 @@ insert into public.tracker_tasks (section, position, owner, title, details) valu
 $md$),
 
 ('Demo week (Wed 4 to Fri 6 Nov)', 310, 'both', 'Defend it: screen, routes, `defenses` table', $md$
-Zia: screen and routes. Kasam: follow-up and grade prompts. Agree the split first.
+Agreed split (5 Nov): Kasam takes the `defenses` migration, the routes and the prompts; Zia takes the screen and the
+ownership meter card.
 
-- A random mastered card, a 180 s timer, paste blocked, one AI follow-up (a fresh 120 s clock), then a grade.
-- New table `defenses` (one unfinished per learner, server clock). Migration agreed by both first.
+- A random owned card, a 180 s timer, paste blocked, one AI follow-up (a fresh 120 s clock), then a grade.
+- New table `defenses` (one unfinished per learner, server clock).
 - Routes on the board: `POST /api/defend/start`, `POST /api/defend/[defenseId]/answer`, `/follow-up`.
 - Labelled "defended (timed, follow-up)", never "verified".
 - Not solid by Wed afternoon: show the canvas preview as next.
+- Open: no real card is mastered before about 14 Nov (mastered on day 11). Either seed a demo account and label it
+  "sample data" on screen, or let Defend use any card answered 2 at least once. Zia to decide.
 $md$),
 
 ('Demo week (Wed 4 to Fri 6 Nov)', 320, 'zia', 'Forgiving streak', $md$
@@ -82,6 +85,7 @@ Out of date on the board:
 - "Score 0 or 1 sends the card back to day 1, decide which": decided, a miss drops one level, a skip keeps it.
 - "Model writes 3 to 5" and "1 : 3 to 5": up to 5, and 0 is a ready session with "No decisions found".
 - `POST /api/review/answer` 200 shows `skipped`; the route returns `level` and `dropped`.
+- "day 1, day 3, day 7": 1, 3 and 7 are gaps. Reviews land on days 1, 4 and 11; mastered on day 11.
 $md$),
 
 ('From the 5 Nov code review', 450, null, 'Later: AI SDK `generateObject` and durable queues', $md$
