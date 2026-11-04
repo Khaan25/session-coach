@@ -130,7 +130,7 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
   const repo = parseRepo(params.repo);
   const { now, sessions, hasMore, due, repos } = await load(user.id, page, repo);
   // A repo the learner has no session in: show every session rather than an empty list.
-  if (repo && !repos.includes(repo)) redirect("/dashboard");
+  if (repo && repos && !repos.includes(repo)) redirect("/dashboard");
   // Past the last page: go to the first rather than show "no sessions yet".
   if (page > 1 && sessions.length === 0) redirect(dashboardHref(repo));
   return (
@@ -159,7 +159,7 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
             <h2>Sessions</h2>
           </CardTitle>
         </CardHeader>
-        {repos.length > 0 && (
+        {repos && repos.length > 0 && (
           <CardContent>
             <nav aria-label="Projects" className="flex flex-wrap gap-2">
               {[null, ...repos].map((name) => (
@@ -183,9 +183,8 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
           sessions={sessions}
           userId={user.id}
           now={now.toISOString()}
-          // shortcut: Realtime events carry every repo, so a filtered list doesn't prepend new sessions (rows already
-          // shown still update); filter the prepend by repo if learners stay on a filtered view while uploading.
-          prepend={page === 1 && !repo}
+          prepend={page === 1}
+          repo={repo ?? undefined}
           limit={PAGE_SIZE}
         />
         {(page > 1 || hasMore) && (
@@ -223,7 +222,11 @@ async function load(userId: string, page: number, repo: string | null) {
   const [{ sessions, hasMore }, due, projects] = await Promise.all([
     listSessions({ userId, page, repo }),
     dueTodayCount(userId, now),
-    listProjects(userId),
+    // Only the filter links need it, so a failed read hides them instead of failing the session list.
+    listProjects(userId).catch((error: unknown) => {
+      console.error("[dashboard] listProjects", error);
+      return null;
+    }),
   ]);
-  return { now, sessions, hasMore, due, repos: projects.map((project) => project.repo) };
+  return { now, sessions, hasMore, due, repos: projects?.map((project) => project.repo) ?? null };
 }

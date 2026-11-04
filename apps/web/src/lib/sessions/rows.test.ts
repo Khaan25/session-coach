@@ -62,6 +62,17 @@ test("an insert is prepended and cut to the limit, or ignored off page 1", () =>
   assert.equal(applySessionChange(rows, row("c"), { ...opts, prepend: false }), rows);
 });
 
+test("a list filtered to one project takes only that project's new sessions", () => {
+  const rows = [row("a")];
+  const opts = { prepend: true, limit: 20, repo: "session-coach" };
+  assert.deepEqual(
+    applySessionChange(rows, row("c"), opts).map((r) => r.id),
+    ["c", "a"],
+  );
+  assert.equal(applySessionChange(rows, { ...row("d"), repo: "rapporteur" }, opts), rows);
+  assert.equal(applySessionChange(rows, { ...row("e"), repo: null }, opts), rows);
+});
+
 test("an update to an older session outside the list leaves the list alone", () => {
   const rows = [row("a"), row("b")];
   const older = { ...row("z", "ready"), created_at: "2026-10-28T09:00:00Z" };

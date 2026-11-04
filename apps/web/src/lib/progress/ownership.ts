@@ -50,7 +50,9 @@ export function computeOwnership({
   const byRepo = new Map<string | null, OwnershipInput["cards"]>();
   for (const card of cards) {
     const repo = repoOf.get(card.session_id) ?? null;
-    byRepo.set(repo, [...(byRepo.get(repo) ?? []), card]);
+    const group = byRepo.get(repo);
+    if (group) group.push(card);
+    else byRepo.set(repo, [card]);
   }
   const repos = [...byRepo]
     .map(([repo, own]) => ({ repo, ...count(own) }))
