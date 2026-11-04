@@ -12,6 +12,7 @@ import {
   MAX_TITLE_CHARS,
   buildCardRows,
   durationMinutes,
+  cutTitle,
   sessionTitle,
   trimTimeline,
   unzipLog,
@@ -321,5 +322,15 @@ test("unzipLog throws LogTooBigError when the log unzips past the limit", () => 
   assert.throws(
     () => unzipLog(Buffer.from("not gzip")),
     (e: unknown) => !(e instanceof LogTooBigError),
+  );
+});
+
+test("cutTitle keeps a short title, cuts a long one with an ellipsis and never splits an emoji", () => {
+  assert.equal(cutTitle("Keep the first prompt"), "Keep the first prompt");
+  assert.equal(cutTitle("y".repeat(MAX_TITLE_CHARS)), "y".repeat(MAX_TITLE_CHARS));
+  assert.equal(cutTitle("x".repeat(200)), `${"x".repeat(MAX_TITLE_CHARS)}…`);
+  assert.equal(
+    cutTitle(`${"x".repeat(MAX_TITLE_CHARS - 1)}😀 and more`),
+    `${"x".repeat(MAX_TITLE_CHARS - 1)}😀…`,
   );
 });

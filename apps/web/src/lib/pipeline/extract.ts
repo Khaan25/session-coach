@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { ModelInput } from "../model/call-model.ts";
 import { sleep as wait } from "../model/retry.ts";
 import type { TimelineEvent } from "./parser.ts";
+import { cutTitle } from "./process-rows.ts";
 
 /** Same signature as `callModel`, injected so tests never call a real API. */
 export type ExtractModel = (task: "extract", input: ModelInput) => Promise<unknown>;
@@ -33,11 +34,13 @@ Who reads the cards: that developer, a few days later, often on a phone, without
 Where reasons are in this timeline: mostly in prompts (the developer's plans, rules and constraints, often pasted as long lists) and in replies (the agent's plans and explanations). Write, edit, bash and result events show what happened, rarely why. Ids can jump: the first prompt is always kept, then events after it may have been cut (for example E1, then E57). Prompts often start with working rules for the agent (plan only, do not edit or commit, do not read env files, run the tests). Those are how the session was run, not decisions about the project: never make a card from them.
 
 Return JSON only, exactly this shape:
-{ "decisions": [ { "decision": string, "why": string, "source": "stated" | "inferred", "evidence": [ { "event": string, "quote": string } ], "files": [string], "question": string, "model_answer": string } ] }
+{ "title": string, "decisions": [ { "decision": string, "why": string, "source": "stated" | "inferred", "evidence": [ { "event": string, "quote": string } ], "files": [string], "question": string, "model_answer": string } ] }
 
 A decision is a choice between at least two real options that changed the code or the plan. A file write, a deletion, a command or a test result alone is not a decision. Examples: where shared styles live, whether a file may be touched, how data is stored. These are NOT decisions: running a command, reading a file, naming, formatting, writing a commit message. A bug fix is not a decision unless it chose between different approaches.
 
 First choose. Look for the choices a teammate would ask about in a code review ("why did you do it this way?"). Rank them by how much the project would change if the choice had gone the other way. Adding a test, a comment or a log line is not a decision; the choice the test protects can be. Writing a test, a doc line or a DECISIONS.md entry that records a choice is never a card by itself; make the card about the choice it records, or make no card.
+
+title: one line in plain English, under 70 characters, saying what this session decided or built (for example "Keep the first prompt when trimming long sessions"). No file paths, backticks, code names or instructions to the agent ("plan only", "edit X only"). Always write a title, even when "decisions" is empty; then describe what the session did.
 
 Then write each card:
 
@@ -91,6 +94,17 @@ export const MAX_CARDS = 5;
 /** The answer's outer shape. Cards are parsed one by one (`parseAnswer`), so one bad card can't sink the rest. */
 const extractOutputSchema = z.object({ decisions: z.array(z.unknown()) });
 
+/** The answer's title, or undefined when it is missing, blank or not a string. Never fails the answer. */
+function parseTitle(answer: unknown): string | undefined {
+  const title = (answer as { title?: unknown } | null)?.title;
+  if (typeof title !== "string") return undefined;
+  const trimmed = title.trim();
+  return trimmed === "" ? undefined : cutTitle(trimmed);
+}
+
+/** What `extractCards` returns: the valid cards and, when the model gave a usable one, the session title. */
+export type Extracted = { cards: ExtractedCard[]; title: string | undefined };
+
 /** A card as the model wrote it, before `checkEvidence` verifies the quotes. */
 export type ExtractedCard = z.infer<typeof modelCardSchema>;
 
@@ -117,7 +131,7 @@ export type ExtractOptions = {
  * Keeps the valid cards of one answer, up to `MAX_CARDS`. Invalid cards are dropped. The answer counts as failed only
  * when its outer shape is wrong, or when it has cards and none of them is valid, so the retry can fix them.
  */
-function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: string } {
+function parseAnswer(answer: unknown): Extracted | { error: string } {
   const outer = extractOutputSchema.safeParse(answer);
   if (!outer.success) return { error: z.prettifyError(outer.error) };
   const results = outer.data.decisions.map((card) => modelCardSchema.safeParse(card));
@@ -128,7 +142,7 @@ function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: str
     );
     return { error: errors.join("\n") };
   }
-  return { cards: cards.slice(0, MAX_CARDS) };
+  return { cards: cards.slice(0, MAX_CARDS), title: parseTitle(answer) };
 }
 
 /**
@@ -140,14 +154,15 @@ function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: str
  * @param model - `callModel` in production, a fake in tests.
  * @param options - `retryDelayMs` (default `RETRY_DELAY_MS`) and `sleep` change the wait; `signal` cancels; `level`
  *   picks the question level (default simple).
- * @returns 0 to `MAX_CARDS` cards, unverified. Zero is a valid answer: a session can have no real decisions.
+ * @returns 0 to `MAX_CARDS` cards, unverified, and the model's title, cut to the title limit; undefined when the answer
+ *   had none. Zero cards is a valid answer: a session can have no real decisions.
  * @throws ExtractError when both answers are invalid. Errors from `model` itself pass through.
  */
 export async function extractCards(
   events: readonly TimelineEvent[],
   model: ExtractModel,
   { retryDelayMs = RETRY_DELAY_MS, sleep = wait, signal, level }: ExtractOptions = {},
-): Promise<ExtractedCard[]> {
+): Promise<Extracted> {
   const instructions = extractInstructions(level);
   const timeline = events.map(({ id, kind, text }) => ({ id, kind, text }));
   const cancel = signal ? { signal } : {};
@@ -157,7 +172,7 @@ export async function extractCards(
     ...cancel,
   });
   const first = parseAnswer(firstAnswer);
-  if ("cards" in first) return first.cards;
+  if ("cards" in first) return first;
 
   await sleep(retryDelayMs, signal);
   signal?.throwIfAborted();
@@ -173,7 +188,7 @@ export async function extractCards(
       ...cancel,
     }),
   );
-  if ("cards" in second) return second.cards;
+  if ("cards" in second) return second;
 
   throw new ExtractError(`The model returned invalid cards twice. Last error:\n${second.error}`);
 }

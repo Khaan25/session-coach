@@ -42,10 +42,17 @@ const WHITESPACE = /\s+/;
  * copied from the event, so every card passes `checkEvidence` and a local push ends `ready` with cards.
  *
  * @param data - The extraction call's data; only `events` (`{ id, kind, text }[]`) is read.
- * @returns The same `{ decisions }` shape the real extractor must return; empty when no event qualifies.
+ * @returns The same `{ title, decisions }` shape the real extractor must return; empty when no event qualifies.
  */
 export function fakeExtract(data: { events?: unknown }) {
   const events = Array.isArray(data.events) ? data.events : [];
+  const firstPrompt = events.find((event: { kind?: unknown }) => event.kind === "prompt");
+  const opening = String(firstPrompt?.text ?? "")
+    .trim()
+    .split(WHITESPACE)
+    .slice(0, 6)
+    .join(" ");
+  const title = opening === "" ? "FAKE: a session with no prompt" : `FAKE: ${opening}`;
   const decisions = events
     .flatMap((event: { id?: unknown; kind?: unknown; text?: unknown }) => {
       if (event.kind !== "prompt" && event.kind !== "reply") return [];
@@ -68,7 +75,7 @@ export function fakeExtract(data: { events?: unknown }) {
       question: `FAKE: why was the choice in ${id} made?`,
       model_answer: `FAKE: because ${quote}`,
     }));
-  return { decisions };
+  return { title, decisions };
 }
 
 /**

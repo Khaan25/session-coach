@@ -15,10 +15,11 @@ test("fake extraction on a real parsed log gives cards that survive the evidence
   const { events } = parseSession(fixture);
   const model = async (task: "extract", input: { data: Record<string, unknown> }) =>
     fakeModel(task, input.data);
-  const drafts = await extractCards(events, model);
+  const { cards: drafts, title } = await extractCards(events, model);
+  assert.match(title ?? "", /^FAKE: /);
   assert.ok(drafts.length > 0 && drafts.length <= 3);
   assert.equal(checkEvidence(drafts, events).length, drafts.length);
-  assert.deepEqual(await extractCards(events, model), drafts);
+  assert.deepEqual((await extractCards(events, model)).cards, drafts);
 });
 
 test("fake extraction skips short and non-conversation events, and returns no cards when none qualify", () => {
@@ -26,8 +27,14 @@ test("fake extraction skips short and non-conversation events, and returns no ca
     { id: "E1", kind: "prompt", text: "too short" },
     { id: "E2", kind: "bash", text: "pnpm test --filter web --run now" },
   ];
-  assert.deepEqual(fakeModel("extract", { events }), { decisions: [] });
-  assert.deepEqual(fakeModel("extract", {}), { decisions: [] });
+  assert.deepEqual(fakeModel("extract", { events }), {
+    title: "FAKE: too short",
+    decisions: [],
+  });
+  assert.deepEqual(fakeModel("extract", {}), {
+    title: "FAKE: a session with no prompt",
+    decisions: [],
+  });
 });
 
 test("the fake model still refuses an unknown task", () => {
