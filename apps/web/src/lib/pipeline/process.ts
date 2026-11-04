@@ -144,7 +144,10 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
   // The trimmed events feed both the model and the quote check, so event_index lines up.
   const { kept: timeline, cut } = trimTimeline(events);
   const level = await questionLevel(admin, session.user_id, session.repo);
-  const drafts = await extractCards(timeline, callModel, { signal, level });
+  const { cards: drafts, title: modelTitle } = await extractCards(timeline, callModel, {
+    signal,
+    level,
+  });
   const cards = checkEvidence(drafts, timeline);
   const rows = buildCardRows(cards, sessionId, session.user_id);
 
@@ -161,7 +164,7 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
   // Title and duration are optional: if computing them throws, the session is still marked ready.
   let extras: { title?: string; duration_min?: number } = {};
   try {
-    const title = session.title ? null : sessionTitle(events);
+    const title = session.title ? null : (modelTitle ?? sessionTitle(events));
     const duration = durationMinutes(raw);
     extras = {
       ...(title !== null && { title }),

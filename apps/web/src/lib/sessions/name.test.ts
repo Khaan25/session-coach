@@ -78,3 +78,16 @@ test("sessionName cleans a saved title and falls back when nothing is left", () 
   );
   assert.equal(sessionName({ title: "<system-reminder>some text" }), "Untitled session");
 });
+
+test("a clean model-written title passes through cleanPromptTitle and sessionName unchanged", () => {
+  const titles = [
+    "Keep the first prompt when trimming long sessions",
+    "Show the ownership meter by explained cards, not owned ones",
+    "Fixed a typo and ran the tests",
+  ];
+  for (const title of titles) {
+    assert.ok(title.length < 70);
+    assert.equal(cleanPromptTitle(title), title);
+    assert.equal(sessionName({ title, repo: "r", branch: "b" }), title);
+  }
+});

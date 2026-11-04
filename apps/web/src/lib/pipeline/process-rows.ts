@@ -153,11 +153,18 @@ export function sessionTitle(events: readonly TimelineEvent[]): string | null {
     if (event.kind !== "prompt") continue;
     const text = cleanPromptTitle(event.text);
     if (text === "") continue;
-    // Clean first, then count and cut by code points, so an emoji at the limit is kept whole or dropped, never split.
-    const chars = [...text];
-    return chars.length > MAX_TITLE_CHARS ? `${chars.slice(0, MAX_TITLE_CHARS).join("")}…` : text;
+    return cutTitle(text);
   }
   return null;
+}
+
+/**
+ * Cuts a title to `MAX_TITLE_CHARS` and adds "…" when it was longer. Counts code points, so an emoji at the limit is
+ * kept whole or dropped, never split.
+ */
+export function cutTitle(text: string): string {
+  const chars = [...text];
+  return chars.length > MAX_TITLE_CHARS ? `${chars.slice(0, MAX_TITLE_CHARS).join("")}…` : text;
 }
 
 /** A `decision_cards` insert row: what the pipeline writes. Postgres adds id and created_at and generates flagged/hidden. */

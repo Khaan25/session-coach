@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-04 · Model-written session titles
+
+- **Decision:** the extraction model writes the session title in the same call that makes the cards: the answer gains a top-level `title` string, one plain line under 70 characters, required even when there are no decisions. It is optional on our side: a missing, blank or non-string title is ignored and the cards are kept exactly as before; a long one is cut to the title limit with "…". `processSession` uses it when the session has no title yet and falls back to the first prompt (`sessionTitle`) when the model gave none. An existing title is never overwritten. The title rules add a little to each extract call.
+- **Why:** first prompts are mostly instructions to the agent ("plan only, do not edit…"), so titles built from them confused learners.
+- **Rejected:** the first card's decision as the title (a session with zero cards would have none); a separate title call (extra tokens on Groq's 8,000 tokens/minute).
+- **Consequence:** sessions processed before this keep their first-prompt title; only new sessions get a model-written one.
+
 ## 2026-11-05 · Ownership meter: bars fill by explained, no-repo sessions are "No project"
 
 - **Decision:** the dashboard meter's bars fill with explained cards (answered 2 at least once); the text shows both

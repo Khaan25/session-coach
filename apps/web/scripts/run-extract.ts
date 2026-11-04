@@ -23,7 +23,8 @@ try {
 const { events } = parseSession(raw);
 console.log(`${events.length} events parsed; asking the model...\n`);
 
-const drafts = await extractCards(events, callModel);
+const { cards: drafts, title } = await extractCards(events, callModel);
+console.log(`title: ${title ?? "(none)"}\n`);
 const cards = checkEvidence(drafts, events);
 
 for (const card of cards) {
