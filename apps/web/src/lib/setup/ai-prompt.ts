@@ -15,7 +15,7 @@ const LOGIN = `1. Run: npx session-coach@latest login
    It prints a code and opens my browser. Wait while I check the code and approve; carry on only after it prints "Signed in".`;
 
 // The hook packages/cli/README.md documents for `sync`: per project, pinned, async. sync skips sessions modified in
-// the last 10 minutes and uploads finished ones on the next start.
+// the last 5 minutes and uploads finished ones on the next start.
 const HOOK = `2. Turn on auto-upload for this project only: merge this into the project's .claude/settings.json (keep what is there):
    {"hooks":{"SessionStart":[{"matcher":"startup|resume|clear","hooks":[{"type":"command","command":"npx --yes session-coach@0.2.0 sync","async":true}]}]}}
    Each time a session starts, it uploads one finished session from this project in the background.`;
