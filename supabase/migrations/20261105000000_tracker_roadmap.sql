@@ -5,9 +5,11 @@
 insert into public.tracker_tasks (section, position, owner, title, details) values
 
 ('Demo week (Wed 4 to Fri 6 Nov)', 300, 'zia', 'Ownership meter on the dashboard', $md$
-"You own 12 of 30 decisions in session-coach. Up 2 this week."
+"Explained 9 · owned 2 of 30 in session-coach." (DECISIONS, 2026-11-04 review ladder: the first card is owned about
+14 Nov, so "explained" carries the demo.)
 
-- owned = `reviews.mastered`, total = visible cards, per `sessions.repo`. No new table.
+- owned = `reviews.mastered`, explained = answered 2 at least once, total = visible cards, per `sessions.repo`. No new
+  table.
 - `levelOf` and `countOwned` are ready in `apps/web/src/lib/review/level.ts`.
 - Contract on the board: `GET /api/progress/ownership` → `{ overall: { owned, total, ownedThisWeek }, repos: [...] }`.
 $md$),
@@ -16,13 +18,13 @@ $md$),
 Agreed split (5 Nov): Kasam takes the `defenses` migration, the routes and the prompts; Zia takes the screen and the
 ownership meter card.
 
-- A random owned card, a 180 s timer, paste blocked, one AI follow-up (a fresh 120 s clock), then a grade.
+- A random card the learner has answered 2 at least once, a 180 s timer, paste blocked, one AI follow-up (a fresh 120 s clock), then a grade.
 - New table `defenses` (one unfinished per learner, server clock).
 - Routes on the board: `POST /api/defend/start`, `POST /api/defend/[defenseId]/answer`, `/follow-up`.
 - Labelled "defended (timed, follow-up)", never "verified".
 - Not solid by Wed afternoon: show the canvas preview as next.
-- Open: no real card is mastered before about 14 Nov (mastered on day 11). Either seed a demo account and label it
-  "sample data" on screen, or let Defend use any card answered 2 at least once. Zia to decide.
+- Any card answered 2 at least once, not only owned ones: no real card is mastered before about 14 Nov (DECISIONS,
+  2026-11-04 review ladder).
 $md$),
 
 ('Demo week (Wed 4 to Fri 6 Nov)', 320, 'zia', 'Forgiving streak', $md$
