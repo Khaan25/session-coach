@@ -15,6 +15,7 @@ import {
   processRequest,
   putRequest,
   sessionMetadata,
+  sessionWhere,
   validateFileName,
 } from "./push.ts";
 
@@ -40,8 +41,39 @@ describe("session metadata", () => {
       external_id: "abc-123",
       size_bytes: 42,
       title: null,
+      repo: null,
+      branch: null,
       started_at: "2026-10-27T10:11:00.000Z",
     });
+  });
+
+  it("takes repo from the first working folder and branch from the last one in the log", () => {
+    const where = [
+      JSON.stringify({ type: "user", cwd: "/Users/me/Developer/session-coach", gitBranch: "main" }),
+      JSON.stringify({ type: "user", cwd: "/Users/me/elsewhere", gitBranch: "" }),
+      "not json",
+      JSON.stringify({ type: "user", gitBranch: "kasam/project-data" }),
+      JSON.stringify({ type: "user", gitBranch: "  " }),
+    ].join("\n");
+    assert.deepEqual(sessionWhere(where), { repo: "session-coach", branch: "kasam/project-data" });
+    const meta = sessionMetadata(where, "s.jsonl", 1);
+    assert.equal(meta.repo, "session-coach");
+    assert.equal(meta.branch, "kasam/project-data");
+  });
+
+  it("reads Windows folders and ignores trailing separators", () => {
+    const windows = JSON.stringify({ cwd: "C:\\Users\\me\\billing-api\\" });
+    assert.equal(sessionWhere(windows).repo, "billing-api");
+    assert.equal(sessionWhere('{"cwd":"/home/me/rapporteur/"}').repo, "rapporteur");
+  });
+
+  it("gives null repo and branch when the log has neither, and caps them at the schema limit", () => {
+    assert.deepEqual(sessionWhere('{"cwd":42,"gitBranch":null}\n{}'), { repo: null, branch: null });
+    assert.deepEqual(sessionWhere(""), { repo: null, branch: null });
+    const long = "x".repeat(300);
+    const where = sessionWhere(JSON.stringify({ cwd: `/a/${long}`, gitBranch: long }));
+    assert.equal(where.repo?.length, 200);
+    assert.equal(where.branch?.length, 200);
   });
 
   it("omits started_at when no line has a usable timestamp", () => {
@@ -61,6 +93,8 @@ describe("requests", () => {
       external_id: "s",
       size_bytes: 5,
       title: null,
+      repo: null,
+      branch: null,
     });
   });
 

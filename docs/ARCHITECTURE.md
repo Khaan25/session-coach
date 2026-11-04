@@ -20,7 +20,7 @@ Claude Code session starts
 ## Why SessionStart sync
 
 `session-coach sync` runs from a SessionStart hook the learner adds to one project's `.claude/settings.json`, so it is
-opt-in, project by project. On each start it uploads at most one of that project's logs: one untouched for 10 minutes
+opt-in, project by project. On each start it uploads at most one of that project's logs: one untouched for 5 minutes
 or more and modified in the last 7 days, skipping the running session and every id it already sent
 (`packages/cli/src/sync.ts`). A SessionEnd hook runs inside a short time budget and can be killed mid-upload; a log
 that is quiet at the next start is finished. One log per start keeps model runs apart on the free tier's 8,000

@@ -19,8 +19,8 @@ export { API_TIMEOUT_MS, UPLOAD_TIMEOUT_MS } from "./upload.ts";
 
 /** Only sessions modified in the last 7 days: the web app drops cards for older ones from the review queue anyway. */
 export const SYNC_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-/** A log modified more recently than this may still be written to, so it waits for a later start. */
-export const SYNC_QUIET_MS = 10 * 60 * 1000;
+/** A log modified more recently than this (5 minutes) may still be written to, so it waits for a later start. */
+export const SYNC_QUIET_MS = 5 * 60 * 1000;
 /** One log per run: each upload starts a model run, and the free tier's 8,000 tokens a minute can't take several. */
 export const SYNC_MAX_LOGS = 1;
 /**

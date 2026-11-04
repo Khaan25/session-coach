@@ -34,6 +34,20 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Vercel Queues or Workflow in place of `after()`:** both are beta, and `after()` works. Revisit if the stale-card shortcut in `process.ts` is ever seen.
 - Zia approved both.
 
+## 2026-11-04 · Sync waits 5 minutes of quiet, not 10
+
+- **Decision:** `SYNC_QUIET_MS` is 5 minutes. `sync` skips a log modified in the last 5 minutes and uploads it on a later start.
+- **Why:** the ideas canvas and the demo flow say 5, and a session that ended a few minutes ago should upload when the next one starts.
+- **Consequence:** a log is marked done after its first upload (`sync-state.json`), so a session resumed after 5 or more quiet minutes loses the part written after the upload. `sync` runs at session start, so the previous session is normally finished.
+- **Rejected:** keeping 10 (the next start after a short break skips the log); re-uploading logs that grew (each upload starts a model run, and Groq's free tier takes one at a time).
+
+## 2026-11-04 · Sessions carry repo and branch
+
+- **Decision:** the CLI sends `repo` and `branch` in step ① of a push. `repo` is the basename of the first `cwd` in the log, the same format as `projects.repo` and the seed (`session-coach`). `branch` is the last non-empty `gitBranch` in the log. Both are null when the log has none, and are cut to the schema's 200 characters. `POST /api/sessions` already stored them (the schema accepts them and the insert spreads the parsed body), so the server is unchanged.
+- **Why:** the app lists work project by project, and `projects` matches `sessions.repo` exactly.
+- **Rejected:** the first branch (a session often starts on `main` and moves to a feature branch, and the last one is where the work landed); the last `cwd` (an agent that `cd`s into a subfolder would make a project per folder); `git remote` or the full path (a path leaks the learner's home folder, and the remote needs git at push time); reading the branch from git at push time (it is the branch now, not the one the session ran on); guessing a repo from the log's file name (it is a session id).
+- **Consequences:** a session run from a git worktree gets the worktree's folder name as its repo, not the main checkout's. Two projects with the same folder name become one project.
+
 ## 2026-11-04 · Optional reasoning effort per model task
 
 - **Decision:** `MODEL_EXTRACT_REASONING` and `MODEL_GRADE_REASONING` (low, medium or high) are read by `callModel` and sent as `reasoning_effort` when the provider is groq. Unset, empty or invalid, nothing is sent and the request is what it was; an invalid value is ignored, not an error. The parsing lives in `lib/model/reasoning.ts`, which is pure so `node --test` can run it.

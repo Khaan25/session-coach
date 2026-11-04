@@ -13,7 +13,7 @@ export const PROJECT_CONTEXT = `
 laptop                                server (Vercel + Supabase)                learner
 session-coach login ─────────────────► device code, approved on /cli/approve ◄── click Approve
 Claude Code SessionStart hook (opt-in per project), or session-coach push
-└─ session-coach sync: a finished log (untouched 10 min), redact, gzip
+└─ session-coach sync: a finished log (untouched 5 min), redact, gzip
    └─ POST /api/sessions ───────► token → sessions(pending) + signed URL (2 h)
    └─ PUT gzip straight to Supabase Storage
    └─ POST /api/sessions/:id/process ► 202
