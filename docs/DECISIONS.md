@@ -2,6 +2,12 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-04 · Optional reasoning effort per model task
+
+- **Decision:** `MODEL_EXTRACT_REASONING` and `MODEL_GRADE_REASONING` (low, medium or high) are read by `callModel` and sent as `reasoning_effort` when the provider is groq. Unset, empty or invalid, nothing is sent and the request is what it was; an invalid value is ignored, not an error. The parsing lives in `lib/model/reasoning.ts`, which is pure so `node --test` can run it.
+- **Why:** with the new extraction prompt, gpt-oss-120b on Groq sometimes returns an empty answer or a 400 `json_validate_failed`, probably because thinking uses up the 2,048-token output budget. A lower effort leaves room for the JSON. Not verified against Groq yet: try `low` on extraction and watch for empty replies.
+- **Rejected:** raising `MAX_OUTPUT_TOKENS` (Groq's 8,000 tokens per minute is shared with grading); hard-coding an effort (it would name a model's behaviour in code and apply to models that don't take it); sending it to openrouter or gemini (different shapes, not needed yet).
+
 ## 2026-11-04 · Question level per project
 
 - **Decision:** learners pick how hard questions are per repo: simple (one-step "why did we do X"), hard (the trade-off or rejected alternative, and what breaks if changed) or complex (reason across two decisions, or predict a change in a new scenario, still grounded in the session). Stored in a new `projects` table keyed by `(user_id, repo)`; the extraction prompt swaps only its question line by level. Default simple.
