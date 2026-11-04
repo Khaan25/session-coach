@@ -25,7 +25,7 @@ test("only Claude Code gets the sync hook, in this project's settings, pinned an
   const claude = setupPrompt("claude");
   assert.match(claude, /"SessionStart"/);
   assert.match(claude, /project's \.claude\/settings\.json/);
-  assert.match(claude, /session-coach@0\.2\.0 sync","async":true/);
+  assert.match(claude, /session-coach@0\.3\.0 sync","async":true/);
   assert.doesNotThrow(() => JSON.parse(claude.match(/\{"hooks".*\}/)?.[0] ?? ""));
   for (const agent of agents.filter((a) => a !== "claude")) {
     assert.doesNotMatch(setupPrompt(agent), /SessionStart|sync/);

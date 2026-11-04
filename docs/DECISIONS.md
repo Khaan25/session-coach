@@ -45,6 +45,11 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **`database.types.ts`:** the `defenses` block is hand-written, copied from the generator's shape, because no local Supabase stack was available. Replace it with the real `supabase gen types typescript --local` output if CI's rls job shows drift.
 - **Rejected:** a `defense` flag on `answers` (a defense is two answers and a question, and would break `answers.score`'s meaning on the review ladder); timing in the browser (the learner controls it); a model task of its own (a new env var for no gain); resuming a running defense (the screen can follow in a later change).
 
+## 2026-11-04 · Sync hook pinned to 0.3.0
+
+- **Decision:** the hook snippet in `packages/cli/README.md` and the setup prompt (`apps/web/src/lib/setup/ai-prompt.ts`) now pin `session-coach@0.3.0` (device login, repo and branch, 5-minute quiet period).
+- **Why:** 0.3.0 is published and the real upload test passed. The pin only moves after the new version is published and tested.
+
 ## 2026-11-04 · Sync waits 5 minutes of quiet, not 10
 
 - **Decision:** `SYNC_QUIET_MS` is 5 minutes. `sync` skips a log modified in the last 5 minutes and uploads it on a later start.

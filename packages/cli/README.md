@@ -57,7 +57,7 @@ Put this in the **project's** `.claude/settings.json` (not your user settings, s
         "hooks": [
           {
             "type": "command",
-            "command": "npx --yes session-coach@0.2.0 sync",
+            "command": "npx --yes session-coach@0.3.0 sync",
             "async": true
           }
         ]
