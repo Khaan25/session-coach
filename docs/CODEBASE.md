@@ -229,6 +229,29 @@ Why it is built this way:
 - **Known gap:** `reviews` and `answers` are two writes, not one transaction. If the answer insert fails, the schedule
   has moved without its history row. Move both into one RPC if progress numbers must be exact.
 
+## Defend it
+
+A timed defense of one card the learner has answered 2 at least once (`defenses`, see
+[DATA_MODEL.md](DATA_MODEL.md#defenses)). Three routes, all `POST`, all `requireUser()` first, then the path id and
+body, then the service-role queries. They share [`lib/defend/guards.ts`](../apps/web/src/lib/defend/guards.ts); the
+clocks, the card pick, the schemas and the prompts are pure and tested in
+[`lib/defend/defend.ts`](../apps/web/src/lib/defend/defend.ts).
+
+| Route                                    | Does                                                                                                                        |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/defend/start`                 | Picks a random visible card of the learner's with an answer scored 2 and opens the defense. Returns the question and clock. |
+| `POST /api/defend/[defenseId]/answer`    | Stores the first answer (180 s) and returns one AI follow-up question with a fresh 120 s. No grade yet.                     |
+| `POST /api/defend/[defenseId]/follow-up` | Takes the follow-up answer, grades the whole defense 0, 1 or 2, and finishes it.                                            |
+
+- **Server clock:** `started_at` and `follow_up_started_at` are the route's `new Date()`. An answer later than the
+  deadline plus 5 s is refused with 409 and the defense is marked `expired`, before any model call.
+- **Models:** the follow-up and the grade both go through `callModel("grade", ...)`, told apart by `data.mode`
+  (`follow_up` or `defend_grade`); no new env vars. Each spends one of the learner's 60 `grade` calls an hour. The
+  fake provider answers both in development.
+- **Compare-and-set:** each write is conditioned on the status it read, so a second submit racing the first gets 409.
+- **No answer key leaves the server.** The routes read `model_answer` to build the prompts and return only the
+  question, the follow-up, the score, `missing` and the label.
+
 ## CLI tokens
 
 `/setup` creates and revokes the tokens the CLI uploads with ([`api/cli/tokens/route.ts`](../apps/web/src/app/api/cli/tokens/route.ts),
@@ -274,18 +297,18 @@ Why it is built this way:
 
 [`lib/auth/rate-limit.ts`](../apps/web/src/lib/auth/rate-limit.ts), on Upstash Redis sliding windows.
 
-| Budget         | Window       | Keyed on | Guards                                           |
-| -------------- | ------------ | -------- | ------------------------------------------------ |
-| `signIn`       | 10 per 10 m  | IP       | Sign-in                                          |
-| `signUp`       | 5 per 1 h    | IP       | Sign-up                                          |
-| `email`        | 5 per 1 h    | IP       | Reset and resend emails (shared)                 |
-| `deviceStart`  | 10 per 10 m  | IP       | `POST /api/cli/device`                           |
-| `devicePoll`   | 300 per 10 m | IP       | `POST /api/cli/device/token`                     |
-| `push`         | 20 per 1 h   | Learner  | `POST /api/sessions`                             |
-| `process`      | 20 per 1 h   | Learner  | `POST /api/sessions/[id]/process`                |
-| `grade`        | 60 per 1 h   | Learner  | `POST /api/review/answer`                        |
-| `deviceDecide` | 30 per 1 h   | Learner  | Approve, deny and code lookups on `/cli/approve` |
-| `tokenCreate`  | 10 per 1 h   | Learner  | `POST /api/cli/tokens`                           |
+| Budget         | Window       | Keyed on | Guards                                                                            |
+| -------------- | ------------ | -------- | --------------------------------------------------------------------------------- |
+| `signIn`       | 10 per 10 m  | IP       | Sign-in                                                                           |
+| `signUp`       | 5 per 1 h    | IP       | Sign-up                                                                           |
+| `email`        | 5 per 1 h    | IP       | Reset and resend emails (shared)                                                  |
+| `deviceStart`  | 10 per 10 m  | IP       | `POST /api/cli/device`                                                            |
+| `devicePoll`   | 300 per 10 m | IP       | `POST /api/cli/device/token`                                                      |
+| `push`         | 20 per 1 h   | Learner  | `POST /api/sessions`                                                              |
+| `process`      | 20 per 1 h   | Learner  | `POST /api/sessions/[id]/process`                                                 |
+| `grade`        | 60 per 1 h   | Learner  | `POST /api/review/answer`, `POST /api/defend/[defenseId]/answer` and `/follow-up` |
+| `deviceDecide` | 30 per 1 h   | Learner  | Approve, deny and code lookups on `/cli/approve`                                  |
+| `tokenCreate`  | 10 per 1 h   | Learner  | `POST /api/cli/tokens`                                                            |
 
 - **A Redis error or a timeout (1 s) allows the call**, so an Upstash outage never locks people out.
 - **With no Upstash configured, calls are allowed**, except `grade` and `process` in production, which answer 503
