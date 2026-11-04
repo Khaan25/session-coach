@@ -32,7 +32,7 @@ route handlers.
 1. **`proxy.ts` refreshes the session.** [`proxy.ts`](../apps/web/src/proxy.ts) calls `updateSession()`
    ([`lib/supabase/proxy.ts`](../apps/web/src/lib/supabase/proxy.ts)) on every page and route except static files, `api/dashboard` (Play Stats), `api/cron`, `api/sessions` (CLI
    token) and `api/unsubscribe` (signed link). It calls `getClaims()`, which refreshes an expiring access token and writes the new cookies onto
-   the response. Signed-out visitors to `/dashboard`, `/s`, `/review`, `/progress`, `/settings`, `/setup`, `/tracker` or `/cli` go to
+   the response. Signed-out visitors to `/dashboard`, `/s`, `/review`, `/defend`, `/progress`, `/settings`, `/setup`, `/tracker` or `/cli` go to
    `/login?next=...`; signed-in visitors to `/login` or `/sign-up` go on to `next`.
    - **Why only here:** Supabase refresh tokens are single-use with reuse detection. If a Server Component also
      refreshed, two refreshes of one token would sign the learner out (docs/plans/auth.md #19). Server Components can't

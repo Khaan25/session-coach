@@ -9,6 +9,7 @@ const PROTECTED = [
   "/dashboard",
   "/s",
   "/review",
+  "/defend",
   "/progress",
   "/settings",
   "/setup",
