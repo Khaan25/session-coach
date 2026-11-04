@@ -6,6 +6,7 @@ import {
   ExamIcon,
   ChartLineUpIcon,
   GearIcon,
+  ShieldCheckIcon,
   SquaresFourIcon,
   TerminalWindowIcon,
 } from "@phosphor-icons/react";
@@ -30,6 +31,7 @@ import type { SessionListItem } from "@/lib/sessions/rows";
 export const navMain = [
   { title: "Dashboard", url: "/dashboard", icon: <SquaresFourIcon /> },
   { title: "Review", url: "/review", icon: <ExamIcon /> },
+  { title: "Defend it", url: "/defend", icon: <ShieldCheckIcon /> },
   { title: "Progress", url: "/progress", icon: <ChartLineUpIcon /> },
   { title: "Setup", url: "/setup", icon: <TerminalWindowIcon /> },
   { title: "Settings", url: "/settings", icon: <GearIcon /> },
