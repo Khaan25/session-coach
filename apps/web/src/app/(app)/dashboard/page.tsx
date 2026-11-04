@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { Sprite } from "@/components/art/sprite";
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { AppPageHeader } from "@/components/app/page-header";
+import { OwnershipMeter } from "@/components/progress/ownership-meter";
 import { ProjectSetup } from "@/components/projects/project-setup";
 import { SessionRow } from "@/components/app/session-row";
 import { SessionList } from "@/components/sessions/session-list";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Item,
   ItemActions,
@@ -22,9 +24,11 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { getOwnership } from "@/lib/progress/queries";
+import { listProjects } from "@/lib/projects/queries";
 import { dueTodayCount } from "@/lib/review/queries";
 import { listSessions } from "@/lib/sessions/queries";
-import { PAGE_SIZE, parsePage, type SessionListItem } from "@/lib/sessions/rows";
+import { PAGE_SIZE, parsePage, parseRepo, type SessionListItem } from "@/lib/sessions/rows";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -52,7 +56,7 @@ const SAMPLE_SESSIONS = [
   sample(3, "Stream the CLI upload", "ready", 5),
 ];
 
-// shortcut: the page is read from searchParams directly; nuqs isn't installed (no new dependencies this phase).
+// shortcut: the page and repo are read from searchParams directly; nuqs isn't installed (no new dependencies this phase).
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
     <Container>
@@ -61,6 +65,9 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
         description="Explain back the decisions your coding agent made."
       />
       <ProjectSetup />
+      <Suspense fallback={null}>
+        <Ownership />
+      </Suspense>
       {/* Skullet measures the real rows, drawn from sample sessions, so each row keeps its shape when the data lands. The
           row count, due banner and page links aren't known until then, so the list can still grow or shrink. */}
       <MeasuredSuspense
@@ -92,13 +99,40 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
   );
 }
 
+/** The ownership meter, once the learner has a visible card. Nothing while loading or before the first card. */
+async function Ownership() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  let ownership: Awaited<ReturnType<typeof getOwnership>>;
+  try {
+    ownership = await getOwnership(user.id);
+  } catch (error) {
+    // A summary above the list: a failed read must not take the dashboard down. /progress shows the error.
+    console.error("[dashboard/Ownership]", error);
+    return null;
+  }
+  return ownership.overall.total > 0 && <OwnershipMeter ownership={ownership} />;
+}
+
+/** The dashboard's URL for a page of sessions, keeping the repo filter. */
+function dashboardHref(repo: string | null, page = 1) {
+  const params = new URLSearchParams();
+  if (repo) params.set("repo", repo);
+  if (page > 1) params.set("page", String(page));
+  return params.size > 0 ? `/dashboard?${params}` : "/dashboard";
+}
+
 async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchParams">) {
   const user = await getCurrentUser();
   if (!user) return <NoSessionsEmpty />;
-  const page = parsePage((await searchParams).page);
-  const { now, sessions, hasMore, due } = await load(user.id, page);
+  const params = await searchParams;
+  const page = parsePage(params.page);
+  const repo = parseRepo(params.repo);
+  const { now, sessions, hasMore, due, repos } = await load(user.id, page, repo);
+  // A repo the learner has no session in: show every session rather than an empty list.
+  if (repo && !repos.includes(repo)) redirect("/dashboard");
   // Past the last page: go to the first rather than show "no sessions yet".
-  if (page > 1 && sessions.length === 0) redirect("/dashboard");
+  if (page > 1 && sessions.length === 0) redirect(dashboardHref(repo));
   return (
     <>
       {due > 0 && (
@@ -125,12 +159,33 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
             <h2>Sessions</h2>
           </CardTitle>
         </CardHeader>
+        {repos.length > 0 && (
+          <CardContent>
+            <nav aria-label="Projects" className="flex flex-wrap gap-2">
+              {[null, ...repos].map((name) => (
+                <Link
+                  key={name ?? ""}
+                  href={dashboardHref(name)}
+                  aria-current={name === repo ? "page" : undefined}
+                  className={buttonVariants({
+                    variant: name === repo ? "secondary" : "ghost",
+                    size: "sm",
+                  })}
+                >
+                  {name ?? "All projects"}
+                </Link>
+              ))}
+            </nav>
+          </CardContent>
+        )}
         <SessionList
-          key={page}
+          key={`${repo}:${page}`}
           sessions={sessions}
           userId={user.id}
           now={now.toISOString()}
-          prepend={page === 1}
+          // shortcut: Realtime events carry every repo, so a filtered list doesn't prepend new sessions (rows already
+          // shown still update); filter the prepend by repo if learners stay on a filtered view while uploading.
+          prepend={page === 1 && !repo}
           limit={PAGE_SIZE}
         />
         {(page > 1 || hasMore) && (
@@ -138,7 +193,7 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
             <nav aria-label="Session pages" className="flex w-full justify-between gap-2">
               {page > 1 ? (
                 <Link
-                  href={page === 2 ? "/dashboard" : `/dashboard?page=${page - 1}`}
+                  href={dashboardHref(repo, page - 1)}
                   className={buttonVariants({ variant: "secondary" })}
                 >
                   Newer
@@ -148,7 +203,7 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
               )}
               {hasMore && (
                 <Link
-                  href={`/dashboard?page=${page + 1}`}
+                  href={dashboardHref(repo, page + 1)}
                   className={buttonVariants({ variant: "secondary" })}
                 >
                   Older
@@ -162,12 +217,13 @@ async function Sessions({ searchParams }: Pick<PageProps<"/dashboard">, "searchP
   );
 }
 
-/** Reads the clock outside render (cacheComponents and the compiler's purity rule), then both queries. */
-async function load(userId: string, page: number) {
+/** Reads the clock outside render (cacheComponents and the compiler's purity rule), then the queries. */
+async function load(userId: string, page: number, repo: string | null) {
   const now = new Date();
-  const [{ sessions, hasMore }, due] = await Promise.all([
-    listSessions({ userId, page }),
+  const [{ sessions, hasMore }, due, projects] = await Promise.all([
+    listSessions({ userId, page, repo }),
     dueTodayCount(userId, now),
+    listProjects(userId),
   ]);
-  return { now, sessions, hasMore, due };
+  return { now, sessions, hasMore, due, repos: projects.map((project) => project.repo) };
 }

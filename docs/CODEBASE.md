@@ -181,6 +181,19 @@ shape, evidence rules and quote check are the same at every level. `processSessi
   update, else insert, through the RLS client.
 - **Scope:** a change applies to sessions processed after it. Existing cards keep their questions.
 
+## Dashboard ownership meter and project filter
+
+- **Meter:** `getOwnership` in [`lib/progress/queries.ts`](../apps/web/src/lib/progress/queries.ts) reads visible
+  cards, the sessions' repos, reviews and answers scored 2 through the RLS client; `computeOwnership`
+  ([`lib/progress/ownership.ts`](../apps/web/src/lib/progress/ownership.ts), pure, with a test) counts, overall and
+  per `sessions.repo`: owned = `reviews.mastered` (`countOwned`), explained = answered 2 at least once, total = visible
+  cards. [`components/progress/ownership-meter.tsx`](../apps/web/src/components/progress/ownership-meter.tsx) draws
+  "Explained 9 · owned 2 of 30", one bar per repo filled by explained cards, and links each repo to the filtered list.
+  Sessions with no repo are one unlinked "No project" row. Nothing shows before the first visible card.
+- **Filter:** `?repo=` (`parseRepo` in [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)) narrows
+  `listSessions`; the links list `listProjects` repos, and a repo the learner has no session in goes back to
+  `/dashboard`. Page links keep `repo`. A filtered list doesn't prepend Realtime inserts (they carry every repo).
+
 ## Grading pipeline
 
 `POST /api/review/answer` ([route](../apps/web/src/app/api/review/answer/route.ts)) grades one explanation:
@@ -488,6 +501,7 @@ open. `proxy.ts` skips these routes: they have no session. Retention maths is pu
 | Model provider or model               | Env vars only: `MODEL_PROVIDER`, `MODEL_<TASK>`, the provider key                                                                                                                                                                                                                                                                                |
 | A new model provider                  | `KEY_ENV` and `request()` in [`lib/model/call-model.ts`](../apps/web/src/lib/model/call-model.ts)                                                                                                                                                                                                                                                |
 | What "can still explain" means        | [`lib/progress/progress.ts`](../apps/web/src/lib/progress/progress.ts), its test and ARCHITECTURE.md                                                                                                                                                                                                                                             |
+| What "explained" and "owned" mean     | [`lib/progress/ownership.ts`](../apps/web/src/lib/progress/ownership.ts) and its test                                                                                                                                                                                                                                                            |
 | "Due today" and the 5-a-day cap       | `todayQueue` and `DAILY_CAP` in [`lib/review/today.ts`](../apps/web/src/lib/review/today.ts), with its test                                                                                                                                                                                                                                      |
 | What a session is called              | [`lib/sessions/name.ts`](../apps/web/src/lib/sessions/name.ts)                                                                                                                                                                                                                                                                                   |
 | Session list columns or page size     | [`lib/sessions/rows.ts`](../apps/web/src/lib/sessions/rows.ts)                                                                                                                                                                                                                                                                                   |
