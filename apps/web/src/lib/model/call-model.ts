@@ -1,6 +1,7 @@
 import "server-only";
 
 import { fakeModel } from "@/lib/model/fake";
+import { reasoningEffort, reasoningField, type ReasoningEffort } from "@/lib/model/reasoning";
 import { ProviderHttpError, retryWaitMs, sleep } from "@/lib/model/retry";
 
 /** A model job. Each reads its model name from `MODEL_<TASK>` (`MODEL_GRADE`, `MODEL_EXTRACT`). */
@@ -52,7 +53,9 @@ const MAX_OUTPUT_TOKENS = 2_048;
 /**
  * Calls the model configured for `task` and returns its JSON output, parsed but not validated: the caller checks the
  * shape with zod. The provider comes from `MODEL_PROVIDER` (gemini, openrouter, groq; `fake` in development and tests
- * only) and the model from `MODEL_<TASK>`, so switching either is config, not code. A failed call is retried once,
+ * only) and the model from `MODEL_<TASK>`, so switching either is config, not code. An optional
+ * `MODEL_<TASK>_REASONING` (low, medium or high) is sent to Groq as `reasoning_effort`; unset or invalid, the request
+ * is unchanged. A failed call is retried once,
  * after the wait `retryWaitMs` picks (the provider's `retry-after` on a 429); a 4xx other than 429 is not retried.
  *
  * Free tiers fail and rate-limit often, and the providers disagree on request shape, so one function hides both: a
@@ -79,10 +82,12 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
   if (!model || !key)
     throw new ModelConfigError(`${modelEnv} and ${KEY_ENV[provider]} must be set`);
 
+  const reasoning = reasoningEffort(modelEnv, process.env);
+
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const text = await request(provider, model, key, input);
+      const text = await request(provider, model, key, input, reasoning);
       // Some models wrap JSON in a markdown fence even when asked not to.
       return JSON.parse(text.trim().replace(JSON_FENCE, ""));
     } catch (error) {
@@ -104,10 +109,17 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
  * @param model - The model name from `MODEL_<TASK>`.
  * @param key - The provider's API key.
  * @param input - Instructions and data, as for `callModel`.
+ * @param reasoning - The optional reasoning effort; only Groq is sent it.
  * @returns The model's raw text, or "" when the reply has none.
  * @throws ProviderHttpError when the provider answers with a non-2xx status. Also throws when the request times out.
  */
-async function request(provider: Provider, model: string, key: string, input: ModelInput) {
+async function request(
+  provider: Provider,
+  model: string,
+  key: string,
+  input: ModelInput,
+  reasoning?: ReasoningEffort,
+) {
   const user = JSON.stringify(input.data);
   const timeout = AbortSignal.timeout(TIMEOUT_MS);
   const signal = input.signal ? AbortSignal.any([timeout, input.signal]) : timeout;
@@ -145,6 +157,7 @@ async function request(provider: Provider, model: string, key: string, input: Mo
       ],
       response_format: { type: "json_object" },
       max_tokens: MAX_OUTPUT_TOKENS,
+      ...reasoningField(provider, reasoning),
     }),
     signal,
   });

@@ -327,8 +327,8 @@ always ends at `ready` or `failed`, with a learner-readable `error`.
    cuts other tool results to 500 characters (`RESULT_MAX_CHARS`); and redacts every kept text again, though the CLI
    already did.
 2. **Trim** (`trimTimeline` in [`process-rows.ts`](../apps/web/src/lib/pipeline/process-rows.ts)): each event is cut to
-   1,500 characters (`MAX_EVENT_CHARS`), then the newest events that fit in 16,000 (`MAX_TIMELINE_CHARS`) are kept and
-   older ones dropped whole. Event ids stay `E<n>`, so a timeline can start at E57.
+   1,500 characters (`MAX_EVENT_CHARS`), the first prompt is always kept, then the newest events that fit in 13,500
+   (`MAX_TIMELINE_CHARS`) are kept and older ones dropped whole. Event ids stay `E<n>`, so a timeline can run E1, E57.
 3. **Extract** (`extractCards` in [`extract.ts`](../apps/web/src/lib/pipeline/extract.ts)): one `callModel("extract")`
    with the project's question level; 0 to 5 cards (`MAX_CARDS`). Each card is parsed alone, so one bad card can't sink
    the rest. An invalid answer gets one more call after 60 s (`RETRY_DELAY_MS`, a fresh minute of Groq's free tier),

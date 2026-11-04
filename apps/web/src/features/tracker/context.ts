@@ -18,7 +18,7 @@ Claude Code SessionStart hook (opt-in per project), or session-coach push
    └─ PUT gzip straight to Supabase Storage
    └─ POST /api/sessions/:id/process ► 202
                                         └─ after(): processSession(id)   [Kasam]
-                                           processing → parse → trim (newest 16k chars)
+                                           processing → parse → trim (first prompt + newest, 13.5k chars)
                                            → extract (question level per repo) → check quotes
                                            → decision_cards → ready | failed ─Realtime─► dashboard
                                                                               review: answer first, 5 a day

@@ -255,6 +255,37 @@ test("each level puts its own question instructions in the prompt, and nothing e
   }
 });
 
+test("the prompt is written for a learner on a phone, with the examples and the style rules after the level line", () => {
+  for (const level of ["simple", "hard", "complex"] as const) {
+    const prompt = extractInstructions(level);
+    assert.match(prompt, /^You turn one AI coding session into a few review cards/);
+    assert.match(prompt, /Who reads the cards: that developer, a few days later, often on a phone/);
+    assert.match(prompt, /Ids can jump: the first prompt is always kept/);
+    assert.match(prompt, /<examples>[\s\S]*<\/examples>/);
+    assert.equal(prompt.match(/<example>/g)?.length, 3);
+    assert.equal(prompt.match(/question \(style, every level\)/g)?.length, 1);
+    assert.ok(
+      prompt.indexOf(QUESTION_LEVELS[level]) < prompt.indexOf("question (style, every level)"),
+      `${level}: the level line comes before the style rules`,
+    );
+    // The replaced lines are gone, the kept rules are still there.
+    assert.ok(!prompt.includes("decision: one plain sentence."));
+    assert.ok(!prompt.includes("model_answer: 1 to 2 sentences."));
+    assert.match(prompt, /Return at most 5 decisions, most important first/);
+    assert.match(prompt, /never invent one to fill the list/);
+  }
+});
+
+test("the prompt tells the model not to make cards from the working rules in a prompt, at every level", () => {
+  for (const level of ["simple", "hard", "complex"] as const) {
+    assert.ok(extractInstructions(level).includes("never make a card from them"), level);
+  }
+});
+
+test("the example keeps its backticks around SYNC_DEADLINE_MS", () => {
+  assert.ok(extractInstructions().includes("`SYNC_DEADLINE_MS`"));
+});
+
 test("the default level is simple, and extractCards sends the level it is given", async () => {
   assert.equal(extractInstructions(), extractInstructions("simple"));
   const { model, calls } = fakeModel({ decisions: [card] }, { decisions: [card] });

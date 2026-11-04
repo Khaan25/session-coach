@@ -42,8 +42,8 @@ hand. See DECISIONS.md, 2026-11-03, "`sync` uploads finished sessions from a Ses
 1. **Filter:** keep prompts, agent text, Write/Edit summaries, Bash commands; drop thinking blocks, attachments and
    Read results; cut tool results to 500 characters; redact again (`lib/pipeline/parser.ts`).
 2. **Timeline:** number kept events E1, E2, … with a map back to the raw JSONL line.
-3. **Big logs:** cap each event at 1,500 characters (`MAX_EVENT_CHARS`), then keep the newest events that fit in
-   16,000 characters (`MAX_TIMELINE_CHARS`) and drop older ones whole (`lib/pipeline/process-rows.ts`). Splitting at
+3. **Big logs:** cap each event at 1,500 characters (`MAX_EVENT_CHARS`), always keep the first prompt, then keep the
+   newest events that fit in 13,500 characters (`MAX_TIMELINE_CHARS`) and drop older ones whole (`lib/pipeline/process-rows.ts`). Splitting at
    user prompts was rejected (DECISIONS.md, 2026-11-01).
 4. **Extract:** one model call returns 0–5 decisions as JSON; a session with none is still `ready` and shows "No
    decisions found". Each card is validated alone with a model-output schema that has the decision fields only
