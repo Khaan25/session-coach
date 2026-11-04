@@ -88,6 +88,7 @@ function SelectTrigger({
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
+      data-cuelume-open=""
       data-size={size}
       className={mergeClass([fieldTriggerClass, triggerSize[size]], className)}
       {...props}
@@ -156,6 +157,7 @@ function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Prop
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      data-cuelume-select=""
       className={mergeClass(listItemClass, className)}
       {...props}
     >

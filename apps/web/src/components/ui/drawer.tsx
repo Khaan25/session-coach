@@ -72,7 +72,7 @@ function Drawer({
 }
 
 function DrawerTrigger({ ...props }: DrawerPrimitive.Trigger.Props) {
-  return <DrawerPrimitive.Trigger data-slot="drawer-trigger" {...props} />;
+  return <DrawerPrimitive.Trigger data-slot="drawer-trigger" data-cuelume-open="" {...props} />;
 }
 
 function DrawerPortal({ ...props }: DrawerPrimitive.Portal.Props) {
@@ -81,7 +81,7 @@ function DrawerPortal({ ...props }: DrawerPrimitive.Portal.Props) {
 }
 
 function DrawerClose({ ...props }: DrawerPrimitive.Close.Props) {
-  return <DrawerPrimitive.Close data-slot="drawer-close" {...props} />;
+  return <DrawerPrimitive.Close data-slot="drawer-close" data-cuelume-close="" {...props} />;
 }
 
 function DrawerOverlay({ className, ...props }: DrawerPrimitive.Backdrop.Props) {

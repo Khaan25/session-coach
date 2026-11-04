@@ -42,7 +42,7 @@ function Dialog({
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" data-cuelume-open="" {...props} />;
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
@@ -51,7 +51,7 @@ function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
 }
 
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
+  return <DialogPrimitive.Close data-slot="dialog-close" data-cuelume-close="" {...props} />;
 }
 
 function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
@@ -115,6 +115,7 @@ function DialogContent({
             >
               <DialogPrimitive.Close
                 data-slot="dialog-close"
+                data-cuelume-close=""
                 aria-label="Close"
                 render={
                   // `after:-inset-2` widens the hit area; safe only because nothing sits beside it.

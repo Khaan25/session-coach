@@ -71,9 +71,12 @@ function Button({
   "data-static": isStatic = false,
   ...props
 }: ButtonProps) {
+  // A trigger or close that renders this button brings its own cue; cuelume reads tap first, so tap steps aside.
+  const cued = Object.keys(props).some((key) => key.startsWith("data-cuelume-"));
   return (
     <ButtonPrimitive
       data-slot="button"
+      data-cuelume-tap={cued ? undefined : ""}
       data-variant={variant}
       data-static={isStatic || undefined}
       className={cn(buttonVariants({ variant, size }), tapScale, className)}
