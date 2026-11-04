@@ -1,18 +1,10 @@
-import type { SessionStatus } from "@session-coach/shared/session";
-
+import { StatRow } from "@/components/app/stat-row";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Item, ItemContent, ItemGroup } from "@/components/ui/item";
-import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { StatRow } from "./stat-row";
-import { StatusBadge } from "./status-badge";
-
-// Skeletons in the geometry of the real thing, so nothing moves when the data lands. The blocks are aria-hidden;
-// each loader says once, in a status region, what is loading.
-// shortcut: no SkeletonText or SkeletonSwap in components/ui yet, so the lines are fixed h-4/h-5 boxes and the caller
-// swaps on its own loading flag; add both to ui/skeleton.tsx to match type roles and skip the flash on fast loads.
+// Loaders for the synthetic previews only: the real pages stream through MeasuredSuspense. Skeletons in the geometry
+// of the real thing; the blocks are aria-hidden and each loader says once, in a status region, what is loading.
 
 function Loading({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -93,34 +85,5 @@ export function ReviewCardLoading() {
         </CardFooter>
       </Card>
     </Loading>
-  );
-}
-
-/**
- * A session still being turned into cards: pending (uploaded, waiting for the pipeline) or processing. Realtime
- * replaces it when the status settles.
- */
-export function ProcessingState({
-  status,
-}: {
-  status: Extract<SessionStatus, "pending" | "processing">;
-}) {
-  const processing = status === "processing";
-  return (
-    <Empty>
-      <StatusBadge status={status} />
-      <EmptyHeader>
-        <EmptyTitle>
-          {processing ? "Making cards from this session" : "Waiting to start"}
-        </EmptyTitle>
-        <EmptyDescription>
-          Each session becomes 3 to 5 decision cards. This page updates when they are ready.
-        </EmptyDescription>
-      </EmptyHeader>
-      {/* TODO(zia): a time estimate, once the pipeline reports one. */}
-      <Progress value={null}>
-        <ProgressLabel>{processing ? "Reading the session" : "Uploaded"}</ProgressLabel>
-      </Progress>
-    </Empty>
   );
 }

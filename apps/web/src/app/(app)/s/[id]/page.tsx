@@ -5,7 +5,7 @@ import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { EmptyState } from "@/components/app/empty-state";
 import { SessionFailedState } from "@/components/app/error-state";
-import { ProcessingState } from "@/components/app/loading-state";
+import { ProcessingState } from "@/components/app/processing-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { StatusBadge } from "@/components/app/status-badge";
 import { DecisionCard, LockedDecisionCard } from "@/components/cards/decision-card";

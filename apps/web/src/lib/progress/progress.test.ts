@@ -47,8 +47,8 @@ test("steps: no review is new, mastered wins, step 1-3 is day 1/3/7", () => {
   assert.deepEqual(computeProgress(base).steps, {
     new: 1,
     "day-1": 1,
-    "day-3": 1,
-    "day-7": 1,
+    "day-4": 1,
+    "day-11": 1,
     mastered: 1,
   });
 });

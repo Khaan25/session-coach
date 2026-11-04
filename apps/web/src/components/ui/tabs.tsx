@@ -96,7 +96,7 @@ function TabsIndicator({ className, ...props }: TabsPrimitive.Indicator.Props) {
     <TabsPrimitive.Indicator
       data-slot="tabs-indicator"
       className={cn(
-        "pointer-events-none absolute top-0 left-0 z-0 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) translate-y-(--active-tab-top) transition-[translate,width,height] duration-200 ease-in-out-quint motion-reduce:transition-none",
+        "pointer-events-none absolute top-0 left-0 z-0 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) translate-y-(--active-tab-top) transition-[translate,width,height] duration-(--dur-200) ease-in-out-quint motion-reduce:transition-none",
         // default: the design system's segmented thumb, a lifted paper box on the grey track.
         "rounded-inner bg-(--surface-thumb) shadow-(--elev-thumb) forced-colors:bg-[Highlight]",
         // The line variant draws a 2px ink line under the tab instead of a thumb behind it.
@@ -147,7 +147,7 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
       data-slot="tabs-content"
       className={cn(
         "col-start-1 min-w-0 flex-1 rounded-soft type-body text-text-1 outline-none group-data-horizontal/tabs:row-start-2 group-data-vertical/tabs:col-start-2 group-data-vertical/tabs:row-start-1 focus-visible:focus-ring",
-        "transition-[opacity,translate] duration-200 ease-out data-ending-style:opacity-0 data-starting-style:opacity-0",
+        "transition-[opacity,translate] duration-(--dur-200) ease-out data-ending-style:opacity-0 data-starting-style:opacity-0",
         "motion-safe:data-ending-style:data-[activation-direction=left]:translate-x-2 motion-safe:data-starting-style:data-[activation-direction=left]:-translate-x-2 motion-safe:data-ending-style:data-[activation-direction=right]:-translate-x-2 motion-safe:data-starting-style:data-[activation-direction=right]:translate-x-2",
         "motion-safe:data-ending-style:data-[activation-direction=down]:-translate-y-2 motion-safe:data-starting-style:data-[activation-direction=down]:translate-y-2 motion-safe:data-ending-style:data-[activation-direction=up]:translate-y-2 motion-safe:data-starting-style:data-[activation-direction=up]:-translate-y-2",
         className,

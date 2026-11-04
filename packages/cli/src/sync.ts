@@ -2,29 +2,20 @@
 // Whatever the hook's stdout holds goes into Claude's context, so nothing here prints. Every outcome, error or not,
 // is a line in sync.log, and `runSync` never throws.
 
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Readable } from "node:stream";
 
-import { configPath, loadConfig, type Config } from "./config.ts";
-import { send } from "./http.ts";
-import { defaultProjectsDir, findRecentLogs, resolveCwd, type LogFile } from "./latest.ts";
-import {
-  createRequest,
-  interpretCreate,
-  interpretPut,
-  MAX_UPLOAD_BYTES,
-  prepareLog,
-  processRequest,
-  putRequest,
-  sessionMetadata,
-  validateFileName,
-} from "./push.ts";
-import { loadState, saveState, syncPaths } from "./state.ts";
+import type { SessionStatus } from "@session-coach/shared/session";
 
-/** Timeouts: the log upload can be up to 50 MB, so it gets longer than the small JSON calls. */
-export const API_TIMEOUT_MS = 15_000;
-export const UPLOAD_TIMEOUT_MS = 120_000;
+import { configPath, loadConfig, type Config } from "./config.ts";
+import { defaultProjectsDir, findRecentLogs, resolveCwd, type LogFile } from "./latest.ts";
+import { validateFileName } from "./push.ts";
+import { loadState, saveState, syncPaths } from "./state.ts";
+import { uploadLog } from "./upload.ts";
+
+// Kept here too: the deadline below is sized from them, and tests import them from this file.
+export { API_TIMEOUT_MS, UPLOAD_TIMEOUT_MS } from "./upload.ts";
 
 /** Only sessions modified in the last 7 days: the web app drops cards for older ones from the review queue anyway. */
 export const SYNC_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -146,62 +137,37 @@ async function writeLog(path: string, time: number, message: string): Promise<vo
 
 /** Pushes one log the way `push` does, but returns what happened instead of printing it. */
 async function syncLog(file: LogFile, config: Config, deps: SyncDeps): Promise<LogResult> {
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(file.path);
-  } catch {
-    return { kind: "skip", reason: "couldn't read the file" };
-  }
-  const { gzipped, text } = prepareLog(bytes);
-  if (gzipped.length > MAX_UPLOAD_BYTES) return { kind: "failed", reason: "over 50 MB" };
-
-  const http = (timeoutMs: number, retry: boolean) => ({
-    timeoutMs,
-    retry,
-    backoffMs: deps.backoffMs ?? 1000,
-    fetchImpl: deps.fetchImpl ?? fetch,
-  });
   const stop = (reason: string): LogResult => ({ kind: "stop", reason });
+  const uploaded = await uploadLog(file.path, file.name, config, {
+    backoffMs: deps.backoffMs,
+    fetchImpl: deps.fetchImpl,
+  });
+  if (uploaded.kind === "unreadable") return { kind: "skip", reason: "couldn't read the file" };
+  if (uploaded.kind === "too_big") return { kind: "failed", reason: "over 50 MB" };
+  if (uploaded.kind === "unreachable") return stop(uploaded.error);
 
-  // ① register the session
-  const meta = sessionMetadata(text, file.name, gzipped.length);
-  const created = await send(
-    createRequest(config.url, config.token, meta),
-    http(API_TIMEOUT_MS, true),
-  );
-  if ("error" in created) return stop(created.error);
-  const { status } = created;
-  if (status === 401) return stop("the token was refused, run session-coach login");
-  if (status === 429 || status >= 500) return stop(`server answered HTTP ${status}`);
-  const next = interpretCreate(status, created.body);
-  if (next.action === "stop") {
+  if (uploaded.kind === "not_created") {
+    const { status } = uploaded.answer;
+    if (status === 401) return stop("the token was refused, run session-coach login");
+    if (status === 429 || status >= 500) return stop(`server answered HTTP ${status}`);
     // 409 with no upload url: ready or processing already.
-    if (next.exitCode === 0) return { kind: "already" };
+    if (uploaded.result.exitCode === 0) return { kind: "already" };
     if (status === 400 || status === 413)
       return { kind: "failed", reason: `rejected (HTTP ${status})` };
     return stop(`server answered HTTP ${status}`);
   }
+  if (uploaded.kind === "not_stored") return stop(`upload answered HTTP ${uploaded.status}`);
 
-  // ② PUT the log to the signed URL
-  const stored = await send(putRequest(next.uploadUrl, gzipped), http(UPLOAD_TIMEOUT_MS, true));
-  if ("error" in stored) return stop(stored.error);
-  if (interpretPut(stored.status).exitCode !== 0)
-    return stop(`upload answered HTTP ${stored.status}`);
-
-  // ③ start processing; not retried, a later start asks again (a pending session answers 409 with a fresh URL)
-  const processed = await send(
-    processRequest(config.url, config.token, next.id),
-    http(API_TIMEOUT_MS, false),
-  );
-  if ("error" in processed) return stop(processed.error);
-  if (processed.status === 202) return { kind: "uploaded" };
-  if (processed.status === 409) {
-    const state = (processed.body as { status?: unknown } | null)?.status;
+  // ③ answered; it isn't retried, a later start asks again (a pending session answers 409 with a fresh URL)
+  const { status, body } = uploaded.answer;
+  if (status === 202) return { kind: "uploaded" };
+  if (status === 409) {
+    const state = (body as { status?: SessionStatus } | null)?.status;
     return state === "failed"
       ? { kind: "failed", reason: "processing failed" }
       : { kind: "already" };
   }
-  return stop(`processing answered HTTP ${processed.status}`);
+  return stop(`processing answered HTTP ${status}`);
 }
 
 async function syncProject(

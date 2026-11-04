@@ -6,7 +6,7 @@ import { MarketingPageHeader } from "@/components/marketing/marketing-page-heade
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supportEmail } from "@/lib/site";
 
-// Answers come only from docs/ARCHITECTURE.md and docs/plans/pages-and-dashboard.md.
+// Every answer must match the code and docs/CODEBASE.md.
 
 export const metadata: Metadata = {
   title: "Support | Session Coach",
@@ -17,7 +17,7 @@ const faq = [
   {
     question: "What does Session Coach send from my laptop?",
     answer:
-      "When a Claude Code session ends, a hook sends that session's log. We try to remove secrets on your laptop before anything leaves it.",
+      "Only the session logs you send. session-coach push sends one, and the opt-in SessionStart hook runs session-coach sync to send your finished sessions. We try to remove secrets on your laptop before anything leaves it.",
   },
   {
     question: "Are my secrets stored?",
@@ -25,9 +25,14 @@ const faq = [
       "We try not to. Secrets are removed on your laptop before the log is sent, and again on the server before it is stored, but removal is not a guarantee: check what your sessions contain.",
   },
   {
-    question: "What happens if I'm offline when a session ends?",
+    question: "What happens if I'm offline?",
     answer:
-      "The upload is retried up to 3 times. If it still fails, the log is kept in an outbox on your laptop. A session that was already sent is not taken twice.",
+      "The hook sends nothing and tries again the next time a session starts. What went wrong is written to ~/.session-coach/sync.log. A session that was already sent is not taken twice.",
+  },
+  {
+    question: "A session failed. What now?",
+    answer:
+      "Open the session on your dashboard to see why. To send it again, run session-coach push with the session's log file.",
   },
   {
     question: "Where is my data stored?",
@@ -47,7 +52,7 @@ const faq = [
   {
     question: "How are my answers scored?",
     answer:
-      "Each answer gets 0, 1 or 2 against the card's reason, its quotes and a model answer. A 2 moves the card to the next review (day 1, 3, then 7); a 0 or 1 moves it one step down (never below day 1) and it comes back tomorrow. Passing the last review masters the card.",
+      "Each answer gets 0, 1 or 2 against the card's reason, its quotes and a model answer. A 2 moves the card to the next review (after 1 day, then 3, then 7); a 0 or 1 moves it one step down (never below day 1) and it comes back tomorrow. Passing the last review masters the card. “I don't know yet” scores 0 but keeps the card where it is.",
   },
 ] as const;
 

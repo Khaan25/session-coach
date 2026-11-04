@@ -31,7 +31,7 @@ const description = "Mastered cards, plus cards you explained in full in the las
 const SAMPLE_PROGRESS: ProgressData = {
   canStillExplain: 5,
   totalCards: 9,
-  steps: { new: 2, "day-1": 2, "day-3": 1, "day-7": 1, mastered: 3 },
+  steps: { new: 2, "day-1": 2, "day-4": 1, "day-11": 1, mastered: 3 },
   answersPerDay: Array.from({ length: CHART_DAYS }, (_, i) => ({
     day: `Oct ${i + 1}`,
     answers: (i * 7) % 4,

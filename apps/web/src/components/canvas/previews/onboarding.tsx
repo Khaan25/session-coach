@@ -91,8 +91,8 @@ export function MarketingHomePreview() {
             the code your agent wrote.
           </h1>
           <p className="mt-8 max-w-lg type-body-lg text-pretty text-text-2 sm:mt-10">
-            Explain back the decisions your coding agent made. Each session becomes 3 to 5 decision
-            cards, due again on day 1, 3 and 7.
+            Explain back the decisions your coding agent made. Each session becomes up to 5 decision
+            cards, due again after 1 day, then 3, then 7.
           </p>
           <div className="mt-8 flex flex-col items-center gap-3">
             <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>

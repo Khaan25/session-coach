@@ -216,7 +216,7 @@ export function DefendResultPreview({ state }: { state: "passed" | "time-up" | "
         <EmptyState
           icon={ShieldCheckIcon}
           title="Nothing to defend yet"
-          description="Defend it picks from decisions you own: explained right on day 1, 3 and 7. Your first one is due in 5 days."
+          description="Defend it picks from decisions you own: explained right on day 1, 4 and 11. Your first one is due in 5 days."
           action={<Button variant="secondary">Go to today&rsquo;s review</Button>}
         />
       </DefendPage>

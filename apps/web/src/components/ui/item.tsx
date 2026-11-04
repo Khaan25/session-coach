@@ -52,7 +52,7 @@ function ItemSeparator({ className, ...props }: React.ComponentProps<typeof Sepa
 const itemVariants = cva(
   [
     "group/item @container/item relative flex w-full min-w-0 flex-wrap items-center text-start text-text-1 outline-none",
-    "transition-colors duration-100 focus-visible:focus-ring-inset [a]:transition-colors",
+    "transition-colors duration-(--dur-100) focus-visible:focus-ring-inset [a]:transition-colors",
     // In a group or a card: a row split from the next by a row rule; the frame clips the corners.
     "in-data-[slot=card]:rounded-none in-data-[slot=card]:rule-row in-data-[slot=item-group]:rounded-none in-data-[slot=item-group]:rule-row",
     // Hover never greys a selected row: the wash stays.

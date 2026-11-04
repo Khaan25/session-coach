@@ -11,11 +11,14 @@ import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmente
 // deleted, a 1200ms hold. The selection cuts, as the segmented control always does. Reduced motion shows the
 // command still. Screen readers get both lines once, not the typing.
 const steps = [
-  { value: "init", lines: ["npx session-coach init", "# adds the SessionEnd hook"] },
-  { value: "login", lines: ["session-coach login", "# signs in with a token from /setup"] },
+  { value: "login", lines: ["session-coach login", "# approve this device in your browser"] },
   {
     value: "push",
-    lines: ["session-coach push --latest", "# uploads a session from before setup"],
+    lines: ["session-coach push --latest", "# uploads your latest session"],
+  },
+  {
+    value: "sync",
+    lines: ["session-coach sync", "# SessionStart hook: uploads finished sessions"],
   },
 ] as const;
 

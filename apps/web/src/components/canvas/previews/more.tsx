@@ -8,7 +8,6 @@ import Link from "next/link";
 
 import { Container } from "@/components/app/container";
 import { NoReviewsEmpty } from "@/components/app/empty-state";
-import { SessionListLoading } from "@/components/app/loading-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
 import { AnswersChart } from "@/components/progress/answers-chart";
@@ -48,13 +47,14 @@ import { Stat, StatGroup, StatLabel, StatValue } from "@/components/ui/stat";
 import { Switch } from "@/components/ui/switch";
 
 import { AppFrame } from "./frames";
+import { SessionListLoading } from "./loading";
 import { IdeaNote } from "./parts";
 
 const STEPS = [
   { label: "New", count: 6 },
   { label: "Day 1", count: 5 },
-  { label: "Day 3", count: 7 },
-  { label: "Day 7", count: 4 },
+  { label: "Day 4", count: 7 },
+  { label: "Day 11", count: 4 },
   { label: "Owned", count: 17 },
 ];
 

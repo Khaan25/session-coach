@@ -14,8 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-// No billing code here: the plan says free during the trial, one plan card. Facts only from docs/ARCHITECTURE.md
-// and docs/plans/pages-and-dashboard.md.
+// No billing code here: the plan says free during the trial, one plan card. Every claim must match the code
+// and docs/CODEBASE.md.
 
 export const metadata: Metadata = {
   title: "Pricing | Session Coach",
@@ -23,9 +23,9 @@ export const metadata: Metadata = {
 };
 
 const included = [
-  "A Claude Code hook that sends each finished session, with secrets filtered out on your laptop first",
-  "3 to 5 decision cards per session, each quote checked against the session",
-  "Review on day 1, 3 and 7, with each answer scored 0, 1 or 2",
+  "A command-line tool that sends your sessions, with an opt-in hook per project, and secrets filtered out on your laptop first",
+  "Up to 5 decision cards per session, each quote checked against the session",
+  "Review after 1 day, then 3, then 7, with each answer scored 0, 1 or 2",
   "A progress view of the decisions you can still explain",
   "A daily email when cards are due, which you can turn off",
 ] as const;
@@ -67,9 +67,9 @@ export default function Page() {
             </ul>
           </CardContent>
           <CardFooter>
-            {/* Points at /how-it-works until the CLI ships; then "Set it up" → /setup. */}
-            <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
-              See how it works
+            {/* The CLI has shipped, so the plan's call to action is setup. */}
+            <Link href="/setup" className={buttonVariants({ size: "lg" })}>
+              Set it up
             </Link>
           </CardFooter>
         </Card>

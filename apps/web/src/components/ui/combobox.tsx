@@ -23,7 +23,7 @@ type ControlSize = "sm" | "default" | "lg";
 
 // The field box holds the bare control (data-control) and draws the edge, hover, focus and fail states for it.
 const fieldBoxClass = cn(
-  "group/field-box relative flex w-full min-w-0 items-center rounded-soft bg-page type-label text-text-1 control-edge forced-colors:border pointer-coarse:text-base",
+  "group/field-box relative flex w-full min-w-0 items-center rounded-soft bg-page type-label text-text-1 control-edge forced-colors:border pointer-coarse:type-input-touch",
   "transition-[background-color,box-shadow,outline-color]",
   // Focus: the edge turns ink and a soft ink halo grows around it, eased. No outline floats off the box.
   "has-[[data-control]:focus]:[--control-lift:var(--focus-halo)]! has-[[data-control]:focus]:[--frame-color:var(--border-focus)]!",
@@ -131,7 +131,7 @@ function ComboboxInput({
         data-slot="combobox-input"
         data-control=""
         disabled={disabled}
-        className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-text-3 disabled:cursor-not-allowed pointer-coarse:text-base"
+        className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-text-3 disabled:cursor-not-allowed pointer-coarse:type-input-touch"
         {...props}
       />
       {showClear && <ComboboxClear disabled={disabled} />}
@@ -349,7 +349,7 @@ function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Pro
       data-control=""
       className={mergeClass(
         // With no chip before it, the text starts where an Input's does, past the box's 4px padding.
-        "h-6 min-w-16 flex-1 bg-transparent ps-1 type-label outline-none placeholder:text-text-3 first:ps-2 disabled:cursor-not-allowed pointer-coarse:text-base",
+        "h-6 min-w-16 flex-1 bg-transparent ps-1 type-label outline-none placeholder:text-text-3 first:ps-2 disabled:cursor-not-allowed pointer-coarse:type-input-touch",
         className,
       )}
       {...props}

@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { clientIp } from "./client-ip";
+import { refusesUnlimited } from "./spend-limits";
 
 /**
  * The signed-out actions with their own per-IP budget. Reset and resend share one: both send email to any address.
@@ -31,7 +32,7 @@ const configured = Boolean(
 );
 
 /** The per-learner actions that cost model calls or storage, each with its own budget. */
-export type UserLimit = "push" | "process" | "grade" | "deviceDecide";
+export type UserLimit = "push" | "process" | "grade" | "deviceDecide" | "tokenCreate";
 
 // Per learner id, so a leaked CLI token or a looping script can't run up model and storage bills. A learner pushes a
 // few sessions a day; 20 an hour still covers a backfill burst. Each process is one extraction run, so it gets the same
@@ -43,6 +44,8 @@ const USER_WINDOWS = {
   // Approving or denying a CLI login, and looking a code up on /cli/approve: a person does a handful, so 30 an hour
   // stops a signed-in script from guessing other people's user codes (20^8 of them).
   deviceDecide: Ratelimit.slidingWindow(30, "1 h"),
+  // Creating a CLI token by hand on /setup: a person makes one or two, so 10 an hour stops a script minting them.
+  tokenCreate: Ratelimit.slidingWindow(10, "1 h"),
 } as const;
 
 /** What a 429 says, by action. */
@@ -51,6 +54,7 @@ const USER_LIMIT_ERROR: Record<UserLimit, string> = {
   process: "Too many sessions processed in the last hour.",
   grade: "Too many answers in the last hour.",
   deviceDecide: "Too many CLI login requests in the last hour.",
+  tokenCreate: "Too many tokens created in the last hour.",
 };
 
 /**
@@ -87,7 +91,9 @@ let warned = false;
 function warnUnconfigured() {
   if (process.env.VERCEL_ENV === "production" && !warned) {
     warned = true;
-    console.error("auth/rate-limit: Upstash Redis is not configured; rate limits are off");
+    console.error(
+      "auth/rate-limit: Upstash Redis is not configured; rate limits are off and grade and process are refused",
+    );
   }
 }
 
@@ -115,12 +121,16 @@ export async function authAttemptWait(action: AuthLimit): Promise<number> {
   }
 }
 
-/** A spent budget: what to tell the learner, and when they may try again. */
-export type UserLimited = { message: string; retryAfterSeconds: number };
+/**
+ * A refused call: what to tell the learner, and when they may try again. `status` is 503 when the call is refused
+ * because limits aren't configured, otherwise the budget is spent (429).
+ */
+export type UserLimited = { message: string; retryAfterSeconds: number; status?: 503 };
 
 /**
- * Counts one `action` by this learner. Fails open like `authAttemptWait`: without Upstash, or when Redis errors or
- * times out, the call goes ahead.
+ * Counts one `action` by this learner. Fails open like `authAttemptWait` when Redis errors or times out. Without
+ * Upstash configured it also fails open, except for the model-spend budgets in production (`refusesUnlimited`),
+ * which answer 503.
  *
  * @param action - Which budget to spend.
  * @param userId - The authenticated learner's id (never an unchecked value from the request).
@@ -132,7 +142,12 @@ export async function userRateLimit(
 ): Promise<UserLimited | null> {
   if (!userLimiters) {
     warnUnconfigured();
-    return null;
+    if (!refusesUnlimited(action, process.env.VERCEL_ENV)) return null;
+    return {
+      message: "This is switched off until rate limits are set up on our side. Try again later.",
+      retryAfterSeconds: 3600,
+      status: 503,
+    };
   }
   try {
     const { success, reset } = await userLimiters[action].limit(userId);
@@ -147,10 +162,10 @@ export async function userRateLimit(
   }
 }
 
-/** The route's 429 for a spent budget: `{ error }` with `Retry-After` in seconds. */
-export function tooManyRequests({ message, retryAfterSeconds }: UserLimited): NextResponse {
+/** The route's 429 for a spent budget (503 when limits aren't configured): `{ error }` with `Retry-After` in seconds. */
+export function tooManyRequests({ message, retryAfterSeconds, status }: UserLimited): NextResponse {
   return NextResponse.json(
     { error: message },
-    { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } },
+    { status: status ?? 429, headers: { "Retry-After": String(retryAfterSeconds) } },
   );
 }

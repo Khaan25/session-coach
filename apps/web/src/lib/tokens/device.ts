@@ -1,5 +1,6 @@
 import { randomBytes, randomInt } from "node:crypto";
 
+import { MAX_POLL_INTERVAL_SECONDS, SLOW_DOWN_STEP_SECONDS } from "@session-coach/shared/limits";
 import { z } from "zod";
 
 // Device-code login (RFC 8628): codes, their format and the state rules the routes and /cli/approve share. Pure, so
@@ -11,10 +12,6 @@ export const USER_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXZ";
 /** How long a code lives, and the poll interval the CLI starts with. */
 export const DEVICE_CODE_TTL_SECONDS = 600;
 export const POLL_INTERVAL_SECONDS = 5;
-
-/** What slow_down adds to the interval (RFC 8628 section 3.5), and the column's ceiling. */
-export const SLOW_DOWN_STEP_SECONDS = 5;
-export const MAX_POLL_INTERVAL_SECONDS = 60;
 
 /** The secret the CLI polls with: 32 random bytes, base64url (43 characters). Only its sha256 is stored. */
 export function newDeviceCode(): string {

@@ -1,30 +1,32 @@
 import "server-only";
 
-// The project context at the top of /tracker, from the build guide sent to Kasam on 31 Oct 2026. Edit here when the
-// plan changes; tasks live in the tracker_tasks table. Server-only: team-only text must not land in a public chunk.
+// The project context at the top of /tracker, from the build guide sent to Kasam on 31 Oct 2026, updated 5 Nov 2026.
+// Edit here when the plan changes; tasks live in the tracker_tasks table. Server-only: team-only text must not land in a public chunk.
 export const PROJECT_CONTEXT = `
-**Session Coach** turns a Claude Code session into 3–5 decision cards the developer explains back on day 1, 3 and 7; a model grades each answer 0, 1 or 2. Live at [coach.ziaa.me](https://coach.ziaa.me). 8x Playmakers trial: feedback call **Mon 2 Nov**, demo and submit **Fri 6 Nov**, V2 (teams) right after.
+**Session Coach** turns a Claude Code session into up to 5 decision cards the developer explains back after 1 day, then 3, then 7 (reviews on days 1, 4 and 11); a model grades each answer 0, 1 or 2. Live at [coach.ziaa.me](https://coach.ziaa.me). 8x Playmakers trial: demo and submit **Fri 6 Nov**, V2 (teams) right after. The roadmap is the task list below; the architecture board is the team's Excalidraw.
 
-**Team:** Zia (lead, reviews every PR, web app, upload API, grading, email) and Kasam (CLI, parser, extraction).
+**Team:** Zia (lead, reviews every PR, web app, auth, screens, grading, email) and Kasam (CLI, parser, extraction, data).
 
 ## End to end
 
 \`\`\`
 laptop                                server (Vercel + Supabase)                learner
-Claude Code session ends
-└─ SessionEnd hook (exits in ~50 ms)
-   └─ detached worker: read, redact, gzip
-      └─ POST /api/sessions ───────► token → sessions(pending) + signed URL
-      └─ PUT gzip straight to Supabase Storage
-      └─ POST /api/sessions/:id/process ► 202
+session-coach login ─────────────────► device code, approved on /cli/approve ◄── click Approve
+Claude Code SessionStart hook (opt-in per project), or session-coach push
+└─ session-coach sync: a finished log (untouched 10 min), redact, gzip
+   └─ POST /api/sessions ───────► token → sessions(pending) + signed URL (2 h)
+   └─ PUT gzip straight to Supabase Storage
+   └─ POST /api/sessions/:id/process ► 202
                                         └─ after(): processSession(id)   [Kasam]
-                                           processing → parse → extract → verify
+                                           processing → parse → trim (first prompt + newest, 13.5k chars)
+                                           → extract (question level per repo) → check quotes
                                            → decision_cards → ready | failed ─Realtime─► dashboard
-                                                                              review: explain back
-                                        grade 0/1/2 ◄──────────────────────── answer   [Zia]
+                                                                              review: answer first, 5 a day
+                                        grade 0/1/2 ◄──────────────────────── answer or "I don't know yet"   [Zia]
+                                        cron 13:00 UTC: daily email, fail stuck sessions (10 min)
 \`\`\`
 
-**The seam:** Zia's routes check the token, create the \`sessions\` row as \`pending\`, hand out the signed upload URL, and call \`processSession(sessionId)\` inside \`after()\`. Everything after that call is Kasam's. Neither edits the other's files.
+**The seam:** Zia's routes check the token, create the \`sessions\` row as \`pending\`, hand out the signed upload URL, and call \`processSession(sessionId, startedAt, invokedAt)\` inside \`after()\`. Everything after that call is Kasam's. Neither edits the other's files.
 
 ## How we stop the model making things up
 
@@ -40,5 +42,5 @@ Claude Code session ends
 - \`pnpm format:check && pnpm typecheck && pnpm lint && pnpm test\` green; tests use fake fixtures, never real logs or keys.
 - Commits like \`feat(pipeline): …\`, lowercase, no co-author lines.
 - Stuck for 30 minutes? Message with what you tried. Schema and \`packages/shared\` change only after asking.
-- Read first: \`AGENTS.md\`, \`docs/ARCHITECTURE.md\`, \`docs/DECISIONS.md\`.
+- Read first: \`AGENTS.md\`, \`docs/CODEBASE.md\`, \`docs/DECISIONS.md\`.
 `.trim();

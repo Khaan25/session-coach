@@ -20,7 +20,7 @@ import {
   OfflineState,
   SessionFailedState,
 } from "@/components/app/error-state";
-import { ProcessingState, SessionListLoading } from "@/components/app/loading-state";
+import { ProcessingState } from "@/components/app/processing-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ScoreBadge } from "@/components/app/score-badge";
 import { SessionRow } from "@/components/app/session-row";
@@ -59,6 +59,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { CardView } from "@/lib/cards/columns";
 
 import { AppFrame, FRAME_SESSIONS } from "./frames";
+import { SessionListLoading } from "./loading";
 import { IdeaNote, NOW } from "./parts";
 
 const SESSION = FRAME_SESSIONS[0];
@@ -144,7 +145,7 @@ export function DashboardPreview({
                     <h2>You own 17 of 39 decisions</h2>
                   </CardTitle>
                   <CardDescription>
-                    Up 2 this week. Owned means you explained it right on day 7.
+                    Up 2 this week. Owned means you explained it right on day 11.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -345,12 +346,12 @@ const QUEUE = [
     id: "c3",
     decision: "Skip unknown JSONL line types instead of throwing",
     sessionName: "Write transcriptParser.ts",
-    step: "Day 3",
+    step: "Day 4",
   },
 ];
 
 const REVIEW_DESCRIPTION =
-  "Explain each decision back in your own words. Each card comes back on day 1, 3 and 7.";
+  "Explain each decision back in your own words. Each card comes back after 1 day, then 3, then 7.";
 
 /** /review with cards due: the queue, capped at 5 a day, and Start review. */
 export function ReviewQueuePreview() {

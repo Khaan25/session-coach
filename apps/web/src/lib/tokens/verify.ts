@@ -18,7 +18,7 @@ export async function userForToken(token: string): Promise<string | null> {
     .from("cli_tokens")
     .select("id, user_id")
     .eq("token_hash", hashToken(token))
-    .maybeSingle<{ id: string; user_id: string }>();
+    .maybeSingle();
   if (error) throw new Error(`userForToken: ${error.message}`);
   if (!data) return null;
 

@@ -19,39 +19,39 @@ import { FeatureCard } from "@/components/marketing/feature-card";
 import { MarketingPageHeader } from "@/components/marketing/marketing-page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Facts only from docs/ARCHITECTURE.md and docs/plans/pages-and-dashboard.md; anything they don't say is a TODO(zia).
+// Every claim here must match the code and docs/CODEBASE.md; anything they don't say is a TODO(zia).
 
 export const metadata: Metadata = {
   title: "How it works | Session Coach",
   description:
-    "How a Claude Code session becomes 3 to 5 decision cards: the hook, the upload, extraction, the evidence check and review on day 1, 3 and 7.",
+    "How a Claude Code session becomes up to 5 decision cards: signing in, the upload, extraction, the evidence check and review after 1 day, then 3, then 7.",
 };
 
 const pipeline = [
   {
     icon: TerminalWindowIcon,
-    title: "The hook",
-    body: "When a Claude Code session ends, a SessionEnd hook starts a small background worker and exits. The worker tries to remove secrets from the session's log on your laptop, then compresses it.",
+    title: "Sign in from your terminal",
+    body: "Run session-coach login. It shows a code, and you approve this device in your browser. Nothing to copy. The setup page gives you one prompt to paste into your AI that installs the CLI, signs you in and sends your first session.",
   },
   {
     icon: CloudArrowUpIcon,
     title: "The upload",
-    body: "The worker sends the log to the server, retrying up to 3 times. If it still can't, it keeps the log in an outbox on your laptop. A session that was already sent is not taken twice.",
+    body: "session-coach push --latest sends your latest session. If you opt a project in, a Claude Code SessionStart hook runs session-coach sync, which sends one finished session each time a session starts. Either way the CLI tries to remove secrets on your laptop, compresses the log and uploads it. Logs over 50 MB are refused. A session that was already sent is not taken twice.",
   },
   {
     icon: CardsIcon,
     title: "Extraction",
-    body: "The server keeps your prompts, the agent's text, file edit summaries and shell commands, drops thinking blocks and attachments, and tries to remove secrets again. One model call turns what is left into 3 to 5 decision cards.",
+    body: "The server keeps your prompts, the agent's text, file edit summaries and shell commands, drops thinking blocks and attachments, and tries to remove secrets again. One model call turns what is left into up to 5 decision cards. A session with no clear decision gets none.",
   },
   {
     icon: MagnifyingGlassIcon,
     title: "The evidence check",
-    body: "Each card quotes events from the session. Plain code, not a model, checks that each cited event exists and contains the quote.",
+    body: "Each card quotes events from the session. Plain code, not a model, checks that each cited event exists and contains the quote, and that the quote is at least 5 words.",
   },
   {
     icon: ArrowsClockwiseIcon,
     title: "Review",
-    body: "The cards appear on your dashboard when they are ready. You explain each decision back in your own words on day 1, 3 and 7, and a daily email tells you when cards are due.",
+    body: "The cards appear on your dashboard when they are ready. You explain each decision back in your own words after 1 day, then 3, then 7, and a daily email tells you when cards are due.",
   },
 ] as const;
 
@@ -103,8 +103,8 @@ export default function Page() {
   return (
     <div className="mx-auto flex w-full max-w-(--container) flex-col gap-20 px-(--gutter-sm) py-16 sm:px-(--gutter) sm:py-20">
       <MarketingPageHeader title="How it works">
-        Each Claude Code session you finish becomes 3 to 5 decision cards. You explain them back on
-        day 1, 3 and 7 until each one is mastered.
+        Each Claude Code session you send becomes up to 5 decision cards. You explain them back
+        after 1 day, then 3, then 7, until each one is mastered.
       </MarketingPageHeader>
 
       <section aria-labelledby="pipeline-title" className="flex flex-col gap-8">
@@ -172,7 +172,11 @@ export default function Page() {
 
       <section aria-labelledby="review-title" className="flex flex-col gap-8">
         <SectionTitle id="review-title">The review</SectionTitle>
-        <FeatureCard size="lg" icon={ChatTextIcon} title="Explain it back on day 1, 3 and 7">
+        <FeatureCard
+          size="lg"
+          icon={ChatTextIcon}
+          title="Explain it back after 1 day, then 3, then 7"
+        >
           <ul className="flex max-w-3xl list-disc flex-col gap-3 ps-5 type-body text-text-2">
             <li>
               You answer each card&apos;s question in your own words. A model scores the answer 0, 1
@@ -180,10 +184,18 @@ export default function Page() {
               was missing.
             </li>
             <li>
-              A 2 moves the card to the next gap: day 1, then day 3, then day 7. A 0 or 1 moves it
-              one step down (never below day 1) and it comes back tomorrow.
+              A 2 moves the card to the next gap: 1 day, then 3, then 7. A 0 or 1 moves it one step
+              down (never below day 1) and it comes back tomorrow.
             </li>
             <li>Passing the last review marks the card mastered, and it stops coming back.</li>
+            <li>
+              You answer first. The card&apos;s reason and its quotes show only after you answer.
+            </li>
+            <li>
+              &ldquo;I don&apos;t know yet&rdquo; is an honest skip: it scores 0 and shows you the
+              reason, but the card keeps its place and comes back tomorrow.
+            </li>
+            <li>At most 5 cards a day, and up to 2 of them new.</li>
             <li>
               Your progress counts the decisions you can still explain: mastered cards plus cards
               you scored 2 on in the last 7 days.

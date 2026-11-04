@@ -40,7 +40,7 @@ const skeletonTheme = {
 } as const;
 
 const description =
-  "Each Claude Code session becomes 3 to 5 decision cards. Explain them back in your own words on day 1, 3 and 7 until you know why your agent wrote what it wrote.";
+  "Each Claude Code session you send becomes up to 5 decision cards. Explain them back in your own words after 1 day, then 3, then 7, until you know why your agent wrote what it wrote.";
 
 // metadataBase makes the opengraph-image and canonical paths absolute; pages override title and description.
 export const metadata: Metadata = {

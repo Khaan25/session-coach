@@ -19,6 +19,7 @@ jobs:
   commits:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -31,8 +32,36 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
 
+  # Every gate on the web app's supported Node versions (root package.json engines), where the CLI also runs on
+  # learners' machines. The CLI's own `>=20` floor is not tested here.
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The pre-commit hook scans staged files; this rescans every tracked file.
+      - run: pnpm check:secrets
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  # Its own job, so the production build runs alongside the gates instead of after them.
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -43,12 +72,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # The pre-commit hook scans staged files; this rescans every tracked file.
-      - run: pnpm check:secrets
-      - run: pnpm format:check
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm test
       # Turbopack's build cache (on by default since Next 16.3) only helps if .next/cache survives between runs.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -63,6 +86,7 @@ jobs:
   # the Kong gateway start.
   rls:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -78,3 +102,27 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: supabase start -x realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - run: pnpm test:rls
+      # The generated row types must match the migrations: a migration without `pnpm db:types` fails here.
+      - run: pnpm db:types && git diff --exit-code apps/web/src/lib/supabase/database.types.ts
+
+  # The browser smoke tests (apps/web/e2e) against a throwaway local stack with the fake model: sign-in, CLI login and
+  # push, answer first, grading. Realtime stays on: the dashboard waits for the session to turn ready.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.119.0
+      - run: pnpm install --frozen-lockfile
+      - run: supabase start -x imgproxy,mailpit,studio,edge-runtime,logflare,vector,supavisor
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm test:e2e

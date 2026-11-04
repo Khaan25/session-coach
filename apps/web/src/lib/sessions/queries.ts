@@ -103,7 +103,7 @@ export async function cardlessReason(userId: string): Promise<Cardless> {
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(1)
-    .maybeSingle<{ id: string; status: SessionSummary["status"] }>();
+    .maybeSingle();
   if (error) throw new Error(`cardlessReason: ${error.message}`);
   if (!data) return { reason: "no-sessions" };
   if (data.status === "pending" || data.status === "processing") return { reason: "processing" };

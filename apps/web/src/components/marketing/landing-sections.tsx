@@ -15,8 +15,8 @@ import { ReviewSchedule } from "@/components/marketing/review-schedule";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-// The landing's sections under the hero. Copy comes only from docs/plans/pages-and-dashboard.md and
-// docs/ARCHITECTURE.md; anything they don't say is a TODO(zia). No scroll reveals (the design system bans them): each
+// The landing's sections under the hero. Copy must match the code and docs/CODEBASE.md; anything they don't say is
+// a TODO(zia). No scroll reveals (the design system bans them): each
 // section has one demo that loops in place (the schedule, the quote check, the secret filter).
 
 function SectionHeading({ id, eyebrow, title }: { id: string; eyebrow: string; title: string }) {
@@ -37,19 +37,19 @@ const loop = [
   {
     step: "1",
     icon: TerminalWindowIcon,
-    title: "Your session ends",
-    body: "A hook in Claude Code sends the session's log when it ends. Secrets are removed on your laptop before anything leaves it.",
+    title: "You send a session",
+    body: "The session-coach CLI sends your session's log, by hand with push or through an opt-in hook that runs when a session starts. Secrets are removed on your laptop before anything leaves it.",
   },
   {
     step: "2",
     icon: CardsIcon,
-    title: "3 to 5 decision cards",
+    title: "Up to 5 decision cards",
     body: "Each card names a decision your agent made, why it made it, the quotes from the session that show it, and one question for you.",
   },
   {
     step: "3",
     icon: ClockCountdownIcon,
-    title: "Explain it back on day 1, 3 and 7",
+    title: "Explain it back after 1 day, then 3, then 7",
     body: "You answer in your own words and get a score of 0, 1 or 2. A 2 moves the card to the next gap; less moves it one step down (never below day 1) and it comes back tomorrow. Passing the last review masters it.",
   },
 ] as const;

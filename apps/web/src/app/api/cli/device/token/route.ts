@@ -8,17 +8,11 @@
  */
 import { NextResponse, type NextRequest } from "next/server";
 
+import { NO_STORE, serverError } from "@/lib/api/http";
 import { authAttemptWait } from "@/lib/auth/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createToken } from "@/lib/tokens/create";
-import {
-  DEVICE_COLUMNS,
-  devicePollSchema,
-  pollOutcome,
-  slowerInterval,
-  type DeviceRow,
-} from "@/lib/tokens/device";
-import { NO_STORE } from "@/lib/tokens/device-codes";
+import { DEVICE_COLUMNS, devicePollSchema, pollOutcome, slowerInterval } from "@/lib/tokens/device";
 import { hashToken } from "@/lib/tokens/hash";
 
 function rfcError(error: string) {
@@ -50,7 +44,7 @@ export async function POST(request: NextRequest) {
       .from("cli_device_codes")
       .select(DEVICE_COLUMNS)
       .eq("device_code_hash", hashToken(parsed.data.deviceCode))
-      .maybeSingle<DeviceRow>();
+      .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) return rfcError("expired_token");
 
@@ -86,18 +80,16 @@ export async function POST(request: NextRequest) {
       .eq("id", row.id)
       .is("token_issued_at", null)
       .select("approved_by")
-      .maybeSingle<{ approved_by: string }>();
+      .maybeSingle();
     if (claimError) throw new Error(claimError.message);
-    if (!claimed) return rfcError("expired_token");
+    // approved_by is set whenever pollOutcome says approved; a row without it can't be turned into a token.
+    if (!claimed?.approved_by) return rfcError("expired_token");
+    const approvedBy = claimed.approved_by;
 
     try {
       const [created, profile] = await Promise.all([
-        createToken(claimed.approved_by, row.client_name),
-        admin
-          .from("profiles")
-          .select("email")
-          .eq("id", claimed.approved_by)
-          .maybeSingle<{ email: string | null }>(),
+        createToken(approvedBy, row.client_name),
+        admin.from("profiles").select("email").eq("id", approvedBy).maybeSingle(),
       ]);
       return NextResponse.json(
         { token: created.token, email: profile.data?.email ?? null },
@@ -115,10 +107,11 @@ export async function POST(request: NextRequest) {
       throw err;
     }
   } catch (err) {
-    console.error("[api/cli/device/token] poll failed", err instanceof Error ? err.message : err);
-    return NextResponse.json(
-      { error: "Couldn't check the login. Try again." },
-      { status: 500, headers: NO_STORE },
+    return serverError(
+      "[api/cli/device/token] poll",
+      err,
+      "Couldn't check the login. Try again.",
+      NO_STORE,
     );
   }
 }

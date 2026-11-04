@@ -15,13 +15,7 @@ import {
   OfflineState,
   SessionFailedState,
 } from "@/components/app/error-state";
-import {
-  DecisionCardLoading,
-  ProcessingState,
-  ReviewCardLoading,
-  SessionListLoading,
-  StatRowLoading,
-} from "@/components/app/loading-state";
+import { ProcessingState } from "@/components/app/processing-state";
 import { ScoreBadge } from "@/components/app/score-badge";
 import { SessionRow } from "@/components/app/session-row";
 import { StatRow } from "@/components/app/stat-row";
@@ -82,7 +76,7 @@ export function AppCatalog() {
         <div className="flex w-full flex-col gap-3">
           <StatRow cardsDueToday={cards.length} sessionsThisWeek={1} explainedPercent={67} />
           <StatRow cardsDueToday={0} sessionsThisWeek={0} explainedPercent={null} />
-          <StatRowLoading />
+          <StatRow loading />
         </div>
       </Specimen>
 
@@ -131,16 +125,6 @@ export function AppCatalog() {
             announce
             action={<Button variant="secondary">Try again</Button>}
           />
-        </div>
-      </Specimen>
-
-      <Specimen label="Loading: session list, decision card, review card">
-        <div className="grid w-full gap-3 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <SessionListLoading rows={3} />
-          </div>
-          <DecisionCardLoading />
-          <ReviewCardLoading />
         </div>
       </Specimen>
 

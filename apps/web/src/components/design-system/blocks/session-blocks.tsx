@@ -33,7 +33,7 @@ const PREFERENCES = [
   {
     id: "notify-review",
     label: "Review reminders",
-    description: "An email on day 1, 3 and 7 after a session ends.",
+    description: "An email after 1 day, then 3, then 7.",
     defaultChecked: true,
   },
   {

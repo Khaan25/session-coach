@@ -86,14 +86,17 @@ async function listCandidates(dir: string): Promise<Candidate[] | null> {
   } catch {
     return null;
   }
-  const candidates: Candidate[] = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
-    const path = join(dir, entry.name);
-    const info = await stat(path).catch(() => null);
-    if (!info) continue;
-    candidates.push({ path, name: entry.name, size: info.size, mtimeMs: info.mtimeMs });
-  }
+  // All stats at once: sync runs under a SessionStart deadline. A file that vanished in between is dropped.
+  const stats = await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".jsonl"))
+      .map(async ({ name }) => {
+        const path = join(dir, name);
+        const info = await stat(path).catch(() => null);
+        return info ? { path, name, size: info.size, mtimeMs: info.mtimeMs } : null;
+      }),
+  );
+  const candidates = stats.filter((c): c is Candidate => c !== null);
   return candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
 }
 
@@ -146,11 +149,13 @@ export async function findRecentLogs(
   const candidates = await listCandidates(join(projectsDir, projectDirName(cwd)));
   if (candidates === null) return [];
   const accepted = await acceptedCwds(cwd);
-  const found: LogFile[] = [];
-  for (const candidate of candidates) {
-    if (candidate.mtimeMs < window.since || candidate.mtimeMs > window.until) continue;
-    const recorded = await recordedCwd(candidate.path);
-    if (recorded !== null && accepted.has(trimSlash(recorded))) found.push(candidate);
-  }
-  return found;
+  const inWindow = candidates.filter(
+    ({ mtimeMs }) => mtimeMs >= window.since && mtimeMs <= window.until,
+  );
+  // Every head is read at once; the filter keeps the newest-first order.
+  const recorded = await Promise.all(inWindow.map(({ path }) => recordedCwd(path)));
+  return inWindow.filter((_, i) => {
+    const cwdOf = recorded[i];
+    return cwdOf != null && accepted.has(trimSlash(cwdOf));
+  });
 }

@@ -1,43 +1,80 @@
 # Architecture
 
 ```
-laptop                         server (Vercel + Supabase)                     learner
-──────                         ──────────────────────────                     ───────
-Claude Code session ends
-  └─ SessionEnd hook (~50ms)
-       └─ detached worker ──POST gzip──► /api/sessions ─► Storage + sessions(pending)
-          redact, retry,                     └─ after(): filter → timeline → extract → evidence check
-          outbox if offline                         └─ decision_cards, sessions(ready) ──Realtime──► dashboard
-                                                                                          review: explain back
-                                                                     grade 0/1/2 ◄──────── answer
-                                                                     reviews(day 1/3/7)
-                                              daily cron ──email──────────────────────────► back to review
+laptop                              server (Vercel + Supabase)                       learner
+──────                              ──────────────────────────                       ───────
+Claude Code session starts
+  └─ SessionStart hook: session-coach sync     (or `session-coach push` by hand)
+       redact, gzip
+       ① POST metadata ──────────────► /api/sessions ─► sessions(pending), signed upload URL (2 h)
+       ② PUT gzip ───────────────────► Storage
+       ③ POST ───────────────────────► /api/sessions/[id]/process ─► claim pending → processing
+                                          └─ after(): parse → trim → extract → evidence check
+                                                └─ decision_cards, sessions(ready) ──Realtime──► dashboard
+                                                                                        review: answer first
+                                                                   grade 0/1/2 ◄──────── answer
+                                                                   reviews(day 1/4/11)
+                                            daily cron ─ fail stuck sessions, email ───────► back to review
 ```
 
-## Why a detached worker
+## Why SessionStart sync
 
-`SessionEnd` hooks run inside a short time budget and can be killed mid-upload. The hook reads `session_id` and `transcript_path` from stdin, spawns the worker with `detached: true` + `unref()`, and exits. The worker does the slow work: redact, gzip, upload with 3 retries, and on failure saves to `~/.session-coach/outbox/`. It skips sessions already in `~/.session-coach/sent`; the server returns 409 for repeats.
+`session-coach sync` runs from a SessionStart hook the learner adds to one project's `.claude/settings.json`, so it is
+opt-in, project by project. On each start it uploads at most one of that project's logs: one untouched for 10 minutes
+or more and modified in the last 7 days, skipping the running session and every id it already sent
+(`packages/cli/src/sync.ts`). A SessionEnd hook runs inside a short time budget and can be killed mid-upload; a log
+that is quiet at the next start is finished. One log per start keeps model runs apart on the free tier's 8,000
+tokens a minute. It prints nothing and never fails the hook. `session-coach push <file>` or `push --latest` uploads by
+hand. See DECISIONS.md, 2026-11-03, "`sync` uploads finished sessions from a SessionStart hook".
 
-## Pipeline stages (Kasam, planned)
+## Upload: three calls
 
-1. **Filter + store:** keep prompts, agent text, Write/Edit summaries, Bash commands; drop thinking blocks and attachments; redact again.
+1. **`POST /api/sessions`** with the session's metadata, never the log. Creates the `pending` row and returns a signed
+   upload URL, valid 2 hours (`apps/web/src/app/api/sessions/route.ts`). A repeat gets 409 (see DATA_MODEL.md,
+   repeat uploads).
+2. **`PUT`** the gzipped, redacted log straight to Storage at that URL, so the log never passes through a function.
+3. **`POST /api/sessions/[id]/process`** checks the log is in Storage and its real size, claims the row with a
+   compare-and-set from `pending` to `processing`, answers 202, and runs `processSession` in `after()`
+   (`apps/web/src/app/api/sessions/[id]/process/route.ts`).
+
+## Pipeline stages
+
+1. **Filter:** keep prompts, agent text, Write/Edit summaries, Bash commands; drop thinking blocks, attachments and
+   Read results; cut tool results to 500 characters; redact again (`lib/pipeline/parser.ts`).
 2. **Timeline:** number kept events E1, E2, … with a map back to the raw JSONL line.
-3. **Big logs:** count tokens first; drop Read results, trim long tool output, then split at user prompts.
-4. **Extract:** one model call returns 0–5 decisions as JSON; a session with none is still `ready`. Validate it with a model-output schema that has the decision fields only (`decision`, `why`, `source`, `evidence` without `verified`, `files`, `question`, `model_answer`). The server adds ids, `position` and `user_id`; Postgres generates `flagged` and `hidden`. Invalid output: retry once, then `failed`.
-5. **Evidence check (plain code):** the cited event exists and contains the quote, which sets each item's `verified`. Postgres generates `flagged` and `hidden` from `evidence` with the same rule as `getEvidenceFlags()`.
+3. **Big logs:** cap each event at 1,500 characters (`MAX_EVENT_CHARS`), always keep the first prompt, then keep the
+   newest events that fit in 13,500 characters (`MAX_TIMELINE_CHARS`) and drop older ones whole (`lib/pipeline/process-rows.ts`). Splitting at
+   user prompts was rejected (DECISIONS.md, 2026-11-01).
+4. **Extract:** one model call returns 0–5 decisions as JSON; a session with none is still `ready` and shows "No
+   decisions found". Each card is validated alone with a model-output schema that has the decision fields only
+   (`decision`, `why`, `source`, `evidence` without `verified`, `files`, `question`, `model_answer`). The server adds
+   ids, `position` and `user_id`; Postgres generates `flagged` and `hidden`. An invalid answer gets one more call,
+   then the session is `failed`.
+5. **Evidence check (plain code):** the cited event exists and contains the quote, which sets each item's `verified`.
+   Cards with no grounded quote are dropped (`lib/pipeline/evidence.ts`). Postgres generates `flagged` and `hidden`
+   from `evidence` with the same rule as `getEvidenceFlags()`.
 
-## Review loop (Zia, planned)
+## Review loop
 
-- **Grading:** `callModel("grade", …)` returns `{ score: 0 | 1 | 2, missing, modelAnswer }` against the card's why, evidence and model answer.
-- **Schedule:** score 2 moves a card to the next gap (1, 3, 7 days); below 2 moves it one step down (never below day 1), due tomorrow; passing day 7 sets `mastered`.
-- **Emails:** Vercel Cron once a day (Hobby fires within the hour). `email_log` is unique per user, kind and day.
+- **Answer first:** a card's why and evidence stay off the page, and out of the learner's column grants, until the
+  learner answers or skips.
+- **Grading:** `callModel("grade", …)` returns `{ score: 0 | 1 | 2, missing, modelAnswer }` against the card's why,
+  evidence and model answer.
+- **Schedule:** score 2 moves a card to the next gap (1, 3, 7 days); a miss (0 or 1) drops it one step (never below
+  day 1), due tomorrow; "I don't know yet" keeps its step and brings it back tomorrow; passing the day-11 review sets `mastered`
+  (`lib/review/schedule.ts`).
+- **5 a day:** each local day offers at most 5 cards, up to 2 of them new (`lib/review/today.ts`).
+- **Emails:** Vercel Cron once a day (Hobby fires within the hour). The same run fails sessions stuck in
+  `processing`. `email_log` is unique per user, kind and day.
 - **Progress:** "decisions you can still explain" = mastered cards + cards scored 2 in the last 7 days.
 
 ## Limits we design around
 
 - Vercel Hobby functions run at most 300s, and `after()` work counts inside that limit.
 - Hobby cron runs at most once per day.
-- Gemini free tier may use inputs to improve Google's products: redaction stays strict and the setup page says so.
+- The model provider is config: `MODEL_PROVIDER` (`gemini`, `openrouter` or `groq`) and `MODEL_<TASK>`. Production runs
+  Groq `openai/gpt-oss-120b` on the free tier (DECISIONS.md, 2026-11-01): 8,000 tokens a minute sets the timeline
+  budget and one upload per `sync`. Logs reach a third-party provider, so redaction stays strict.
 
 ## CLI login (device code)
 

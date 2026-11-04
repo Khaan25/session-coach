@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
  */
 const fieldControlVariants = cva(
   [
-    "w-full min-w-0 rounded-soft bg-page type-label text-text-1 control-edge outline-none forced-colors:border pointer-coarse:text-base",
+    "w-full min-w-0 rounded-soft bg-page type-label text-text-1 control-edge outline-none forced-colors:border pointer-coarse:type-input-touch",
     "transition-[color,background-color,border-color,box-shadow,outline-color] duration-(--dur-fast) ease-(--ease-step)",
     "placeholder:text-text-3",
     // Focus is the edge turning ink, eased in: no outline floating off the control.

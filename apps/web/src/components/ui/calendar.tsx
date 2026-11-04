@@ -177,7 +177,7 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "relative isolate z-10 flex aspect-square size-auto w-full min-w-(--cell-size) flex-col items-center justify-center gap-1 rounded-(--cell-radius) data type-label text-current",
+        "relative isolate z-(--z-raised) flex aspect-square size-auto w-full min-w-(--cell-size) flex-col items-center justify-center gap-1 rounded-(--cell-radius) data type-label text-current",
         // The button's press: a 2% sink, as every Button takes.
         "transition-[color,background-color,scale] duration-(--dur-fast) ease-(--ease-step) active:duration-(--dur-press) active:not-disabled:scale-[0.98] motion-reduce:scale-none!",
         // Days sit edge to edge: the ring sits inside, and on an ink end it is paper.

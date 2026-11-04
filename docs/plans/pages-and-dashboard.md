@@ -1,5 +1,7 @@
 # Plan: public pages and the learner dashboard
 
+**Status: shipped; kept for history. The code and docs/CODEBASE.md are the source of truth.**
+
 > **Executor instructions**: This is a phased plan. Each phase is one branch and one pull
 > request; do not start a phase until the one it depends on is merged. Inside a phase, follow
 > the steps in order and run every verification command before moving on. If anything in a
@@ -13,7 +15,7 @@
 
 ## Status
 
-- **Priority**: P1 (the product has no user-facing screens yet)
+- **Priority**: P1 (when written, the product had no user-facing screens; it has them now)
 - **Effort**: L overall; each phase S–M
 - **Risk**: MED (auth, RLS boundaries, model grading)
 - **Depends on**: the design system PR (Phase 0 below) merged first
@@ -129,10 +131,10 @@ Built first and separately; this plan only fixes what the later phases need from
   `separator`, `avatar`, `dropdown-menu`, `tooltip`, `switch`, `select`.
 - App-level building blocks in `apps/web/src/components/` (not `ui/`): `PageHeader`,
   `EmptyState`, `ErrorState`, `StatusBadge` (session status), `ScoreBadge` (0/1/2), `Container`.
-- A `/design` route (or Storybook-free gallery page, `noindex`) rendering every component in
+- A `/design-system` route (Storybook-free gallery page, `noindex`) rendering every component in
   every variant, used for review and screenshots.
 
-**Done when** `/design` renders all of the above in light and dark, and `pnpm lint` passes.
+**Done when** `/design-system` renders all of the above in light and dark, and `pnpm lint` passes.
 
 ---
 
@@ -165,7 +167,7 @@ Steps:
 6. **Support** (`/support`): FAQ (5–8 entries from this plan's facts) + contact email from an env
    var `NEXT_PUBLIC_SUPPORT_EMAIL` (add to `.env.example`, empty).
 7. **SEO**: `metadata` per page (title, description), `robots.ts` disallows `/dashboard`, `/s/`,
-   `/review`, `/settings`, `/setup`, `/design`; `sitemap.ts` lists the public pages only.
+   `/review`, `/settings`, `/setup`, `/design-system`; `sitemap.ts` lists the public pages only.
 
 **Done criteria**: `pnpm build` lists the six public pages (`/`, `/how-it-works`, `/pricing`,
 `/privacy`, `/terms`, `/support`) as static (`○`), plus `robots.txt` and `sitemap.xml`; `pnpm lint`,
@@ -193,8 +195,8 @@ filter on `user_id` or use the RLS-scoped client; another learner's token id ret
 
 Steps:
 
-1. Install guide with copyable commands (`npx session-coach init`, `session-coach login`), what
-   the SessionEnd hook does, and how to upload past sessions (`session-coach push --latest`).
+1. Install guide with copyable commands (`npx session-coach login`; superseded: there is no `init`), what
+   the SessionStart `sync` hook does (superseded: not a SessionEnd hook; see DECISIONS.md, 2026-11-03), and how to upload past sessions (`session-coach push --latest`).
    Commands come from Kasam's CLI README; until it exists, show them as "coming soon".
 2. "Create token" button → shows the token once in a dialog with a copy button and a warning that
    it won't be shown again. Token list (label, created, last used) with revoke

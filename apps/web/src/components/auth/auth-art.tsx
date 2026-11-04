@@ -9,11 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Facts only from docs/ARCHITECTURE.md (Review loop) and the how-it-works page.
-const loop = ["Day 1", "Day 3", "Day 7"] as const;
+const loop = ["Day 1", "Day 4", "Day 11"] as const;
 
 const scores = [
-  { score: 0, body: "Back to day 1" },
-  { score: 1, body: "Back to day 1" },
+  { score: 0, body: "One step back" },
+  { score: 1, body: "One step back" },
   { score: 2, body: "On to the next gap" },
 ] as const;
 
@@ -21,7 +21,7 @@ function Rule() {
   return <span aria-hidden className="h-px min-w-3 flex-1 bg-line-row" />;
 }
 
-/** The review loop in one card: a session becomes cards, cards come back on day 1, 3 and 7, and a 2 moves them on. */
+/** The review loop in one card: a session becomes cards, cards come back after 1 day, then 3, then 7, and a 2 moves them on. */
 function ReviewLoop() {
   return (
     <Card>
@@ -37,7 +37,8 @@ function ReviewLoop() {
               <Rule />
             </li>
             <li className="flex items-center gap-1.5">
-              <CardsIcon weight="duotone" className="size-4 text-text-1" aria-hidden />3 to 5 cards
+              <CardsIcon weight="duotone" className="size-4 text-text-1" aria-hidden />
+              Up to 5 cards
             </li>
           </ol>
           <ol aria-label="Review schedule" className="flex items-center gap-2">

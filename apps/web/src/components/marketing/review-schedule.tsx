@@ -8,17 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLoopStep } from "@/hooks/use-loop-step";
 
 // One card's way through the schedule, played on a loop: every 2.2s it is answered, and the marker springs to
-// where the score sends it. A 2 moves it to the next gap, less moves it one step down, a 2 on day 7 masters it
-// (docs/ARCHITECTURE.md). The track is decorative; the rule is written out under it for everyone.
-const stops = ["Session", "Day 1", "Day 3", "Day 7", "Mastered"];
+// where the score sends it. A 2 moves it to the next gap, less moves it one step down, a 2 on the day-11 review masters it
+// (lib/review/schedule.ts). The track is decorative; the rule is written out under it for everyone.
+const stops = ["Session", "Day 1", "Day 4", "Day 11", "Mastered"];
 
 const story: { at: number; score?: Score; note: string }[] = [
   { at: 1, note: "A new card is due on day 1." },
-  { at: 2, score: 2, note: "Explained on day 1, so it moves to day 3." },
-  { at: 1, score: 1, note: "Partly on day 3, so it starts again at day 1." },
-  { at: 2, score: 2, note: "Explained on day 1, so it moves to day 3." },
-  { at: 3, score: 2, note: "Explained on day 3, so it moves to day 7." },
-  { at: 4, score: 2, note: "Explained on day 7: mastered." },
+  { at: 2, score: 2, note: "Explained on day 1, so it's due 3 days later." },
+  { at: 1, score: 1, note: "Partly on day 4, so it drops a step, due tomorrow." },
+  { at: 2, score: 2, note: "Explained, so it's due 3 days later again." },
+  { at: 3, score: 2, note: "Explained again, so it's due 7 days later." },
+  { at: 4, score: 2, note: "Explained on the last review: mastered." },
 ];
 
 const percent = (stop: number) => `${(stop / (stops.length - 1)) * 100}%`;
@@ -33,7 +33,7 @@ export function ReviewSchedule() {
     <MotionConfig reducedMotion="user">
       <Card size="lg">
         <CardHeader>
-          <CardTitle>One card&rsquo;s week</CardTitle>
+          <CardTitle>One card&rsquo;s schedule</CardTitle>
         </CardHeader>
         <CardContent>
           <div aria-hidden className="relative mx-6 mt-2 h-12">
@@ -82,9 +82,9 @@ export function ReviewSchedule() {
             </AnimatePresence>
           </div>
           <p className="sr-only">
-            Each card is due on day 1, 3 and 7. A score of 2 moves it to the next day; less moves it
-            one step down (never below day 1) and it comes back tomorrow. Passing the last review
-            masters it.
+            Each card comes back after 1 day, then 3, then 7. A score of 2 moves it to the next gap;
+            less moves it one step down (never below day 1) and it comes back tomorrow. Passing the
+            last review masters it.
           </p>
         </CardContent>
       </Card>

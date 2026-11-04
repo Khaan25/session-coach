@@ -25,8 +25,84 @@ import { color, font } from "./brand";
 const CARDS = "{{ .SiteURL }}/email/cards.png";
 
 /**
- * One auth email: brand line, a paper card with the illustration, heading, body, one button, a fallback link and a
- * footer line.
+ * The frame every email shares: brand line, a paper card with the illustration and heading, then a rule and a footer
+ * line. The auth emails and the daily review fill it.
+ *
+ * @param preview - The inbox preview line.
+ * @param image - The illustration's URL.
+ * @param heading - The card's heading.
+ * @param children - The card's body, under the heading.
+ * @param footer - The footer line's content.
+ */
+export function EmailShell({
+  preview,
+  image,
+  heading,
+  children,
+  footer,
+}: {
+  preview: string;
+  image: string;
+  heading: string;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+}) {
+  return (
+    <Html lang="en">
+      <Head>
+        <meta name="color-scheme" content="light" />
+        <meta name="supported-color-schemes" content="light" />
+      </Head>
+      <Preview>{preview}</Preview>
+      <Body style={{ margin: 0, backgroundColor: color.canvas, fontFamily: font }}>
+        <Container style={{ maxWidth: 520, margin: "0 auto", padding: "40px 16px" }}>
+          <Text style={{ margin: "0 0 16px", fontSize: 14, lineHeight: "20px", color: color.ink }}>
+            Session Coach
+          </Text>
+          <Section
+            style={{
+              backgroundColor: color.paper,
+              border: `1px solid ${color.line}`,
+              borderRadius: 12,
+              padding: "32px 32px 28px",
+            }}
+          >
+            <Img
+              src={image}
+              width={96}
+              height={80}
+              alt=""
+              style={{ display: "block", margin: "0 0 20px" }}
+            />
+            <Heading
+              as="h1"
+              style={{
+                margin: "0 0 12px",
+                fontSize: 28,
+                lineHeight: "34px",
+                fontWeight: 400,
+                letterSpacing: "-0.01em",
+                color: color.ink,
+              }}
+            >
+              {heading}
+            </Heading>
+            {children}
+          </Section>
+          <Hr
+            style={{ border: "none", borderTop: `1px solid ${color.line}`, margin: "28px 0 16px" }}
+          />
+          <Text style={{ margin: 0, fontSize: 12, lineHeight: "18px", color: color.text3 }}>
+            {footer}
+          </Text>
+        </Container>
+      </Body>
+    </Html>
+  );
+}
+
+/**
+ * One auth email: the shared shell with the body, one button and a fallback link.
  *
  * @param preview - The inbox preview line.
  * @param heading - The card's heading.
@@ -51,82 +127,33 @@ export function AuthEmail({
   footer: string;
 }) {
   return (
-    <Html lang="en">
-      <Head>
-        <meta name="color-scheme" content="light" />
-        <meta name="supported-color-schemes" content="light" />
-      </Head>
-      <Preview>{preview}</Preview>
-      <Body style={{ margin: 0, backgroundColor: color.canvas, fontFamily: font }}>
-        <Container style={{ maxWidth: 520, margin: "0 auto", padding: "40px 16px" }}>
-          <Text style={{ margin: "0 0 16px", fontSize: 14, lineHeight: "20px", color: color.ink }}>
-            Session Coach
-          </Text>
-          <Section
-            style={{
-              backgroundColor: color.paper,
-              border: `1px solid ${color.line}`,
-              borderRadius: 12,
-              padding: "32px 32px 28px",
-            }}
-          >
-            <Img
-              src={CARDS}
-              width={96}
-              height={80}
-              alt=""
-              style={{ display: "block", margin: "0 0 20px" }}
-            />
-            <Heading
-              as="h1"
-              style={{
-                margin: "0 0 12px",
-                fontSize: 28,
-                lineHeight: "34px",
-                fontWeight: 400,
-                letterSpacing: "-0.01em",
-                color: color.ink,
-              }}
-            >
-              {heading}
-            </Heading>
-            {children}
-            <Button
-              href={href}
-              style={{
-                display: "inline-block",
-                margin: "4px 0 0",
-                backgroundColor: color.ink,
-                color: color.paper,
-                borderRadius: 8,
-                padding: "12px 20px",
-                fontSize: 15,
-                lineHeight: "20px",
-                fontWeight: 500,
-                textDecoration: "none",
-              }}
-            >
-              {cta}
-            </Button>
-            <Text
-              style={{ margin: "24px 0 0", fontSize: 13, lineHeight: "19px", color: color.text3 }}
-            >
-              Button not working? Paste this link into your browser:
-              <br />
-              <Link href={href} style={{ color: color.text2, wordBreak: "break-all" }}>
-                {href}
-              </Link>
-            </Text>
-          </Section>
-          <Hr
-            style={{ border: "none", borderTop: `1px solid ${color.line}`, margin: "28px 0 16px" }}
-          />
-          <Text style={{ margin: 0, fontSize: 12, lineHeight: "18px", color: color.text3 }}>
-            {footer}
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+    <EmailShell preview={preview} image={CARDS} heading={heading} footer={footer}>
+      {children}
+      <Button
+        href={href}
+        style={{
+          display: "inline-block",
+          margin: "4px 0 0",
+          backgroundColor: color.ink,
+          color: color.paper,
+          borderRadius: 8,
+          padding: "12px 20px",
+          fontSize: 15,
+          lineHeight: "20px",
+          fontWeight: 500,
+          textDecoration: "none",
+        }}
+      >
+        {cta}
+      </Button>
+      <Text style={{ margin: "24px 0 0", fontSize: 13, lineHeight: "19px", color: color.text3 }}>
+        Button not working? Paste this link into your browser:
+        <br />
+        <Link href={href} style={{ color: color.text2, wordBreak: "break-all" }}>
+          {href}
+        </Link>
+      </Text>
+    </EmailShell>
   );
 }
 
