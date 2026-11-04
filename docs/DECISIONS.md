@@ -2,6 +2,12 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-04 · Review ladder: answers on days 0, 1, 4, 11
+
+- **Decision:** a card is answered on day 0, then on days 1, 4 and 11. `GAP_DAYS` is `[1, 3, 7]`, and those are the gaps after each answer, not day numbers. For a perfect run starting Tue 3 Nov, the cards are due 4, 7 and 14 Nov, and the card is mastered on the 14th. A miss (score below 2; a 1 counts as a miss) drops one rung and the card is due tomorrow. We never write "day 7" in the demo or in any copy, because the third review is on day 11.
+- **Why:** "day 7" read as the 7th day, but with the gaps added up the third review is on day 11. The `schedule.test.ts` perfect-run test shows the due dates.
+- **Consequence:** "owned" means mastered, so the earliest owned card is about 14 Nov and a demo-day meter would read 0 of N. Agreed with Zia on 4 Nov: the meter shows "explained N · owned M of total", and Defend works on any card the learner has answered 2 at least once.
+
 ## 2026-11-04 · Question level per project
 
 - **Decision:** learners pick how hard questions are per repo: simple (one-step "why did we do X"), hard (the trade-off or rejected alternative, and what breaks if changed) or complex (reason across two decisions, or predict a change in a new scenario, still grounded in the session). Stored in a new `projects` table keyed by `(user_id, repo)`; the extraction prompt swaps only its question line by level. Default simple.
