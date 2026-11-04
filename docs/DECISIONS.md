@@ -34,6 +34,11 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Vercel Queues or Workflow in place of `after()`:** both are beta, and `after()` works. Revisit if the stale-card shortcut in `process.ts` is ever seen.
 - Zia approved both.
 
+## 2026-11-04 · Sync hook pinned to 0.3.0
+
+- **Decision:** the hook snippet in `packages/cli/README.md` and the setup prompt (`apps/web/src/lib/setup/ai-prompt.ts`) now pin `session-coach@0.3.0` (device login, repo and branch, 5-minute quiet period).
+- **Why:** 0.3.0 is published and the real upload test passed. The pin only moves after the new version is published and tested.
+
 ## 2026-11-04 · Sync waits 5 minutes of quiet, not 10
 
 - **Decision:** `SYNC_QUIET_MS` is 5 minutes. `sync` skips a log modified in the last 5 minutes and uploads it on a later start.
