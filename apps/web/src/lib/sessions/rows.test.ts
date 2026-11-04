@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { applySessionChange, localDate, parsePage, type SessionSummary } from "./rows.ts";
+import {
+  applySessionChange,
+  localDate,
+  parsePage,
+  parseRepo,
+  type SessionSummary,
+} from "./rows.ts";
 
 const row = (id: string, status: SessionSummary["status"] = "pending"): SessionSummary => ({
   id,
@@ -18,6 +24,12 @@ test("parsePage keeps whole numbers from 1, else 1", () => {
   assert.equal(parsePage("3"), 3);
   assert.equal(parsePage(["2", "5"]), 2);
   for (const bad of [undefined, "", "0", "-1", "1.5", "abc"]) assert.equal(parsePage(bad), 1);
+});
+
+test("parseRepo trims the first value; missing or blank is every session", () => {
+  assert.equal(parseRepo(" session-coach "), "session-coach");
+  assert.equal(parseRepo(["rapporteur", "x"]), "rapporteur");
+  for (const none of [undefined, "", "  ", []]) assert.equal(parseRepo(none), null);
 });
 
 test("localDate is the learner's date, not UTC's", () => {

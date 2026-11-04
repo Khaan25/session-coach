@@ -12,22 +12,24 @@ import { PAGE_SIZE, SESSION_COLUMNS, type SessionListItem, type SessionSummary }
  *
  * @param options.userId - The signed-in learner.
  * @param options.page - The 1-based page from `?page=` (see `parsePage`).
+ * @param options.repo - Only sessions in this repo (`?repo=`, see `parseRepo`); null for every session.
  * @returns The page's rows and whether an older page exists.
  */
 export async function listSessions({
   userId,
   page,
+  repo = null,
 }: {
   userId: string;
   page: number;
+  repo?: string | null;
 }): Promise<{ sessions: SessionListItem[]; hasMore: boolean }> {
   const supabase = await createClient();
   const from = (page - 1) * PAGE_SIZE;
+  let query = supabase.from("sessions").select(SESSION_COLUMNS).eq("user_id", userId);
+  if (repo) query = query.eq("repo", repo);
   // One extra row tells whether a next page exists without a count query.
-  const { data, error } = await supabase
-    .from("sessions")
-    .select(SESSION_COLUMNS)
-    .eq("user_id", userId)
+  const { data, error } = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, from + PAGE_SIZE)

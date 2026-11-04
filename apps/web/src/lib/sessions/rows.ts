@@ -32,6 +32,11 @@ export function parsePage(value: string | string[] | undefined): number {
   return Number.isInteger(n) && n >= 1 ? n : 1;
 }
 
+/** `?repo=` as a trimmed name; missing or blank is null (every session). */
+export function parseRepo(value: string | string[] | undefined): string | null {
+  return (Array.isArray(value) ? value[0] : value)?.trim() || null;
+}
+
 /** Today's date (YYYY-MM-DD) in an IANA time zone. An unknown zone falls back to UTC. */
 export function localDate(timeZone: string, now: Date): string {
   try {
