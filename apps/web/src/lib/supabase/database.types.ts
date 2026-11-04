@@ -545,6 +545,15 @@ export type Database = {
     };
     Functions: {
       is_tracker_member: { Args: Record<PropertyKey, never>; Returns: boolean };
+      learner_ownership: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          explained: number;
+          owned: number;
+          repo: string;
+          total: number;
+        }[];
+      };
       learner_repos: {
         Args: Record<PropertyKey, never>;
         Returns: {

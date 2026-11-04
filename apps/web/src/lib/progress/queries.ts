@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
+import { computeOwnership, type Ownership } from "./ownership";
 import { CHART_DAYS, computeProgress, type Progress, type ProgressInput } from "./progress";
 
 /**
@@ -69,4 +70,17 @@ export async function getProgress(userId: string, now: Date): Promise<Progress> 
     timeZone: profile.data?.timezone ?? "UTC",
     now,
   });
+}
+
+/**
+ * The dashboard's ownership meter: `learner_ownership()` counts explained, owned and visible cards per repo in Postgres
+ * (one row per repo, RLS applies since it runs as the learner), then `computeOwnership` adds the overall line.
+ *
+ * @returns See `computeOwnership`.
+ */
+export async function getOwnership(): Promise<Ownership> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("learner_ownership");
+  if (error) throw error;
+  return computeOwnership(data);
 }

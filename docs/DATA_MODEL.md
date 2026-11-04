@@ -20,6 +20,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
   per repo, and `learner_repos()` (see [`projects`](#projects)).
 - [`20261105000100_defenses.sql`](../supabase/migrations/20261105000100_defenses.sql): the server-written `defenses`
   table, one timed defense of a card per row (see [`defenses`](#defenses)).
+- [`20261105000200_ownership.sql`](../supabase/migrations/20261105000200_ownership.sql): `learner_ownership()`, the
+  dashboard meter's counts per repo (see [`projects`](#projects)).
 
 ## The one rule
 
@@ -281,6 +283,10 @@ exactly. A repo with no row, and every session with no repo, gets `simple`.
   PostgREST upsert (which would write `user_id` and `repo` on conflict).
 - **`learner_repos()`:** the caller's distinct non-blank `sessions.repo`, A to Z. Runs as the caller (RLS applies),
   executable by `authenticated` only. The dashboard and /settings list projects from it without reading every session.
+- **`learner_ownership()`:** one row per `sessions.repo` (null: sent without one) with `explained` (visible cards
+  answered 2 at least once), `owned` (`reviews.mastered`) and `total` (visible cards). Runs as the caller (RLS applies,
+  and `not hidden` matches the cards policy), executable by `authenticated` only, so a learner counts only their own
+  cards. The dashboard meter reads it instead of every card, review and answer.
 - **Read by the pipeline** with the service role, to pick the extraction prompt's question level.
 
 ### `defenses`

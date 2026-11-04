@@ -17,14 +17,17 @@ export function SessionList({
   now,
   prepend,
   limit,
+  repo,
 }: {
   sessions: SessionListItem[];
   userId: string;
   now: string;
   prepend: boolean;
   limit: number;
+  /** The project the list is filtered to: only its new sessions join. */
+  repo?: string;
 }) {
-  const { rows, elapsedMs } = useLiveSessions(userId, sessions, { prepend, limit });
+  const { rows, elapsedMs } = useLiveSessions(userId, sessions, { prepend, limit, repo });
   if (rows.length === 0) return <NoSessionsEmpty variant="plain" />;
   const clock = new Date(Date.parse(now) + (elapsedMs ?? 0));
   return (

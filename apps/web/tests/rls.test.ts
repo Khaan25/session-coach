@@ -309,3 +309,32 @@ test("tracker_tasks: members read, add and edit only the granted columns; others
     await admin.from("tracker_members").delete().eq("user_id", member.id);
   }
 });
+
+test("learner_ownership: counts only the caller's visible cards, an explained card once, and anon can't call it", async () => {
+  const [me, other] = learners;
+  // Two answers scored 2 on the visible card and one on the hidden card, and the visible card mastered.
+  const answers = await admin.from("answers").insert([
+    { card_id: me.cardId, user_id: me.id, review_step: 1, answer: "a", score: 2 },
+    { card_id: me.cardId, user_id: me.id, review_step: 2, answer: "a", score: 2 },
+    { card_id: me.hiddenCardId, user_id: me.id, review_step: 0, answer: "a", score: 2 },
+  ]);
+  assert.ifError(answers.error);
+  const mastered = await admin
+    .from("reviews")
+    .update({ mastered: true, due_on: null })
+    .eq("card_id", me.cardId);
+  assert.ifError(mastered.error);
+
+  const mine = await me.client.rpc("learner_ownership");
+  assert.ifError(mine.error);
+  assert.deepEqual(mine.data, [{ repo: null, explained: 1, owned: 1, total: 1 }]);
+  // The other learner's counts don't move: their one visible card, answered 1 only. A blank repo counts as none.
+  const blank = await admin.from("sessions").update({ repo: "" }).eq("id", other.sessionId);
+  assert.ifError(blank.error);
+  const theirs = await other.client.rpc("learner_ownership");
+  assert.ifError(theirs.error);
+  assert.deepEqual(theirs.data, [{ repo: null, explained: 0, owned: 0, total: 1 }]);
+
+  const anon = await createClient(stack.url, stack.anonKey, options).rpc("learner_ownership");
+  assert.ok(anon.error, "anon called learner_ownership");
+});
