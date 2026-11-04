@@ -78,7 +78,7 @@ export function toSummary(record: Record<string, unknown>): SessionSummary {
  * @param row - The inserted or updated session.
  * @param options.prepend - Whether a new session joins this list.
  * @param options.limit - The most rows the list may hold.
- * @param options.repo - When set, only a session from this repo joins (a list filtered to one project).
+ * @param options.repo - When set, only a session from this repo joins or stays (a list filtered to one project).
  * @returns A new array; `rows` is not changed.
  */
 export function applySessionChange(
@@ -87,7 +87,11 @@ export function applySessionChange(
   { prepend, limit, repo }: { prepend: boolean; limit: number; repo?: string },
 ): SessionListItem[] {
   const i = rows.findIndex(({ id }) => id === row.id);
-  if (i >= 0) return rows.map((old, j) => (j === i ? { ...old, ...row } : old));
+  if (i >= 0) {
+    // A retry can move a session to another repo: it leaves a list filtered to the old one.
+    if (repo !== undefined && row.repo !== repo) return rows.filter((_, j) => j !== i);
+    return rows.map((old, j) => (j === i ? { ...old, ...row } : old));
+  }
   const newest = rows[0] ? Date.parse(rows[0].created_at) : -Infinity;
   const joins = prepend && (repo === undefined || row.repo === repo);
   return joins && Date.parse(row.created_at) >= newest ? [row, ...rows].slice(0, limit) : rows;

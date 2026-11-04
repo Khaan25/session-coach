@@ -328,7 +328,9 @@ test("learner_ownership: counts only the caller's visible cards, an explained ca
   const mine = await me.client.rpc("learner_ownership");
   assert.ifError(mine.error);
   assert.deepEqual(mine.data, [{ repo: null, explained: 1, owned: 1, total: 1 }]);
-  // The other learner's counts don't move: their one visible card, answered 1 only.
+  // The other learner's counts don't move: their one visible card, answered 1 only. A blank repo counts as none.
+  const blank = await admin.from("sessions").update({ repo: "" }).eq("id", other.sessionId);
+  assert.ifError(blank.error);
   const theirs = await other.client.rpc("learner_ownership");
   assert.ifError(theirs.error);
   assert.deepEqual(theirs.data, [{ repo: null, explained: 0, owned: 0, total: 1 }]);

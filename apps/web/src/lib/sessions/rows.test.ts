@@ -71,6 +71,8 @@ test("a list filtered to one project takes only that project's new sessions", ()
   );
   assert.equal(applySessionChange(rows, { ...row("d"), repo: "rapporteur" }, opts), rows);
   assert.equal(applySessionChange(rows, { ...row("e"), repo: null }, opts), rows);
+  // A row already shown that moves to another repo leaves the filtered list.
+  assert.deepEqual(applySessionChange(rows, { ...row("a"), repo: "rapporteur" }, opts), []);
 });
 
 test("an update to an older session outside the list leaves the list alone", () => {
