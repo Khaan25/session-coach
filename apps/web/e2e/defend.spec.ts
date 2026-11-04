@@ -108,7 +108,9 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
   await box.fill(modelAnswer);
   await page.getByRole("button", { name: "Finish" }).click();
 
-  await expect(page.getByRole("heading", { name: /^(Defended|Not defended this time)$/ })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /^(Defended|Not defended this time)$/ }),
+  ).toBeVisible();
   await shot(page, "4-result");
   const defense = await admin
     .from("defenses")
