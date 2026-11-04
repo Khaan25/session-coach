@@ -17,7 +17,7 @@ import {
 const cards = sample.cards.filter((visible) => !visible.hidden);
 const card = cards[0];
 const { session } = sample;
-const reviewDays = [1, 3, 7];
+const reviewDays = [1, 4, 11];
 
 export function DecisionCardPreview() {
   return (
