@@ -117,11 +117,11 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     if (world) {
       // While the camera moves, the world is one GPU layer, so a frame moves pixels instead of repainting every
       // preview (28ms down to 7ms a frame with all 56 in view). Dropped once it settles, so zoomed text is sharp.
-      world.style.willChange = "transform";
+      world.classList.add("will-change-transform");
       world.style.transform = `translate(${x}px, ${y}px) scale(${z})`;
       if (settleTimer.current) clearTimeout(settleTimer.current);
       settleTimer.current = setTimeout(() => {
-        world.style.willChange = "";
+        world.classList.remove("will-change-transform");
       }, SETTLE_MS);
     }
     if (zoomTextRef.current) zoomTextRef.current.textContent = `${Math.round(z * 100)}%`;
