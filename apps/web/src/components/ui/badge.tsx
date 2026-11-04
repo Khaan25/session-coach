@@ -26,10 +26,6 @@ const kindLabels: Record<Kind | BadgeStatus, string> = {
   fail: "Failed",
 };
 
-// Trouble's look, set by `status` rather than a variant: the warn or fail line step carries the colour.
-const troubleLook =
-  "frame bg-page text-text-1 [--frame-color:var(--accent-line)] [--frame-radius:var(--radius-inner)] [a]:hover:bg-hover";
-
 const badgeVariants = cva(
   [
     "group/badge relative inline-flex w-fit shrink-0 items-center justify-center overflow-hidden rounded-inner whitespace-nowrap tabular-nums",
@@ -43,10 +39,16 @@ const badgeVariants = cva(
       variant: {
         // No badge takes ink: the default is the quiet tint, the design system's own default.
         default: "bg-accent-tint text-accent-label [a]:hover:bg-hover",
+        secondary: "bg-accent-tint text-accent-label [a]:hover:bg-hover",
         outline:
           "frame bg-page text-text-1 [--frame-color:var(--line-control)] [--frame-radius:var(--radius-inner)] [a]:hover:bg-hover",
+        ghost: "bg-transparent text-text-2 hover:bg-hover hover:text-text-1",
+        warn: "frame bg-page text-text-1 [--frame-color:var(--accent-line)] [--frame-radius:var(--radius-inner)] [a]:hover:bg-hover",
+        destructive:
+          "frame bg-page text-text-1 [--frame-color:var(--accent-line)] [--frame-radius:var(--radius-inner)] [a]:hover:bg-hover",
         success: "bg-success-wash text-success-text",
         warning: "bg-warning-wash text-warning-text",
+        link: "h-auto px-0 text-text-1 decoration-1 underline-offset-4 [a]:hover:underline",
       },
       size: {
         default:
@@ -85,20 +87,19 @@ function Badge({
   children,
   ...props
 }: BadgeProps) {
+  const tone =
+    status ?? (variant === "destructive" ? "fail" : variant === "warn" ? "warn" : undefined);
   const named = kind ?? status;
   const capped = count !== undefined && count > max;
   const word = label ?? children ?? (named ? kindLabels[named] : undefined);
   const shown = count === undefined ? word : capped ? `${max}+` : count.toLocaleString("en-US");
   // Trouble is outlined whatever variant was asked for; a kind keeps the asked variant.
+  const look = tone ? (tone === "fail" ? "destructive" : "warn") : variant;
   return useRender({
     defaultTagName: "span",
     props: mergeProps<"span">(
       {
-        className: cn(
-          badgeVariants({ variant: status ? null : variant, size }),
-          status && troubleLook,
-          className,
-        ),
+        className: cn(badgeVariants({ variant: look, size }), className),
         children: capped ? (
           <>
             <span aria-hidden>{shown}</span>
@@ -111,7 +112,7 @@ function Badge({
       {
         "data-slot": "badge",
         "data-kind": kind,
-        "data-status": status,
+        "data-status": tone,
         "data-size": size,
         title: capped ? count.toLocaleString("en-US") : undefined,
       } as React.ComponentProps<"span">,

@@ -75,7 +75,17 @@ import { kinds } from "@/lib/ui/kind";
 import { GallerySection, Specimen } from "./gallery-section";
 import { cards, session } from "./sample";
 
-const BADGE_VARIANTS = ["default", "outline", "success", "warning"] as const;
+const BADGE_VARIANTS = [
+  "default",
+  "secondary",
+  "outline",
+  "ghost",
+  "warn",
+  "destructive",
+  "success",
+  "warning",
+  "link",
+] as const;
 const AVATAR_SIZES = ["2xs", "xs", "sm", "default", "lg"] as const;
 const AVATAR_TYPES = ["person", "agent", "source"] as const;
 // Sample numbers for the trend specimens; there is no real series yet. TODO(zia): real explain-back scores.

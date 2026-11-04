@@ -66,7 +66,7 @@ function CollapsibleRow({
         <CaretRightIcon
           aria-hidden
           data-slot="collapsible-caret"
-          className="size-3 shrink-0 text-text-3 transition-transform duration-(--dur-slow) ease-out-quint group-data-panel-open/collapsible-trigger:rotate-90 motion-reduce:transition-none rtl:-scale-x-100 rtl:group-data-panel-open/collapsible-trigger:-rotate-90"
+          className="size-3 shrink-0 text-text-3 transition-transform duration-(--dur-200) ease-out-quint group-data-panel-open/collapsible-trigger:rotate-90 motion-reduce:transition-none rtl:-scale-x-100 rtl:group-data-panel-open/collapsible-trigger:-rotate-90"
         />
       )}
       {children}
@@ -91,7 +91,7 @@ function CollapsibleContent({ className, ...props }: CollapsiblePrimitive.Panel.
     <CollapsiblePrimitive.Panel
       data-slot="collapsible-content"
       className={cn(
-        "h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-(--dur-slow) ease-out-quint data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none",
+        "h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-(--dur-200) ease-out-quint data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none",
         className,
       )}
       {...props}

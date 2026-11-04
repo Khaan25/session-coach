@@ -31,6 +31,8 @@ const statVariants = cva("group/stat flex min-w-0 flex-col", {
     variant: {
       plain: "",
       framed: "frame bg-page px-4 py-3",
+      /** @deprecated Use framed. */
+      card: "frame bg-page px-4 py-3",
     },
   },
   defaultVariants: { size: "default", variant: "plain" },
@@ -59,7 +61,7 @@ function Stat({
     <div
       data-slot="stat"
       data-size={size}
-      data-variant={variant}
+      data-variant={variant === "card" ? "framed" : variant}
       data-kind={kind}
       data-status={status}
       data-loading={loading || undefined}
@@ -73,8 +75,8 @@ function Stat({
 type StatGroupProps = React.ComponentProps<"div"> & {
   /** The kind the whole strip counts: sets data-kind on the strip so every Stat's trend takes it. */
   kind?: Kind;
-  /** framed: the strip's own frame. plain: no edge, for a strip inside another frame, which draws only the rules. */
-  variant?: "framed" | "plain";
+  /** framed: the strip's own frame. plain: no edge, for a strip inside another frame, which draws only the rules. `frame` is a @deprecated alias of framed. */
+  variant?: "framed" | "plain" | "frame";
 };
 
 /**

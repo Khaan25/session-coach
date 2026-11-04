@@ -14,7 +14,7 @@ import { mergeClass } from "@/lib/ui/utils";
 // side it opened on. The design system's own opacity-only overlayMotion is left out, the zip's motion wins.
 // Select and combobox reuse these classes, so every list popup moves and looks the same.
 const popupMotionClass =
-  "origin-(--transform-origin) duration-(--dur-fast) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95";
+  "origin-(--transform-origin) duration-(--dur-100) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95";
 
 // The popup takes focus when a menu opens by keyboard with nothing highlighted; menu-popup opts it out of the ring,
 // the highlighted item is the focus indicator.

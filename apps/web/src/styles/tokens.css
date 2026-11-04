@@ -286,6 +286,14 @@
   --dur-run: 1000ms; /* one turn of the running status arc (animate-run) | status arc */
   --dur-slide: 1200ms; /* one pass of the indeterminate progress segment (animate-slide) | progress bar */
   --dur-progress: 1000ms; /* a live span growing to its new length between updates, on linear | timeline */
+  /* The ui components' own timings, kept exact so tokenizing them changed nothing but reduced motion, which zeroes
+     each one below. */
+  --dur-100: 100ms; /* a menu item, tooltip or toast leaving | dropdown-menu, item, tooltip, toast */
+  --dur-150: 150ms; /* a popover or dialog leaving, a tooltip or toast entering, a switch thumb | dialog, switch */
+  --dur-200: 200ms; /* a dialog, popover, sheet or tab indicator entering, a collapsible opening | sheet, tabs */
+  --dur-250: 250ms; /* a toast moving in its stack | toast */
+  --dur-300: 300ms; /* a progress bar or a nested drawer's content fading | progress, drawer */
+  --dur-450: 450ms; /* a drawer and its overlay sliding, on the drawer curve | drawer */
   --ease-spin: linear; /* the pending ring turns smoothly | animate-spin */
   --thumb-lift: 0%; /* how much ink the selected segment takes beyond paper; the dark theme raises it | surface-thumb */
   --thumb-ring-alpha: 0; /* the ink alpha of the selected segment's 1px ring; the dark theme raises it | elev-thumb */
@@ -768,6 +776,12 @@
     --dur-base: 0ms;
     --dur-slow: 0ms;
     --dur-progress: 0ms;
+    --dur-100: 0ms;
+    --dur-150: 0ms;
+    --dur-200: 0ms;
+    --dur-250: 0ms;
+    --dur-300: 0ms;
+    --dur-450: 0ms;
     --dur-spin: 2400ms; /* a pending ring still turns, so loading stays visible, at a third of the speed */
     --sheet-shift: 0px;
   }
@@ -777,6 +791,12 @@
   --dur-base: 0ms;
   --dur-slow: 0ms;
   --dur-progress: 0ms;
+  --dur-100: 0ms;
+  --dur-150: 0ms;
+  --dur-200: 0ms;
+  --dur-250: 0ms;
+  --dur-300: 0ms;
+  --dur-450: 0ms;
   --dur-spin: 2400ms;
   --sheet-shift: 0px;
 }

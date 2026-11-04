@@ -12,6 +12,9 @@ import { cn } from "cn";
 // DataTable or data grid row it drops to the plain ink word instead: a long column of boxes would be many
 // InkSlots in one card, and the rule is one. A short list in a panel (Item, static Table) keeps its one box.
 //
+// variant="field" is kept so old call sites compile and renders as plain: the big moment belongs to the frame
+// (data-status="fail" on it, the word in its header).
+//
 // live: speaks only when work settles or stops on a person. A hidden status region holds the word for ok, warn,
 // fail and waiting and stays empty for idle, queued and running, so a screen reader hears one word when a run
 // ends, not every hop on the way. Server-safe: the region is plain markup, no effect or timer.
@@ -63,6 +66,9 @@ const wordVariants = cva(
       variant: {
         plain:
           "data-[status=fail]:text-fail-text data-[status=idle]:text-text-3 data-[status=ok]:text-text-2 data-[status=warn]:text-warn-text",
+        /** @deprecated Renders as plain. */
+        field:
+          "data-[status=fail]:text-fail-text data-[status=idle]:text-text-3 data-[status=ok]:text-text-2 data-[status=warn]:text-warn-text",
       },
     },
     defaultVariants: { variant: "plain" },
@@ -72,6 +78,8 @@ const wordVariants = cva(
 type StatusProps = Omit<React.ComponentProps<"span">, "children"> &
   VariantProps<typeof wordVariants> & {
     status?: Status;
+    /** @deprecated A no-op kept so older call sites compile: a Status is always the word. */
+    display?: "word";
     /** Replaces the default word. `true` keeps it. */
     label?: string | true;
     /** Speak when the status settles on ok, warn or fail; stay quiet for queued and running. */
@@ -88,10 +96,15 @@ function Status({
   label,
   live,
   size,
+  display: _display,
   className,
   children,
   ...props
 }: StatusProps) {
+  if (process.env.NODE_ENV !== "production" && variant === "field")
+    console.warn(
+      'Status: variant="field" renders as plain. Put data-status on the frame and the word in its header.',
+    );
   const word = children ?? (typeof label === "string" ? label : statusLabels[status]);
   // The region is always in the DOM, so a change from empty to the word is what gets announced.
   const region = live ? (
