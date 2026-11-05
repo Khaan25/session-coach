@@ -294,9 +294,19 @@ export async function signOut(): Promise<void> {
   redirect("/");
 }
 
-/** Signs out every browser and device: revokes all of the learner's refresh tokens. */
+/**
+ * Signs out every browser and device: revokes the learner's CLI tokens and all of their refresh tokens. CLI tokens
+ * never expire and Settings calls them devices, so a takeover isn't over until they go too.
+ */
 export async function signOutEverywhere(): Promise<void> {
   const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
+  if (userId) {
+    // Before signOut, while the session can still delete. RLS limits it to their rows; the filter says so in code.
+    const { error } = await supabase.from("cli_tokens").delete().eq("user_id", userId);
+    if (error) console.error("auth/signOutEverywhere tokens", error);
+  }
   const { error } = await supabase.auth.signOut({ scope: "global" });
   if (error) console.error("auth/signOutEverywhere", error);
   redirect("/");
