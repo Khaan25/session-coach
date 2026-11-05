@@ -56,8 +56,8 @@ const loop = [
   {
     step: "4",
     icon: ShieldCheckIcon,
-    title: "Defend it, then own it",
-    body: "Defend a card you've explained: 3 minutes to answer, then one follow-up question in 2. A mastered card counts as owned, and your dashboard shows how much of each project you own.",
+    title: "Own it, and defend it any time",
+    body: "Passing the last review masters a card, and a mastered card counts as owned: your dashboard shows how much of each project you own. To test yourself harder, defend any card you've explained: 3 minutes to answer, then one follow-up question in 2.",
   },
 ] as const;
 

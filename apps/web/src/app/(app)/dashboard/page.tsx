@@ -62,7 +62,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
     <Container>
       <AppPageHeader
         title="Dashboard"
-        description="Your agent’s decisions, project by project. Explain them, defend them, own them."
+        description="Your agent’s decisions, project by project. Explain them until you own them, and defend them any time."
       />
       <ProjectSetup />
       <Suspense fallback={null}>

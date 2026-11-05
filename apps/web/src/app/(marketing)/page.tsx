@@ -27,7 +27,7 @@ const jsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Web",
   description:
-    "Session Coach tracks the decisions your Claude Code agent makes, project by project. Explain each one in your own words after 1 day, then 3, then 7, defend it, and own it.",
+    "Session Coach tracks the decisions your Claude Code agent makes, project by project. Explain each one in your own words after 1 day, then 3, then 7 until you own it, and defend it whenever you like.",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
@@ -67,8 +67,8 @@ export default function Home() {
 
           <p className="mt-8 max-w-lg type-body-lg text-pretty text-text-2 sm:mt-10">
             Each Claude Code session becomes up to 5 decision cards, filed by project. Explain each
-            decision in your own words, defend it against a follow-up, and keep it until it&rsquo;s
-            yours.
+            decision in your own words until it&rsquo;s yours, and defend it against a follow-up
+            whenever you like.
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3">

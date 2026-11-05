@@ -40,7 +40,7 @@ const skeletonTheme = {
 } as const;
 
 const description =
-  "Own the code your agent writes. Each Claude Code session becomes up to 5 decision cards, filed by project: explain each one in your own words after 1 day, then 3, then 7, defend it, and keep it until it's yours.";
+  "Own the code your agent writes. Each Claude Code session becomes up to 5 decision cards, filed by project: explain each one in your own words after 1 day, then 3, then 7 until it's yours, and defend it whenever you like.";
 
 // metadataBase makes the opengraph-image and canonical paths absolute; pages override title and description.
 export const metadata: Metadata = {
