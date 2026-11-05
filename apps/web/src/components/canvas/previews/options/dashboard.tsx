@@ -104,7 +104,7 @@ const DECISION_CARD =
 const ANSWER_FIRST =
   "You explain it before you see the why. Pulling it from memory is what makes it stick; reading it first only feels like learning.";
 const SCHEDULE =
-  "Each answer scores 0 (missed), 1 (partly) or 2 (explained). A 2 brings the card back on day 4, then day 11; below 2, it steps down one and comes back tomorrow. At most 5 cards a day.";
+  "Each answer scores 0 (missed), 1 (partly) or 2 (explained). A 2 brings the card back on day 1, then day 4, then day 11; below 2, it steps down one and comes back tomorrow. At most 5 cards a day.";
 const OWNERSHIP =
   "Explained means you got it right once. Owned means you still could on day 11, without looking.";
 const DEFEND =
@@ -278,7 +278,7 @@ export function DashboardHomeOptionA() {
       ),
     },
     {
-      title: "Bring them back on day 4 and day 11",
+      title: "Bring them back on days 1, 4 and 11",
       state: "later",
       body: SCHEDULE,
       extra: <ScheduleLadder />,
@@ -352,7 +352,7 @@ export function DashboardHomeOptionAEmpty() {
       extra: <p className="type-body-sm text-text-2">{ANSWER_FIRST}</p>,
     },
     {
-      title: "Bring them back on day 4 and day 11",
+      title: "Bring them back on days 1, 4 and 11",
       state: "later",
       body: SCHEDULE,
       extra: <ScheduleLadder />,

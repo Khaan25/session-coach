@@ -129,9 +129,9 @@ const SCORES: Score[] = [2, 1, 0];
 const ANSWERED = SCORES.reduce<number>((sum, score) => sum + SCORE_MIX[score], 0);
 
 const BY_SESSION = [
-  { id: FRAME_SESSIONS[0].id, title: FRAME_SESSIONS[0].title, owned: 3, total: 4 },
-  { id: FRAME_SESSIONS[1].id, title: FRAME_SESSIONS[1].title, owned: 2, total: 5 },
-  { id: FRAME_SESSIONS[3].id, title: FRAME_SESSIONS[3].title, owned: 1, total: 3 },
+  // Only ready sessions have cards; these add up to TOTAL (39) and OWNED (17).
+  { id: FRAME_SESSIONS[0].id, title: FRAME_SESSIONS[0].title, owned: 10, total: 22 },
+  { id: FRAME_SESSIONS[3].id, title: FRAME_SESSIONS[3].title, owned: 7, total: 17 },
 ];
 
 const pct = (n: number, of: number) => Math.round((n / of) * 100);

@@ -6,6 +6,7 @@
 
 import { CheckCircleIcon, CircleIcon, LaptopIcon, LockSimpleIcon } from "@phosphor-icons/react";
 import Link from "next/link";
+import { useId } from "react";
 
 import { Container } from "@/components/app/container";
 import { EmptyState } from "@/components/app/empty-state";
@@ -79,6 +80,8 @@ const STATE_BADGE: Record<StepState, React.ReactNode> = {
 
 /** A decision card's question face: what the agent decided, the question, an answer box, and the why still locked. */
 function SampleCardFace() {
+  // Three options render this face in one canvas row, so the field id must be unique per instance.
+  const answerId = useId();
   return (
     <div className="frame flex flex-col gap-3 bg-page p-4">
       <div className="flex items-center justify-between gap-3">
@@ -90,9 +93,9 @@ function SampleCardFace() {
       <p className="type-label text-text-2">{SAMPLE.decision}</p>
       <p className="type-heading-sm text-text-1">{SAMPLE.question}</p>
       <Field>
-        <FieldLabel htmlFor="options-onboarding-sample-answer">Your answer</FieldLabel>
+        <FieldLabel htmlFor={answerId}>Your answer</FieldLabel>
         <Textarea
-          id="options-onboarding-sample-answer"
+          id={answerId}
           disabled
           placeholder="In your own words, why did the agent do it this way?"
         />

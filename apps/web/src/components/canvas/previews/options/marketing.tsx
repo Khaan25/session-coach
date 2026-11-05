@@ -306,7 +306,7 @@ const FIRST_STEPS = [
     title: "Send a session",
     command: PUSH,
     body: "Your latest Claude Code session becomes up to 5 decision cards, filed under its project.",
-    more: "A decision card is one choice your agent made, a question about it, and a quote from the session that shows it happened. Secrets are removed on your laptop first.",
+    more: "A decision card is one choice your agent made, a question about it, and a quote from the session that shows it happened. The CLI removes secrets it recognises on your laptop first; it can miss some.",
   },
   {
     title: "Answer before you see the why",
@@ -493,7 +493,7 @@ const PIPELINE: {
   {
     icon: CloudArrowUpIcon,
     title: "Send a session",
-    summary: "Secrets removed first",
+    summary: "Known secret shapes removed first",
     body: "push --latest sends your latest session. Opt a project in and a SessionStart hook runs sync for you. The CLI tries to remove secrets on your laptop, then uploads. Logs over 50 MB are refused, and no session is taken twice.",
     example: <Terminal lines={[`$ ${PUSH}`, "Sent. Making cards."]} />,
   },
@@ -1106,7 +1106,8 @@ const STATUSES: { label: string; badge: BadgeProps; means: string; next: string 
   {
     label: "Cards ready",
     badge: { variant: "success" },
-    means: "Cards passed the quote check and are on your dashboard.",
+    means:
+      "Every quote was checked against the session. Cards are on your dashboard; one whose quote didn't match is flagged.",
     next: "Answer them on their review day: 1, 4 or 11.",
   },
   {
