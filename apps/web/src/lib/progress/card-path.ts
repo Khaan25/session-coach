@@ -103,6 +103,10 @@ export function cardPath({
   if (review.mastered || !review.due_on) return { decision, session, stops, next: null };
   const step = Math.min(Math.max(review.step, 1), 3);
   const back = STEP_NAMES[Math.max(step - 1, 1)].toLowerCase();
+  const dueToday = review.due_on <= today;
+  // Due today, it reads as the task: now and tomorrow. Later, as a plan: then and the day after.
+  const when = dueToday ? "now" : "then";
+  const after = dueToday ? "tomorrow" : "the next day";
   return {
     decision,
     session,
@@ -112,9 +116,9 @@ export function cardPath({
       what: REVIEW_NAMES[step],
       outcome:
         step === 3
-          ? `Explain it then and you own it. Partly or Missed sends it back to ${back}, due the next day.`
-          : `Explain it then and it moves up. Partly or Missed sends it back to ${back}, due the next day.`,
-      dueToday: review.due_on <= today,
+          ? `Explain it ${when} and it becomes owned. Partly or Missed sends it back to ${back}, due ${after}.`
+          : `Explain it ${when} and it moves up. Partly or Missed sends it back to ${back}, due ${after}.`,
+      dueToday,
     },
   };
 }

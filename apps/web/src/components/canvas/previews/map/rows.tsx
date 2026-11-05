@@ -24,10 +24,8 @@ import { DashboardHomeOptionB, DashboardHomeOptionBEmpty } from "../options/dash
 import { DefendOptionC } from "../options/defend";
 import { MarketingHowItWorksOptionB, MarketingPricingOptionC } from "../options/marketing";
 import { OnboardingCliApproveOptionC } from "../options/onboarding";
-import {
-  ProgressSettingsProgressOptionC,
-  ProgressSettingsSettingsOptionA,
-} from "../options/progress-settings";
+import { ProgressSettingsProgressOptionC } from "../options/progress";
+import { ProgressSettingsSettingsOptionA } from "../options/progress-settings";
 import {
   CanvasQuiz,
   CanvasQuizAnswer,
@@ -355,6 +353,9 @@ const routeRows: Entry[][] = [
   ],
   [
     page("/progress", "with data", () => <ProgressSettingsProgressOptionC />),
+    page("/progress", "one project", () => (
+      <ProgressSettingsProgressOptionC repo="session-coach" />
+    )),
     page("/progress", "no reviews yet", () => <MapProgressEmpty state="no-reviews" />),
     page("/progress", "no cards yet", () => <MapProgressEmpty state="no-cards" />),
     page("/progress", "error", () => <MapProgressEmpty state="error" />),

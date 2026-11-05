@@ -32,7 +32,7 @@ test("replays each answer through the schedule: day 1, 4, then 11", () => {
     date: "Today",
     what: "Day 11 review",
     outcome:
-      "Explain it then and you own it. Partly or Missed sends it back to day 4, due the next day.",
+      "Explain it now and it becomes owned. Partly or Missed sends it back to day 4, due tomorrow.",
     dueToday: true,
   });
 });

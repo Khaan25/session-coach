@@ -9,12 +9,10 @@ import SessionNotFound from "@/app/(app)/s/[id]/not-found";
 import { Container } from "@/components/app/container";
 import { NoCardsYetEmpty, NoReviewsEmpty } from "@/components/app/empty-state";
 import { LoadFailedState, OfflineState } from "@/components/app/error-state";
+import { ProgressEmpty } from "@/components/progress/progress-view";
 import { Button } from "@/components/ui/button";
 
 import { AppFrame } from "../frames";
-import { MapAppPage } from "./parts";
-
-const PROGRESS_DESCRIPTION = "What to do today, and how a card becomes yours.";
 
 /** A page's error boundary (LoadErrorState): load failed, or offline when the browser has no connection. */
 function LoadError({ noun, offline }: { noun: string; offline?: boolean }) {
@@ -73,10 +71,14 @@ export function MapCardNotFound() {
 
 export function MapProgressEmpty({ state }: { state: "no-cards" | "no-reviews" | "error" }) {
   return (
-    <MapAppPage path="/progress" title="Progress" description={PROGRESS_DESCRIPTION} dueCount={0}>
-      {state === "no-cards" && <NoCardsYetEmpty />}
-      {state === "no-reviews" && <NoReviewsEmpty />}
-      {state === "error" && <LoadError noun="your progress" />}
-    </MapAppPage>
+    <AppFrame path="/progress" dueCount={0}>
+      {state === "error" ? (
+        <Container>
+          <LoadError noun="your progress" />
+        </Container>
+      ) : (
+        <ProgressEmpty empty={state === "no-cards" ? <NoCardsYetEmpty /> : <NoReviewsEmpty />} />
+      )}
+    </AppFrame>
   );
 }

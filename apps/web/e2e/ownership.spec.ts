@@ -88,9 +88,7 @@ test("the dashboard shows ownership per repo and filters sessions by project", a
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
-  await expect(
-    page.getByRole("heading", { name: "Explained 1 · owned 1 of 3 decisions" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Explained 1 · owned 1 of 3" })).toBeVisible();
   await expect(page.getByText("Explained 1 · owned 1 of 2", { exact: true })).toBeVisible();
   await expect(page.getByText("Explained 0 · owned 0 of 1", { exact: true })).toBeVisible();
 

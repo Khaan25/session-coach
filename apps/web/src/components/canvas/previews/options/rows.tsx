@@ -19,10 +19,8 @@ import { DashboardHomeOptionB, DashboardHomeOptionBEmpty } from "./dashboard";
 import { CanvasSession } from "./session";
 import { CanvasQuiz, CanvasReviewQueue } from "./review";
 import { DefendOptionC } from "./defend";
-import {
-  ProgressSettingsProgressOptionC,
-  ProgressSettingsSettingsOptionA,
-} from "./progress-settings";
+import { ProgressSettingsProgressOptionC } from "./progress";
+import { ProgressSettingsSettingsOptionA } from "./progress-settings";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
 
