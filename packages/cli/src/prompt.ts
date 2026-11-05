@@ -68,3 +68,19 @@ export function promptHidden(question: string): Promise<string> {
     input.on("data", onData);
   });
 }
+
+/** Asks one question and reads one line, echoed as typed. Resolves "" when input ends (Ctrl-D, closed pipe). */
+export function promptLine(question: string): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    let answered = false;
+    rl.question(question, (answer) => {
+      answered = true;
+      rl.close();
+      resolve(answer);
+    });
+    rl.once("close", () => {
+      if (!answered) resolve("");
+    });
+  });
+}
