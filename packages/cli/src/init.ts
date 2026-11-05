@@ -2,10 +2,17 @@
 // `.claude/settings.local.json`, Claude Code's personal, uncommitted settings file. `addSyncHooks` is pure, so
 // node --test covers the merge.
 
+import { execFile } from "node:child_process";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 
-/** The two hooks: SessionEnd uploads a session as it ends; SessionStart catches up on any that one missed. */
+/**
+ * The two hooks: SessionEnd uploads a session as it ends; SessionStart catches up on any that one missed.
+ * SessionEnd isn't async: `claude -p` kills async hooks still running at teardown, which can land before `sync` has
+ * started its detached copy. Claude Code waits only for that handoff; `timeout` raises the SessionEnd budget (1.5 s by
+ * default) so a slow `npx` start isn't cut off.
+ */
 export function syncHooks(version: string) {
   const command = `npx --yes session-coach@${version} sync`;
   return {
@@ -13,7 +20,7 @@ export function syncHooks(version: string) {
       matcher: "startup|resume|clear",
       hooks: [{ type: "command", command, async: true }],
     },
-    SessionEnd: { hooks: [{ type: "command", command, async: true }] },
+    SessionEnd: { hooks: [{ type: "command", command, timeout: 30 }] },
   };
 }
 
@@ -88,8 +95,24 @@ async function readSettings(path: string): Promise<Record<string, unknown> | { e
   };
 }
 
+const SETTINGS_LOCAL = ".claude/settings.local.json";
+
 /**
- * Adds the hooks to `<cwd>/.claude/settings.local.json`.
+ * Whether git ignores `.claude/settings.local.json` in `cwd`: true or false in a git repo, null outside one or
+ * without git, where there is nothing to commit it to.
+ */
+export async function settingsLocalIgnored(cwd: string): Promise<boolean | null> {
+  try {
+    await promisify(execFile)("git", ["check-ignore", "-q", SETTINGS_LOCAL], { cwd });
+    return true;
+  } catch (err) {
+    // check-ignore exits 1 for a path that isn't ignored and 128 outside a repo; ENOENT means no git.
+    return (err as { code?: unknown }).code === 1 ? false : null;
+  }
+}
+
+/**
+ * Adds the hooks to `<cwd>/.claude/settings.local.json`, and warns when git would commit that file.
  *
  * @returns What to print and the exit code.
  */
@@ -114,6 +137,12 @@ export async function runInit(
     `Added the session-coach hooks to ${path} (your personal settings; keep it out of git).`,
     "Each session in this project now uploads when it ends. Run session-coach init in other projects to add them.",
   ];
+  if ((await settingsLocalIgnored(cwd)) === false) {
+    lines.push(
+      `Warning: git doesn't ignore ${SETTINGS_LOCAL} in this project, so it could be committed and the hooks would run for teammates. Add this line to .gitignore:`,
+      SETTINGS_LOCAL,
+    );
+  }
   const shared = await readSettings(join(cwd, ".claude", "settings.json"));
   if (!("error" in shared) && hasSyncHook(shared)) {
     lines.push(

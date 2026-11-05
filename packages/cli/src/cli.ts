@@ -247,7 +247,7 @@ async function init(args: string[]): Promise<number> {
   console.log(
     [
       "Two hooks in this project's .claude/settings.local.json (your personal settings, kept out of git) run `session-coach sync`:",
-      "SessionEnd uploads a session as it ends; SessionStart catches up on any it missed. Both print nothing and never hold Claude Code up.",
+      "SessionEnd uploads a session as it ends; SessionStart catches up on any it missed. Both print nothing; SessionEnd holds Claude Code's exit only while it hands off the upload, a second or two.",
       "Secrets are removed on your laptop before upload, as best it can; only turn this on for projects you're happy to send.",
     ].join("\n"),
   );

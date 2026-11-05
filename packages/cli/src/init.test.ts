@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
+import { promisify } from "node:util";
 
 import {
   addSyncHooks,
@@ -10,6 +12,7 @@ import {
   parseInitArgs,
   parseYesNo,
   runInit,
+  settingsLocalIgnored,
   syncHooks,
 } from "./init.ts";
 
@@ -67,6 +70,30 @@ describe("runInit", () => {
       assert.equal(bad.exitCode, 1);
       assert.equal(await readFile(path, "utf8"), "not json");
     } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when git would commit settings.local.json, and not once it is ignored", async () => {
+    const cwd = await mkdtemp(join(tmpdir(), "sc-init-git-"));
+    // The machine's own git config may already ignore the file globally; leave it out.
+    const saved = { ...process.env };
+    Object.assign(process.env, {
+      GIT_CONFIG_GLOBAL: "/dev/null",
+      GIT_CONFIG_NOSYSTEM: "1",
+      XDG_CONFIG_HOME: cwd,
+    });
+    try {
+      assert.equal(await settingsLocalIgnored(cwd), null);
+      await promisify(execFile)("git", ["init", "-q"], { cwd });
+      assert.equal(await settingsLocalIgnored(cwd), false);
+      assert.match((await runInit(cwd, "0.4.0")).message, /Warning: git doesn't ignore/);
+
+      await writeFile(join(cwd, ".gitignore"), ".claude/settings.local.json\n");
+      assert.equal(await settingsLocalIgnored(cwd), true);
+      assert.doesNotMatch((await runInit(cwd, "0.4.0")).message, /Warning/);
+    } finally {
+      process.env = saved;
       await rm(cwd, { recursive: true, force: true });
     }
   });

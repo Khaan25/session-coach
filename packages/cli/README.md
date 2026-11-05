@@ -60,7 +60,7 @@ pnpm --filter session-coach start sync
 
 **Opt-in, best-effort redaction, Windows untested.** `sync` uploads logs without you looking at them first. Redaction runs on your machine, but it is best-effort and misses some secrets (see the known gaps in `docs/DECISIONS.md`). Add the hook only to projects whose sessions you are happy to upload. Windows paths and the Windows hook shell have not been tested; don't rely on `sync` there.
 
-Run `npx session-coach login` once, then `npx session-coach init` in each project folder. `init` adds these hooks to the project's `.claude/settings.local.json` (your personal settings, not committed, so teammates don't run them), keeping everything else in the file and replacing any older session-coach hook:
+Run `npx session-coach login` once, then `npx session-coach init` in each project folder. `init` adds these hooks to the project's `.claude/settings.local.json` (your personal settings, not committed, so teammates don't run them), keeping everything else in the file and replacing any older session-coach hook. If the project is a git repo that doesn't ignore that file, `init` warns and prints the line to add to `.gitignore`; it never edits `.gitignore` itself:
 
 ```json
 {
@@ -76,7 +76,7 @@ Run `npx session-coach login` once, then `npx session-coach init` in each projec
     "SessionEnd": [
       {
         "hooks": [
-          { "type": "command", "command": "npx --yes session-coach@0.4.0 sync", "async": true }
+          { "type": "command", "command": "npx --yes session-coach@0.4.0 sync", "timeout": 30 }
         ]
       }
     ]
@@ -86,7 +86,7 @@ Run `npx session-coach login` once, then `npx session-coach init` in each projec
 
 The version is the one `init` ran as, pinned so the hook doesn't run whatever is newest on npm at every session start. Run a newer `init` on purpose to move it.
 
-**When a session ends**, `sync` starts a detached copy of itself and returns at once, because Claude Code may be quitting. The copy uploads the session that ended, with the same `cwd` check, unless it was already sent.
+**When a session ends**, `sync` starts a detached copy of itself and returns at once, because Claude Code may be quitting. The copy uploads the session that ended, with the same `cwd` check, unless it was already sent. The SessionEnd hook is not `async`: `claude -p` kills async hooks still running at teardown, which could stop `sync` before it starts the copy. Claude Code waits only for that handoff, usually a second or two for `npx` to start; `timeout: 30` raises the SessionEnd budget from its 1.5 s default so a slow start isn't cut off.
 
 What it does on each start:
 
@@ -94,7 +94,7 @@ What it does on each start:
 - Skips the session that is starting, logs last modified more than 7 days ago, and logs modified in the last 5 minutes (they may still be written to; they are picked up on a later start).
 - Skips sessions it has already dealt with (see below), then uploads up to 1 finished session per start, newest first, exactly like `push`, redaction included. The rest follow on the next starts.
 - A session the server already has (ready or processing) is skipped quietly. A session the server started but never got the log for is uploaded again.
-- Gives up after 180 seconds, longer than the 120 s upload timeout plus two 15 s API calls. `async: true` means Claude Code doesn't wait for it, and the hooks docs say `timeout` isn't enforced on an async hook, which is why `sync` has its own limit.
+- Gives up after 180 seconds, longer than the 120 s upload timeout plus two 15 s API calls. The SessionStart hook is `async: true`, so Claude Code doesn't wait for it, and the hooks docs say `timeout` isn't enforced on an async hook, which is why `sync` has its own limit.
 
 **It prints nothing and always exits 0.** A hook's stdout goes into Claude's context, so `sync` writes nothing to stdout or stderr. Not signed in, offline, a refused token, the rate limit and server errors all end the run quietly. Look in `~/.session-coach/sync.log` for a one-line summary per run and for what went wrong. A start with nothing to upload writes no line, so the log doesn't grow on every session.
 
