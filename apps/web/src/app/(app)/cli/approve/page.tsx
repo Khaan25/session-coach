@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { Container } from "@/components/app/container";
 import { ErrorState } from "@/components/app/error-state";
-import { AppPageHeader } from "@/components/app/page-header";
-import { ApproveRequest } from "@/components/cli/approve-request";
+import { ApproveHeader, ApproveRequest } from "@/components/cli/approve-request";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -25,53 +23,53 @@ export const metadata: Metadata = { title: "Connect the CLI", robots: { index: f
  */
 export default function CliApprovePage({ searchParams }: PageProps<"/cli/approve">) {
   return (
-    <Container>
-      <AppPageHeader
-        title="Connect the CLI"
-        description="Check the code matches the one in your terminal, then approve."
-      />
+    // One narrow column, centred: the page asks a single question.
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-8 px-(--gutter-sm) py-12 sm:px-(--gutter)">
       <Suspense fallback={<Spinner label="Loading the login request" />}>
         <Request searchParams={searchParams} />
       </Suspense>
-    </Container>
+    </div>
   );
 }
 
 /** The code form: a plain GET back to this page, so it works before any JavaScript loads. */
 function CodeForm({ code, error }: { code?: string; error?: string }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2>Enter the code from your terminal</h2>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form action="/cli/approve" className="flex flex-col gap-4">
-          <Field data-invalid={error ? true : undefined}>
-            <FieldLabel htmlFor="cli-code">Code</FieldLabel>
-            <Input
-              id="cli-code"
-              name="code"
-              defaultValue={code}
-              placeholder="XXXX-XXXX"
-              autoComplete="off"
-              autoCapitalize="characters"
-              spellCheck={false}
-              maxLength={9}
-              aria-invalid={error ? true : undefined}
-              required
-            />
-            <FieldDescription>
-              {error ?? "session-coach login prints it, like WDJB-MJHT."}
-            </FieldDescription>
-          </Field>
-          <div>
-            <Button type="submit">Continue</Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+    <>
+      <ApproveHeader />
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Enter the code from your terminal</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action="/cli/approve" className="flex flex-col gap-4">
+            <Field data-invalid={error ? true : undefined}>
+              <FieldLabel htmlFor="cli-code">Code</FieldLabel>
+              <Input
+                id="cli-code"
+                name="code"
+                defaultValue={code}
+                placeholder="XXXX-XXXX"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                maxLength={9}
+                aria-invalid={error ? true : undefined}
+                required
+              />
+              <FieldDescription>
+                {error ?? "session-coach login prints it, like WDJB-MJHT."}
+              </FieldDescription>
+            </Field>
+            <div>
+              <Button type="submit">Continue</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
@@ -91,36 +89,42 @@ async function Request({ searchParams }: Pick<PageProps<"/cli/approve">, "search
   const limited = await userRateLimit("deviceDecide", user.id);
   if (limited) {
     return (
-      <Card>
-        <ErrorState
-          variant="plain"
-          status="warn"
-          statusWord="Slow down"
-          title="Too many codes"
-          message={limited.message}
-        />
-      </Card>
+      <>
+        <ApproveHeader />
+        <Card>
+          <ErrorState
+            variant="plain"
+            status="warn"
+            statusWord="Slow down"
+            title="Too many codes"
+            message={limited.message}
+          />
+        </Card>
+      </>
     );
   }
 
   const loaded = await load(userCode);
   if (!loaded) {
     return (
-      <Card>
-        <ErrorState
-          variant="plain"
-          title="Couldn't look up that code"
-          message="Reload the page to try again."
-          action={
-            <Link
-              href={`/cli/approve?code=${formatUserCode(userCode)}`}
-              className={buttonVariants({ variant: "secondary" })}
-            >
-              Try again
-            </Link>
-          }
-        />
-      </Card>
+      <>
+        <ApproveHeader />
+        <Card>
+          <ErrorState
+            variant="plain"
+            title="Couldn't look up that code"
+            message="Reload the page to try again."
+            action={
+              <Link
+                href={`/cli/approve?code=${formatUserCode(userCode)}`}
+                className={buttonVariants({ variant: "secondary" })}
+              >
+                Try again
+              </Link>
+            }
+          />
+        </Card>
+      </>
     );
   }
 
@@ -160,15 +164,18 @@ async function Request({ searchParams }: Pick<PageProps<"/cli/approve">, "search
       },
     }[state];
     return (
-      <Card>
-        <ErrorState
-          variant="plain"
-          status="warn"
-          statusWord={copy.word}
-          title={copy.title}
-          message={copy.message}
-        />
-      </Card>
+      <>
+        <ApproveHeader />
+        <Card>
+          <ErrorState
+            variant="plain"
+            status="warn"
+            statusWord={copy.word}
+            title={copy.title}
+            message={copy.message}
+          />
+        </Card>
+      </>
     );
   }
 
