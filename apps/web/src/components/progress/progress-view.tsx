@@ -6,6 +6,7 @@ import { AppPageHeader } from "@/components/app/page-header";
 import { ProjectTabs } from "@/components/app/project-tabs";
 import { ScoreBadge } from "@/components/app/score-badge";
 import { AnswersChart } from "@/components/progress/answers-chart";
+import { ExplainedOwnedBars } from "@/components/progress/explained-owned-bars";
 import { OwnershipMeter } from "@/components/progress/ownership-meter";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -27,10 +28,9 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { Stat, StatDescription, StatGroup, StatLabel, StatValue } from "@/components/ui/stat";
 import type { CardPath } from "@/lib/progress/card-path";
-import type { Ownership, OwnershipCount } from "@/lib/progress/ownership";
+import type { Ownership } from "@/lib/progress/ownership";
 import {
   REVIEW_STEPS,
   stepLabels,
@@ -71,8 +71,6 @@ export type ProgressPageData = {
 /** The page's URL for one project, or for every project. */
 export const progressHref = (repo: string | null) =>
   repo ? `/progress?${new URLSearchParams({ repo })}` : "/progress";
-
-const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0);
 
 /** Progress with nothing to count yet: the header, then the empty state that says what to do. */
 export function ProgressEmpty({ empty }: { empty: React.ReactNode }) {
@@ -181,33 +179,6 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
         body
       )}
     </Container>
-  );
-}
-
-/** Explained and owned as two bars, each with its definition under it. */
-function ExplainedOwnedBars({ counts }: { counts: OwnershipCount }) {
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <Progress value={pct(counts.explained, counts.total)}>
-          <ProgressLabel>Explained</ProgressLabel>
-          <ProgressValue>{() => `${counts.explained} of ${counts.total}`}</ProgressValue>
-        </Progress>
-        <p className="type-body-sm text-text-2">
-          You answered it in your own words and the grader scored it Explained, at least once.
-        </p>
-      </div>
-      <div className="flex flex-col gap-1">
-        <Progress value={pct(counts.owned, counts.total)}>
-          <ProgressLabel>Owned</ProgressLabel>
-          <ProgressValue>{() => `${counts.owned} of ${counts.total}`}</ProgressValue>
-        </Progress>
-        <p className="type-body-sm text-text-2">
-          You still explained it on day 11, after three spaced reviews. That is the goal for every
-          card.
-        </p>
-      </div>
-    </div>
   );
 }
 
