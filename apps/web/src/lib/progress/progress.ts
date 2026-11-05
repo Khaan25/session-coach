@@ -14,7 +14,7 @@ export const stepLabels: Record<ReviewStep, string> = {
   "day-1": "Day 1",
   "day-4": "Day 4",
   "day-11": "Day 11",
-  mastered: "Mastered",
+  mastered: "Owned",
 };
 
 /** The steps in schedule order; index n is `reviews.step` n, so `REVIEW_STEPS[step]` maps a row to its step. */
