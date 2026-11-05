@@ -16,13 +16,8 @@ import {
 } from "./auth";
 import { OnboardingCliApproveOptionC } from "./onboarding";
 import { DashboardHomeOptionB, DashboardHomeOptionBEmpty } from "./dashboard";
-import {
-  SessionFailedOptionB,
-  SessionNoCardsOptionB,
-  SessionProcessingOptionB,
-  SessionReadyOptionB,
-} from "./session";
-import { ReviewCardOptionB, ReviewQueueOptionB } from "./review";
+import { CanvasSession } from "./session";
+import { CanvasQuiz, CanvasReviewQueue } from "./review";
 import { DefendOptionC } from "./defend";
 import {
   ProgressSettingsProgressOptionC,
@@ -129,52 +124,53 @@ export const optionRows: Entry[][] = [
       render: () => <DashboardHomeOptionBEmpty />,
     },
   ],
+  // /s/[id] and /review: option B was dropped after #76; these are the real pages.
   [
     {
-      id: "opt-session-b-processing",
-      name: "Option · Session · B · Explain as you go · Processing",
+      id: "opt-session-processing",
+      name: "Session · processing",
       width: 1440,
       height: 900,
-      render: () => <SessionProcessingOptionB />,
+      render: () => <CanvasSession status="processing" />,
     },
     {
-      id: "opt-session-b-ready",
-      name: "Option · Session · B · Explain as you go · Ready",
+      id: "opt-session-ready",
+      name: "Session · ready",
       width: 1440,
       height: 900,
-      render: () => <SessionReadyOptionB />,
+      render: () => <CanvasSession status="ready" />,
     },
     {
-      id: "opt-session-b-failed",
-      name: "Option · Session · B · Explain as you go · Failed",
+      id: "opt-session-failed",
+      name: "Session · failed",
       width: 1440,
       height: 900,
-      render: () => <SessionFailedOptionB />,
+      render: () => <CanvasSession status="failed" />,
     },
     {
-      id: "opt-session-b-no-cards",
-      name: "Option · Session · B · Explain as you go · No cards",
+      id: "opt-session-no-cards",
+      name: "Session · no cards",
       width: 1440,
       height: 900,
-      render: () => <SessionNoCardsOptionB />,
+      render: () => <CanvasSession status="ready" noCards />,
     },
   ],
   [
     {
-      id: "opt-review-queue-b",
-      name: "Option · Review queue · B · Split explain-as-you-go",
+      id: "opt-review-queue",
+      name: "Review · queue",
       width: 1440,
       height: 900,
-      render: () => <ReviewQueueOptionB />,
+      render: () => <CanvasReviewQueue />,
     },
   ],
   [
     {
-      id: "opt-review-card-b",
-      name: "Option · Review card · B · Split explain-as-you-go",
+      id: "opt-review-card",
+      name: "Review · card",
       width: 1440,
       height: 900,
-      render: () => <ReviewCardOptionB />,
+      render: () => <CanvasQuiz />,
     },
   ],
   [

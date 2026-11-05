@@ -6,10 +6,10 @@
 // under app/(app)/. Synthetic data only; no answer key is shown.
 
 import { ArrowRightIcon } from "@phosphor-icons/react";
-import type { QuestionLevel } from "@session-coach/shared/project";
 import Link from "next/link";
-import { useState } from "react";
 
+import CardNotFound from "@/app/(app)/review/[cardId]/not-found";
+import SessionNotFound from "@/app/(app)/s/[id]/not-found";
 import { Container } from "@/components/app/container";
 import {
   AllCaughtUpEmpty,
@@ -19,7 +19,6 @@ import {
 } from "@/components/app/empty-state";
 import { LoadFailedState, NotFoundState, OfflineState } from "@/components/app/error-state";
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
-import { LevelPicker } from "@/components/projects/level-picker";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -34,8 +33,6 @@ import { DataList, DataListItem, DataListLabel, DataListValue } from "@/componen
 import { AppFrame, FRAME_SESSIONS } from "../frames";
 import { MapAppPage } from "./parts";
 
-const REVIEW_DESCRIPTION =
-  "Explain each decision back in your own words. Pick a card to see where it is and what your answer will do to it.";
 const PROGRESS_DESCRIPTION = "What to do today, and how a card becomes yours.";
 
 /** A page's error boundary (LoadErrorState): load failed, or offline when the browser has no connection. */
@@ -61,73 +58,32 @@ export function MapDashboardError({ offline }: { offline?: boolean }) {
   );
 }
 
-/**
- * ProjectSetupCard: a new repo's first-time question, above the dashboard. Save keeps the level, Not now keeps simple;
- * either way the card goes and the level can change in Settings. The real card saves through a Server Action.
- */
-export function MapProjectSetupCard({ repo }: { repo: string }) {
-  const [level, setLevel] = useState<QuestionLevel>("simple");
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2>Set up {repo}: how hard should questions be?</h2>
-        </CardTitle>
-        <CardDescription>
-          Applies to new sessions from this repo. You can change it in Settings.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <LevelPicker label="Question level" value={level} onValueChange={setLevel} />
-      </CardContent>
-      <CardFooter>
-        <Button>Save</Button>
-        <Button variant="ghost">Not now</Button>
-      </CardFooter>
-    </Card>
-  );
-}
-
 // ---------------------------------------------------------------------------------------------------------------------
-// /s/[id]
+// /s/[id] and /review: the real not-found pages and the review's error boundary.
 
 export function MapSessionNotFound() {
   return (
-    <MapAppPage path="/s/5e0c71aa" title="Session">
-      <NotFoundState />
-    </MapAppPage>
+    <AppFrame path="/s/5e0c71aa">
+      <SessionNotFound />
+    </AppFrame>
   );
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
-// /review
-
-export type ReviewEmpty = "done" | "caught-up" | "no-cards" | "on-the-way" | "error";
-
-export function MapReviewEmpty({ state }: { state: ReviewEmpty }) {
+export function MapReviewError() {
   return (
-    <MapAppPage path="/review" title="Review" description={REVIEW_DESCRIPTION} dueCount={0}>
-      {state === "done" && <DoneForTodayEmpty cap={5} />}
-      {state === "caught-up" && <AllCaughtUpEmpty next="tomorrow" />}
-      {state === "no-cards" && <NoCardsYetEmpty />}
-      {state === "on-the-way" && <NoCardsYetEmpty cardless={{ reason: "processing" }} />}
-      {state === "error" && <LoadError noun="your review" />}
-    </MapAppPage>
+    <AppFrame path="/review" dueCount={0}>
+      <Container>
+        <LoadError noun="your review" />
+      </Container>
+    </AppFrame>
   );
 }
 
 export function MapCardNotFound() {
   return (
-    <MapAppPage path="/review/9b1f02cd" title="Explain it back">
-      <NotFoundState
-        noun="Card"
-        action={
-          <Link href="/review" className={buttonVariants({ variant: "secondary" })}>
-            Back to the queue
-          </Link>
-        }
-      />
-    </MapAppPage>
+    <AppFrame path="/review/9b1f02cd">
+      <CardNotFound />
+    </AppFrame>
   );
 }
 

@@ -5,6 +5,10 @@
 // render). Names read `Map · <route> · <state>`; the flow cards link to the items by id.
 
 import { AuthNotice } from "@/components/auth/auth-notice";
+import { AllCaughtUpEmpty, DoneForTodayEmpty, NoCardsYetEmpty } from "@/components/app/empty-state";
+import { ProjectSetupCard } from "@/components/projects/project-setup-card";
+import { PASTE_OFF } from "@/components/review/quiz-form";
+import { DAILY_CAP, DAILY_CAP_MESSAGE } from "@/lib/review/today";
 
 import type { CanvasItem } from "../../canvas";
 import { DeleteAccountOpen, EmailPreview, FlowPreview } from "../more";
@@ -24,13 +28,13 @@ import {
   ProgressSettingsProgressOptionC,
   ProgressSettingsSettingsOptionA,
 } from "../options/progress-settings";
-import { ReviewCardOptionB, ReviewQueueOptionB } from "../options/review";
 import {
-  SessionFailedOptionB,
-  SessionNoCardsOptionB,
-  SessionProcessingOptionB,
-  SessionReadyOptionB,
-} from "../options/session";
+  CanvasQuiz,
+  CanvasQuizAnswer,
+  CanvasQuizResult,
+  CanvasReviewQueue,
+} from "../options/review";
+import { CanvasSession } from "../options/session";
 import {
   MapAppErrorPage,
   MapDashboardLoading,
@@ -46,14 +50,16 @@ import {
   MapDashboardError,
   MapDefendEnding,
   MapProgressEmpty,
-  MapProjectSetupCard,
-  MapReviewEmpty,
+  MapReviewError,
   MapSessionNotFound,
 } from "./learning";
 import { CanvasToast } from "./parts";
 import { MapSetup } from "./setup";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
+
+/** Stands in for the Server Action, so a click on the canvas saves nothing. */
+const saveNothing = async () => ({ error: null });
 
 const PAGE = { width: 1440, height: 900 };
 const TERMINAL = { width: 720, height: 460 };
@@ -252,7 +258,7 @@ const routeRows: Entry[][] = [
     page("/dashboard", "full", () => <DashboardHomeOptionB />),
     page("/dashboard", "first visit", () => <DashboardHomeOptionBEmpty />),
     page("/dashboard", "new project question", () => (
-      <DashboardHomeOptionB before={<MapProjectSetupCard repo="rapporteur" />} />
+      <DashboardHomeOptionB before={<ProjectSetupCard repo="rapporteur" save={saveNothing} />} />
     )),
     page("/dashboard", "filtered by project", () => (
       <DashboardHomeOptionB initialRepo="rapporteur" />
@@ -263,80 +269,75 @@ const routeRows: Entry[][] = [
     page("/dashboard", "offline", () => <MapDashboardError offline />),
   ],
   [
-    page("/s/[id]", "queued", () => <SessionProcessingOptionB queued />),
-    page("/s/[id]", "processing", () => <SessionProcessingOptionB />),
-    page("/s/[id]", "ready", () => <SessionReadyOptionB />),
-    page("/s/[id]", "failed", () => <SessionFailedOptionB />),
-    page("/s/[id]", "no cards", () => <SessionNoCardsOptionB />),
+    page("/s/[id]", "queued", () => <CanvasSession status="pending" />),
+    page("/s/[id]", "processing", () => <CanvasSession status="processing" />),
+    page("/s/[id]", "ready", () => <CanvasSession status="ready" />),
+    page("/s/[id]", "failed", () => <CanvasSession status="failed" />),
+    page("/s/[id]", "stopped", () => <CanvasSession status="processing" stuck />),
+    page("/s/[id]", "no cards", () => <CanvasSession status="ready" noCards />),
     page("/s/[id]", "not found", () => <MapSessionNotFound />),
   ],
   [
-    page("/review", "queue", () => <ReviewQueueOptionB />),
-    page("/review", "done for today", () => <MapReviewEmpty state="done" />),
-    page("/review", "caught up", () => <MapReviewEmpty state="caught-up" />),
-    page("/review", "no cards yet", () => <MapReviewEmpty state="no-cards" />),
-    page("/review", "cards on the way", () => <MapReviewEmpty state="on-the-way" />),
-    page("/review", "error", () => <MapReviewEmpty state="error" />),
+    page("/review", "queue", () => <CanvasReviewQueue />),
+    page("/review", "done for today", () => (
+      <CanvasReviewQueue>
+        <DoneForTodayEmpty cap={DAILY_CAP} />
+      </CanvasReviewQueue>
+    )),
+    page("/review", "caught up", () => (
+      <CanvasReviewQueue>
+        <AllCaughtUpEmpty next="tomorrow" />
+      </CanvasReviewQueue>
+    )),
+    page("/review", "no cards yet", () => (
+      <CanvasReviewQueue>
+        <NoCardsYetEmpty />
+      </CanvasReviewQueue>
+    )),
+    page("/review", "cards on the way", () => (
+      <CanvasReviewQueue>
+        <NoCardsYetEmpty cardless={{ reason: "processing" }} />
+      </CanvasReviewQueue>
+    )),
+    page("/review", "error", () => <MapReviewError />),
   ],
   [
-    page("/review/[cardId]", "answering", () => <ReviewCardOptionB controls={false} />),
-    page("/review/[cardId]", "paste blocked", () => (
-      <ReviewCardOptionB controls={false} error="Paste is off here. Type it in your own words." />
-    )),
+    page("/review/[cardId]", "answering", () => <CanvasQuiz />),
+    page("/review/[cardId]", "paste blocked", () => <CanvasQuizAnswer error={PASTE_OFF} />),
     page("/review/[cardId]", "scoring", () => (
-      <ReviewCardOptionB
-        controls={false}
+      <CanvasQuizAnswer
         pending="answer"
         answer="So the client knows when it can try again."
-        overlay={<CanvasToast title="Scoring your answer" />}
+        toast={{ title: "Scoring your answer" }}
       />
     )),
-    page("/review/[cardId]", "result 2 explained", () => (
-      <ReviewCardOptionB controls={false} stage="result" score={2} />
-    )),
-    page("/review/[cardId]", "result 1 partly", () => (
-      <ReviewCardOptionB controls={false} stage="result" score={1} />
-    )),
-    page("/review/[cardId]", "result 0 missed", () => (
-      <ReviewCardOptionB controls={false} stage="result" score={0} />
-    )),
-    page("/review/[cardId]", "i don't know yet", () => (
-      <ReviewCardOptionB controls={false} stage="skipped" />
-    )),
-    page("/review/[cardId]", "last card today", () => (
-      <ReviewCardOptionB controls={false} stage="caught-up" />
-    )),
+    page("/review/[cardId]", "result 2 explained", () => <CanvasQuizResult score={2} />),
+    page("/review/[cardId]", "result 1 partly", () => <CanvasQuizResult score={1} />),
+    page("/review/[cardId]", "result 0 missed", () => <CanvasQuizResult score={0} />),
+    page("/review/[cardId]", "i don't know yet", () => <CanvasQuizResult skipped />),
+    page("/review/[cardId]", "last card today", () => <CanvasQuizResult last />),
     page("/review/[cardId]", "cap of 5 reached", () => (
-      <ReviewCardOptionB
-        controls={false}
-        answer="The CLI waits for Retry-After."
-        error="You've done 5 cards today. This one comes back tomorrow."
-      />
+      <CanvasQuizAnswer answer="The CLI waits for Retry-After." error={DAILY_CAP_MESSAGE} />
     )),
     page("/review/[cardId]", "rate limited", () => (
-      <ReviewCardOptionB
-        controls={false}
+      <CanvasQuizAnswer
         answer="The CLI waits for Retry-After."
         error="Too many answers in the last hour. Try again in 12 minutes."
-        overlay={
-          <CanvasToast
-            title="Your answer couldn't be scored"
-            description="It's still in the box. Too many answers in the last hour. Try again in 12 minutes."
-          />
-        }
+        toast={{
+          title: "Your answer couldn't be scored",
+          description:
+            "It's still in the box. Too many answers in the last hour. Try again in 12 minutes.",
+        }}
       />
     )),
     page("/review/[cardId]", "scoring failed", () => (
-      <ReviewCardOptionB
-        controls={false}
+      <CanvasQuizAnswer
         answer="The CLI waits for Retry-After."
         error="Your answer couldn't be scored. Try again."
-        overlay={
-          <CanvasToast
-            title="Your answer couldn't be scored"
-            description="It's still in the box. Your answer couldn't be scored. Try again."
-          />
-        }
+        toast={{
+          title: "Your answer couldn't be scored",
+          description: "It's still in the box. Your answer couldn't be scored. Try again.",
+        }}
       />
     )),
     page("/review/[cardId]", "card not found", () => <MapCardNotFound />),
