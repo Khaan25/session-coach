@@ -1,36 +1,17 @@
 "use client";
 
-// The learning routes' states that the picked options don't draw: a page whose data didn't load, a row that isn't
-// there, the review queue's empty reasons, Progress before any answer, and Defend it's other endings. Each reuses the
-// real empty and error presets (components/app/*-state.tsx) inside the picked page's frame. Copy from the route files
-// under app/(app)/. Synthetic data only; no answer key is shown.
-
-import { ArrowRightIcon } from "@phosphor-icons/react";
-import Link from "next/link";
+// The learning routes' states that the picked options don't draw: a page whose data didn't load, and a row that isn't
+// there. The not-found pages are the real ones; a load error is the real LoadErrorState's two faces (it reads the
+// browser's connection, so the canvas picks the face). Synthetic data only; no answer key is shown.
 
 import CardNotFound from "@/app/(app)/review/[cardId]/not-found";
 import SessionNotFound from "@/app/(app)/s/[id]/not-found";
 import { Container } from "@/components/app/container";
-import {
-  AllCaughtUpEmpty,
-  DoneForTodayEmpty,
-  NoCardsYetEmpty,
-  NoReviewsEmpty,
-} from "@/components/app/empty-state";
-import { LoadFailedState, NotFoundState, OfflineState } from "@/components/app/error-state";
-import { ScoreBadge, type Score } from "@/components/app/score-badge";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
+import { NoCardsYetEmpty, NoReviewsEmpty } from "@/components/app/empty-state";
+import { LoadFailedState, OfflineState } from "@/components/app/error-state";
+import { Button } from "@/components/ui/button";
 
-import { AppFrame, FRAME_SESSIONS } from "../frames";
+import { AppFrame } from "../frames";
 import { MapAppPage } from "./parts";
 
 const PROGRESS_DESCRIPTION = "What to do today, and how a card becomes yours.";
@@ -97,94 +78,5 @@ export function MapProgressEmpty({ state }: { state: "no-cards" | "no-reviews" |
       {state === "no-reviews" && <NoReviewsEmpty />}
       {state === "error" && <LoadError noun="your progress" />}
     </MapAppPage>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// /defend, in the picked design (C, one focused column). Endings from components/defend/defend-flow.tsx.
-
-const DECISION = "Rate limit uploads per CLI token, not per IP";
-
-const ENDING = {
-  "not-defended": {
-    score: 1 as Score,
-    title: "Not defended this time",
-    body: "Explain it again in your next review, then defend it again.",
-    missing:
-      "Why an IP is the wrong key: learners behind one office IP would block each other's uploads.",
-  },
-  "time-up": {
-    score: null,
-    title: "Time's up",
-    body: "Nothing was typed before the clock ran out, so this one ends here. Start again for another decision.",
-    missing: null,
-  },
-};
-
-export function MapDefendEnding({ kind }: { kind: keyof typeof ENDING }) {
-  const end = ENDING[kind];
-  const again = (
-    <Button variant={end.score === null ? "default" : "secondary"}>Defend another</Button>
-  );
-  return (
-    <AppFrame path="/defend" crumb="Defend it">
-      <Container>
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 py-6">
-          <div className="flex flex-col gap-2">
-            {end.score !== null && <ScoreBadge score={end.score} />}
-            <h1 className="type-heading">{end.title}</h1>
-            <p className="type-body text-text-2">
-              {end.score !== null && (
-                <>
-                  &ldquo;{DECISION}&rdquo;, from {FRAME_SESSIONS[0].title}.{" "}
-                </>
-              )}
-              {end.body}
-            </p>
-          </div>
-          {end.missing && (
-            <DataList>
-              <DataListItem>
-                <DataListLabel>What was missing</DataListLabel>
-                <DataListValue>{end.missing}</DataListValue>
-              </DataListItem>
-              <DataListItem>
-                <DataListLabel>Why not &ldquo;verified&rdquo;</DataListLabel>
-                <DataListValue>
-                  Paste was off, but help off screen is still possible. Defended is the honest word.
-                </DataListValue>
-              </DataListItem>
-              <DataListItem>
-                <DataListLabel>Your reviews</DataListLabel>
-                <DataListValue>
-                  Unchanged: a defense never moves a card&rsquo;s schedule.
-                </DataListValue>
-              </DataListItem>
-            </DataList>
-          )}
-          <div className="flex flex-col gap-3">
-            <h2 className="type-label text-text-2">What to do next</h2>
-            <div className="flex flex-wrap gap-3">
-              {end.score !== null ? (
-                <>
-                  <Link href="/review" className={buttonVariants()}>
-                    See today&rsquo;s reviews
-                    <ArrowRightIcon aria-hidden="true" data-icon="inline-end" />
-                  </Link>
-                  {again}
-                </>
-              ) : (
-                <>
-                  {again}
-                  <Link href="/dashboard" className={buttonVariants({ variant: "secondary" })}>
-                    Back to dashboard
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </Container>
-    </AppFrame>
   );
 }

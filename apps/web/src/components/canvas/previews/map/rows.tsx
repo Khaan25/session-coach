@@ -48,7 +48,6 @@ import { MapCliApprove, MapCliTerminal } from "./cli";
 import {
   MapCardNotFound,
   MapDashboardError,
-  MapDefendEnding,
   MapProgressEmpty,
   MapReviewError,
   MapSessionNotFound,
@@ -351,8 +350,8 @@ const routeRows: Entry[][] = [
     page("/defend", "answering", () => <DefendOptionC stage="answer" />),
     page("/defend", "follow-up", () => <DefendOptionC stage="follow-up" />),
     page("/defend", "defended", () => <DefendOptionC stage="result" />),
-    page("/defend", "not defended", () => <MapDefendEnding kind="not-defended" />),
-    page("/defend", "time's up", () => <MapDefendEnding kind="time-up" />),
+    page("/defend", "not defended", () => <DefendOptionC stage="not-defended" />),
+    page("/defend", "time's up", () => <DefendOptionC stage="time-up" />),
   ],
   [
     page("/progress", "with data", () => <ProgressSettingsProgressOptionC />),
