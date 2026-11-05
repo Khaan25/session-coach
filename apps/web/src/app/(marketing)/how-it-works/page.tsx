@@ -17,6 +17,7 @@ import Link from "next/link";
 
 import { FeatureCard } from "@/components/marketing/feature-card";
 import { MarketingPageHeader } from "@/components/marketing/marketing-page-header";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Every claim here must match the code and docs/CODEBASE.md; anything they don't say is a TODO(zia).
@@ -36,7 +37,7 @@ const pipeline = [
   {
     icon: CloudArrowUpIcon,
     title: "The upload",
-    body: "session-coach push --latest sends your latest session. If you opt a project in, a Claude Code SessionStart hook runs session-coach sync, which sends one finished session each time a session starts. Either way the CLI tries to remove secrets on your laptop, compresses the log and uploads it. Logs over 50 MB are refused. A session that was already sent is not taken twice.",
+    body: "Run session-coach init in a project and each Claude Code session there is sent when it ends; a session start also sends one the end missed. session-coach push --latest sends your latest session by hand. Either way the CLI tries to remove secrets on your laptop, compresses the log and uploads it. Logs over 50 MB are refused. A session that was already sent is not taken twice.",
   },
   {
     icon: CardsIcon,
@@ -203,6 +204,12 @@ export default function Page() {
           </ul>
         </FeatureCard>
       </section>
+
+      <div className="flex justify-center">
+        <Link href="/sign-up" className={buttonVariants({ size: "lg" })}>
+          Get started
+        </Link>
+      </div>
     </div>
   );
 }

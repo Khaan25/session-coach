@@ -189,10 +189,10 @@ export function ClosingSection() {
         >
           Your next session is the first decision you own.
         </h2>
-        <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
-          See how it works
+        <Link href="/sign-up" className={buttonVariants({ size: "lg" })}>
+          Get started
         </Link>
-        {/* TODO(zia): point at /setup once Phase 3 lands, and add the price or trial note. */}
+        <p className="type-body-sm text-text-2">Free during the trial.</p>
       </div>
     </section>
   );
