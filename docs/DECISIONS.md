@@ -4,7 +4,7 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 
 ## 2026-11-05 · "Sign out everywhere" also revokes CLI tokens
 
-- **Decision:** `signOutEverywhere` deletes the learner's `cli_tokens` rows with their own client (RLS "delete own tokens") before `signOut({ scope: "global" })`.
+- **Decision:** `signOutEverywhere` deletes the learner's `cli_tokens` rows with their own client (RLS "delete own tokens") and, with the service role, their approved device logins the CLI hasn't collected (which would mint a new token), before `signOut({ scope: "global" })`. If either delete fails, nothing is signed out and Settings shows a toast, so the learner can retry.
 - **Why:** a security audit found CLI tokens never expire and survived the documented takeover fix (reset the password, then Sign out everywhere). Settings calls each token a device and the card promises "every browser and device", so an attacker's token kept uploading sessions and reading the email after the learner thought they were safe.
 - **Rejected:** revoking on every password change (a learner changing their own password would silently stop their CLI uploads); token expiry (a bigger change to the CLI login flow; still worth doing later).
 
