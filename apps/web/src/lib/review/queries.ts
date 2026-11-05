@@ -49,6 +49,8 @@ export type QueueCard = {
   decision: string;
   sessionId: string;
   sessionName: string;
+  /** The session's repo, for the dashboard's project filter; null for a session sent without one. */
+  repo: string | null;
   step: Step;
   dueOn: string | null;
   createdAt: string;
@@ -113,6 +115,7 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
     decision: card.decision,
     sessionId: card.session_id,
     sessionName: sessionName(card.session ?? {}),
+    repo: card.session?.repo ?? null,
     step,
     dueOn,
     createdAt: card.created_at,

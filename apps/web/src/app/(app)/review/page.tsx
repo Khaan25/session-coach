@@ -30,6 +30,7 @@ const sample = (i: number, decision: string, sessionName: string, step: QueueCar
   decision,
   sessionId: `sample-session-${i}`,
   sessionName,
+  repo: null,
   step,
   dueOn: null,
   createdAt: "2026-01-01T12:00:00Z",
