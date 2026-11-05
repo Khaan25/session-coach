@@ -23,7 +23,14 @@ import { LevelPicker } from "./level-picker";
  * The first-time question for a repo: how hard should its questions be. Save keeps the choice; "Not now" keeps simple.
  * Both mark the project onboarded, so the card goes away; the level can still change in /settings.
  */
-export function ProjectSetupCard({ repo }: { repo: string }) {
+export function ProjectSetupCard({
+  repo,
+  save: saveLevel = setProjectLevel,
+}: {
+  repo: string;
+  /** The Server Action by default; /canvas passes one that saves nothing. */
+  save?: typeof setProjectLevel;
+}) {
   const [level, setLevel] = useState<QuestionLevel>("simple");
   const [pending, setPending] = useState(false);
 
@@ -31,7 +38,7 @@ export function ProjectSetupCard({ repo }: { repo: string }) {
     setPending(true);
     toast
       .promise(
-        setProjectLevel({ repo, question_level }).then(({ error }) => {
+        saveLevel({ repo, question_level }).then(({ error }) => {
           if (error) throw new Error(error);
         }),
         {

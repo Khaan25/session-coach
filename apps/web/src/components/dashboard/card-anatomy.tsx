@@ -16,16 +16,23 @@ import { DAILY_CAP } from "@/lib/review/today";
 /** `reviews.step` in words: 0 is a card never answered, then the day 1, 4 and 11 reviews. */
 export const STEP_LABELS = ["New", "Day 1", "Day 4", "Day 11"] as const;
 
-const LADDER = [...STEP_LABELS, "Owned"] as const;
+/** The reviews a card climbs after its first answer: days 1, 4 and 11, then owned. */
+const LADDER = ["Day 1", "Day 4", "Day 11", "Owned"] as const;
+
+export const DECISION_CARD =
+  "A decision card is one choice your agent made in a session, with a quote from the log that proves it.";
 
 export const ANSWER_FIRST =
   "You explain it before you see the why. Pulling it from memory is what makes it stick; reading it first only feels like learning.";
 
-const SCHEDULE = `Each answer scores 0 (missed), 1 (partly) or 2 (explained). A 2 brings the card back on day 1, then day 4, then day 11, and a 2 on day 11 makes it owned. Below 2, it steps down one and comes back tomorrow. At most ${DAILY_CAP} cards a day.`;
+const SCHEDULE = `Each answer scores 0 (missed), 1 (partly) or 2 (explained). A 2 brings the card back on day 1, then day 4, then day 11; below 2, it steps down one and comes back tomorrow. At most ${DAILY_CAP} cards a day.`;
 
-/** The steps a card climbs, its own step marked: passed steps done, later ones outlined. No step marks none. */
+/**
+ * The reviews a card climbs, its own step marked: passed steps done, later ones outlined. A new card (step 0) and no
+ * step mark none.
+ */
 export function ReviewLadder({ step }: { step?: Step }) {
-  const current = step ?? -1;
+  const current = step ? step - 1 : -1;
   return (
     <ol aria-label="Review schedule" className="flex flex-wrap items-center gap-2">
       {LADDER.map((label, i) => (
@@ -80,11 +87,7 @@ export function CardAnatomy({
         <CardTitle>
           <h2>Inside a decision card</h2>
         </CardTitle>
-        <CardDescription>
-          {sample
-            ? "A sample card. Yours look like this once your first session is read."
-            : "Your next card to explain, taken apart."}
-        </CardDescription>
+        <CardDescription>{DECISION_CARD}</CardDescription>
         {sample && (
           <CardAction>
             <Badge variant="outline">Sample</Badge>
@@ -92,10 +95,6 @@ export function CardAnatomy({
         )}
       </CardHeader>
       <CardContent>
-        <p className="type-body-sm text-text-2">
-          A decision card is one choice your agent made in a session, with a quote from the log that
-          proves it.
-        </p>
         <DataList>
           <DataListItem>
             <DataListLabel>Decision</DataListLabel>
@@ -106,7 +105,7 @@ export function CardAnatomy({
           <DataListItem>
             <DataListLabel>Question</DataListLabel>
             <DataListValue>
-              <Field value={card.question} about="What you answer, in your own words." />
+              <Field value={card.question} about="What you answer, in your words." />
             </DataListValue>
           </DataListItem>
           <DataListItem>
@@ -116,16 +115,7 @@ export function CardAnatomy({
             </DataListValue>
           </DataListItem>
           <DataListItem>
-            <DataListLabel>Evidence</DataListLabel>
-            <DataListValue>
-              <Field
-                value={<Locked>Shows after you answer.</Locked>}
-                about="The quote from your session's log that backs the decision."
-              />
-            </DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Reviews</DataListLabel>
+            <DataListLabel>Next review</DataListLabel>
             <DataListValue>
               <span className="flex flex-col gap-2">
                 <ReviewLadder step={card.step} />
