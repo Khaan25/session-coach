@@ -14,7 +14,7 @@ const statusOf: Record<SessionStatus, { status: StatusValue; label: string }> = 
 
 /**
  * `live` announces the word once when the status settles on ready or failed (for a Realtime-updated row).
- * `cardCount` is the visible cards; a ready session with 0 says "No decisions found" in the idle (lighter) text. Without it
+ * `cardCount` is the visible cards; a ready session with 0 says "No decisions" in the idle (lighter) text. Without it
  * the badge is as before.
  */
 export function StatusBadge({

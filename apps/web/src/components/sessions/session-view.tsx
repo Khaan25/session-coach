@@ -73,8 +73,19 @@ export function SessionView({
       ) : cards.length === 0 ? (
         // Extraction drops every card it can't back with an exact quote, so a ready session can end with none.
         <EmptyState
-          title="No cards to show"
-          description="This session has no cards available to review. Sessions where you talk through options give the most cards."
+          title="No decisions to learn from this session."
+          description={
+            <>
+              <span className="block">
+                It was mostly edits and commands, with no real choice between options. We may also
+                have missed one.
+              </span>
+              <span className="mt-2 block">
+                Next time, ask your agent to explain why it picked an approach, and say your reasons
+                in your prompts. Sessions that state the reasons give better cards.
+              </span>
+            </>
+          }
         />
       ) : (
         <div className="flex flex-col gap-6">

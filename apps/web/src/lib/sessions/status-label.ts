@@ -3,7 +3,7 @@ import type { SessionStatus } from "@session-coach/shared/session";
 // Pure, so node --test runs it. The words are the ones the dashboard row and the sidebar already used.
 
 /** What a ready session with no visible cards says: nothing is waiting to be reviewed. */
-export const NO_DECISIONS = "No decisions found";
+export const NO_DECISIONS = "No decisions";
 
 /** A ready session whose visible card count is known to be 0. An unknown count (undefined) is not empty. */
 export function isEmptyReady(status: SessionStatus, cardCount?: number): boolean {
