@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-05 · Landing leads with owning your project
+
+- **Decision:** the headline is "_Own_ the code your agent writes." (the hand underline moves from "Explain" to "Own"). The copy says decisions are filed by project, explained until owned, and defended whenever the learner likes. "Owned" means mastered (`reviews.mastered`), so Defend it is described as optional, never as a step to ownership. The hero shows a 24 s muted product film in a panel card (`Card variant="panel"` with `CardInset`) in place of the card stack.
+- **Why:** "Explain the code your agent wrote" stopped fitting once projects, Defend it and the ownership meter shipped; the product is now about owning a project decision by decision. Swapping one verb keeps the headline's shape and underline.
+- **Rejected:** "Every decision, yours to defend." (makes the optional Defend it the point); "Your project, decision by decision." (calmer, but no promise); "Know every decision in your project." (no verb worth underlining).
+- **Not yet:** the Open Graph image still carries the old line and needs a re-export.
+
 ## 2026-11-04 · Model-written session titles
 
 - **Decision:** the extraction model writes the session title in the same call that makes the cards: the answer gains a top-level `title` string, one plain line under 70 characters, required even when there are no decisions. It is optional on our side: a missing, blank or non-string title is ignored and the cards are kept exactly as before; a long one is cut to the title limit with "…". `processSession` uses it when the session has no title yet and falls back to the first prompt (`sessionTitle`) when the model gave none. An existing title is never overwritten. The title rules add a little to each extract call.
