@@ -5,16 +5,7 @@
 // become the real screens and the full state map goes on the canvas.
 
 import type { CanvasItem } from "../../canvas";
-import {
-  MarketingHowItWorksOptionB,
-  MarketingLandingOptionA,
-  MarketingLandingOptionB,
-  MarketingLandingOptionC,
-  MarketingPricingOptionC,
-  MarketingSupportOptionA,
-  MarketingSupportOptionB,
-  MarketingSupportOptionC,
-} from "./marketing";
+import { MarketingHowItWorksOptionB, MarketingPricingOptionC } from "./marketing";
 import {
   AuthCheckEmailOptionB,
   AuthErrorOptionB,
@@ -43,29 +34,6 @@ type Entry = Omit<CanvasItem, "x" | "y">;
 export const optionRows: Entry[][] = [
   [
     {
-      id: "opt-landing-a",
-      name: "Option · Landing · A · First-week checklist",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingLandingOptionA />,
-    },
-    {
-      id: "opt-landing-b",
-      name: "Option · Landing · B · Annotated live card",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingLandingOptionB />,
-    },
-    {
-      id: "opt-landing-c",
-      name: "Option · Landing · C · One card, nothing else",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingLandingOptionC />,
-    },
-  ],
-  [
-    {
       id: "opt-how-b",
       name: "Option · How it works · B · Tabs by place",
       width: 1440,
@@ -80,29 +48,6 @@ export const optionRows: Entry[][] = [
       width: 1440,
       height: 900,
       render: () => <MarketingPricingOptionC />,
-    },
-  ],
-  [
-    {
-      id: "opt-support-a",
-      name: "Option · Support · A · Troubleshooter",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingSupportOptionA />,
-    },
-    {
-      id: "opt-support-b",
-      name: "Option · Support · B · Topic tabs FAQ",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingSupportOptionB />,
-    },
-    {
-      id: "opt-support-c",
-      name: "Option · Support · C · Read the badges",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingSupportOptionC />,
     },
   ],
   [
