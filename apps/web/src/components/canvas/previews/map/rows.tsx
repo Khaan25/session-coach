@@ -4,7 +4,6 @@
 // with every state the app has for it (found in app/**/page.tsx, error.tsx, not-found.tsx and the components they
 // render). Names read `Map · <route> · <state>`; the flow cards link to the items by id.
 
-import { AuthNotice } from "@/components/auth/auth-notice";
 import { AllCaughtUpEmpty, DoneForTodayEmpty, NoCardsYetEmpty } from "@/components/app/empty-state";
 import { ProjectSetupCard } from "@/components/projects/project-setup-card";
 import { PASTE_OFF } from "@/components/review/quiz-form";
@@ -14,6 +13,7 @@ import type { CanvasItem } from "../../canvas";
 import { DeleteAccountOpen, EmailPreview, FlowPreview } from "../more";
 import {
   AuthCheckEmailOptionB,
+  AuthConfirm,
   AuthErrorOptionB,
   AuthForgotPasswordOptionB,
   AuthLoginOptionB,
@@ -41,7 +41,6 @@ import {
   MapServerErrorPage,
   MapSessionLoading,
 } from "./app";
-import { MapAuthConfirm } from "./auth";
 import { MapCliApprove, MapCliTerminal } from "./cli";
 import {
   MapCardNotFound,
@@ -95,19 +94,20 @@ const routeRows: Entry[][] = [
     page("/sign-up", "default", () => <AuthSignUpOptionB />),
     page("/sign-up", "field error", () => (
       <AuthSignUpOptionB
-        errors={{
-          email: "Enter an email address like name@example.com.",
-          password: "Use at least 8 characters.",
+        state={{
+          fields: {
+            email: "Enter an email address like name@example.com.",
+            password: "Use at least 8 characters.",
+          },
         }}
       />
     )),
     page("/sign-up", "rate limited", () => (
       <AuthSignUpOptionB
-        notice={
-          <AuthNotice title="Couldn't create the account" fail>
-            Too many attempts from your network. Try again in 10 minutes.
-          </AuthNotice>
-        }
+        state={{
+          status: "error",
+          message: "Too many attempts from your network. Try again in 10 minutes.",
+        }}
       />
     )),
   ],
@@ -116,71 +116,55 @@ const routeRows: Entry[][] = [
     page("/sign-up/check-email", "resent", () => <AuthCheckEmailOptionB resent />),
   ],
   [
-    page("/auth/confirm", "sign up", () => <MapAuthConfirm state="sign-up" />),
-    page("/auth/confirm", "password reset", () => <MapAuthConfirm state="recovery" />),
-    page("/auth/confirm", "incomplete link", () => <MapAuthConfirm state="incomplete" />),
+    page("/auth/confirm", "sign up", () => <AuthConfirm state="sign-up" />),
+    page("/auth/confirm", "password reset", () => <AuthConfirm state="recovery" />),
+    page("/auth/confirm", "incomplete link", () => <AuthConfirm state="incomplete" />),
   ],
   [
     page("/login", "default", () => <AuthLoginOptionB />),
     page("/login", "field error", () => (
-      <AuthLoginOptionB errors={{ password: "Enter your password." }} />
+      <AuthLoginOptionB state={{ fields: { password: "Enter your password." } }} />
     )),
     page("/login", "wrong password", () => (
       <AuthLoginOptionB
-        notice={
-          <AuthNotice title="Couldn't sign in" fail>
-            That email and password don&apos;t match.
-          </AuthNotice>
-        }
+        state={{ status: "error", message: "That email and password don't match." }}
       />
     )),
     page("/login", "email not confirmed", () => (
       <AuthLoginOptionB
-        notice={
-          <AuthNotice title="Confirm your email">
-            Confirm your email address first. We can send the link again.
-          </AuthNotice>
-        }
+        state={{
+          status: "unconfirmed",
+          message: "Confirm your email address first. We can send the link again.",
+          email: "sam@example.com",
+        }}
       />
     )),
     page("/login", "rate limited", () => (
       <AuthLoginOptionB
-        notice={
-          <AuthNotice title="Couldn't sign in" fail>
-            Too many attempts. Wait a minute, then try again.
-          </AuthNotice>
-        }
+        state={{ status: "error", message: "Too many attempts. Wait a minute, then try again." }}
       />
     )),
   ],
   [
     page("/forgot-password", "default", () => <AuthForgotPasswordOptionB />),
     page("/forgot-password", "field error", () => (
-      <AuthForgotPasswordOptionB errors={{ email: "Enter your email address." }} />
+      <AuthForgotPasswordOptionB state={{ fields: { email: "Enter your email address." } }} />
     )),
     page("/forgot-password", "link sent", () => (
-      <AuthForgotPasswordOptionB
-        notice={
-          <AuthNotice title="Check your email">
-            If an account exists for that address, we sent a link to reset the password. Open it on
-            this device.
-          </AuthNotice>
-        }
-      />
+      <AuthForgotPasswordOptionB state={{ status: "sent", email: "sam@example.com" }} />
     )),
   ],
   [
     page("/update-password", "default", () => <AuthUpdatePasswordOptionB />),
     page("/update-password", "field error", () => (
-      <AuthUpdatePasswordOptionB errors={{ password: "Use at least 8 characters." }} />
+      <AuthUpdatePasswordOptionB state={{ fields: { password: "Use at least 8 characters." } }} />
     )),
     page("/update-password", "link expired", () => (
       <AuthUpdatePasswordOptionB
-        notice={
-          <AuthNotice title="Couldn't save the password" fail>
-            Your reset link has expired. Request a new one to set a password.
-          </AuthNotice>
-        }
+        state={{
+          status: "error",
+          message: "Your reset link has expired. Request a new one to set a password.",
+        }}
       />
     )),
   ],

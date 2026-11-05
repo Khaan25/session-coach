@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { AuthHeading } from "@/components/auth/auth-parts";
 import { SignUpForm } from "@/components/auth/sign-up-form";
+import { SignUpHeading } from "@/components/auth/auth-screens";
 
 export const metadata: Metadata = {
   title: "Create an account | Session Coach",
@@ -11,15 +11,7 @@ export const metadata: Metadata = {
 export default function SignUpPage() {
   return (
     <>
-      <AuthHeading
-        title={
-          <>
-            Create an <span className="italic">account</span>
-          </>
-        }
-      >
-        Track the decisions your coding agent makes, project by project, until you own them.
-      </AuthHeading>
+      <SignUpHeading />
       <SignUpForm />
     </>
   );

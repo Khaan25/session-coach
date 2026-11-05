@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { use, useActionState, useEffect, useState } from "react";
 
 import { type AuthState, resendConfirmation } from "@/app/(auth)/actions";
+import { useDryRun } from "@/components/app/dry-run";
+import { AuthPreviewContext } from "@/components/auth/use-auth-form";
 import { Button } from "@/components/ui/button";
 
 // Supabase sends at most one confirmation per address per 60 s (docs/plans/auth.md #2).
@@ -11,11 +13,21 @@ const COOLDOWN_S = 60;
 /** "Resend the email" for an unconfirmed address, then a 60 s countdown before it can be pressed again. */
 export function ResendConfirmation({ email }: { email: string }) {
   const [left, setLeft] = useState(0);
-  const [state, action, pending] = useActionState<AuthState, FormData>(async (prev, formData) => {
-    const result = await resendConfirmation(prev, formData);
-    if (result.status === "sent") setLeft(COOLDOWN_S);
-    return result;
-  }, {});
+  // /canvas: answers as a sent resend would, without sending one.
+  const dryRun = useDryRun();
+  const [state, action, pending] = useActionState<AuthState, FormData>(
+    async (prev, formData) => {
+      const result = dryRun
+        ? {
+            status: "sent" as const,
+            message: "If that address is waiting to be confirmed, we sent a new link.",
+          }
+        : await resendConfirmation(prev, formData);
+      if (result.status === "sent") setLeft(COOLDOWN_S);
+      return result;
+    },
+    use(AuthPreviewContext) ?? {},
+  );
 
   useEffect(() => {
     if (left <= 0) return;

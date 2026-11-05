@@ -14,6 +14,7 @@ import Link from "next/link";
 
 import { AuthArt, type AuthScene } from "@/components/auth/auth-art";
 import { BrandLink } from "@/components/auth/auth-parts";
+import { AuthShell } from "@/components/auth/auth-screens";
 import { DryRunContext } from "@/components/app/dry-run";
 import { BrandMark } from "@/components/brand-mark";
 import { navMain } from "@/components/nav-items";
@@ -346,7 +347,7 @@ function FrameSidebar({
   );
 }
 
-/** The (auth) layout: the brand, the one form column and the footer links on the left, the scene's art on the right. */
+/** The (auth) layout: the real AuthShell, with the scene's art the route would pick. */
 export function AuthFrame({
   path,
   scene,
@@ -359,33 +360,7 @@ export function AuthFrame({
   return (
     <FrameWindow path={path}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="grid min-h-full flex-1 bg-page lg:grid-cols-2">
-          <div className="flex flex-col">
-            <header className="flex h-18 items-center px-(--gutter-sm) sm:h-20 sm:px-(--gutter)">
-              <BrandLink />
-            </header>
-            <main className="flex flex-1 flex-col justify-center">
-              <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
-                {children}
-              </div>
-            </main>
-            <footer className="px-(--gutter-sm) py-8 sm:px-(--gutter)">
-              <ul className="flex justify-center gap-6">
-                {["Privacy", "Terms", "Support"].map((label) => (
-                  <li key={label}>
-                    <Link
-                      href={`/${label.toLowerCase()}`}
-                      className="type-body-sm text-text-2 transition-colors duration-(--dur-fast) hover:text-text-1"
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </footer>
-          </div>
-          <AuthArt scene={scene} />
-        </div>
+        <AuthShell art={<AuthArt scene={scene} />}>{children}</AuthShell>
       </div>
     </FrameWindow>
   );
