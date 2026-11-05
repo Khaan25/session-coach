@@ -27,7 +27,7 @@ const jsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Web",
   description:
-    "Session Coach tracks the decisions your Claude Code agent makes, project by project. Explain each one in your own words after 1 day, then 3, then 7 until you own it, and defend it whenever you like.",
+    "Session Coach tracks the decisions your Claude Code agent makes, project by project. Explain each one in your own words on day 1, 4 and 11 until you own it, and defend it whenever you like.",
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 

@@ -176,8 +176,8 @@ export function BentoSection() {
           Everything after the session ends.
         </h2>
         <p className="type-body-lg text-pretty text-text-2">
-          Set up once. Each session you send becomes cards, checked against its log, due again after
-          1 day, then 3, then 7.
+          Set up once. Each session you send becomes cards, checked against its log, due again on
+          day 1, 4 and 11.
         </p>
       </div>
       <MotionProvider>

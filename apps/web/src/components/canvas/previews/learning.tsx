@@ -351,7 +351,7 @@ const QUEUE = [
 ];
 
 const REVIEW_DESCRIPTION =
-  "Explain each decision back in your own words. Each card comes back after 1 day, then 3, then 7.";
+  "Explain each decision back in your own words. Each card comes back on day 1, 4 and 11.";
 
 /** /review with cards due: the queue, capped at 5 a day, and Start review. */
 export function ReviewQueuePreview() {
