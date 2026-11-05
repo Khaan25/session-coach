@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { navMain } from "@/components/app-sidebar";
+import { navMain } from "@/components/nav-items";
 import {
   Breadcrumb,
   BreadcrumbItem,

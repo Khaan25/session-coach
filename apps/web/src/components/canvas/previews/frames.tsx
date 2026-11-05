@@ -8,22 +8,14 @@
 // the sign-out Server Action, NavSessions subscribes to live sessions through Supabase, NavMain and AppBreadcrumb read
 // the pathname, SiteNav reads the signed-in user, and the real Sidebar container is `fixed` at the viewport's height.
 
-import {
-  CaretRightIcon,
-  CaretUpDownIcon,
-  ChartLineUpIcon,
-  ExamIcon,
-  FolderSimpleIcon,
-  GearIcon,
-  SquaresFourIcon,
-  TerminalWindowIcon,
-} from "@phosphor-icons/react";
+import { CaretRightIcon, CaretUpDownIcon, FolderSimpleIcon } from "@phosphor-icons/react";
 import type { SessionStatus } from "@session-coach/shared/session";
 import Link from "next/link";
 
 import { AuthArt, type AuthScene } from "@/components/auth/auth-art";
 import { BrandLink } from "@/components/auth/auth-parts";
 import { BrandMark } from "@/components/brand-mark";
+import { navMain } from "@/components/nav-items";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -57,14 +49,8 @@ import {
 
 export type FrameNavItem = { title: string; url: string; icon: React.ReactNode };
 
-/** The real sidebar's Learn group, from app-sidebar.tsx. */
-export const LEARN_NAV: FrameNavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: <SquaresFourIcon /> },
-  { title: "Review", url: "/review", icon: <ExamIcon /> },
-  { title: "Progress", url: "/progress", icon: <ChartLineUpIcon /> },
-  { title: "Setup", url: "/setup", icon: <TerminalWindowIcon /> },
-  { title: "Settings", url: "/settings", icon: <GearIcon /> },
-];
+/** The real sidebar's Learn group. */
+export const LEARN_NAV: FrameNavItem[] = navMain;
 
 export type FrameSession = { id: string; title: string; repo: string; status: SessionStatus };
 
