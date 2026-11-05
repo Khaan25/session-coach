@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { LockSimpleIcon } from "@phosphor-icons/react/ssr";
 
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
@@ -12,15 +10,7 @@ import { AppPageHeader } from "@/components/app/page-header";
 import { StatusBadge } from "@/components/app/status-badge";
 import { DecisionCard, LockedDecisionCard } from "@/components/cards/decision-card";
 import { RefreshOnSettle } from "@/components/cards/refresh-on-settle";
-import {
-  CardOutline,
-  Mark,
-  Marked,
-  ReviewPath,
-  SessionGuideLayout,
-} from "@/components/sessions/session-guide";
-import { buttonVariants } from "@/components/ui/button";
-import { Code, CodeBlock } from "@/components/ui/code-block";
+import { Code } from "@/components/ui/code-block";
 import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import type { SessionCard } from "@/lib/cards/columns";
@@ -132,98 +122,34 @@ function SessionView({
       </AppPageHeader>
 
       {status === "pending" || status === "processing" ? (
-        <SessionGuideLayout state="processing">
-          <Marked mark={<Mark n={1} />}>
-            <ProcessingState status={status} />
-          </Marked>
-          <CardOutline />
+        <>
+          <ProcessingState status={status} />
           {userId && <RefreshOnSettle userId={userId} session={session} />}
-        </SessionGuideLayout>
+        </>
       ) : status === "failed" ? (
-        <SessionGuideLayout state="failed">
-          <Marked mark={<Mark n={1} />}>
-            <SessionFailedState error={error} />
-          </Marked>
-          <Marked mark={<Mark n={2} />}>
-            <CodeBlock variant="command" command="npx session-coach push --latest" />
-          </Marked>
-        </SessionGuideLayout>
+        <SessionFailedState error={error} />
       ) : cards.length === 0 ? (
-        <SessionGuideLayout state="no-cards">
-          <Marked mark={<Mark n={1} />}>
-            {/* Extraction drops every card it can't back with an exact quote, so a ready session can end with none. */}
-            <EmptyState
-              title="No decisions found"
-              description="This session gave no cards. Your other sessions may have some waiting."
-              action={
-                <Link href="/dashboard" className={buttonVariants({ variant: "secondary" })}>
-                  See your sessions
-                </Link>
-              }
-            />
-          </Marked>
-          <div className="flex items-start gap-3 well p-3">
-            <Mark n={2} />
-            <p className="type-body-sm text-text-2">
-              Next session, ask your agent to compare two approaches and say why it picks one.
-            </p>
-          </div>
-        </SessionGuideLayout>
+        // Extraction drops every card it can't back with an exact quote, so a ready session can end with none.
+        <EmptyState
+          title="No cards to show"
+          description="This session has no cards available to review. Sessions where you talk through options give the most cards."
+        />
       ) : (
-        <SessionGuideLayout state="ready">
-          <ReadyCards cards={cards} />
-        </SessionGuideLayout>
+        <div className="flex flex-col gap-6">
+          <p className="type-body text-text-2">
+            Each card is one decision your agent made. Explain why in your own words; the reason and
+            its quote open after you answer.
+          </p>
+          {cards.map((card) =>
+            card.locked ? (
+              <LockedDecisionCard key={card.id} card={card} />
+            ) : (
+              <DecisionCard key={card.id} card={card} />
+            ),
+          )}
+        </div>
       )}
     </Container>
-  );
-}
-
-/**
- * The cards with the guide's marks, each on the first card that has that part: 1 the decision, 2 where an answer is
- * scored (the first answer box, else the first Explain it), 3 the why and its quotes (only on an answered card), 4 the
- * review path, 5 the lock on an unanswered card.
- */
-function ReadyCards({ cards }: { cards: SessionCard[] }) {
-  const firstLocked = cards.find((card) => card.locked)?.id;
-  const firstOpen = cards.find((card) => !card.locked)?.id;
-  return (
-    <>
-      {cards.map((card, i) => {
-        const decision = i === 0 ? <Mark n={1} /> : undefined;
-        if (card.locked)
-          return (
-            <LockedDecisionCard
-              key={card.id}
-              card={card}
-              marks={{ decision, answer: card.id === firstLocked ? <Mark n={2} /> : undefined }}
-            >
-              {card.id === firstLocked && (
-                <p className="flex items-center gap-3 type-body-sm text-text-3">
-                  <Mark n={5} />
-                  <LockSimpleIcon aria-hidden />
-                  Why, source and quote open after you answer.
-                </p>
-              )}
-            </LockedDecisionCard>
-          );
-        const first = card.id === firstOpen;
-        return (
-          <DecisionCard
-            key={card.id}
-            card={card}
-            marks={{
-              decision,
-              why: first ? <Mark n={3} /> : undefined,
-              question: first && !firstLocked ? <Mark n={2} /> : undefined,
-            }}
-          />
-        );
-      })}
-      <div className="flex items-center gap-3 well p-3">
-        <Mark n={4} />
-        <ReviewPath />
-      </div>
-    </>
   );
 }
 
