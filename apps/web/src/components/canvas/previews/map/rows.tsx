@@ -55,9 +55,6 @@ import { MapSetup } from "./setup";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
 
-/** Stands in for the Server Action, so a click on the canvas saves nothing. */
-const saveNothing = async () => ({ error: null });
-
 const PAGE = { width: 1440, height: 900 };
 const TERMINAL = { width: 720, height: 460 };
 
@@ -255,7 +252,7 @@ const routeRows: Entry[][] = [
     page("/dashboard", "full", () => <DashboardHomeOptionB />),
     page("/dashboard", "first visit", () => <DashboardHomeOptionBEmpty />),
     page("/dashboard", "new project question", () => (
-      <DashboardHomeOptionB before={<ProjectSetupCard repo="rapporteur" save={saveNothing} />} />
+      <DashboardHomeOptionB before={<ProjectSetupCard repo="rapporteur" />} />
     )),
     page("/dashboard", "filtered by project", () => (
       <DashboardHomeOptionB initialRepo="rapporteur" />
@@ -361,15 +358,12 @@ const routeRows: Entry[][] = [
     page("/progress", "error", () => <MapProgressEmpty state="error" />),
   ],
   [
-    page("/settings", "default", () => <ProgressSettingsSettingsOptionA id="map-settings" />),
+    page("/settings", "default", () => <ProgressSettingsSettingsOptionA />),
     page("/settings", "saved", () => (
-      <ProgressSettingsSettingsOptionA
-        id="map-settings-saved"
-        overlay={<CanvasToast title="Profile saved" />}
-      />
+      <ProgressSettingsSettingsOptionA overlay={<CanvasToast title="Profile saved" />} />
     )),
     page("/settings", "delete account confirm", () => (
-      <ProgressSettingsSettingsOptionA id="map-settings-delete" overlay={<DeleteAccountOpen />} />
+      <ProgressSettingsSettingsOptionA overlay={<DeleteAccountOpen />} />
     )),
   ],
 ];

@@ -2,15 +2,10 @@
 
 import { useId, useState } from "react";
 
+import { useAction } from "@/components/app/dry-run";
 import { Button } from "@/components/ui/button";
 import { ChecklistStep } from "@/components/settings/checklist-step";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Combobox,
@@ -38,6 +33,7 @@ type Profile = {
  */
 export function ProfileForm({ profile, timezones }: { profile: Profile; timezones: string[] }) {
   const id = useId();
+  const save = useAction(updateProfile);
   const [timezone, setTimezone] = useState(profile.timezone);
   const [notify, setNotify] = useState(profile.notify_email);
   const [pending, setPending] = useState(false);
@@ -50,7 +46,7 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
         toast
           .promise(
             // A blank name is sent as null: the database and profileUpdateSchema reject "".
-            updateProfile({ display_name: name || null, timezone, notify_email: notify }).then(
+            save({ display_name: name || null, timezone, notify_email: notify }).then(
               ({ error }) => {
                 if (error) throw new Error(error);
               },
@@ -72,32 +68,23 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
           changes="Shown in your account menu."
           done={Boolean(profile.display_name)}
         >
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor={`${id}-name`}>Display name</FieldLabel>
-              <Input
-                id={`${id}-name`}
-                name="display_name"
-                defaultValue={profile.display_name ?? ""}
-                maxLength={100}
-                autoComplete="name"
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`${id}-email`}>Email</FieldLabel>
-              <Input
-                id={`${id}-email`}
-                type="email"
-                value={profile.email ?? ""}
-                readOnly
-                aria-describedby={`${id}-email-hint`}
-              />
-              <FieldDescription id={`${id}-email-hint`}>
-                Comes from how you sign in.
-                {/* TODO(zia): say how to change it. */}
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
+          <Field>
+            <FieldLabel htmlFor={`${id}-name`}>Display name</FieldLabel>
+            <Input
+              id={`${id}-name`}
+              name="display_name"
+              defaultValue={profile.display_name ?? ""}
+              maxLength={100}
+              autoComplete="name"
+              aria-describedby={`${id}-email-hint`}
+            />
+            {/* TODO(zia): say how to change the email. */}
+            <FieldDescription id={`${id}-email-hint`}>
+              {profile.email
+                ? `Email: ${profile.email}, from how you sign in.`
+                : "No email on file."}
+            </FieldDescription>
+          </Field>
         </ChecklistStep>
         <ChecklistStep
           n={2}
@@ -113,11 +100,7 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
               value={timezone}
               onValueChange={(value: string | null) => value && setTimezone(value)}
             >
-              <ComboboxInput
-                id={`${id}-timezone`}
-                aria-describedby={`${id}-timezone-hint`}
-                placeholder="Find a time zone"
-              />
+              <ComboboxInput id={`${id}-timezone`} placeholder="Find a time zone" />
               <ComboboxContent>
                 <ComboboxEmpty>No time zones match.</ComboboxEmpty>
                 <ComboboxList>
@@ -129,9 +112,6 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
                 </ComboboxList>
               </ComboboxContent>
             </Combobox>
-            <FieldDescription id={`${id}-timezone-hint`}>
-              Sets when a card is due today.
-            </FieldDescription>
           </Field>
         </ChecklistStep>
         <ChecklistStep

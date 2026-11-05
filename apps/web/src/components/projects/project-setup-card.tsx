@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useAction } from "@/components/app/dry-run";
 import { toast } from "@/components/ui/toast";
 
 import { setProjectLevel } from "@/app/(app)/settings/actions";
@@ -23,14 +24,8 @@ import { LevelPicker } from "./level-picker";
  * The first-time question for a repo: how hard should its questions be. Save keeps the choice; "Not now" keeps simple.
  * Both mark the project onboarded, so the card goes away; the level can still change in /settings.
  */
-export function ProjectSetupCard({
-  repo,
-  save: saveLevel = setProjectLevel,
-}: {
-  repo: string;
-  /** The Server Action by default; /canvas passes one that saves nothing. */
-  save?: typeof setProjectLevel;
-}) {
+export function ProjectSetupCard({ repo }: { repo: string }) {
+  const saveLevel = useAction(setProjectLevel);
   const [level, setLevel] = useState<QuestionLevel>("simple");
   const [pending, setPending] = useState(false);
 

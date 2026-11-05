@@ -16,7 +16,7 @@ export function ProjectsCard({ projects }: { projects: ProjectListItem[] | null 
     <ChecklistStep
       n={4}
       title="Question level per project"
-      changes="How hard the questions are for each repo: simple, hard or complex. Applies to sessions processed after the change. Cards you already have keep their questions."
+      changes="Applies to sessions processed after the change. Cards you already have keep their questions."
       done={projects?.length ? projects.every((project) => project.onboarded) : undefined}
     >
       {projects === null ? (
