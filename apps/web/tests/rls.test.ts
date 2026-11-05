@@ -338,3 +338,30 @@ test("learner_ownership: counts only the caller's visible cards, an explained ca
   const anon = await createClient(stack.url, stack.anonKey, options).rpc("learner_ownership");
   assert.ok(anon.error, "anon called learner_ownership");
 });
+
+test("report: a learner reads only their own slug, switches only their own report and can't pick a slug", async () => {
+  for (const [me, other] of pairs()) {
+    const own = await me.client.from("profiles").select("report_on, report_slug").eq("id", me.id);
+    assert.ifError(own.error);
+    assert.equal(own.data.length, 1);
+    assert.match(own.data[0]?.report_slug ?? "", /^[0-9a-f]{32}$/);
+    assert.equal(own.data[0]?.report_on, false, "report is off by default");
+
+    const theirs = await me.client.from("profiles").select("report_slug").eq("id", other.id);
+    assert.ifError(theirs.error);
+    assert.equal(theirs.data.length, 0, "read another learner's report_slug");
+
+    const on = await me.client.from("profiles").update({ report_on: true }).eq("id", me.id);
+    assert.ifError(on.error);
+    const slug = await me.client
+      .from("profiles")
+      .update({ report_slug: "0".repeat(32) })
+      .eq("id", me.id);
+    assert.ok(slug.error, "learner wrote report_slug");
+
+    await me.client.from("profiles").update({ report_on: true }).eq("id", other.id);
+    const after = await admin.from("profiles").select("report_on").eq("id", other.id).single();
+    assert.equal(after.data?.report_on, false, "switched on another learner's report");
+    await admin.from("profiles").update({ report_on: false }).eq("id", me.id);
+  }
+});

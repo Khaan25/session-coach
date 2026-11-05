@@ -149,7 +149,7 @@ function TextFields() {
                 <Checkbox id="field-email" defaultChecked />
                 <FieldContent>
                   <FieldLabel htmlFor="field-email">Email me on review days</FieldLabel>
-                  <FieldDescription>After 1 day, then 3, then 7.</FieldDescription>
+                  <FieldDescription>On day 1, 4 and 11.</FieldDescription>
                 </FieldContent>
               </Field>
               <FieldSeparator>or</FieldSeparator>

@@ -82,9 +82,9 @@ export function ReviewSchedule() {
             </AnimatePresence>
           </div>
           <p className="sr-only">
-            Each card comes back after 1 day, then 3, then 7. A score of 2 moves it to the next gap;
-            less moves it one step down (never below day 1) and it comes back tomorrow. Passing the
-            last review masters it.
+            Each card comes back on day 1, 4 and 11. A score of 2 moves it to the next review; less
+            moves it one step down (never below day 1) and it comes back tomorrow. Passing the last
+            review masters it.
           </p>
         </CardContent>
       </Card>

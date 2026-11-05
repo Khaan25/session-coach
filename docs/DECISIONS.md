@@ -11,6 +11,20 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 - **Rejected:** a user-level hook for every project (uploads projects nobody opted in); retrying from the CLI only (the learner rarely knows the log's path); setting the time zone on every visit (would undo a deliberate UTC choice).
 - **Consequence:** the setup prompt calls `npx session-coach@latest init`, so 0.4.0 must be on npm before this deploys.
 
+## 2026-11-05 · Public ownership report: quotes shown, flagged cards out, repos opt-in
+
+- **Decision:** `/r/[slug]` lists owned (mastered) cards with the decision, the first verified evidence quote, its
+  file and the owned and defended dates. Flagged cards are left out as well as hidden ones. Each repo is off the page
+  until the learner ticks it (`projects.report_shown`, default false). The slug is 32 random hex characters, and a
+  learner can replace it ("Make a new link") but never choose it.
+- **Why:** quotes come from the learner's own redacted session log and are what makes a decision credible to a
+  reviewer, so they stay, and the settings card says plainly that decisions and quotes from ticked repos become
+  public. A flagged card has an unverified quote, which shouldn't be shown to strangers as evidence. Repos default off
+  because a learner's work repo may be private; turning the report on shouldn't publish it.
+- **Rejected:** a slug from the name (the canvas's `sam-rivera-7k2p`: guessable); per-repo defaults on (publishes
+  private work by accident); showing per-repo counts in settings (`learner_ownership()` counts flagged cards, so they
+  wouldn't match the page).
+
 ## 2026-11-04 · Model-written session titles
 
 - **Decision:** the extraction model writes the session title in the same call that makes the cards: the answer gains a top-level `title` string, one plain line under 70 characters, required even when there are no decisions. It is optional on our side: a missing, blank or non-string title is ignored and the cards are kept exactly as before; a long one is cut to the title limit with "…". `processSession` uses it when the session has no title yet and falls back to the first prompt (`sessionTitle`) when the model gave none. An existing title is never overwritten. The title rules add a little to each extract call.

@@ -311,6 +311,8 @@ export type Database = {
           email: string | null;
           id: string;
           notify_email: boolean;
+          report_on: boolean;
+          report_slug: string;
           timezone: string;
         };
         Insert: {
@@ -320,6 +322,8 @@ export type Database = {
           email?: string | null;
           id: string;
           notify_email?: boolean;
+          report_on?: boolean;
+          report_slug?: string;
           timezone?: string;
         };
         Update: {
@@ -329,6 +333,8 @@ export type Database = {
           email?: string | null;
           id?: string;
           notify_email?: boolean;
+          report_on?: boolean;
+          report_slug?: string;
           timezone?: string;
         };
         Relationships: [];
@@ -340,6 +346,7 @@ export type Database = {
           onboarded_at: string | null;
           question_level: string;
           repo: string;
+          report_shown: boolean;
           user_id: string;
         };
         Insert: {
@@ -348,6 +355,7 @@ export type Database = {
           onboarded_at?: string | null;
           question_level?: string;
           repo: string;
+          report_shown?: boolean;
           user_id: string;
         };
         Update: {
@@ -356,6 +364,7 @@ export type Database = {
           onboarded_at?: string | null;
           question_level?: string;
           repo?: string;
+          report_shown?: boolean;
           user_id?: string;
         };
         Relationships: [

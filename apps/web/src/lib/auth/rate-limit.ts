@@ -10,9 +10,10 @@ import { refusesUnlimited } from "./spend-limits";
 
 /**
  * The signed-out actions with their own per-IP budget. Reset and resend share one: both send email to any address.
- * deviceStart and devicePoll are the CLI's device-code login, which runs before the CLI has a token.
+ * deviceStart and devicePoll are the CLI's device-code login, which runs before the CLI has a token. report is the
+ * public ownership report (/r/[slug] and GET /api/report/[slug]), read by strangers with no session.
  */
-export type AuthLimit = "signIn" | "signUp" | "email" | "deviceStart" | "devicePoll";
+export type AuthLimit = "signIn" | "signUp" | "email" | "deviceStart" | "devicePoll" | "report";
 
 // Per IP. Supabase's own limits (per address and per project) still apply behind these.
 const WINDOWS = {
@@ -23,6 +24,8 @@ const WINDOWS = {
   deviceStart: Ratelimit.slidingWindow(10, "10 m"),
   // One code polled every 5 s for its 10 minutes is 120; 300 leaves room for a few logins at once from one address.
   devicePoll: Ratelimit.slidingWindow(300, "10 m"),
+  // A reviewer opens a report a few times; 60 in 10 minutes stops a script walking slugs or hammering one page.
+  report: Ratelimit.slidingWindow(60, "10 m"),
 } as const;
 
 // Redis.fromEnv reads UPSTASH_REDIS_REST_URL/TOKEN, or the KV_REST_API_URL/TOKEN names the Vercel Marketplace sets.

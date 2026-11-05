@@ -211,7 +211,7 @@ export function dailyReviewCopy(
   const cards = all.slice(0, LISTED);
   const more = all.length > LISTED ? `and ${all.length - LISTED} more` : null;
   const body =
-    "Explain each one back in your own words. You get a score and what you missed, and the card comes back after 1 day, then 3, then 7, until you've got it.";
+    "Explain each one back in your own words. You get a score and what you missed, and the card comes back on day 1, 4 and 11 until you've got it.";
   const progress =
     answered === 0
       ? "These are your first cards from Session Coach."

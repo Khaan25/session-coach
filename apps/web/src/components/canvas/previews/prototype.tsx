@@ -594,7 +594,7 @@ function DashboardScreen({
         <EmptyState
           icon={TerminalWindowIcon}
           title="No sessions yet"
-          description="Your sessions appear here once the CLI is set up. Each one becomes up to 5 decision cards to explain back after 1 day, then 3, then 7."
+          description="Your sessions appear here once the CLI is set up. Each one becomes up to 5 decision cards to explain back on day 1, 4 and 11."
           action={<Button onClick={() => go("setup")}>Set up the CLI</Button>}
         />
       </>
@@ -2066,7 +2066,7 @@ function SetupScreen({
                   <CardHeader>
                     <CardTitle>3 cards ready from &ldquo;{FIRST_PUSH.title}&rdquo;</CardTitle>
                     <CardDescription>
-                      Explain them back today, then after 1 day, then 3, then 7.
+                      Explain them back today, then on day 1, 4 and 11.
                     </CardDescription>
                   </CardHeader>
                   <CardFooter>
