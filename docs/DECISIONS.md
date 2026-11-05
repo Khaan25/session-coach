@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-05 · Upload each session when it ends, retry from the web
+
+- **Decision:** `session-coach init` (CLI 0.4.0) writes the `sync` hooks into the project's `.claude/settings.local.json`, pinned to its own version: SessionStart as before, plus SessionEnd. From SessionEnd, `sync` re-spawns itself detached with the hook's JSON in `SESSION_COACH_HOOK_INPUT` and exits, and the copy uploads only the session that ended (same cwd check, no quiet window). `/setup` and the setup prompt run `init` instead of hand-merging JSON. `push --latest` run inside Claude Code (`CLAUDECODE` set) skips logs written in the last minute, so the setup prompt's first upload is a finished session, not the setup chat.
+- **Why:** with SessionStart alone a session uploaded only when the next one started in the same project, often days later or never. `settings.local.json` keeps the hook off teammates' machines; the old prompt put it in the committed `settings.json`.
+- **Decision:** a failed session, or one stuck in `processing` or `pending` past `STUCK_MS`, gets a Try again button on its page (`POST /api/sessions/[id]/retry`, cookie auth). The log is still in Storage, so the run restarts from it with the same claim-and-delete-cards steps as a re-push. The daily sweep now also fails `pending` rows past `STUCK_MS`, timed from the latest upload URL: `POST /api/sessions` sets `processing_started_at` when it hands a pending or reset repeat a fresh URL, and a first upload counts from `created_at`. Reusing that column avoids a migration; a dedicated `upload_started_at` would read more clearly if the column's double meaning ever confuses.
+- **Decision:** a new account adopts the browser's time zone while its profile still says UTC, the learner hasn't saved a time zone in Settings, and it is under a day old (`adoptBrowserTimezone`); after that only Settings changes it. A Settings save sets `timezone_chosen: true` in the auth user's `user_metadata`, so an explicit UTC choice is kept; that flag avoids a `profiles` column and its migration.
+- **Rejected:** a user-level hook for every project (uploads projects nobody opted in); retrying from the CLI only (the learner rarely knows the log's path); setting the time zone on every visit (would undo a deliberate UTC choice).
+- **Consequence:** the setup prompt calls `npx session-coach@latest init`, so 0.4.0 must be on npm before this deploys.
+
 ## 2026-11-05 · Public ownership report: quotes shown, flagged cards out, repos opt-in
 
 - **Decision:** `/r/[slug]` lists owned (mastered) cards with the decision, the first verified evidence quote, its

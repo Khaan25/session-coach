@@ -110,17 +110,29 @@ async function acceptedCwds(cwd: string): Promise<Set<string>> {
 
 /**
  * Finds the newest `.jsonl` (by modified time) directly inside the project's folder whose recorded `cwd` is the
- * current folder. Fails closed: two folders can encode to the same name (`/work/a-b` and `/work/a/b`), so a log
+ * current folder, skipping logs modified after `runningSince` (the session running now, when run from inside Claude
+ * Code). Fails closed: two folders can encode to the same name (`/work/a-b` and `/work/a/b`), so a log
  * with no `cwd`, or another one, is never chosen. Subfolders are not read, and no other project is tried.
  *
  * @param projectsDir - The folder that holds one folder per project.
  * @param cwd - The project's working directory.
  */
-export async function findLatestLog(projectsDir: string, cwd: string): Promise<LatestLog> {
+export async function findLatestLog(
+  projectsDir: string,
+  cwd: string,
+  runningSince = Infinity,
+): Promise<LatestLog> {
   const dir = join(projectsDir, projectDirName(cwd));
-  const candidates = await listCandidates(dir);
-  if (candidates === null) return { error: `No Claude Code logs found in ${dir}.` };
-  if (candidates.length === 0) return { error: `No .jsonl logs found in ${dir}.` };
+  const all = await listCandidates(dir);
+  if (all === null) return { error: `No Claude Code logs found in ${dir}.` };
+  if (all.length === 0) return { error: `No .jsonl logs found in ${dir}.` };
+  const candidates = all.filter(({ mtimeMs }) => mtimeMs <= runningSince);
+  if (candidates.length === 0) {
+    return {
+      error:
+        "The only log here is the session running now. It uploads when it ends, once session-coach init has run.",
+    };
+  }
 
   const accepted = await acceptedCwds(cwd);
   for (const { path, name, size } of candidates) {

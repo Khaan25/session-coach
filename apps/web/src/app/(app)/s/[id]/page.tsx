@@ -10,12 +10,14 @@ import { AppPageHeader } from "@/components/app/page-header";
 import { StatusBadge } from "@/components/app/status-badge";
 import { DecisionCard, LockedDecisionCard } from "@/components/cards/decision-card";
 import { RefreshOnSettle } from "@/components/cards/refresh-on-settle";
+import { RetrySessionButton } from "@/components/sessions/retry-session-button";
 import { Code } from "@/components/ui/code-block";
 import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import type { SessionCard } from "@/lib/cards/columns";
 import { getSessionWithCards } from "@/lib/cards/queries";
 import type { SessionSummary } from "@/lib/sessions/rows";
+import { isStuck } from "@/lib/sessions/stuck";
 import { formatRelativeTime } from "@/lib/relative-time";
 
 export const metadata: Metadata = { title: "Session" };
@@ -80,7 +82,7 @@ async function SessionDetail({ params }: Pick<PageProps<"/s/[id]">, "params">) {
   if (!user) notFound();
   const { now, found } = await load(user.id, id);
   if (!found) notFound();
-  return <SessionView {...found} now={now} userId={user.id} />;
+  return <SessionView {...found} now={now} userId={user.id} stuck={isStuck(found.session, now)} />;
 }
 
 function SessionView({
@@ -88,12 +90,15 @@ function SessionView({
   cards,
   now,
   userId,
+  stuck = false,
 }: {
   session: SessionSummary;
   cards: SessionCard[];
   now: Date;
   /** Only a pending or processing session needs it, to refresh when it settles. */
   userId?: string;
+  /** A run that was killed or an upload that died (`isStuck`): shown as failed, with Try again. */
+  stuck?: boolean;
 }) {
   const { title, repo, branch, started_at, duration_min, status, error } = session;
   const started = started_at ? formatRelativeTime(started_at, now) : null;
@@ -121,13 +126,18 @@ function SessionView({
         </PageHeaderStats>
       </AppPageHeader>
 
-      {status === "pending" || status === "processing" ? (
+      {stuck ? (
+        <SessionFailedState
+          error="This session stopped before its cards were made."
+          action={<RetrySessionButton sessionId={session.id} />}
+        />
+      ) : status === "pending" || status === "processing" ? (
         <>
           <ProcessingState status={status} />
           {userId && <RefreshOnSettle userId={userId} session={session} />}
         </>
       ) : status === "failed" ? (
-        <SessionFailedState error={error} />
+        <SessionFailedState error={error} action={<RetrySessionButton sessionId={session.id} />} />
       ) : cards.length === 0 ? (
         // Extraction drops every card it can't back with an exact quote, so a ready session can end with none.
         <EmptyState

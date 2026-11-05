@@ -7,23 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Code, CodeBlock } from "@/components/ui/code-block";
 
 // The hook packages/cli/README.md documents for `sync`, as written there: per project, pinned, async.
-const HOOK_JSON = `{
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup|resume|clear",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx --yes session-coach@0.3.0 sync",
-            "async": true
-          }
-        ]
-      }
-    ]
-  }
-}`;
-
 /** What the page already knows: the newest connected device and how many sessions arrived. null: not known. */
 export type SetupProgress = { device: string | null; sessions: number | null };
 
@@ -65,20 +48,13 @@ export function SetupSteps({ progress }: { progress?: SetupProgress }) {
           <Step
             number={2}
             title="Turn on automatic uploads for this project"
-            what="A SessionStart hook runs sync each time Claude Code starts in this project. In the background it uploads one finished session, newest first, and skips any session changed in the last 5 minutes, so the one you are in waits for a later start. It goes in the project's .claude/settings.json, not your user settings, so each project is its own choice."
+            what="Run init in the project's folder. It adds two hooks to the project's .claude/settings.local.json (your personal settings, kept out of git): one uploads each Claude Code session as it ends, the other catches up on any it missed when a session starts. Each project is its own choice."
           >
-            <CodeBlock
-              code={HOOK_JSON}
-              language="json"
-              filename=".claude/settings.json"
-              lineNumbers={false}
-              copyLabel="Copy the hook"
-            />
+            <CodeBlock variant="command" command="npx session-coach init" />
             <p className="type-body-sm text-text-2">
-              Merge it with what the file already holds. The version is pinned so the hook
-              doesn&apos;t run whatever is newest on npm; raise it when you want a newer{" "}
-              <Code>sync</Code>. It prints nothing: <Code>~/.session-coach/sync.log</Code> has a
-              line for each run that uploads or fails. Remove the hook to turn it off.
+              Run it again any time: it leaves exactly one of each hook. The hooks print nothing:{" "}
+              <Code>~/.session-coach/sync.log</Code> has a line for each run that uploads or fails.
+              Remove them from the file to turn uploads off.
             </p>
             <p className="type-body-sm text-text-2">
               Sessions upload without you reading them first, and secret removal is best-effort, so

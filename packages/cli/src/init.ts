@@ -1,11 +1,161 @@
-// `session-coach init`: a guided first run, one step at a time (sign in, the sync hook, the first upload, what comes
-// next). The parts that decide anything are pure, so node --test covers them without a terminal; cli.ts does the I/O.
+// `session-coach init`: turns on auto-upload for the project in the current folder by adding the sync hooks to its
+// `.claude/settings.local.json`, Claude Code's personal, uncommitted settings file. `addSyncHooks` is pure, so
+// node --test covers the merge.
+
+import { execFile } from "node:child_process";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 
 /**
- * The CLI version the hook runs. Pinned, as packages/cli/README.md explains, so a session start never runs whatever
- * is newest on npm. shortcut: a literal, raise it with each release that changes `sync`.
+ * The two hooks: SessionEnd uploads a session as it ends; SessionStart catches up on any that one missed.
+ * SessionEnd isn't async: `claude -p` kills async hooks still running at teardown, which can land before `sync` has
+ * started its detached copy. Claude Code waits only for that handoff; `timeout` raises the SessionEnd budget (1.5 s by
+ * default) so a slow `npx` start isn't cut off.
  */
-export const HOOK_VERSION = "0.3.0";
+export function syncHooks(version: string) {
+  const command = `npx --yes session-coach@${version} sync`;
+  return {
+    SessionStart: {
+      matcher: "startup|resume|clear",
+      hooks: [{ type: "command", command, async: true }],
+    },
+    SessionEnd: { hooks: [{ type: "command", command, timeout: 30 }] },
+  };
+}
+
+const OUR_COMMAND = /\bsession-coach(@\S+)? sync\b/;
+
+type HookGroup = { hooks?: { command?: unknown }[] };
+
+/** Whether a hook group is one of ours, from any version. */
+function isOurs(group: unknown): boolean {
+  const hooks = (group as HookGroup | null)?.hooks;
+  return (
+    Array.isArray(hooks) &&
+    hooks.some((hook) => typeof hook?.command === "string" && OUR_COMMAND.test(hook.command))
+  );
+}
+
+/**
+ * Settings with our hooks added, and any older session-coach sync hooks replaced, so running init again (or after an
+ * upgrade) leaves exactly one of each. Every other setting and hook is kept as it was.
+ *
+ * @param settings - The parsed settings file, or `{}` when there is none.
+ * @param version - The CLI version the hooks pin.
+ * @returns The new settings, or an error when the file's `hooks` isn't the shape Claude Code uses.
+ */
+export function addSyncHooks(
+  settings: Record<string, unknown>,
+  version: string,
+): Record<string, unknown> | { error: string } {
+  const hooks = settings.hooks ?? {};
+  if (typeof hooks !== "object" || hooks === null || Array.isArray(hooks)) {
+    return { error: '"hooks" in the settings file is not an object, so nothing was changed.' };
+  }
+  const next: Record<string, unknown> = { ...hooks };
+  for (const [event, group] of Object.entries(syncHooks(version))) {
+    const groups = next[event] ?? [];
+    if (!Array.isArray(groups)) {
+      return {
+        error: `"hooks.${event}" in the settings file is not a list, so nothing was changed.`,
+      };
+    }
+    next[event] = [...groups.filter((g) => !isOurs(g)), group];
+  }
+  return { ...settings, hooks: next };
+}
+
+/** Whether a settings file already holds a session-coach sync hook, so init can warn about running it twice. */
+export function hasSyncHook(settings: Record<string, unknown>): boolean {
+  const hooks = settings.hooks;
+  if (typeof hooks !== "object" || hooks === null) return false;
+  return Object.values(hooks).some((groups) => Array.isArray(groups) && groups.some(isOurs));
+}
+
+/** Reads a JSON settings file: `{}` when it doesn't exist, an error when it isn't a JSON object. */
+async function readSettings(path: string): Promise<Record<string, unknown> | { error: string }> {
+  let text: string;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return {};
+    return { error: `Couldn't read ${path}.` };
+  }
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // reported below
+  }
+  return {
+    error: `${path} isn't a JSON object, so nothing was changed. Fix it and run init again.`,
+  };
+}
+
+const SETTINGS_LOCAL = ".claude/settings.local.json";
+
+/**
+ * Whether git ignores `.claude/settings.local.json` in `cwd`: true or false in a git repo, null outside one or
+ * without git, where there is nothing to commit it to.
+ */
+export async function settingsLocalIgnored(cwd: string): Promise<boolean | null> {
+  try {
+    await promisify(execFile)("git", ["check-ignore", "-q", SETTINGS_LOCAL], { cwd });
+    return true;
+  } catch (err) {
+    // check-ignore exits 1 for a path that isn't ignored and 128 outside a repo; ENOENT means no git.
+    return (err as { code?: unknown }).code === 1 ? false : null;
+  }
+}
+
+/**
+ * Adds the hooks to `<cwd>/.claude/settings.local.json`, and warns when git would commit that file.
+ *
+ * @returns What to print and the exit code.
+ */
+export async function runInit(
+  cwd: string,
+  version: string,
+): Promise<{ message: string; exitCode: number }> {
+  const path = join(cwd, ".claude", "settings.local.json");
+  const current = await readSettings(path);
+  if ("error" in current) return { message: current.error as string, exitCode: 1 };
+  const updated = addSyncHooks(current, version);
+  if ("error" in updated) return { message: `${path}: ${updated.error as string}`, exitCode: 1 };
+
+  await mkdir(dirname(path), { recursive: true });
+  // Written beside it, then renamed over it, so an interrupted write never leaves half a settings file.
+  const temporary = `${path}.${process.pid}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(updated, null, 2)}\n`);
+  await rename(temporary, path);
+
+  const lines = [
+    `Auto-upload is on for ${cwd}.`,
+    `Added the session-coach hooks to ${path} (your personal settings; keep it out of git).`,
+    "Each session in this project now uploads when it ends. Run session-coach init in other projects to add them.",
+  ];
+  if ((await settingsLocalIgnored(cwd)) === false) {
+    lines.push(
+      `Warning: git doesn't ignore ${SETTINGS_LOCAL} in this project, so it could be committed and the hooks would run for teammates. Add this line to .gitignore:`,
+      SETTINGS_LOCAL,
+    );
+  }
+  const shared = await readSettings(join(cwd, ".claude", "settings.json"));
+  if (!("error" in shared) && hasSyncHook(shared)) {
+    lines.push(
+      "Note: .claude/settings.json also has a session-coach hook. Remove it there, so teammates don't run it too.",
+    );
+  }
+  return { message: lines.join("\n"), exitCode: 0 };
+}
+
+/** Where init writes the hooks: Claude Code's personal, uncommitted settings for the project. */
+export function settingsLocalPath(cwd: string): string {
+  return join(cwd, ".claude", "settings.local.json");
+}
 
 export type InitArgs = { url: string | null; yes: boolean } | { error: string };
 
@@ -33,68 +183,6 @@ export function parseInitArgs(args: string[]): InitArgs {
     url = value;
   }
   return { url, yes };
-}
-
-/** The hook's command, exactly as packages/cli/README.md documents it. */
-export function syncHookCommand(version: string = HOOK_VERSION): string {
-  return `npx --yes session-coach@${version} sync`;
-}
-
-export type HookEdit =
-  | { kind: "added"; text: string }
-  | { kind: "present" }
-  | { kind: "invalid"; reason: string };
-
-type Json = Record<string, unknown>;
-const isObject = (value: unknown): value is Json =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-/** True when a SessionStart group already runs `session-coach … sync`, at any version. */
-function hasSyncHook(groups: unknown[]): boolean {
-  return groups.some(
-    (group) =>
-      isObject(group) &&
-      Array.isArray(group.hooks) &&
-      group.hooks.some(
-        (hook) =>
-          isObject(hook) &&
-          typeof hook.command === "string" &&
-          /\bsession-coach(@\S+)?\s+sync\b/.test(hook.command),
-      ),
-  );
-}
-
-/**
- * Adds the sync hook to a project's `.claude/settings.json` text, keeping every other setting and hook as it was.
- * Never guesses at a file it can't read as a settings object: that comes back `invalid` and the file is left alone.
- *
- * @param text - The file's contents, or null when there is no file yet.
- * @returns The new text to write, `present` when the hook is already there, or `invalid` with a reason.
- */
-export function addSyncHook(text: string | null, version: string = HOOK_VERSION): HookEdit {
-  let settings: unknown = {};
-  if (text !== null && text.trim() !== "") {
-    try {
-      settings = JSON.parse(text);
-    } catch {
-      return { kind: "invalid", reason: "it isn't valid JSON" };
-    }
-  }
-  if (!isObject(settings)) return { kind: "invalid", reason: "it isn't a JSON object" };
-
-  const hooks = settings.hooks ?? {};
-  if (!isObject(hooks)) return { kind: "invalid", reason: '"hooks" isn\'t an object' };
-  const start = hooks.SessionStart ?? [];
-  if (!Array.isArray(start))
-    return { kind: "invalid", reason: '"hooks.SessionStart" isn\'t a list' };
-  if (hasSyncHook(start)) return { kind: "present" };
-
-  const group = {
-    matcher: "startup|resume|clear",
-    hooks: [{ type: "command", command: syncHookCommand(version), async: true }],
-  };
-  const next = { ...settings, hooks: { ...hooks, SessionStart: [...start, group] } };
-  return { kind: "added", text: `${JSON.stringify(next, null, 2)}\n` };
 }
 
 /** A step heading: `Step 2 of 4 · Turn on automatic uploads`. */

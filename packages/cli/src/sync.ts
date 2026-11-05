@@ -1,4 +1,5 @@
-// `session-coach sync`: run by a Claude Code SessionStart hook, uploads the project's recent finished sessions.
+// `session-coach sync`: run by a Claude Code SessionStart hook, uploads the project's recent finished sessions; run by a
+// SessionEnd hook, uploads the session that just ended.
 // Whatever the hook's stdout holds goes into Claude's context, so nothing here prints. Every outcome, error or not,
 // is a line in sync.log, and `runSync` never throws.
 
@@ -74,8 +75,11 @@ export function readStdin(
   });
 }
 
-/** What the hook's stdin JSON tells sync: the folder, and the session that is running now. */
-export type HookInput = { cwd: string | null; currentIds: Set<string> };
+/**
+ * What the hook's stdin JSON tells sync: the folder, the session that is running now, and, from a SessionEnd hook, the
+ * session that just ended.
+ */
+export type HookInput = { cwd: string | null; currentIds: Set<string>; ended: string | null };
 
 /** Session id of a log file name or path: the base name without `.jsonl`. */
 function sessionIdOf(fileName: string): string {
@@ -84,7 +88,7 @@ function sessionIdOf(fileName: string): string {
 
 /** Reads the hook's JSON. Anything that isn't the expected shape is ignored, so bad input never stops a sync. */
 export function parseHookInput(text: string | null): HookInput {
-  const input: HookInput = { cwd: null, currentIds: new Set() };
+  const input: HookInput = { cwd: null, currentIds: new Set(), ended: null };
   if (!text) return input;
   let parsed: unknown;
   try {
@@ -92,12 +96,18 @@ export function parseHookInput(text: string | null): HookInput {
   } catch {
     return input;
   }
-  const { session_id, cwd, transcript_path } = (parsed ?? {}) as Record<string, unknown>;
-  if (typeof session_id === "string" && session_id) input.currentIds.add(session_id);
-  if (typeof transcript_path === "string" && transcript_path) {
-    input.currentIds.add(sessionIdOf(transcript_path));
-  }
+  const { session_id, cwd, transcript_path, hook_event_name } = (parsed ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const fileId =
+    typeof transcript_path === "string" && transcript_path ? sessionIdOf(transcript_path) : null;
+  const sessionId = typeof session_id === "string" && session_id ? session_id : null;
+  if (sessionId) input.currentIds.add(sessionId);
+  if (fileId) input.currentIds.add(fileId);
   if (typeof cwd === "string" && cwd) input.cwd = cwd;
+  // The log is found by its file name, so the transcript's name wins over the session id.
+  if (hook_event_name === "SessionEnd") input.ended = fileId ?? sessionId;
   return input;
 }
 
@@ -184,16 +194,16 @@ async function syncProject(
   const now = (deps.now ?? Date.now)();
   const state = await loadState(paths.state);
 
+  // A session that just ended is finished, so it skips the quiet window; it still goes through the same cwd check.
   const recent = await findRecentLogs(deps.projectsDir ?? defaultProjectsDir(deps.home), cwd, {
     since: now - SYNC_MAX_AGE_MS,
-    until: now - SYNC_QUIET_MS,
+    until: hook.ended ? now : now - SYNC_QUIET_MS,
   });
   const queue = recent
     .filter((file) => {
       const id = sessionIdOf(file.name);
-      return (
-        !hook.currentIds.has(id) && validateFileName(file.name) === null && !(id in state.done)
-      );
+      const wanted = hook.ended ? id === hook.ended : !hook.currentIds.has(id);
+      return wanted && validateFileName(file.name) === null && !(id in state.done);
     })
     .slice(0, SYNC_MAX_LOGS);
   if (queue.length === 0) return;
@@ -232,7 +242,8 @@ async function syncProject(
 
 /**
  * Uploads the project's recent finished sessions: the newest `SYNC_MAX_LOGS` top-level logs modified between
- * `SYNC_MAX_AGE_MS` and `SYNC_QUIET_MS` ago, except the running session and those the state file already lists. Writes
+ * `SYNC_MAX_AGE_MS` and `SYNC_QUIET_MS` ago, except the running session and those the state file already lists. From a
+ * SessionEnd hook it uploads only the session that ended, unless the state file already lists it. Writes
  * nothing to stdout or stderr and never throws; not signed in, offline or a server error end the run quietly.
  */
 export async function runSync(deps: SyncDeps): Promise<void> {

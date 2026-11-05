@@ -72,10 +72,18 @@ export default function Home() {
           </p>
 
           <div className="mt-8 flex flex-col items-center gap-3">
-            <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
-              <CardsIcon weight="duotone" data-icon="inline-start" aria-hidden />
-              See how it works
-            </Link>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link href="/sign-up" className={buttonVariants({ size: "lg" })}>
+                <CardsIcon weight="duotone" data-icon="inline-start" aria-hidden />
+                Get started
+              </Link>
+              <Link
+                href="/how-it-works"
+                className={buttonVariants({ size: "lg", variant: "secondary" })}
+              >
+                See how it works
+              </Link>
+            </div>
             <p className="type-body-sm text-text-2">
               Free during the trial. Built for Claude Code sessions.
             </p>

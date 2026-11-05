@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { spawn } from "node:child_process";
+import { basename } from "node:path";
+
+import pkg from "../package.json" with { type: "json" };
 
 import { parseLoginArgs, parsePushArgs } from "./args.ts";
 import {
@@ -20,11 +22,11 @@ import {
   pollForToken,
 } from "./device.ts";
 import { interpretMe, meRequest, send, unreachable } from "./http.ts";
-import { addSyncHook, parseInitArgs, parseYesNo, stepHeading } from "./init.ts";
+import { parseInitArgs, parseYesNo, runInit, settingsLocalPath, stepHeading } from "./init.ts";
 import { defaultProjectsDir, findLatestLog, formatSize, resolveCwd } from "./latest.ts";
 import { promptHidden, promptLine } from "./prompt.ts";
 import { interpretProcess, interpretPut, validateFileName } from "./push.ts";
-import { readStdin, runSync } from "./sync.ts";
+import { parseHookInput, readStdin, runSync } from "./sync.ts";
 import { API_TIMEOUT_MS, uploadLog } from "./upload.ts";
 
 const USAGE = `Usage:
@@ -103,7 +105,7 @@ async function deviceLogin(url: string, showNext = true): Promise<number> {
   await saveConfig(configPath(), { token: result.token, url });
   const who = result.email ? `Signed in as ${result.email}.` : `Signed in to ${url}.`;
   return say(
-    `${who} Saved to ${configPath()}.${showNext ? "\nNext: session-coach push --latest" : ""}`,
+    `${who} Saved to ${configPath()}.${showNext ? "\nNext: session-coach init, in each project whose sessions you want uploaded." : ""}`,
   );
 }
 
@@ -113,7 +115,10 @@ async function push(args: string[]): Promise<number> {
 
   if ("latest" in parsed) {
     const cwd = resolveCwd(process.env, process.cwd());
-    const found = await findLatestLog(defaultProjectsDir(), cwd);
+    // Inside Claude Code (an agent running the setup prompt) the newest log is the session still running: skip logs
+    // written in the last minute, so the first upload is a finished session, not a half-written one.
+    const runningSince = process.env.CLAUDECODE ? Date.now() - 60_000 : Infinity;
+    const found = await findLatestLog(defaultProjectsDir(), cwd, runningSince);
     if ("error" in found) return say(found.error, 1);
     const problem = validateFileName(found.name);
     if (problem) return say(`${found.path}: ${problem}`, 1);
@@ -143,13 +148,27 @@ async function pushFile(file: string): Promise<number> {
   return say(result.message, result.exitCode);
 }
 
+/** Carries a SessionEnd hook's stdin to the detached process that does the upload. */
+const HOOK_INPUT_ENV = "SESSION_COACH_HOOK_INPUT";
+
 /**
- * For a SessionStart hook: its stdout goes into Claude's context, so this prints nothing, always exits 0, and exits
+ * For a SessionStart or SessionEnd hook: its stdout goes into Claude's context, so this prints nothing, always exits 0, and exits
  * itself because an upload cut off by the deadline would otherwise keep the process alive.
  */
 async function sync(): Promise<never> {
   try {
-    const stdin = process.stdin.isTTY ? null : await readStdin(process.stdin);
+    const handedOver = process.env[HOOK_INPUT_ENV];
+    const stdin = handedOver ?? (process.stdin.isTTY ? null : await readStdin(process.stdin));
+    // Claude Code may be quitting at SessionEnd, so the upload goes on in a detached copy of this process and the hook
+    // returns at once.
+    if (handedOver === undefined && parseHookInput(stdin).ended) {
+      spawn(process.execPath, [...process.execArgv, ...process.argv.slice(1)], {
+        detached: true,
+        stdio: "ignore",
+        env: { ...process.env, [HOOK_INPUT_ENV]: stdin ?? "" },
+      }).unref();
+      process.exit(0);
+    }
     await runSync({ stdin, env: process.env, cwd: process.cwd() });
   } catch {
     // runSync reports its own failures to sync.log; nothing may reach stdout or stderr
@@ -173,16 +192,20 @@ async function init(args: string[]): Promise<number> {
     url = cleaned;
   }
 
-  const ask = async (question: string): Promise<boolean> => {
+  // Without a terminal (an agent running the setup prompt), running init is the yes for the hooks, the step init
+  // exists for; every other question is a no, so nothing is uploaded unasked.
+  const ask = async (question: string, noTerminal = false): Promise<boolean> => {
     if (parsed.yes) {
       console.log(`${question} yes (--yes)`);
       return true;
     }
     if (!process.stdin.isTTY) {
       console.log(
-        `${question} skipped: there's no terminal to answer in. Run session-coach init --yes to say yes to every step.`,
+        noTerminal
+          ? `${question} yes (no terminal: running init means yes to the hooks)`
+          : `${question} skipped: there's no terminal to answer in. Run session-coach init --yes to say yes to every step.`,
       );
-      return false;
+      return noTerminal;
     }
     for (;;) {
       const line = await promptLine(`${question} [Y/n] `);
@@ -193,7 +216,9 @@ async function init(args: string[]): Promise<number> {
     }
   };
 
-  console.log("Set up Session Coach for this project, in 4 steps. Nothing changes without a yes.");
+  console.log(
+    "Set up Session Coach for this project, in 4 steps. In a terminal, nothing changes without a yes.",
+  );
 
   console.log(stepHeading(1, INIT_STEPS, "Sign in"));
   const saved = await loadConfig(configPath());
@@ -219,59 +244,37 @@ async function init(args: string[]): Promise<number> {
 
   console.log(stepHeading(2, INIT_STEPS, "Turn on automatic uploads for this project"));
   const cwd = resolveCwd(process.env, process.cwd());
-  const settingsFile = join(cwd, ".claude", "settings.json");
   console.log(
     [
-      "A SessionStart hook in this project's .claude/settings.json runs `session-coach sync` whenever a Claude Code session starts.",
-      "It uploads one finished session (quiet for 5 minutes, from the last 7 days), prints nothing and never holds Claude Code up.",
-      "Secrets are removed on your laptop before upload, as best it can; only add it to projects you're happy to send.",
+      "Two hooks in this project's .claude/settings.local.json (your personal settings, kept out of git) run `session-coach sync`:",
+      "SessionEnd uploads a session as it ends; SessionStart catches up on any it missed. Both print nothing; SessionEnd holds Claude Code's exit only while it hands off the upload, a second or two.",
+      "Secrets are removed on your laptop before upload, as best it can; only turn this on for projects you're happy to send.",
     ].join("\n"),
   );
-  // Only a missing file is "no settings yet"; any other read error stops this step rather than risk a rewrite.
-  let current: string | null = null;
-  let unreadable: string | null = null;
-  try {
-    current = await readFile(settingsFile, "utf8");
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOENT") unreadable = code ?? "unreadable";
-  }
-  const edit = unreadable
-    ? ({ kind: "invalid", reason: `it couldn't be read (${unreadable})` } as const)
-    : addSyncHook(current);
-  if (edit.kind === "present") console.log("The hook is already in this project. Nothing to do.");
-  else if (edit.kind === "invalid") {
-    console.log(
-      `Left ${settingsFile} as it is: ${edit.reason}. Fix it, then run session-coach init again.`,
-    );
-  } else if (await ask(`Add the hook to ${settingsFile}?`)) {
-    await mkdir(dirname(settingsFile), { recursive: true });
-    // Written beside it, then renamed over it, so an interrupted write never leaves half a settings file.
-    const temporary = `${settingsFile}.${process.pid}.tmp`;
-    await writeFile(temporary, edit.text);
-    await rename(temporary, settingsFile);
-    console.log(
-      "Added. Commit .claude/settings.json if your team should share it, or keep it local.",
-    );
+  if (await ask(`Add the hooks to ${settingsLocalPath(cwd)}?`, true)) {
+    const result = await runInit(cwd, pkg.version);
+    console.log(result.message);
   } else console.log("Skipped. Upload by hand with session-coach push --latest.");
 
   console.log(stepHeading(3, INIT_STEPS, "Send your newest session"));
   const found = await findLatestLog(defaultProjectsDir(), cwd);
   if ("error" in found) {
     console.log(
-      `${found.error}\nThat's fine: finish a Claude Code session in this folder and it uploads on your next session start.`,
+      `${found.error}\nThat's fine: finish a Claude Code session in this folder and it uploads when it ends.`,
     );
   } else if (await ask(`Upload ${found.name} (${formatSize(found.size)}) now?`)) {
     const code = await pushFile(found.path);
     if (code !== 0)
-      console.log("The upload didn't go through; the hook tries again on your next session start.");
+      console.log(
+        "The upload didn't go through; the hook catches it up on your next session start.",
+      );
   } else console.log("Skipped. The hook sends it later, or run session-coach push --latest.");
 
   console.log(stepHeading(4, INIT_STEPS, "What happens next"));
   return say(
     [
       `1. Within a few minutes, up to 5 decision cards from each session appear at ${url}/dashboard.`,
-      "2. Explain each decision in your own words. A card comes back after 1 day, then 3, then 7, until you own it.",
+      "2. Explain each decision in your own words. A card comes back on day 1, 4 and 11 until you own it.",
       "3. Defend any card you've explained, whenever you want harder practice.",
       "Run session-coach init in another project to turn it on there too.",
     ].join("\n"),

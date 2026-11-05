@@ -81,13 +81,21 @@ export async function POST(request: Request) {
     if (insertError?.code === UNIQUE_VIOLATION) {
       const { data: existing, error: readError } = await admin
         .from("sessions")
-        .select("id, status, processing_started_at")
+        .select("id, status, processing_started_at, created_at")
         .eq("user_id", userId)
         .eq("external_id", meta.external_id)
         .single();
       if (readError) throw new Error(readError.message);
-      if (existing.status === "pending")
+      if (existing.status === "pending") {
+        // Restarts the stuck clock for this upload attempt (see isStuck), so the sweep can't fail it mid-upload.
+        const { error: touchError } = await admin
+          .from("sessions")
+          .update({ processing_started_at: new Date().toISOString() })
+          .eq("id", existing.id)
+          .eq("status", "pending");
+        if (touchError) throw new Error(touchError.message);
         return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 409 });
+      }
       if (existing.status !== "failed" && !isStuck(existing, new Date()))
         return NextResponse.json({ id: existing.id }, { status: 409 });
 
@@ -95,7 +103,13 @@ export async function POST(request: Request) {
       // and a push that read an older run can't reset a newer one.
       const reset = admin
         .from("sessions")
-        .update({ ...meta, status: "pending", error: null, processing_started_at: null })
+        // On a pending row, processing_started_at is when this upload attempt began (see isStuck).
+        .update({
+          ...meta,
+          status: "pending",
+          error: null,
+          processing_started_at: new Date().toISOString(),
+        })
         .eq("id", existing.id)
         .eq("status", existing.status);
       const { data: resetRows, error: resetError } = await (

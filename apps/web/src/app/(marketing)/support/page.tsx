@@ -17,7 +17,7 @@ const faq = [
   {
     question: "What does Session Coach send from my laptop?",
     answer:
-      "Only the session logs you send. session-coach push sends one, and the opt-in SessionStart hook runs session-coach sync to send your finished sessions. We try to remove secrets on your laptop before anything leaves it.",
+      "Only the session logs you send. session-coach push sends one, and in projects where you ran session-coach init, a Claude Code hook sends each session when it ends. We try to remove secrets on your laptop before anything leaves it.",
   },
   {
     question: "Are my secrets stored?",
@@ -27,12 +27,12 @@ const faq = [
   {
     question: "What happens if I'm offline?",
     answer:
-      "The hook sends nothing and tries again the next time a session starts. What went wrong is written to ~/.session-coach/sync.log. A session that was already sent is not taken twice.",
+      "The hook sends nothing and tries again the next time a session starts in that project. What went wrong is written to ~/.session-coach/sync.log. A session that was already sent is not taken twice.",
   },
   {
     question: "A session failed. What now?",
     answer:
-      "Open the session on your dashboard to see why. To send it again, run session-coach push with the session's log file.",
+      "Open the session on your dashboard to see why, then press Try again. That works when the log reached us, so nothing needs sending again. If it says the log never reached Session Coach, run npx session-coach push on the computer that recorded the session to send it again.",
   },
   {
     question: "Where is my data stored?",

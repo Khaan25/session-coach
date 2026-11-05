@@ -53,7 +53,7 @@ const laptop = [
   },
   {
     title: "The upload",
-    body: "session-coach push --latest sends your latest session. If you opt a project in, a Claude Code SessionStart hook runs session-coach sync, which sends one finished session each time a session starts. Either way the CLI removes the secrets it recognises on your laptop, compresses the log and uploads it. Logs over 50 MB are refused. A session that was already sent is not taken twice.",
+    body: "Run session-coach init in a project and each Claude Code session there is sent when it ends; a session start also sends one the end missed. session-coach push --latest sends your latest session by hand. Either way the CLI removes the secrets it recognises on your laptop, compresses the log and uploads it. Logs over 50 MB are refused. A session that was already sent is not taken twice.",
   },
 ] as const;
 
@@ -253,9 +253,9 @@ export default function Page() {
       </Tabs>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Link href="/setup" className={buttonVariants({ size: "lg" })}>
+        <Link href="/sign-up" className={buttonVariants({ size: "lg" })}>
           <TerminalWindowIcon weight="duotone" data-icon="inline-start" aria-hidden />
-          Set it up
+          Get started
         </Link>
         <Link href="/support" className={buttonVariants({ size: "lg", variant: "secondary" })}>
           Questions
