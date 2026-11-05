@@ -24,7 +24,6 @@ const SAMPLE_CARD: QuizCard = {
   question: "Why is the limit keyed on the token rather than the IP?",
   sessionId: "sample-session",
   sessionName: "Add rate limiting to the upload route",
-  level: 2,
 };
 
 export default function QuizPage({ params }: PageProps<"/review/[cardId]">) {
@@ -66,13 +65,7 @@ function QuizView({ card, nextHref }: { card: QuizCard; nextHref: string | null 
           </>
         }
       />
-      <QuizForm
-        key={card.id}
-        cardId={card.id}
-        question={card.question}
-        level={card.level}
-        nextHref={nextHref}
-      />
+      <QuizForm key={card.id} cardId={card.id} question={card.question} nextHref={nextHref} />
     </>
   );
 }

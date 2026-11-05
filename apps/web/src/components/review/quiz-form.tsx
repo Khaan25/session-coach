@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import { LockSimpleIcon, LockSimpleOpenIcon } from "@phosphor-icons/react/ssr";
 import type { Evidence } from "@session-coach/shared/decision";
 
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
@@ -22,10 +21,6 @@ import { Item, ItemContent, ItemDescription, ItemGroup } from "@/components/ui/i
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
-import { ExplainedOwned, ScheduleTrack, ScoreOutcomes } from "@/components/review/ladder";
-import { stageIndex, STAGES } from "@/lib/review/ladder";
-import type { Level } from "@/lib/review/level";
-import type { Step } from "@/lib/review/schedule";
 import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
 
 // MAX_ANSWER in lib/review/grade.ts; not imported, so zod stays out of the client bundle. The route checks it again.
@@ -40,9 +35,6 @@ type Grade = {
   evidence: Evidence[];
   /** YYYY-MM-DD, or null once the card is mastered. */
   nextDue: string | null;
-  /** The card's step and level after this answer. */
-  step: Step;
-  level: Level;
   /** True when a miss moved the card down a step. A skip never does. */
   dropped: boolean;
 };
@@ -83,16 +75,10 @@ async function postAnswer(
 export function QuizForm({
   cardId,
   question,
-  level,
   nextHref,
 }: {
   cardId: string;
   question: string;
-  /**
-   * Where the card is on the ladder before this answer. Given, the quiz takes the review page's split: the work on
-   * the left, a rail that explains it on the right. Left out (a card inside a session page), only the work.
-   */
-  level?: Level;
   /** The next card in the queue, or null when this was the last. */
   nextHref: string | null;
 }) {
@@ -160,99 +146,104 @@ export function QuizForm({
     setError(PASTE_OFF);
   }
 
-  const work = grade ? (
-    <Card size="lg">
-      <CardHeader>
-        <CardTitle>
-          <h2 ref={resultHeading} tabIndex={-1}>
-            {skipped ? "Here's the why" : "Your result"}
-          </h2>
-        </CardTitle>
-        {skipped ? (
-          <CardDescription>
-            Not knowing yet is fine. This card comes back tomorrow at the same level.
-          </CardDescription>
-        ) : (
-          grade.dropped && (
-            <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
-          )
-        )}
-      </CardHeader>
-      <CardContent>
-        <DataList>
-          {!skipped && (
-            <>
-              <DataListItem>
-                <DataListLabel>Score</DataListLabel>
-                <DataListValue>
-                  <ScoreBadge score={grade.score} />
-                </DataListValue>
-              </DataListItem>
-              <DataListItem>
-                <DataListLabel>Your answer</DataListLabel>
-                <DataListValue>{answer.trim()}</DataListValue>
-              </DataListItem>
-              <DataListItem>
-                <DataListLabel>What was missing</DataListLabel>
-                <DataListValue>{grade.missing || "Nothing"}</DataListValue>
-              </DataListItem>
-            </>
+  if (grade)
+    return (
+      <Card size="lg">
+        <CardHeader>
+          <CardTitle>
+            <h2 ref={resultHeading} tabIndex={-1}>
+              {skipped ? "Here's the why" : "Your result"}
+            </h2>
+          </CardTitle>
+          {skipped ? (
+            <CardDescription>
+              Not knowing yet is fine. This card comes back tomorrow at the same level.
+            </CardDescription>
+          ) : (
+            grade.dropped && (
+              <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
+            )
           )}
-          <DataListItem>
-            <DataListLabel>Why</DataListLabel>
-            <DataListValue>{grade.why}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Model answer</DataListLabel>
-            <DataListValue>{grade.modelAnswer}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Next review</DataListLabel>
-            <DataListValue>
-              {grade.nextDue ? (
-                <time dateTime={grade.nextDue}>{formatDue(grade.nextDue)}</time>
-              ) : (
-                "None: you've mastered this card"
-              )}
-            </DataListValue>
-          </DataListItem>
-        </DataList>
-      </CardContent>
-      <ItemGroup aria-label="Evidence">
-        {grade.evidence.map((item) => (
-          // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-          // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
-          <Item key={`${item.event_index}-${item.quote}`} role="listitem">
-            <ItemContent>
-              <blockquote className="type-body text-text-1">&ldquo;{item.quote}&rdquo;</blockquote>
-              <ItemDescription>
-                <span className="flex flex-wrap items-center gap-2">
-                  <span>Event E{item.event_index}</span>
-                  {item.file && (
-                    <Code>
-                      {item.lines ? `${item.file}:${item.lines[0]}-${item.lines[1]}` : item.file}
-                    </Code>
-                  )}
-                </span>
-              </ItemDescription>
-            </ItemContent>
-          </Item>
-        ))}
-      </ItemGroup>
-      <CardFooter>
-        <div className="flex flex-wrap gap-3">
-          {nextHref && (
-            <Link href={nextHref} className={buttonVariants()}>
-              Next card
+        </CardHeader>
+        <CardContent>
+          <DataList>
+            {!skipped && (
+              <>
+                <DataListItem>
+                  <DataListLabel>Score</DataListLabel>
+                  <DataListValue>
+                    <ScoreBadge score={grade.score} />
+                  </DataListValue>
+                </DataListItem>
+                <DataListItem>
+                  <DataListLabel>Your answer</DataListLabel>
+                  <DataListValue>{answer.trim()}</DataListValue>
+                </DataListItem>
+                <DataListItem>
+                  <DataListLabel>What was missing</DataListLabel>
+                  <DataListValue>{grade.missing || "Nothing"}</DataListValue>
+                </DataListItem>
+              </>
+            )}
+            <DataListItem>
+              <DataListLabel>Why</DataListLabel>
+              <DataListValue>{grade.why}</DataListValue>
+            </DataListItem>
+            <DataListItem>
+              <DataListLabel>Model answer</DataListLabel>
+              <DataListValue>{grade.modelAnswer}</DataListValue>
+            </DataListItem>
+            <DataListItem>
+              <DataListLabel>Next review</DataListLabel>
+              <DataListValue>
+                {grade.nextDue ? (
+                  <time dateTime={grade.nextDue}>{formatDue(grade.nextDue)}</time>
+                ) : (
+                  "None: you've mastered this card"
+                )}
+              </DataListValue>
+            </DataListItem>
+          </DataList>
+        </CardContent>
+        <ItemGroup aria-label="Evidence">
+          {grade.evidence.map((item) => (
+            // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
+            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+            <Item key={`${item.event_index}-${item.quote}`} role="listitem">
+              <ItemContent>
+                <blockquote className="type-body text-text-1">
+                  &ldquo;{item.quote}&rdquo;
+                </blockquote>
+                <ItemDescription>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span>Event E{item.event_index}</span>
+                    {item.file && (
+                      <Code>
+                        {item.lines ? `${item.file}:${item.lines[0]}-${item.lines[1]}` : item.file}
+                      </Code>
+                    )}
+                  </span>
+                </ItemDescription>
+              </ItemContent>
+            </Item>
+          ))}
+        </ItemGroup>
+        <CardFooter>
+          <div className="flex flex-wrap gap-3">
+            {nextHref && (
+              <Link href={nextHref} className={buttonVariants()}>
+                Next card
+              </Link>
+            )}
+            <Link href="/review" className={buttonVariants({ variant: "secondary" })}>
+              Back to the queue
             </Link>
-          )}
-          <Link href="/review" className={buttonVariants({ variant: "secondary" })}>
-            Back to the queue
-          </Link>
-        </div>
-      </CardFooter>
-    </Card>
-  ) : (
+          </div>
+        </CardFooter>
+      </Card>
+    );
+
+  return (
     <form onSubmit={submit} noValidate>
       <Card size="lg">
         <CardHeader>
@@ -314,88 +305,5 @@ export function QuizForm({
         </CardFooter>
       </Card>
     </form>
-  );
-
-  if (level === undefined) return work;
-  return (
-    <div className="grid gap-6 lg:grid-cols-5">
-      <div className="flex flex-col gap-6 lg:col-span-3">{work}</div>
-      <div className="flex flex-col gap-6 lg:col-span-2">
-        <Rail level={level} grade={grade} skipped={skipped} />
-      </div>
-    </div>
-  );
-}
-
-/**
- * The right rail: annotates the quiz as it changes. The why's lock opens on answer, the row for the score just given
- * lights up, and the ladder moves to where the route put the card.
- */
-function Rail({ level, grade, skipped }: { level: Level; grade: Grade | null; skipped: boolean }) {
-  const now = grade ? grade.level : level;
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>What you&rsquo;re looking at</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <DataList>
-            <DataListItem>
-              <DataListLabel>Decision card</DataListLabel>
-              <DataListValue>
-                One choice your agent made in a session, backed by a quote from it.
-              </DataListValue>
-            </DataListItem>
-            <DataListItem>
-              <DataListLabel>The why</DataListLabel>
-              <DataListValue>
-                <span className="flex items-center gap-2">
-                  {grade ? <LockSimpleOpenIcon aria-hidden /> : <LockSimpleIcon aria-hidden />}
-                  {grade
-                    ? "Unlocked by your answer. Compare it with what you wrote."
-                    : "Locked. Explaining first tests what you remember, not what you just read."}
-                </span>
-              </DataListValue>
-            </DataListItem>
-          </DataList>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>What your answer does</h2>
-          </CardTitle>
-          <CardDescription>
-            {grade
-              ? `Now at ${STAGES[stageIndex(now)]}.`
-              : level === "owned"
-                ? "You own this card. It doesn't come back."
-                : `This card is at ${STAGES[level]} today.`}
-          </CardDescription>
-        </CardHeader>
-        {level !== "owned" && (
-          <ScoreOutcomes
-            step={level}
-            given={grade ? (skipped ? "skip" : grade.score) : undefined}
-          />
-        )}
-        <CardFooter>
-          <ScheduleTrack level={now} label="Where this card is" />
-        </CardFooter>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Explained vs owned</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ExplainedOwned />
-        </CardContent>
-      </Card>
-    </>
   );
 }
