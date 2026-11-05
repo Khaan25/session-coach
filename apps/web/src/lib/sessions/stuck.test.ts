@@ -28,6 +28,17 @@ test("isStuck: pending past STUCK_MS since it was registered is stuck", () => {
   );
 });
 
+test("isStuck: a pending repeat counts from its latest upload URL, not from registration", () => {
+  assert.equal(
+    isStuck({ status: "pending", processing_started_at: ago(STUCK_MS), created_at: old }, now),
+    false,
+  );
+  assert.equal(
+    isStuck({ status: "pending", processing_started_at: ago(STUCK_MS + 1), created_at: old }, now),
+    true,
+  );
+});
+
 test("isStuck: a live run, another status or no start time is not stuck", () => {
   assert.equal(
     isStuck({ status: "processing", processing_started_at: ago(STUCK_MS), created_at: old }, now),

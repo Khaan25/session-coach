@@ -9,7 +9,9 @@ const UPLOAD_ERROR = "The upload didn't finish. Try again.";
 
 /**
  * Whether a session will never settle by itself: still `processing` more than `STUCK_MS` after the run claimed it
- * (the run was killed), or still `pending` more than `STUCK_MS` after it was registered (the upload died).
+ * (the run was killed), or still `pending` more than `STUCK_MS` after its latest upload URL was issued (the upload
+ * died). `POST /api/sessions` sets `processing_started_at` on a pending row when it hands a repeat a fresh URL; a first
+ * upload has none, so its age counts from `created_at`.
  *
  * @param session - `status`, `processing_started_at` and `created_at` from `sessions`.
  * @param now - The current time.
@@ -23,7 +25,11 @@ export function isStuck(
   now: Date,
 ): boolean {
   const since =
-    status === "processing" ? processing_started_at : status === "pending" ? created_at : null;
+    status === "processing"
+      ? processing_started_at
+      : status === "pending"
+        ? (processing_started_at ?? created_at)
+        : null;
   return since !== null && now.getTime() - Date.parse(since) > STUCK_MS;
 }
 
@@ -48,7 +54,9 @@ export async function failStuckSessions(admin: SupabaseClient, now: Date): Promi
       .from("sessions")
       .update({ status: "failed", error: UPLOAD_ERROR })
       .eq("status", "pending")
-      .lt("created_at", cutoff)
+      .or(
+        `processing_started_at.lt."${cutoff}",and(processing_started_at.is.null,created_at.lt."${cutoff}")`,
+      )
       .select("id"),
   ]);
   if (runs.error) throw new Error(runs.error.message);
