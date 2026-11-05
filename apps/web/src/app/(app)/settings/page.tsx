@@ -6,10 +6,12 @@ import { AppPageHeader } from "@/components/app/page-header";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { ProjectsCard } from "@/components/settings/projects-card";
+import { ReportCard } from "@/components/settings/report-card";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { listProjects, type ProjectListItem } from "@/lib/projects/queries";
+import { getReportSettings, type ReportSettings } from "@/lib/report/queries";
 import { getSettingsProfile, timeZoneOptions } from "@/lib/settings/profile";
 
 import { signOutEverywhere } from "@/app/(auth)/actions";
@@ -29,6 +31,7 @@ const SAMPLE_PROJECTS: ProjectListItem[] = [
   { repo: "acme/web", question_level: "simple", onboarded: true },
   { repo: "acme/api", question_level: "hard", onboarded: true },
 ];
+const SAMPLE_REPORT: ReportSettings = { on: false, slug: "0".repeat(32), repos: [] };
 
 export default function SettingsPage() {
   return (
@@ -40,7 +43,13 @@ export default function SettingsPage() {
       {/* cacheComponents: the profile read uses cookies, so it streams inside Suspense. */}
       <MeasuredSuspense
         label="Loading your settings"
-        skeleton={<SettingsView profile={SAMPLE_PROFILE} projects={SAMPLE_PROJECTS} />}
+        skeleton={
+          <SettingsView
+            profile={SAMPLE_PROFILE}
+            projects={SAMPLE_PROJECTS}
+            report={SAMPLE_REPORT}
+          />
+        }
       >
         <AccountSettings />
       </MeasuredSuspense>
@@ -52,7 +61,23 @@ async function AccountSettings() {
   const [profile, projects] = await Promise.all([getSettingsProfile(), loadProjects()]);
   // Signed out: proxy.ts redirects to sign-in, so show nothing here.
   if (!profile) return null;
-  return <SettingsView profile={profile} projects={projects} />;
+  const report = await loadReport(projects);
+  return <SettingsView profile={profile} projects={projects} report={report} />;
+}
+
+/** The report settings, or null when the read failed, so the rest of the page still loads. */
+async function loadReport(projects: ProjectListItem[] | null) {
+  const user = await getCurrentUser();
+  if (!user || !projects) return null;
+  try {
+    return await getReportSettings(
+      user.id,
+      projects.map((p) => p.repo),
+    );
+  } catch (error) {
+    console.error("[settings/loadReport]", error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 /** The learner's projects, or null when the read failed, so the profile still loads and the card shows the error. */
@@ -70,15 +95,18 @@ async function loadProjects() {
 function SettingsView({
   profile,
   projects,
+  report,
 }: {
   profile: SettingsProfile;
   projects: ProjectListItem[] | null;
+  report: ReportSettings | null;
 }) {
   // One block with the page's own gap: skullet wraps the skeleton in an element, so a fragment's cards would lose it.
   return (
     <div className="flex flex-col gap-6">
       <ProfileForm profile={profile} timezones={timeZoneOptions(profile.timezone)} />
       <ProjectsCard projects={projects} />
+      <ReportCard report={report} />
       <SettingsCard
         title="Sign out everywhere"
         description="Signs you out on every browser and device, including this one."
