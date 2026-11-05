@@ -34,6 +34,7 @@ import {
   UpdatePasswordPreview,
 } from "./previews/onboarding";
 import { LearnerPrototype } from "./previews/prototype";
+import { optionRows } from "./previews/options/rows";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
 
@@ -63,7 +64,7 @@ function stack(top: number, rows: Entry[][]): CanvasItem[] {
   });
 }
 
-export const canvasItems: CanvasItem[] = [
+const currentItems: CanvasItem[] = [
   // The clickable prototype sits above the static rows, so it is the first thing to try.
   ...stack(-(PAGE.height + ROW_GAP), [
     [
@@ -468,6 +469,11 @@ export const canvasItems: CanvasItem[] = [
     ],
   ]),
 ];
+
+/** The redesign options start one row gap below the lowest current preview. */
+const optionsTop = Math.max(...currentItems.map((item) => item.y + item.height)) + ROW_GAP * 2;
+
+export const canvasItems: CanvasItem[] = [...currentItems, ...stack(optionsTop, optionRows)];
 
 /**
  * The page's only child: the canvas with every preview above. Client-side, since each entry renders a component.
