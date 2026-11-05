@@ -23,8 +23,12 @@ const steps = [
     what: "Signs the CLI in: it opens your browser, and you approve the code it prints.",
   },
   {
+    command: "npx session-coach init",
+    what: "Run it in each project folder: from then on, every Claude Code session there uploads when it ends.",
+  },
+  {
     command: "npx session-coach push --latest",
-    what: "Uploads the last Claude Code session you ran in this folder.",
+    what: "Uploads the last Claude Code session you ran in this folder, for sessions from before init.",
   },
   {
     command: "npx session-coach push ./your-session.jsonl",
