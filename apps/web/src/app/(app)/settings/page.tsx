@@ -3,11 +3,13 @@ import Link from "next/link";
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { AppPageHeader } from "@/components/app/page-header";
+import { ChecklistStep } from "@/components/settings/checklist-step";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { ProjectsCard } from "@/components/settings/projects-card";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { listProjects, type ProjectListItem } from "@/lib/projects/queries";
 import { getSettingsProfile, timeZoneOptions } from "@/lib/settings/profile";
@@ -35,7 +37,7 @@ export default function SettingsPage() {
     <Container>
       <AppPageHeader
         title="Settings"
-        description="Your profile, projects, reminders and account."
+        description="Five things to check once. Each says what it changes in your reviews."
       />
       {/* cacheComponents: the profile read uses cookies, so it streams inside Suspense. */}
       <MeasuredSuspense
@@ -74,36 +76,51 @@ function SettingsView({
   profile: SettingsProfile;
   projects: ProjectListItem[] | null;
 }) {
-  // One block with the page's own gap: skullet wraps the skeleton in an element, so a fragment's cards would lose it.
+  // One block with the page's own gap: skullet wraps the skeleton in an element, so a fragment's parts would lose it.
+  // ProfileForm is steps 1 to 3 in its own form and list, so this list carries on from 4.
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <ProfileForm profile={profile} timezones={timeZoneOptions(profile.timezone)} />
-      <ProjectsCard projects={projects} />
-      <SettingsCard
-        title="Sign out everywhere"
-        description="Signs you out on every browser and device, including this one."
-      >
-        <form action={signOutEverywhere}>
-          <Button type="submit" variant="secondary" size="sm">
-            Sign out everywhere
-          </Button>
-        </form>
-      </SettingsCard>
-      <SettingsCard
-        title="CLI tokens"
-        description="Create and revoke the tokens the CLI signs in with."
-      >
-        <Link href="/setup" className={buttonVariants({ variant: "secondary", size: "sm" })}>
-          Manage tokens
-        </Link>
-      </SettingsCard>
-      {/* Last on purpose: the destructive action ends the page. */}
-      <SettingsCard
-        title="Delete account"
-        description="Deletes your sessions, cards, answers and tokens. It can't be undone."
-      >
-        <DeleteAccountDialog email={profile.email ?? ""} />
-      </SettingsCard>
+      <ol start={4} className="flex flex-col gap-8">
+        <ProjectsCard projects={projects} />
+        <ChecklistStep
+          n={5}
+          title="CLI tokens"
+          changes="Each computer pushes sessions with the token it signed in with. Revoke one and that computer can't push until you run npx session-coach login there again."
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="type-body-sm text-text-2">
+              Create and revoke the tokens the CLI signs in with.
+            </p>
+            <Link href="/setup" className={buttonVariants({ variant: "secondary", size: "sm" })}>
+              Manage tokens
+            </Link>
+          </div>
+        </ChecklistStep>
+      </ol>
+      <Separator />
+      {/* Apart from the checklist on purpose: nothing destructive sits mid-list, and delete ends the page. */}
+      <section aria-labelledby="settings-account" className="flex flex-col gap-6">
+        <h2 id="settings-account" skullet-own="" className="type-heading-sm text-text-1">
+          Account
+        </h2>
+        <SettingsCard
+          title="Sign out everywhere"
+          description="Signs you out on every browser and device, including this one."
+        >
+          <form action={signOutEverywhere}>
+            <Button type="submit" variant="secondary" size="sm">
+              Sign out everywhere
+            </Button>
+          </form>
+        </SettingsCard>
+        <SettingsCard
+          title="Delete account"
+          description="Deletes your sessions, cards, answers and tokens. It can't be undone."
+        >
+          <DeleteAccountDialog email={profile.email ?? ""} />
+        </SettingsCard>
+      </section>
     </div>
   );
 }

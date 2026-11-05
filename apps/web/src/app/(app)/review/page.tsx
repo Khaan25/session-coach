@@ -30,6 +30,7 @@ const sample = (i: number, decision: string, sessionName: string, step: QueueCar
   decision,
   sessionId: `sample-session-${i}`,
   sessionName,
+  repo: null,
   step,
   dueOn: null,
   createdAt: "2026-01-01T12:00:00Z",
@@ -62,7 +63,7 @@ export default function ReviewPage() {
     <Container>
       <AppPageHeader
         title="Review"
-        description="Explain each decision back in your own words. Each card comes back after 1 day, then 3, then 7."
+        description="Explain each decision from memory, then see the reason. A card comes back on day 1, 4 and 11 until you own it."
       />
       {/* Skullet measures the real queue, drawn from sample cards, so each row keeps its shape when the data lands. The
           queue length isn't known until then, so the list can still grow or shrink. */}

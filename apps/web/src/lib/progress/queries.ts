@@ -3,6 +3,9 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
+import { sessionName } from "@/lib/sessions/name";
+
+import { cardPath, type CardPath, type CardPathInput } from "./card-path";
 import { computeOwnership, type Ownership } from "./ownership";
 import { CHART_DAYS, computeProgress, type Progress, type ProgressInput } from "./progress";
 
@@ -83,4 +86,54 @@ export async function getOwnership(): Promise<Ownership> {
   const { data, error } = await supabase.rpc("learner_ownership");
   if (error) throw error;
   return computeOwnership(data);
+}
+
+/**
+ * One of the learner's own cards to teach the schedule with: the furthest along (owned first, then the highest step),
+ * with all its answers. Learner reads through RLS; the inner embed drops a hidden card. Only the decision's title is
+ * read, never its why, evidence or answer key.
+ *
+ * @param userId - The signed-in learner.
+ * @param now - The current time, from the page.
+ * @returns The card's path (see `cardPath`), or null when no card has been answered.
+ */
+export async function getCardPath(userId: string, now: Date): Promise<CardPath | null> {
+  const supabase = await createClient();
+  const [profile, review] = await Promise.all([
+    supabase.from("profiles").select("timezone").eq("id", userId).maybeSingle(),
+    supabase
+      .from("reviews")
+      .select(
+        "card_id, step, due_on, mastered, card:decision_cards!inner(decision, created_at, session:sessions(title, repo, branch))",
+      )
+      .eq("user_id", userId)
+      .order("mastered", { ascending: false })
+      .order("step", { ascending: false })
+      .order("due_on")
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (profile.error) throw new Error(`getCardPath: ${profile.error.message}`);
+  if (review.error) throw new Error(`getCardPath: ${review.error.message}`);
+  if (!review.data) return null;
+
+  const answers = await supabase
+    .from("answers")
+    .select("score, review_step, skipped, created_at")
+    .eq("user_id", userId)
+    .eq("card_id", review.data.card_id)
+    .order("created_at")
+    .overrideTypes<CardPathInput["answers"], { merge: false }>();
+  if (answers.error) throw new Error(`getCardPath: ${answers.error.message}`);
+
+  const { card, step, due_on, mastered } = review.data;
+  return cardPath({
+    decision: card.decision,
+    session: card.session ? sessionName(card.session) : "your session",
+    createdAt: card.created_at,
+    answers: answers.data,
+    review: { step, due_on, mastered },
+    timeZone: profile.data?.timezone ?? "UTC",
+    now,
+  });
 }

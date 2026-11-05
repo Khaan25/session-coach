@@ -4,7 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 
-import { addSyncHooks, hasSyncHook, runInit, syncHooks } from "./init.ts";
+import {
+  addSyncHooks,
+  hasSyncHook,
+  parseInitArgs,
+  parseYesNo,
+  runInit,
+  syncHooks,
+} from "./init.ts";
 
 describe("addSyncHooks", () => {
   it("adds both hooks to empty settings", () => {
@@ -62,5 +69,35 @@ describe("runInit", () => {
     } finally {
       await rm(cwd, { recursive: true, force: true });
     }
+  });
+});
+
+describe("parseInitArgs", () => {
+  it("takes --url and --yes in any order", () => {
+    assert.deepEqual(parseInitArgs([]), { url: null, yes: false });
+    assert.deepEqual(parseInitArgs(["--yes", "--url", "http://localhost:3000"]), {
+      url: "http://localhost:3000",
+      yes: true,
+    });
+    assert.deepEqual(parseInitArgs(["--url=https://x.test", "-y"]), {
+      url: "https://x.test",
+      yes: true,
+    });
+  });
+
+  it("refuses unknown, repeated and empty flags", () => {
+    for (const bad of [["--token"], ["--yes", "--yes"], ["--url"], ["--url=a", "--url=b"]]) {
+      assert.ok("error" in parseInitArgs(bad), bad.join(" "));
+    }
+  });
+});
+
+describe("parseYesNo", () => {
+  it("uses the default on Enter and reads y/n words", () => {
+    assert.equal(parseYesNo("", true), true);
+    assert.equal(parseYesNo("", false), false);
+    assert.equal(parseYesNo(" Yes ", false), true);
+    assert.equal(parseYesNo("no", true), false);
+    assert.equal(parseYesNo("maybe", true), null);
   });
 });

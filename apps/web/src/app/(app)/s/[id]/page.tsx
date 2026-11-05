@@ -146,6 +146,10 @@ function SessionView({
         />
       ) : (
         <div className="flex flex-col gap-6">
+          <p className="type-body text-text-2">
+            Each card is one decision your agent made. Explain why in your own words; the reason and
+            its quote open after you answer.
+          </p>
           {cards.map((card) =>
             card.locked ? (
               <LockedDecisionCard key={card.id} card={card} />

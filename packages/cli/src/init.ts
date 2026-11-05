@@ -2,7 +2,7 @@
 // `.claude/settings.local.json`, Claude Code's personal, uncommitted settings file. `addSyncHooks` is pure, so
 // node --test covers the merge.
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 /** The two hooks: SessionEnd uploads a session as it ends; SessionStart catches up on any that one missed. */
@@ -104,7 +104,10 @@ export async function runInit(
   if ("error" in updated) return { message: `${path}: ${updated.error as string}`, exitCode: 1 };
 
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(updated, null, 2)}\n`);
+  // Written beside it, then renamed over it, so an interrupted write never leaves half a settings file.
+  const temporary = `${path}.${process.pid}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(updated, null, 2)}\n`);
+  await rename(temporary, path);
 
   const lines = [
     `Auto-upload is on for ${cwd}.`,
@@ -118,4 +121,51 @@ export async function runInit(
     );
   }
   return { message: lines.join("\n"), exitCode: 0 };
+}
+
+/** Where init writes the hooks: Claude Code's personal, uncommitted settings for the project. */
+export function settingsLocalPath(cwd: string): string {
+  return join(cwd, ".claude", "settings.local.json");
+}
+
+export type InitArgs = { url: string | null; yes: boolean } | { error: string };
+
+/** Accepts `--url value`, `--url=value` and `--yes` (say yes to every step, for agents and scripts). */
+export function parseInitArgs(args: string[]): InitArgs {
+  let url: string | null = null;
+  let yes = false;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i] as string;
+    if (arg === "--yes" || arg === "-y") {
+      if (yes) return { error: "--yes was given twice." };
+      yes = true;
+      continue;
+    }
+    let value: string | undefined;
+    if (arg === "--url") {
+      value = args[++i];
+      if (value === undefined) return { error: "--url needs a value." };
+    } else if (arg.startsWith("--url=")) {
+      value = arg.slice("--url=".length);
+    } else {
+      return { error: `Unknown argument: ${arg}` };
+    }
+    if (url !== null) return { error: "--url was given twice." };
+    url = value;
+  }
+  return { url, yes };
+}
+
+/** A step heading: `Step 2 of 4 · Turn on automatic uploads`. */
+export function stepHeading(step: number, total: number, title: string): string {
+  return `\nStep ${step} of ${total} · ${title}`;
+}
+
+/** Reads a yes/no answer. Empty means the default; anything not starting with y or n is asked again (null). */
+export function parseYesNo(answer: string, defaultYes: boolean): boolean | null {
+  const a = answer.trim().toLowerCase();
+  if (a === "") return defaultYes;
+  if (a.startsWith("y")) return true;
+  if (a.startsWith("n")) return false;
+  return null;
 }

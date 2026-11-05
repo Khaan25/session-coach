@@ -7,6 +7,7 @@ Uploads Claude Code session logs to Session Coach.
 Needs Node 20 or newer (tested on Node 22). Nothing to install first; `npx` fetches it.
 
 ```sh
+npx session-coach init          # first time in a project: the guided setup
 npx session-coach login
 npx session-coach init
 npx session-coach push --latest
@@ -15,6 +16,17 @@ npx session-coach sync
 ```
 
 `login` prints a code and opens the app's `/cli/approve` page; check the code matches, click Approve, and the CLI saves its own token (device-code login, RFC 8628). Nothing to copy. Ctrl+C cancels; the code expires after 10 minutes. On a machine without a browser, open the printed address anywhere you're signed in. `login --token` instead asks for a token from the app's `/setup` page, checks it with the server and saves it only if it works. `push --latest` uploads the newest log of the project in the folder you run it from, and only that project (see [push](#push)). `sync` is for a Claude Code hook that uploads your finished sessions for you (see [sync](#sync)).
+
+## init
+
+New to Session Coach? Run `npx session-coach init` in the project's folder. It walks through four steps, says what each does before doing it, and changes nothing without a yes:
+
+1. **Sign in**: the same browser login as `login`, skipped when you're already signed in.
+2. **Turn on automatic uploads**: adds the [sync](#sync) hook to this project's `.claude/settings.json`, keeping every other setting and hook. It does nothing when the hook is already there, and leaves a file it can't read as JSON alone.
+3. **Send your newest session**: offers to `push --latest` now.
+4. **What happens next**: where the cards appear and how reviews come back.
+
+`--yes` says yes to every step, for an agent or a script. Without a terminal and without `--yes`, every question is answered no. `--url` works as it does for `login`.
 
 ## Run from the repo (contributors)
 

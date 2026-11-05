@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import type { Ownership, OwnershipCount } from "@/lib/progress/ownership";
 
@@ -17,17 +17,21 @@ const line = ({ explained, owned, total }: OwnershipCount) =>
  * The dashboard's ownership meter: the overall line, then one bar per repo linking to the sessions filtered to it.
  * The bar fills with explained cards, not owned ones: no card is owned before about 14 Nov (DECISIONS, 2026-11-04
  * review ladder), so an owned bar would sit empty. Sessions sent without a repo are one unlinked "No project" row.
+ * `footer` goes under the bars: the dashboard's "What's this?".
  */
-export function OwnershipMeter({ ownership }: { ownership: Ownership }) {
+export function OwnershipMeter({
+  ownership,
+  footer,
+}: {
+  ownership: Ownership;
+  footer?: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>
           <h2>{line(ownership.overall)} decisions</h2>
         </CardTitle>
-        <CardDescription>
-          Explained means you answered it right once. Owned means you still could on day 11.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         {ownership.repos.map((row) => (
@@ -48,6 +52,7 @@ export function OwnershipMeter({ ownership }: { ownership: Ownership }) {
           </Progress>
         ))}
       </CardContent>
+      {footer && <CardFooter>{footer}</CardFooter>}
     </Card>
   );
 }
