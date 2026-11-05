@@ -32,7 +32,7 @@ const faq = [
   {
     question: "A session failed. What now?",
     answer:
-      "Open the session on your dashboard to see why, then press Try again. The log is already stored, so nothing needs sending again.",
+      "Open the session on your dashboard to see why, then press Try again. That works when the log reached us, so nothing needs sending again. If it says the log never reached Session Coach, run npx session-coach push on the computer that recorded the session to send it again.",
   },
   {
     question: "Where is my data stored?",
