@@ -1,13 +1,16 @@
 import { CalendarCheckIcon, SealCheckIcon } from "@phosphor-icons/react/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoCardsYetEmpty, NoReviewsEmpty } from "@/components/app/empty-state";
 import { AppPageHeader } from "@/components/app/page-header";
+import { ProjectTabs } from "@/components/app/project-tabs";
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
 import { AnswersChart } from "@/components/progress/answers-chart";
+import { OwnershipMeter } from "@/components/progress/ownership-meter";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -33,7 +36,7 @@ import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress
 import { Stat, StatDescription, StatGroup, StatLabel, StatValue } from "@/components/ui/stat";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import type { CardPath } from "@/lib/progress/card-path";
-import type { OwnershipCount } from "@/lib/progress/ownership";
+import type { Ownership, OwnershipCount } from "@/lib/progress/ownership";
 import {
   CHART_DAYS,
   REVIEW_STEPS,
@@ -42,8 +45,10 @@ import {
   type ReviewStep,
 } from "@/lib/progress/progress";
 import { getCardPath, getOwnership, getProgress } from "@/lib/progress/queries";
+import { listProjects } from "@/lib/projects/queries";
 import { dueTodayCount } from "@/lib/review/queries";
 import { cardlessReason } from "@/lib/sessions/queries";
+import { parseRepo } from "@/lib/sessions/rows";
 
 export const metadata: Metadata = { title: "Progress" };
 
@@ -62,9 +67,13 @@ const stepMeans: Record<ReviewStep, string> = {
 /** Everything the page shows; the skeleton draws the same shape from `SAMPLE`. */
 type ProgressPageData = {
   progress: ProgressData;
-  ownership: OwnershipCount;
+  ownership: Ownership;
   dueToday: number;
   path: CardPath | null;
+  /** The project tab picked (`?repo=`); null for every project. */
+  repo: string | null;
+  /** The learner's projects, for the tabs; null when the read failed or isn't known yet. */
+  repos: string[] | null;
 };
 
 // Only the skeleton's shape comes from this: counts, days and session titles like a real learner's.
@@ -84,7 +93,15 @@ const SAMPLE: ProgressPageData = {
       { id: "sample-2", title: "Stream the CLI upload", mastered: 0, total: 2 },
     ],
   },
-  ownership: { explained: 6, owned: 3, total: 9 },
+  ownership: {
+    overall: { explained: 6, owned: 3, total: 9 },
+    repos: [
+      { repo: "rapporteur", explained: 2, owned: 1, total: 4 },
+      { repo: "session-coach", explained: 4, owned: 2, total: 5 },
+    ],
+  },
+  repo: null,
+  repos: null,
   dueToday: 3,
   path: {
     decision: "Rate limit uploads per CLI token",
@@ -99,26 +116,31 @@ const SAMPLE: ProgressPageData = {
   },
 };
 
-export default function ProgressPage() {
+export default function ProgressPage({ searchParams }: PageProps<"/progress">) {
   // Skullet measures the real page, drawn from sample progress, so each card keeps its shape when the data lands. The
-  // session count and the card's path aren't known until then, so those lists can still grow or shrink.
+  // session count, the project tabs and the card's path aren't known until then, so those can still grow or shrink.
   return (
     <MeasuredSuspense label="Loading your progress" skeleton={<ProgressSummary data={SAMPLE} />}>
-      <ProgressView />
+      <ProgressView searchParams={searchParams} />
     </MeasuredSuspense>
   );
 }
 
 // Reads the signed-in learner's rows, so it renders inside Suspense (cacheComponents). A failed read throws to
 // error.tsx, which offers a retry.
-async function ProgressView() {
+async function ProgressView({ searchParams }: Pick<PageProps<"/progress">, "searchParams">) {
   const user = await getCurrentUser();
-  const data = user ? await load(user.id) : null;
+  const repo = parseRepo((await searchParams).repo);
+  const data = user ? await load(user.id, repo) : null;
+  // A repo the learner has no session in: show every project rather than an empty page, as the dashboard does.
+  if (repo && data?.repos && !data.repos.includes(repo)) redirect("/progress");
 
   // No card: `cardlessReason` picks the copy (first run points at the CLI; a session being read, a failed one, or
-  // sessions that gave none point at the sessions). Cards but no answer yet point at the queue.
+  // sessions that gave none point at the sessions). Cards but no answer yet point at the queue. A project picked
+  // from the tabs keeps the page and its tabs, even at zero.
   if (!user || !data) return <ProgressEmpty empty={<NoCardsYetEmpty />} />;
   const { progress } = data;
+  if (repo) return <ProgressSummary data={data} />;
   if (progress.totalCards === 0) {
     return <ProgressEmpty empty={<NoCardsYetEmpty cardless={await cardlessReason(user.id)} />} />;
   }
@@ -143,8 +165,63 @@ const answeredCount = (progress: ProgressData) =>
 const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0);
 
 function ProgressSummary({ data }: { data: ProgressPageData }) {
-  const { progress, ownership, dueToday, path } = data;
+  const { progress, ownership, dueToday, path, repo, repos } = data;
   const answered = answeredCount(progress);
+  // The collapsible's explained and owned bars: the picked project's row, or every project's.
+  const counts = repo
+    ? (ownership.repos.find((row) => row.repo === repo) ?? { explained: 0, owned: 0, total: 0 })
+    : ownership.overall;
+  const body = (
+    <>
+      <TodayBanner dueToday={dueToday} allProjects={repo !== null} />
+
+      {path && <CardPathCard path={path} />}
+
+      <Card>
+        <CardContent>
+          <Collapsible>
+            <CollapsibleRow
+              size="row"
+              summary={`${counts.total} cards · ${counts.explained} explained · ${counts.owned} owned`}
+            >
+              {repo ? `Your cards in ${repo}` : "All your cards"}
+            </CollapsibleRow>
+            <CollapsibleContent>
+              <CardsDetail progress={progress} counts={counts} answered={answered} />
+            </CollapsibleContent>
+          </Collapsible>
+        </CardContent>
+      </Card>
+
+      {ownership.repos.length > 0 && (
+        <OwnershipMeter ownership={ownership} title="By project" path="/progress" />
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle skullet-own="">
+            <h2>By session</h2>
+          </CardTitle>
+        </CardHeader>
+        <ItemGroup>
+          {progress.bySession.map(({ id, title, mastered, total }) => (
+            // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
+            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+            <Item key={id} role="listitem">
+              <ItemContent>
+                <ItemTitle>
+                  <Link href={`/s/${id}`}>{title}</Link>
+                </ItemTitle>
+                <ItemDescription>
+                  {mastered} of {total} cards owned
+                </ItemDescription>
+              </ItemContent>
+            </Item>
+          ))}
+        </ItemGroup>
+      </Card>
+    </>
+  );
   return (
     <Container>
       {/* skullet-own: static text stays real in the skeleton; only the learner's numbers are drawn as bars. The spans
@@ -171,127 +248,112 @@ function ProgressSummary({ data }: { data: ProgressPageData }) {
         </PageHeaderStats>
       </AppPageHeader>
 
-      <TodayBanner dueToday={dueToday} />
-
-      {path && <CardPathCard path={path} />}
-
-      <Card>
-        <CardContent>
-          <Collapsible>
-            <CollapsibleRow
-              size="row"
-              summary={`${ownership.total} cards · ${ownership.explained} explained · ${ownership.owned} owned`}
-            >
-              All your cards
-            </CollapsibleRow>
-            <CollapsibleContent>
-              <div className="flex flex-col gap-6 pt-4">
-                <section aria-labelledby="progress-steps" className="flex flex-col gap-3">
-                  <h2 id="progress-steps" className="type-heading-xs text-text-1">
-                    Cards by step
-                  </h2>
-                  <StatGroup variant="plain">
-                    {REVIEW_STEPS.map((step) => (
-                      <Stat key={step}>
-                        <StatLabel>{stepLabels[step]}</StatLabel>
-                        <StatValue>{progress.steps[step]}</StatValue>
-                        <StatDescription>{stepMeans[step]}</StatDescription>
-                      </Stat>
-                    ))}
-                  </StatGroup>
-                </section>
-
-                <section aria-labelledby="progress-owned" className="flex flex-col gap-3">
-                  <h2 id="progress-owned" className="type-heading-xs text-text-1">
-                    Explained and owned
-                  </h2>
-                  <div className="flex flex-col gap-1">
-                    <Progress value={pct(ownership.explained, ownership.total)}>
-                      <ProgressLabel>
-                        Explained: {ownership.explained} of {ownership.total}
-                      </ProgressLabel>
-                      <ProgressValue />
-                    </Progress>
-                    <p className="type-body-sm text-text-2">
-                      You explained it in your own words and the grader scored it Explained, at
-                      least once.
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Progress value={pct(ownership.owned, ownership.total)}>
-                      <ProgressLabel>
-                        Owned: {ownership.owned} of {ownership.total}
-                      </ProgressLabel>
-                      <ProgressValue />
-                    </Progress>
-                    <p className="type-body-sm text-text-2">
-                      You still explained it on day 11, after three spaced reviews. That is the goal
-                      for every card.
-                    </p>
-                  </div>
-                </section>
-
-                <section aria-labelledby="progress-answers" className="flex flex-col gap-3">
-                  <h2 id="progress-answers" className="type-heading-xs text-text-1">
-                    Answers per day
-                  </h2>
-                  <AnswersChart data={progress.answersPerDay} />
-                </section>
-
-                <section aria-labelledby="progress-mix" className="flex flex-col gap-3">
-                  <h2 id="progress-mix" className="type-heading-xs text-text-1">
-                    Score mix
-                  </h2>
-                  <p className="type-body-sm text-text-2">
-                    {answered > 0
-                      ? `${answered} answers in the last ${progress.answersPerDay.length} days.`
-                      : `No answers in the last ${progress.answersPerDay.length} days.`}
-                  </p>
-                  {answered > 0 &&
-                    scores.map((score) => (
-                      <Progress key={score} value={pct(progress.scoreMix[score], answered)}>
-                        <ProgressLabel>
-                          <ScoreBadge score={score} /> {progress.scoreMix[score]} answers
-                        </ProgressLabel>
-                        <ProgressValue />
-                      </Progress>
-                    ))}
-                </section>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle skullet-own="">
-            <h2>By session</h2>
-          </CardTitle>
-        </CardHeader>
-        <ItemGroup>
-          {progress.bySession.map(({ id, title, mastered, total }) => (
-            // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
-            <Item key={id} role="listitem">
-              <ItemContent>
-                <ItemTitle>
-                  <Link href={`/s/${id}`}>{title}</Link>
-                </ItemTitle>
-                <ItemDescription>
-                  {mastered} of {total} cards owned
-                </ItemDescription>
-              </ItemContent>
-            </Item>
-          ))}
-        </ItemGroup>
-      </Card>
+      {repos && repos.length > 0 ? (
+        <ProjectTabs
+          tabs={[null, ...repos].map((name) => ({ repo: name, href: progressHref(name) }))}
+          repo={repo}
+        >
+          {body}
+        </ProjectTabs>
+      ) : (
+        body
+      )}
     </Container>
   );
 }
 
+/** The progress page's URL for one project, or for every project. */
+const progressHref = (repo: string | null) =>
+  repo ? `/progress?${new URLSearchParams({ repo })}` : "/progress";
+
+/** Inside "All your cards": cards by step, explained and owned, answers per day and the score mix. */
+function CardsDetail({
+  progress,
+  counts,
+  answered,
+}: {
+  progress: ProgressData;
+  counts: OwnershipCount;
+  answered: number;
+}) {
+  return (
+    <div className="flex flex-col gap-6 pt-4">
+      <section aria-labelledby="progress-steps" className="flex flex-col gap-3">
+        <h2 id="progress-steps" className="type-heading-xs text-text-1">
+          Cards by step
+        </h2>
+        <StatGroup variant="plain">
+          {REVIEW_STEPS.map((step) => (
+            <Stat key={step}>
+              <StatLabel>{stepLabels[step]}</StatLabel>
+              <StatValue>{progress.steps[step]}</StatValue>
+              <StatDescription>{stepMeans[step]}</StatDescription>
+            </Stat>
+          ))}
+        </StatGroup>
+      </section>
+
+      <section aria-labelledby="progress-owned" className="flex flex-col gap-3">
+        <h2 id="progress-owned" className="type-heading-xs text-text-1">
+          Explained and owned
+        </h2>
+        <div className="flex flex-col gap-1">
+          <Progress value={pct(counts.explained, counts.total)}>
+            <ProgressLabel>
+              Explained: {counts.explained} of {counts.total}
+            </ProgressLabel>
+            <ProgressValue />
+          </Progress>
+          <p className="type-body-sm text-text-2">
+            You explained it in your own words and the grader scored it Explained, at least once.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Progress value={pct(counts.owned, counts.total)}>
+            <ProgressLabel>
+              Owned: {counts.owned} of {counts.total}
+            </ProgressLabel>
+            <ProgressValue />
+          </Progress>
+          <p className="type-body-sm text-text-2">
+            You still explained it on day 11, after three spaced reviews. That is the goal for every
+            card.
+          </p>
+        </div>
+      </section>
+
+      <section aria-labelledby="progress-answers" className="flex flex-col gap-3">
+        <h2 id="progress-answers" className="type-heading-xs text-text-1">
+          Answers per day
+        </h2>
+        <AnswersChart data={progress.answersPerDay} />
+      </section>
+
+      <section aria-labelledby="progress-mix" className="flex flex-col gap-3">
+        <h2 id="progress-mix" className="type-heading-xs text-text-1">
+          Score mix
+        </h2>
+        <p className="type-body-sm text-text-2">
+          {answered > 0
+            ? `${answered} answers in the last ${progress.answersPerDay.length} days.`
+            : `No answers in the last ${progress.answersPerDay.length} days.`}
+        </p>
+        {answered > 0 &&
+          scores.map((score) => (
+            <Progress key={score} value={pct(progress.scoreMix[score], answered)}>
+              <ProgressLabel>
+                <ScoreBadge score={score} /> {progress.scoreMix[score]} answers
+              </ProgressLabel>
+              <ProgressValue />
+            </Progress>
+          ))}
+      </section>
+    </div>
+  );
+}
+
 /** The one task for today: the review queue's count (the same number the dashboard and sidebar show). */
-function TodayBanner({ dueToday }: { dueToday: number }) {
+function TodayBanner({ dueToday, allProjects }: { dueToday: number; allProjects: boolean }) {
   return (
     <Card>
       <CardHeader>
@@ -304,6 +366,8 @@ function TodayBanner({ dueToday }: { dueToday: number }) {
           </h2>
         </CardTitle>
         <CardDescription>
+          {/* The queue is one list for every project (at most 5 a day), so a project tab doesn't narrow it. */}
+          {allProjects && "From all your projects. "}
           {dueToday > 0
             ? "Write the why in your own words first. Each one you explain moves a step closer to owned."
             : "Cards come back on day 1, 4 and 11 after you answer them. Come back tomorrow."}
@@ -392,13 +456,25 @@ function CardPathCard({ path }: { path: CardPath }) {
 }
 
 /** Reads the clock outside render (cacheComponents and the compiler's purity rule), then the learner's rows. */
-async function load(userId: string): Promise<ProgressPageData> {
+async function load(userId: string, repo: string | null): Promise<ProgressPageData> {
   const now = new Date();
-  const [progress, ownership, dueToday, path] = await Promise.all([
-    getProgress(userId, now),
+  const [progress, ownership, dueToday, path, projects] = await Promise.all([
+    getProgress(userId, now, repo),
     getOwnership(),
     dueTodayCount(userId, now),
-    getCardPath(userId, now),
+    getCardPath(userId, now, repo),
+    // Only the tabs need it, so a failed read hides them instead of failing the page.
+    listProjects(userId).catch((error: unknown) => {
+      console.error("[progress] listProjects", error);
+      return null;
+    }),
   ]);
-  return { progress, ownership: ownership.overall, dueToday, path };
+  return {
+    progress,
+    ownership,
+    dueToday,
+    path,
+    repo,
+    repos: projects?.map((project) => project.repo) ?? null,
+  };
 }

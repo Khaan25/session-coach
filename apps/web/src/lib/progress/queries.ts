@@ -13,26 +13,34 @@ import { CHART_DAYS, computeProgress, type Progress, type ProgressInput } from "
  * The learner's progress from their visible cards, reviews, answers of the last CHART_DAYS days and ready sessions.
  * Learner reads through RLS, columns by name (never model_answer); the user_id filters decide ownership in code too.
  * Each list is read with `fetchAll`, so a learner with more than 1000 answers isn't silently cut short.
+ * With `repo`, only that project's cards and sessions are read; `computeProgress` then drops the other cards' reviews
+ * and answers, so every number narrows to the project.
  *
  * @param userId - The signed-in learner.
  * @param now - The current time, from the page.
+ * @param repo - One project (`?repo=`, see `parseRepo`); null for every project.
  * @returns The computed progress (see `computeProgress`).
  */
-export async function getProgress(userId: string, now: Date): Promise<Progress> {
+export async function getProgress(
+  userId: string,
+  now: Date,
+  repo: string | null = null,
+): Promise<Progress> {
   const supabase = await createClient();
   // One extra day so the oldest chart day is whole in any time zone.
   const since = new Date(now.getTime() - (CHART_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
 
   const [profile, cards, reviews, answers, sessions] = await Promise.all([
     supabase.from("profiles").select("timezone").eq("id", userId).maybeSingle(),
-    fetchAll<ProgressInput["cards"][number]>((from, to) =>
-      supabase
+    fetchAll<ProgressInput["cards"][number]>((from, to) => {
+      // The inner embed lets the repo filter reach the card's session; every card has one, so it drops nothing else.
+      let query = supabase
         .from("decision_cards")
-        .select("id, session_id")
-        .eq("user_id", userId)
-        .order("id")
-        .range(from, to),
-    ),
+        .select("id, session_id, session:sessions!inner(repo)")
+        .eq("user_id", userId);
+      if (repo) query = query.eq("session.repo", repo);
+      return query.order("id").range(from, to);
+    }),
     fetchAll<ProgressInput["reviews"][number]>((from, to) =>
       supabase
         .from("reviews")
@@ -52,16 +60,15 @@ export async function getProgress(userId: string, now: Date): Promise<Progress> 
         // score has a check constraint (0, 1 or 2) that the generated types read as number.
         .overrideTypes<ProgressInput["answers"], { merge: false }>(),
     ),
-    fetchAll<ProgressInput["sessions"][number]>((from, to) =>
-      supabase
+    fetchAll<ProgressInput["sessions"][number]>((from, to) => {
+      let query = supabase
         .from("sessions")
         .select("id, title, repo, branch")
         .eq("user_id", userId)
-        .eq("status", "ready")
-        .order("created_at", { ascending: false })
-        .order("id")
-        .range(from, to),
-    ),
+        .eq("status", "ready");
+      if (repo) query = query.eq("repo", repo);
+      return query.order("created_at", { ascending: false }).order("id").range(from, to);
+    }),
   ]);
   if (profile.error) throw new Error(`getProgress: ${profile.error.message}`);
 
@@ -95,18 +102,26 @@ export async function getOwnership(): Promise<Ownership> {
  *
  * @param userId - The signed-in learner.
  * @param now - The current time, from the page.
+ * @param repo - Pick the card from this project only (`?repo=`); null for every project.
  * @returns The card's path (see `cardPath`), or null when no card has been answered.
  */
-export async function getCardPath(userId: string, now: Date): Promise<CardPath | null> {
+export async function getCardPath(
+  userId: string,
+  now: Date,
+  repo: string | null = null,
+): Promise<CardPath | null> {
   const supabase = await createClient();
+  // Both embeds are inner so the repo filter drops the review row, not just its session; every card has a session.
+  let reviewQuery = supabase
+    .from("reviews")
+    .select(
+      "card_id, step, due_on, mastered, card:decision_cards!inner(decision, created_at, session:sessions!inner(title, repo, branch))",
+    )
+    .eq("user_id", userId);
+  if (repo) reviewQuery = reviewQuery.eq("card.session.repo", repo);
   const [profile, review] = await Promise.all([
     supabase.from("profiles").select("timezone").eq("id", userId).maybeSingle(),
-    supabase
-      .from("reviews")
-      .select(
-        "card_id, step, due_on, mastered, card:decision_cards!inner(decision, created_at, session:sessions(title, repo, branch))",
-      )
-      .eq("user_id", userId)
+    reviewQuery
       .order("mastered", { ascending: false })
       .order("step", { ascending: false })
       .order("due_on")
