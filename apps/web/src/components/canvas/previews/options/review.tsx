@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/card";
 import { Code } from "@/components/ui/code-block";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
@@ -207,16 +207,29 @@ function AnswerField({
   value,
   onChange,
   hint,
+  error,
+  readOnly,
 }: {
   value: string;
   onChange: (value: string) => void;
   hint?: React.ReactNode;
+  /** What the route or the field check said, under the box, as the real quiz shows it. */
+  error?: string;
+  /** While scoring, so the answer shown with the result is the one scored. */
+  readOnly?: boolean;
 }) {
   const id = useId();
   return (
-    <Field>
+    <Field data-invalid={error ? true : undefined}>
       <FieldLabel htmlFor={id}>Your explanation</FieldLabel>
-      <Textarea id={id} rows={5} value={value} onChange={(e) => onChange(e.target.value)} />
+      <Textarea
+        id={id}
+        rows={5}
+        value={value}
+        readOnly={readOnly}
+        aria-invalid={error ? true : undefined}
+        onChange={(e) => onChange(e.target.value)}
+      />
       <FieldDescription>
         {hint ?? "Type it in your own words. Paste is off here."} Submit with{" "}
         <KbdGroup>
@@ -225,6 +238,7 @@ function AnswerField({
         </KbdGroup>
         .
       </FieldDescription>
+      <FieldError>{error}</FieldError>
     </Field>
   );
 }
@@ -247,13 +261,14 @@ function Evidence() {
   );
 }
 
-type Stage = "answer" | "skipped" | "result" | "caught-up";
+export type QuizStage = "answer" | "skipped" | "result" | "caught-up";
+type Stage = QuizStage;
 
 /** One quiz walk-through: the stage, the score the canvas pretends the grader gave, and the typed answer. */
-function useQuizWalk() {
-  const [stage, setStage] = useState<Stage>("answer");
-  const [score, setScore] = useState<Score>(1);
-  const [answer, setAnswer] = useState("");
+function useQuizWalk(initial: { stage?: Stage; score?: Score; answer?: string }) {
+  const [stage, setStage] = useState<Stage>(initial.stage ?? "answer");
+  const [score, setScore] = useState<Score>(initial.score ?? 1);
+  const [answer, setAnswer] = useState(initial.answer ?? "");
   // The result shows the typed answer when there is one, else the sample for the score.
   const shown = answer.trim() || GRADES[score].answer;
   return { stage, setStage, score, setScore, answer, setAnswer, shown };
@@ -478,14 +493,33 @@ export function ReviewQueueOptionB() {
 // /review/[cardId], option B: split explain-as-you-go. The work on the left; on the right, notes that explain each
 // part of the screen as it changes: what this card is, what each score does, where the card moves.
 
-export function ReviewCardOptionB() {
-  const walk = useQuizWalk();
+export function ReviewCardOptionB({
+  stage: initialStage,
+  score: initialScore,
+  answer: initialAnswer,
+  pending,
+  error,
+  controls = true,
+  overlay,
+}: {
+  stage?: Stage;
+  score?: Score;
+  answer?: string;
+  /** A request in flight: the buttons say what they are doing, as the real quiz's do. */
+  pending?: "answer" | "skip";
+  error?: string;
+  /** The canvas's state switcher above the app. Off for a fixed state. */
+  controls?: boolean;
+  /** Drawn over the window, such as the toast the real quiz raises. */
+  overlay?: React.ReactNode;
+} = {}) {
+  const walk = useQuizWalk({ stage: initialStage, score: initialScore, answer: initialAnswer });
   const { stage, setStage, score, answer, setAnswer, shown } = walk;
   const grade = GRADES[score];
   const fx = effects(CARD.step);
   const answered = stage === "result" || stage === "skipped";
   return (
-    <AppFrame path={CARD.path} bar={<StageBar {...walk} />}>
+    <AppFrame path={CARD.path} bar={controls && <StageBar {...walk} />} overlay={overlay}>
       <Container>
         {stage === "caught-up" ? (
           <>
@@ -505,7 +539,12 @@ export function ReviewCardOptionB() {
                   </CardHeader>
                   <CardContent>
                     {stage === "answer" ? (
-                      <AnswerField value={answer} onChange={setAnswer} />
+                      <AnswerField
+                        value={answer}
+                        onChange={setAnswer}
+                        error={error}
+                        readOnly={pending !== undefined}
+                      />
                     ) : (
                       <DataList>
                         {stage === "result" && (
@@ -542,9 +581,15 @@ export function ReviewCardOptionB() {
                   <CardFooter>
                     {stage === "answer" ? (
                       <div className="flex flex-wrap gap-3">
-                        <Button onClick={() => setStage("result")}>Submit answer</Button>
-                        <Button variant="secondary" onClick={() => setStage("skipped")}>
-                          I don&rsquo;t know yet
+                        <Button disabled={!!pending} onClick={() => setStage("result")}>
+                          {pending === "answer" ? "Scoring" : "Submit answer"}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          disabled={!!pending}
+                          onClick={() => setStage("skipped")}
+                        >
+                          {pending === "skip" ? "Showing the why" : "I don’t know yet"}
                         </Button>
                       </div>
                     ) : (

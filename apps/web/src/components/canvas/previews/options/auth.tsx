@@ -7,7 +7,7 @@
 
 import { ArrowRightIcon, CheckCircleIcon, CircleIcon, SealCheckIcon } from "@phosphor-icons/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { AuthNotice } from "@/components/auth/auth-notice";
 import { AuthCard, AuthHeading, AuthSwitch, BrandLink } from "@/components/auth/auth-parts";
@@ -27,6 +27,7 @@ import { DataList, DataListItem, DataListLabel, DataListValue } from "@/componen
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
@@ -85,7 +86,7 @@ function Footer() {
 }
 
 /** Option B: the form column on the left, a panel that explains the product on the right, in place of the art. */
-function SplitShell({
+export function SplitShell({
   path,
   aside,
   children,
@@ -210,7 +211,7 @@ function ScheduleStrip() {
 }
 
 /** The three words the app uses everywhere, defined once. */
-function Glossary() {
+export function Glossary() {
   return (
     <DataList orientation="vertical">
       <DataListItem>
@@ -234,7 +235,13 @@ function Glossary() {
 
 /** A labelled fold: the explanation is one click away, not in the way. */
 
-function PanelHeading({ eyebrow, children }: { eyebrow: string; children: React.ReactNode }) {
+export function PanelHeading({
+  eyebrow,
+  children,
+}: {
+  eyebrow: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col gap-2">
       <p className="type-label-sm text-text-2">{eyebrow}</p>
@@ -255,12 +262,25 @@ function GoogleButton() {
   );
 }
 
-function EmailField({ id, hint }: { id: string; hint?: string }) {
+/** What a form shows after its action ran: field errors under the fields, a notice under the form. */
+export type AuthFormState = {
+  errors?: { email?: string; password?: string };
+  /** An AuthNotice, as the real form puts in its live region. */
+  notice?: React.ReactNode;
+};
+
+function EmailField({ id, hint, error }: { id: string; hint?: string; error?: string }) {
   return (
-    <Field>
+    <Field data-invalid={error ? true : undefined}>
       <FieldLabel htmlFor={id}>Email</FieldLabel>
-      <Input id={id} type="email" placeholder="sam@example.com" />
+      <Input
+        id={id}
+        type="email"
+        placeholder="sam@example.com"
+        aria-invalid={error ? true : undefined}
+      />
       {hint && <FieldDescription>{hint}</FieldDescription>}
+      <FieldError>{error}</FieldError>
     </Field>
   );
 }
@@ -270,14 +290,16 @@ function PasswordField({
   label = "Password",
   hint,
   forgot,
+  error,
 }: {
   id: string;
   label?: string;
   hint?: string;
   forgot?: boolean;
+  error?: string;
 }) {
   return (
-    <Field>
+    <Field data-invalid={error ? true : undefined}>
       <div className="flex items-baseline justify-between gap-3">
         <FieldLabel htmlFor={id}>{label}</FieldLabel>
         {forgot && (
@@ -286,21 +308,22 @@ function PasswordField({
           </Link>
         )}
       </div>
-      <Input id={id} type="password" />
+      <Input id={id} type="password" aria-invalid={error ? true : undefined} />
       {hint && <FieldDescription>{hint}</FieldDescription>}
+      <FieldError>{error}</FieldError>
     </Field>
   );
 }
 
-function LoginForm({ id }: { id: string }) {
+function LoginForm({ id, errors }: { id: string; errors?: AuthFormState["errors"] }) {
   return (
     <AuthCard>
       <FieldGroup>
         <GoogleButton />
         <FieldSeparator>or</FieldSeparator>
         <FieldGroup>
-          <EmailField id={`${id}-email`} />
-          <PasswordField id={`${id}-password`} forgot />
+          <EmailField id={`${id}-email`} error={errors?.email} />
+          <PasswordField id={`${id}-password`} forgot error={errors?.password} />
           <Button size="lg">Sign in</Button>
         </FieldGroup>
       </FieldGroup>
@@ -308,15 +331,23 @@ function LoginForm({ id }: { id: string }) {
   );
 }
 
-function SignUpForm({ id }: { id: string }) {
+function SignUpForm({ id, errors }: { id: string; errors?: AuthFormState["errors"] }) {
   return (
     <AuthCard>
       <FieldGroup>
         <GoogleButton />
         <FieldSeparator>or</FieldSeparator>
         <FieldGroup>
-          <EmailField id={`${id}-email`} hint="We send one link to confirm it." />
-          <PasswordField id={`${id}-password`} hint={`At least ${MIN_PASSWORD} characters.`} />
+          <EmailField
+            id={`${id}-email`}
+            hint="We send one link to confirm it."
+            error={errors?.email}
+          />
+          <PasswordField
+            id={`${id}-password`}
+            hint={`At least ${MIN_PASSWORD} characters.`}
+            error={errors?.password}
+          />
           <Button size="lg">Create account</Button>
         </FieldGroup>
       </FieldGroup>
@@ -324,11 +355,11 @@ function SignUpForm({ id }: { id: string }) {
   );
 }
 
-function ResetForm({ id }: { id: string }) {
+function ResetForm({ id, errors }: { id: string; errors?: AuthFormState["errors"] }) {
   return (
     <AuthCard>
       <FieldGroup>
-        <EmailField id={`${id}-email`} hint="The address you sign in with." />
+        <EmailField id={`${id}-email`} hint="The address you sign in with." error={errors?.email} />
         <Button size="lg">Send reset link</Button>
       </FieldGroup>
     </AuthCard>
@@ -339,7 +370,8 @@ function ResetForm({ id }: { id: string }) {
 // /login
 
 /** B: the form, and beside it the anatomy of the card the learner is signing in to answer. */
-export function AuthLoginOptionB() {
+export function AuthLoginOptionB({ errors, notice }: AuthFormState = {}) {
+  const id = useId();
   return (
     <SplitShell
       path="/login"
@@ -347,7 +379,7 @@ export function AuthLoginOptionB() {
         <>
           <PanelHeading eyebrow="What's waiting">A decision card</PanelHeading>
           <SampleCard
-            id="opt-login-b-card"
+            id={`${id}-card`}
             caption="Each card is one choice your agent made. You answer it from memory, then see the why."
           />
           <ScheduleStrip />
@@ -364,7 +396,8 @@ export function AuthLoginOptionB() {
         Your due cards are where you left them.
       </AuthHeading>
       <div className="flex flex-col gap-4">
-        <LoginForm id="opt-login-b" />
+        <LoginForm id={id} errors={errors} />
+        {notice}
         <AuthSwitch prompt="New to Session Coach?" href="/sign-up">
           Create an account
         </AuthSwitch>
@@ -377,7 +410,8 @@ export function AuthLoginOptionB() {
 // /sign-up
 
 /** B: the form, and beside it the loop explained in the order the learner meets it. */
-export function AuthSignUpOptionB() {
+export function AuthSignUpOptionB({ errors, notice }: AuthFormState = {}) {
+  const id = useId();
   return (
     <SplitShell
       path="/sign-up"
@@ -423,7 +457,8 @@ export function AuthSignUpOptionB() {
         Explain back the decisions your coding agent made, and keep what you learn.
       </AuthHeading>
       <div className="flex flex-col gap-4">
-        <SignUpForm id="opt-signup-b" />
+        <SignUpForm id={id} errors={errors} />
+        {notice}
         <AuthSwitch prompt="Already have an account?" href="/login">
           Sign in
         </AuthSwitch>
@@ -435,10 +470,10 @@ export function AuthSignUpOptionB() {
 // ---------------------------------------------------------------------------------------------------------------
 // /sign-up/check-email
 
-function ResendButton() {
+function ResendButton({ resent }: { resent?: boolean }) {
   return (
     <Button variant="secondary" disabled>
-      Resend in 42 s
+      {resent ? "Resend in 58 s" : "Resend in 42 s"}
     </Button>
   );
 }
@@ -447,7 +482,9 @@ const CHECK_EMAIL_LEAD =
   "If that address can sign up, we sent it a link to confirm the account. Open the link on this device to finish.";
 
 /** B: the wait, and beside it the one thing worth knowing before the first card arrives. */
-export function AuthCheckEmailOptionB() {
+/** `resent`: after "Resend the email", with the answer the resend action gives. */
+export function AuthCheckEmailOptionB({ resent }: { resent?: boolean } = {}) {
+  const id = useId();
   return (
     <SplitShell
       path="/sign-up/check-email"
@@ -455,7 +492,7 @@ export function AuthCheckEmailOptionB() {
         <>
           <PanelHeading eyebrow="While you wait">Your first card will look like this</PanelHeading>
           <SampleCard
-            id="opt-check-email-b-card"
+            id={`${id}-card`}
             caption="You can't see the why yet, and that's the point: you answer first."
           />
           <Glossary />
@@ -472,7 +509,12 @@ export function AuthCheckEmailOptionB() {
         {CHECK_EMAIL_LEAD}
       </AuthHeading>
       <div className="flex flex-col items-start gap-4">
-        <ResendButton />
+        <ResendButton resent={resent} />
+        {resent && (
+          <p className="type-body-sm text-text-2">
+            If that address is waiting to be confirmed, we sent a new link.
+          </p>
+        )}
         <AuthSwitch prompt="Already confirmed?" href="/login">
           Sign in
         </AuthSwitch>
@@ -485,7 +527,8 @@ export function AuthCheckEmailOptionB() {
 // /forgot-password
 
 /** B: the form, and beside it the reassurance a worried learner needs: a reset touches nothing they learned. */
-export function AuthForgotPasswordOptionB() {
+export function AuthForgotPasswordOptionB({ errors, notice }: AuthFormState = {}) {
+  const id = useId();
   return (
     <SplitShell
       path="/forgot-password"
@@ -529,7 +572,8 @@ export function AuthForgotPasswordOptionB() {
         Enter the address you sign in with and we&apos;ll email you a link to set a new password.
       </AuthHeading>
       <div className="flex flex-col gap-4">
-        <ResetForm id="opt-forgot-b" />
+        <ResetForm id={id} errors={errors} />
+        {notice}
         <AuthSwitch prompt="Remembered it?" href="/login">
           Sign in
         </AuthSwitch>
@@ -542,16 +586,17 @@ export function AuthForgotPasswordOptionB() {
 // /update-password
 
 /** The new-password field with the length rule checked as you type, so the error never comes after submit. */
-function NewPasswordField({ id }: { id: string }) {
+function NewPasswordField({ id, error }: { id: string; error?: string }) {
   const [value, setValue] = useState("");
   const long = value.length >= MIN_PASSWORD;
   return (
-    <Field>
+    <Field data-invalid={error ? true : undefined}>
       <FieldLabel htmlFor={id}>New password</FieldLabel>
       <Input
         id={id}
         type="password"
         value={value}
+        aria-invalid={error ? true : undefined}
         onChange={(event) => setValue(event.target.value)}
       />
       <FieldDescription>
@@ -560,15 +605,16 @@ function NewPasswordField({ id }: { id: string }) {
           At least {MIN_PASSWORD} characters{value ? ` (${value.length} so far)` : ""}.
         </span>
       </FieldDescription>
+      <FieldError>{error}</FieldError>
     </Field>
   );
 }
 
-function UpdateForm({ id }: { id: string }) {
+function UpdateForm({ id, errors }: { id: string; errors?: AuthFormState["errors"] }) {
   return (
     <AuthCard>
       <FieldGroup>
-        <NewPasswordField id={id} />
+        <NewPasswordField id={id} error={errors?.password} />
         <Button size="lg">Save password</Button>
       </FieldGroup>
     </AuthCard>
@@ -576,7 +622,8 @@ function UpdateForm({ id }: { id: string }) {
 }
 
 /** B: the form, and beside it the dashboard the learner lands on, with its meter explained. */
-export function AuthUpdatePasswordOptionB() {
+export function AuthUpdatePasswordOptionB({ errors, notice }: AuthFormState = {}) {
+  const id = useId();
   return (
     <SplitShell
       path="/update-password"
@@ -614,7 +661,8 @@ export function AuthUpdatePasswordOptionB() {
         Choose the password you&apos;ll sign in with from now on.
       </AuthHeading>
       <div className="flex flex-col gap-4">
-        <UpdateForm id="opt-update-b" />
+        <UpdateForm id={id} errors={errors} />
+        {notice}
         <AuthSwitch prompt="Link expired?" href="/forgot-password">
           Request a new one
         </AuthSwitch>
@@ -624,11 +672,21 @@ export function AuthUpdatePasswordOptionB() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// /auth/error. Copy from app/auth/error/page.tsx; the preview shows the link_expired code.
+// /auth/error. Copy from app/auth/error/page.tsx, by the code in the URL; link_expired by default.
 
-const EXPIRED = {
-  title: "This link was already used or has expired",
-  body: "Each email link works once. If you opened it before, your account may already be confirmed: try signing in.",
+const ERROR_COPY = {
+  link_expired: {
+    title: "This link was already used or has expired",
+    body: "Each email link works once. If you opened it before, your account may already be confirmed: try signing in.",
+  },
+  confirmed_sign_in: {
+    title: "Your email is confirmed",
+    body: "This browser isn't the one you signed up in, so sign in here to continue.",
+  },
+  access_denied: {
+    title: "Google sign-in was cancelled",
+    body: "Nothing changed. Try again whenever you're ready.",
+  },
 };
 
 function ErrorHeading() {
@@ -644,10 +702,13 @@ function ErrorHeading() {
 }
 
 /** B: the error and its fix on the left; on the right, why links work once and what the failure didn't touch. */
-export function AuthErrorOptionB() {
+export function AuthErrorOptionB({
+  code = "link_expired",
+}: { code?: keyof typeof ERROR_COPY } = {}) {
+  const copy = ERROR_COPY[code];
   return (
     <SplitShell
-      path="/auth/error?code=link_expired"
+      path={`/auth/error?code=${code}`}
       aside={
         <>
           <PanelHeading eyebrow="Why this happens">Email links work once</PanelHeading>
@@ -671,8 +732,8 @@ export function AuthErrorOptionB() {
       }
     >
       <ErrorHeading />
-      <AuthNotice title={EXPIRED.title} fail>
-        {EXPIRED.body}
+      <AuthNotice title={copy.title} fail>
+        {copy.body}
       </AuthNotice>
       <div className="flex flex-wrap gap-3">
         <Link href="/login" className={buttonVariants({ size: "lg" })}>

@@ -218,16 +218,43 @@ function CardAnatomy() {
   );
 }
 
-export function DashboardHomeOptionB() {
-  const [repo, setRepo] = useState<string | null>(null);
-  const due = DUE.filter((card) => !repo || card.repo === repo);
+/** Why the due block has no cards: the day's 5 are done, or nothing is due today. */
+const EMPTY_DUE = {
+  done: {
+    title: "Done for today",
+    body: "You've done 5 cards today. The rest come back tomorrow.",
+  },
+  "caught-up": {
+    title: "All caught up",
+    body: "Nothing is due today. Your next card is due tomorrow.",
+  },
+};
+
+export function DashboardHomeOptionB({
+  initialRepo = null,
+  empty,
+  before,
+}: {
+  /** The project filter to open on. */
+  initialRepo?: string | null;
+  /** Show the due block with no cards, and why. */
+  empty?: keyof typeof EMPTY_DUE;
+  /** Drawn under the header, where the real page puts a new project's question-level card. */
+  before?: React.ReactNode;
+} = {}) {
+  const [repo, setRepo] = useState<string | null>(initialRepo);
+  const due = empty ? [] : DUE.filter((card) => !repo || card.repo === repo);
   return (
-    <AppFrame path="/dashboard">
+    <AppFrame
+      path={repo ? `/dashboard?repo=${repo}` : "/dashboard"}
+      dueCount={empty ? 0 : DUE.length}
+    >
       <Container>
         <AppPageHeader
           title="Dashboard"
           description="Your agent’s decisions, project by project. Open any “What’s this?” to learn the part next to it."
         />
+        {before}
         <nav aria-label="Projects" className="flex flex-wrap gap-2">
           {[null, ...PROJECTS.map((p) => p.repo)].map((name) => (
             <Button
@@ -247,14 +274,20 @@ export function DashboardHomeOptionB() {
               <CardHeader>
                 <CardTitle>
                   <h2>
-                    {due.length} {due.length === 1 ? "card is" : "cards are"} due today
+                    {empty
+                      ? EMPTY_DUE[empty].title
+                      : `${due.length} ${due.length === 1 ? "card is" : "cards are"} due today`}
                   </h2>
                 </CardTitle>
-                <CardAction>
-                  <Link href="/review" className={buttonVariants()}>
-                    Start review
-                  </Link>
-                </CardAction>
+                {empty ? (
+                  <CardDescription>{EMPTY_DUE[empty].body}</CardDescription>
+                ) : (
+                  <CardAction>
+                    <Link href="/review" className={buttonVariants()}>
+                      Start review
+                    </Link>
+                  </CardAction>
+                )}
               </CardHeader>
               <ItemGroup>
                 {due.map((card) => (

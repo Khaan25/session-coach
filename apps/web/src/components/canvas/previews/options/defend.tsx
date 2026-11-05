@@ -14,7 +14,7 @@ import { EmptyState } from "@/components/app/empty-state";
 import { ScoreBadge } from "@/components/app/score-badge";
 import { Button } from "@/components/ui/button";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -208,7 +208,14 @@ function OptionCTimed({
   );
 }
 
-export function DefendOptionC({ stage: initial = "start" }: { stage?: DefendStage }) {
+export function DefendOptionC({
+  stage: initial = "start",
+  error,
+}: {
+  stage?: DefendStage;
+  /** Why the defense didn't start, under the Start button, as the real flow shows it. */
+  error?: string;
+}) {
   const { stage, live, go } = useStage(initial);
   return (
     <AppFrame path="/defend" crumb="Defend it">
@@ -239,6 +246,7 @@ export function DefendOptionC({ stage: initial = "start" }: { stage?: DefendStag
                 <div>
                   <Button onClick={() => go("answer")}>Start: pick one of {DEFENDABLE}</Button>
                 </div>
+                {error && <FieldError>{error}</FieldError>}
                 <p className="type-body-sm text-text-2">
                   The clock starts when the question appears. Your review days don&rsquo;t change.
                 </p>

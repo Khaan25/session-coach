@@ -474,10 +474,17 @@ function ChecklistStep({
   );
 }
 
-export function ProgressSettingsSettingsOptionA() {
-  const id = "opt-settings-a";
+export function ProgressSettingsSettingsOptionA({
+  id = "opt-settings-a",
+  overlay,
+}: {
+  /** Prefix for the field ids, unique per copy on the canvas. */
+  id?: string;
+  /** Drawn over the window, such as the delete dialog or the saved toast. */
+  overlay?: React.ReactNode;
+} = {}) {
   return (
-    <AppFrame path="/settings">
+    <AppFrame path="/settings" overlay={overlay}>
       <Container>
         <AppPageHeader
           title="Settings"

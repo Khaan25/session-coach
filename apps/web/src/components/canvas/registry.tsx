@@ -34,6 +34,7 @@ import {
   UpdatePasswordPreview,
 } from "./previews/onboarding";
 import { LearnerPrototype } from "./previews/prototype";
+import { mapRows } from "./previews/map/rows";
 import { optionRows } from "./previews/options/rows";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
@@ -473,7 +474,16 @@ const currentItems: CanvasItem[] = [
 /** The redesign options start one row gap below the lowest current preview. */
 const optionsTop = Math.max(...currentItems.map((item) => item.y + item.height)) + ROW_GAP * 2;
 
-export const canvasItems: CanvasItem[] = [...currentItems, ...stack(optionsTop, optionRows)];
+const optionItems = stack(optionsTop, optionRows);
+
+/** The app map (every route in its picked design, every state, and the flows between them) below the options. */
+const mapTop = Math.max(...optionItems.map((item) => item.y + item.height)) + ROW_GAP * 2;
+
+export const canvasItems: CanvasItem[] = [
+  ...currentItems,
+  ...optionItems,
+  ...stack(mapTop, mapRows),
+];
 
 /**
  * The page's only child: the canvas with every preview above. Client-side, since each entry renders a component.

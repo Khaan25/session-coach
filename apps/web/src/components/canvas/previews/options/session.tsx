@@ -9,6 +9,7 @@
 
 import { ArrowRightIcon, CheckIcon, LockSimpleIcon } from "@phosphor-icons/react";
 import Link from "next/link";
+import { useId } from "react";
 
 import { Container } from "@/components/app/container";
 import { EmptyState } from "@/components/app/empty-state";
@@ -93,14 +94,16 @@ const STEPS = ["Today", "Day 1", "Day 4", "Day 11", "Owned"] as const;
 /** The real page's frame and header, so every option differs only below it. */
 function SessionPage({
   state,
+  queued,
   actions,
   children,
 }: {
   state: SessionState;
+  queued?: boolean;
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const status = state === "no-cards" ? "ready" : state;
+  const status = state === "no-cards" ? "ready" : queued ? "pending" : state;
   return (
     <AppFrame
       path={PATH}
@@ -307,10 +310,11 @@ function CardOutline() {
   );
 }
 
-function OptionB({ state }: { state: SessionState }) {
+function OptionB({ state, queued }: { state: SessionState; queued?: boolean }) {
   const [answered, locked] = CARDS;
+  const answerId = useId();
   return (
-    <SessionPage state={state}>
+    <SessionPage state={state} queued={queued}>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
           {state === "processing" && (
@@ -318,7 +322,7 @@ function OptionB({ state }: { state: SessionState }) {
               <span className="flex items-center gap-3">
                 <Mark n={1} />
                 <span className="min-w-0 flex-1">
-                  <ProcessingState status="processing" />
+                  <ProcessingState status={queued ? "pending" : "processing"} />
                 </span>
               </span>
               <CardOutline />
@@ -412,7 +416,7 @@ function OptionB({ state }: { state: SessionState }) {
                       <LockSimpleIcon aria-hidden="true" />
                       Why, source and quote open after you answer.
                     </span>
-                    <AnswerBox card={locked} id="option-b-answer" />
+                    <AnswerBox card={locked} id={answerId} />
                   </div>
                 </CardContent>
                 <CardFooter>
@@ -431,8 +435,9 @@ function OptionB({ state }: { state: SessionState }) {
   );
 }
 
-export function SessionProcessingOptionB() {
-  return <OptionB state="processing" />;
+/** `queued`: the session is waiting its turn (`pending`), before the model starts reading it. */
+export function SessionProcessingOptionB({ queued }: { queued?: boolean } = {}) {
+  return <OptionB state="processing" queued={queued} />;
 }
 export function SessionReadyOptionB() {
   return <OptionB state="ready" />;
