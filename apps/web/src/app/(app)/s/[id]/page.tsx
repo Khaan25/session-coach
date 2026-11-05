@@ -1,24 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
-import { EmptyState } from "@/components/app/empty-state";
-import { SessionFailedState } from "@/components/app/error-state";
-import { ProcessingState } from "@/components/app/processing-state";
-import { AppPageHeader } from "@/components/app/page-header";
-import { StatusBadge } from "@/components/app/status-badge";
-import { DecisionCard, LockedDecisionCard } from "@/components/cards/decision-card";
-import { RefreshOnSettle } from "@/components/cards/refresh-on-settle";
-import { RetrySessionButton } from "@/components/sessions/retry-session-button";
-import { Code } from "@/components/ui/code-block";
-import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
+import {
+  SAMPLE_SESSION,
+  SAMPLE_SESSION_CARDS,
+  SAMPLE_SESSION_NOW,
+} from "@/components/sessions/session-sample";
+import { SessionView } from "@/components/sessions/session-view";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import type { SessionCard } from "@/lib/cards/columns";
 import { getSessionWithCards } from "@/lib/cards/queries";
-import type { SessionSummary } from "@/lib/sessions/rows";
 import { isStuck } from "@/lib/sessions/stuck";
-import { formatRelativeTime } from "@/lib/relative-time";
 
 export const metadata: Metadata = { title: "Session" };
 
@@ -28,47 +20,19 @@ export function generateStaticParams() {
   return [{ id: "00000000-0000-0000-0000-000000000000" }];
 }
 
-// Only the skeleton's shape comes from these: a ready session with cards of typical length.
-const SAMPLE_NOW = new Date("2026-01-01T12:00:00Z");
-const SAMPLE_SESSION: SessionSummary = {
-  id: "sample-session",
-  title: "Add rate limiting to the upload route",
-  repo: "session-coach",
-  branch: "zia/rate-limit",
-  started_at: new Date(SAMPLE_NOW.getTime() - 3 * 3_600_000).toISOString(),
-  duration_min: 42,
-  status: "ready",
-  error: null,
-  created_at: SAMPLE_NOW.toISOString(),
-};
-// Locked, as most cards are on a learner's first visit to a session: no why or evidence until they answer.
-const sample = (position: number, decision: string, question: string): SessionCard => ({
-  locked: true,
-  id: `sample-card-${position}`,
-  position,
-  decision,
-  question,
-});
-const SAMPLE_CARDS = [
-  sample(
-    0,
-    "Rate limit the upload route per token, not per IP",
-    "Why is the limit keyed on the token rather than the IP?",
-  ),
-  sample(
-    1,
-    "Return 429 with a Retry-After header",
-    "Why does the route send Retry-After instead of only a 429?",
-  ),
-];
-
 export default function SessionPage({ params }: PageProps<"/s/[id]">) {
   // Skullet measures the real page, drawn from a sample session, so the header and each card keep their shape when the
   // data lands. The card count isn't known until then, so the list can still grow or shrink.
   return (
     <MeasuredSuspense
       label="Loading the session"
-      skeleton={<SessionView session={SAMPLE_SESSION} cards={SAMPLE_CARDS} now={SAMPLE_NOW} />}
+      skeleton={
+        <SessionView
+          session={SAMPLE_SESSION}
+          cards={SAMPLE_SESSION_CARDS}
+          now={SAMPLE_SESSION_NOW}
+        />
+      }
     >
       <SessionDetail params={params} />
     </MeasuredSuspense>
@@ -83,84 +47,6 @@ async function SessionDetail({ params }: Pick<PageProps<"/s/[id]">, "params">) {
   const { now, found } = await load(user.id, id);
   if (!found) notFound();
   return <SessionView {...found} now={now} userId={user.id} stuck={isStuck(found.session, now)} />;
-}
-
-function SessionView({
-  session,
-  cards,
-  now,
-  userId,
-  stuck = false,
-}: {
-  session: SessionSummary;
-  cards: SessionCard[];
-  now: Date;
-  /** Only a pending or processing session needs it, to refresh when it settles. */
-  userId?: string;
-  /** A run that was killed or an upload that died (`isStuck`): shown as failed, with Try again. */
-  stuck?: boolean;
-}) {
-  const { title, repo, branch, started_at, duration_min, status, error } = session;
-  const started = started_at ? formatRelativeTime(started_at, now) : null;
-
-  return (
-    <Container>
-      <AppPageHeader
-        title={title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session"}
-        description={
-          <span className="flex flex-wrap items-center gap-2">
-            {repo && <Code>{repo}</Code>}
-            {branch && <Code>{branch}</Code>}
-            <StatusBadge status={status} />
-          </span>
-        }
-      >
-        <PageHeaderStats>
-          <PageHeaderStat
-            label="Duration"
-            value={duration_min ?? "None"}
-            detail={duration_min === null ? undefined : "min"}
-          />
-          <PageHeaderStat label="Started" value={started ?? "None"} />
-          {status === "ready" && <PageHeaderStat label="Cards" value={cards.length} />}
-        </PageHeaderStats>
-      </AppPageHeader>
-
-      {stuck ? (
-        <SessionFailedState
-          error="This session stopped before its cards were made."
-          action={<RetrySessionButton sessionId={session.id} />}
-        />
-      ) : status === "pending" || status === "processing" ? (
-        <>
-          <ProcessingState status={status} />
-          {userId && <RefreshOnSettle userId={userId} session={session} />}
-        </>
-      ) : status === "failed" ? (
-        <SessionFailedState error={error} action={<RetrySessionButton sessionId={session.id} />} />
-      ) : cards.length === 0 ? (
-        // Extraction drops every card it can't back with an exact quote, so a ready session can end with none.
-        <EmptyState
-          title="No cards to show"
-          description="This session has no cards available to review. Sessions where you talk through options give the most cards."
-        />
-      ) : (
-        <div className="flex flex-col gap-6">
-          <p className="type-body text-text-2">
-            Each card is one decision your agent made. Explain why in your own words; the reason and
-            its quote open after you answer.
-          </p>
-          {cards.map((card) =>
-            card.locked ? (
-              <LockedDecisionCard key={card.id} card={card} />
-            ) : (
-              <DecisionCard key={card.id} card={card} />
-            ),
-          )}
-        </div>
-      )}
-    </Container>
-  );
 }
 
 /** Reads the clock outside render (cacheComponents and the compiler's purity rule), then the session. */
