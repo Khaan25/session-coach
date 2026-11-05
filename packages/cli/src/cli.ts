@@ -1,5 +1,8 @@
 #!/usr/bin/env node
+import { spawn } from "node:child_process";
 import { basename } from "node:path";
+
+import pkg from "../package.json" with { type: "json" };
 
 import { parseLoginArgs, parsePushArgs } from "./args.ts";
 import {
@@ -19,14 +22,16 @@ import {
   pollForToken,
 } from "./device.ts";
 import { interpretMe, meRequest, send, unreachable } from "./http.ts";
+import { runInit } from "./init.ts";
 import { defaultProjectsDir, findLatestLog, formatSize, resolveCwd } from "./latest.ts";
 import { promptHidden } from "./prompt.ts";
 import { interpretProcess, interpretPut, validateFileName } from "./push.ts";
-import { readStdin, runSync } from "./sync.ts";
+import { parseHookInput, readStdin, runSync } from "./sync.ts";
 import { API_TIMEOUT_MS, uploadLog } from "./upload.ts";
 
 const USAGE = `Usage:
   session-coach login [--url <site url>] [--token]
+  session-coach init
   session-coach push <file.jsonl>
   session-coach push --latest
   session-coach sync`;
@@ -99,7 +104,9 @@ async function deviceLogin(url: string): Promise<number> {
 
   await saveConfig(configPath(), { token: result.token, url });
   const who = result.email ? `Signed in as ${result.email}.` : `Signed in to ${url}.`;
-  return say(`${who} Saved to ${configPath()}.\nNext: session-coach push --latest`);
+  return say(
+    `${who} Saved to ${configPath()}.\nNext: session-coach init, in each project whose sessions you want uploaded.`,
+  );
 }
 
 async function push(args: string[]): Promise<number> {
@@ -108,7 +115,10 @@ async function push(args: string[]): Promise<number> {
 
   if ("latest" in parsed) {
     const cwd = resolveCwd(process.env, process.cwd());
-    const found = await findLatestLog(defaultProjectsDir(), cwd);
+    // Inside Claude Code (an agent running the setup prompt) the newest log is the session still running: skip logs
+    // written in the last minute, so the first upload is a finished session, not a half-written one.
+    const runningSince = process.env.CLAUDECODE ? Date.now() - 60_000 : Infinity;
+    const found = await findLatestLog(defaultProjectsDir(), cwd, runningSince);
     if ("error" in found) return say(found.error, 1);
     const problem = validateFileName(found.name);
     if (problem) return say(`${found.path}: ${problem}`, 1);
@@ -138,13 +148,27 @@ async function pushFile(file: string): Promise<number> {
   return say(result.message, result.exitCode);
 }
 
+/** Carries a SessionEnd hook's stdin to the detached process that does the upload. */
+const HOOK_INPUT_ENV = "SESSION_COACH_HOOK_INPUT";
+
 /**
- * For a SessionStart hook: its stdout goes into Claude's context, so this prints nothing, always exits 0, and exits
+ * For a SessionStart or SessionEnd hook: its stdout goes into Claude's context, so this prints nothing, always exits 0, and exits
  * itself because an upload cut off by the deadline would otherwise keep the process alive.
  */
 async function sync(): Promise<never> {
   try {
-    const stdin = process.stdin.isTTY ? null : await readStdin(process.stdin);
+    const handedOver = process.env[HOOK_INPUT_ENV];
+    const stdin = handedOver ?? (process.stdin.isTTY ? null : await readStdin(process.stdin));
+    // Claude Code may be quitting at SessionEnd, so the upload goes on in a detached copy of this process and the hook
+    // returns at once.
+    if (handedOver === undefined && parseHookInput(stdin).ended) {
+      spawn(process.execPath, [...process.execArgv, ...process.argv.slice(1)], {
+        detached: true,
+        stdio: "ignore",
+        env: { ...process.env, [HOOK_INPUT_ENV]: stdin ?? "" },
+      }).unref();
+      process.exit(0);
+    }
     await runSync({ stdin, env: process.env, cwd: process.cwd() });
   } catch {
     // runSync reports its own failures to sync.log; nothing may reach stdout or stderr
@@ -155,6 +179,11 @@ async function sync(): Promise<never> {
 async function main(argv: string[]): Promise<number> {
   const [command, ...args] = argv;
   if (command === "login") return login(args);
+  if (command === "init") {
+    if (args.length > 0) return say(`Unknown argument: ${args[0]}\n${USAGE}`, 1);
+    const result = await runInit(resolveCwd(process.env, process.cwd()), pkg.version);
+    return say(result.message, result.exitCode);
+  }
   if (command === "push") return push(args);
   if (command === "sync") return sync();
   return say(USAGE, command ? 1 : 0);

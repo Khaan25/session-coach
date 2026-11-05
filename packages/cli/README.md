@@ -8,6 +8,7 @@ Needs Node 20 or newer (tested on Node 22). Nothing to install first; `npx` fetc
 
 ```sh
 npx session-coach login
+npx session-coach init
 npx session-coach push --latest
 npx session-coach push <file.jsonl>
 npx session-coach sync
@@ -38,15 +39,16 @@ pnpm --filter session-coach start sync
 - Two folders can share one encoded name (`/work/a-b` and `/work/a/b`), so a log is chosen only if its recorded `cwd` (read from the first 64 KB, up to 50 lines) is the current folder. A log with no `cwd` is skipped; if none matches, nothing is uploaded.
 - Only the top level of that folder is read; subfolders are ignored and no other project is tried.
 - If the folder or a `.jsonl` is missing, it says so and exits non-zero.
+- Run from inside Claude Code (`CLAUDECODE` is set), it skips logs written in the last minute: that is the session running the command, still being written.
 - When run through `pnpm --filter`, the folder comes from `INIT_CWD` (where you typed the command), because pnpm runs the CLI from `packages/cli`.
 
 ## sync
 
-`sync` uploads your finished sessions for the current project without you typing `push`. It is meant to run from a Claude Code `SessionStart` hook. You opt in per project; nothing is installed for you.
+`sync` uploads your finished sessions for the current project without you typing `push`. It runs from Claude Code `SessionEnd` and `SessionStart` hooks. You opt in per project with `init`; nothing is installed until you run it.
 
 **Opt-in, best-effort redaction, Windows untested.** `sync` uploads logs without you looking at them first. Redaction runs on your machine, but it is best-effort and misses some secrets (see the known gaps in `docs/DECISIONS.md`). Add the hook only to projects whose sessions you are happy to upload. Windows paths and the Windows hook shell have not been tested; don't rely on `sync` there.
 
-Put this in the **project's** `.claude/settings.json` (not your user settings, so each project is its own choice), then run `npx session-coach login` once:
+Run `npx session-coach login` once, then `npx session-coach init` in each project folder. `init` adds these hooks to the project's `.claude/settings.local.json` (your personal settings, not committed, so teammates don't run them), keeping everything else in the file and replacing any older session-coach hook:
 
 ```json
 {
@@ -55,11 +57,14 @@ Put this in the **project's** `.claude/settings.json` (not your user settings, s
       {
         "matcher": "startup|resume|clear",
         "hooks": [
-          {
-            "type": "command",
-            "command": "npx --yes session-coach@0.3.0 sync",
-            "async": true
-          }
+          { "type": "command", "command": "npx --yes session-coach@0.4.0 sync", "async": true }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          { "type": "command", "command": "npx --yes session-coach@0.4.0 sync", "async": true }
         ]
       }
     ]
@@ -67,7 +72,9 @@ Put this in the **project's** `.claude/settings.json` (not your user settings, s
 }
 ```
 
-The version is pinned so the hook doesn't run whatever is newest on npm at every session start. Raise it on purpose when you want a newer `sync`.
+The version is the one `init` ran as, pinned so the hook doesn't run whatever is newest on npm at every session start. Run a newer `init` on purpose to move it.
+
+**When a session ends**, `sync` starts a detached copy of itself and returns at once, because Claude Code may be quitting. The copy uploads the session that ended, with the same `cwd` check, unless it was already sent.
 
 What it does on each start:
 
@@ -81,6 +88,6 @@ What it does on each start:
 
 **State.** `~/.session-coach/sync-state.json` (next to `config.json`) lists the session ids already uploaded or failed, so a start doesn't redact and gzip the same logs again. It holds session ids, outcomes (`pushed` or `failed`) and timestamps, never log contents. `sync` records `pushed` as soon as the server accepts a session, so it never learns of a later model failure and never retries it; run `push <file>` to retry a failed session. A corrupt file is treated as empty. Deleting it (or losing it) is not always harmless: `sync` then asks the server about the recent logs again. A session that is ready or processing answers that it exists, but the server resets and re-runs a `failed` or stuck session on a repeat request (its cards are deleted and the model runs again, which costs model quota). No session is duplicated.
 
-**Turn it off** by removing the hook from `.claude/settings.json`.
+**Turn it off** by removing the hooks from `.claude/settings.local.json`.
 
 Known limits: a session you resume after more than 5 minutes keeps writing to a log that `sync` may already have uploaded, and the server keeps the first upload. Two sessions starting at the same moment can both upload the same log; the server keeps one.
