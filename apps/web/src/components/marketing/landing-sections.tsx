@@ -1,6 +1,7 @@
 import {
   CardsIcon,
   ChatTextIcon,
+  ShieldCheckIcon,
   ClockCountdownIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
@@ -52,6 +53,12 @@ const loop = [
     title: "Explain it back after 1 day, then 3, then 7",
     body: "You answer in your own words and get a score of 0, 1 or 2. A 2 moves the card to the next gap; less moves it one step down (never below day 1) and it comes back tomorrow. Passing the last review masters it.",
   },
+  {
+    step: "4",
+    icon: ShieldCheckIcon,
+    title: "Defend it, then own it",
+    body: "Defend a card you've explained: 3 minutes to answer, then one follow-up question in 2. A mastered card counts as owned, and your dashboard shows how much of each project you own.",
+  },
 ] as const;
 
 export function LoopSection() {
@@ -63,9 +70,9 @@ export function LoopSection() {
       <SectionHeading
         id="loop-title"
         eyebrow="How it works"
-        title="One session in, three reviews out."
+        title="From one session to decisions you own."
       />
-      <ol className="grid gap-4 md:grid-cols-3">
+      <ol className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {loop.map(({ step, icon, title, body }) => (
           <li key={step} className="flex">
             <FeatureCard
@@ -180,7 +187,7 @@ export function ClosingSection() {
           id="closing-title"
           className="max-w-3xl font-display text-4xl leading-tight text-balance text-text-1 sm:text-6xl"
         >
-          Your next session is your first set of cards.
+          Your next session is the first decision you own.
         </h2>
         <Link href="/how-it-works" className={buttonVariants({ size: "lg" })}>
           See how it works
