@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { basename } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 
 import { parseLoginArgs, parsePushArgs } from "./args.ts";
 import {
@@ -19,13 +20,15 @@ import {
   pollForToken,
 } from "./device.ts";
 import { interpretMe, meRequest, send, unreachable } from "./http.ts";
+import { addSyncHook, parseInitArgs, parseYesNo, stepHeading } from "./init.ts";
 import { defaultProjectsDir, findLatestLog, formatSize, resolveCwd } from "./latest.ts";
-import { promptHidden } from "./prompt.ts";
+import { promptHidden, promptLine } from "./prompt.ts";
 import { interpretProcess, interpretPut, validateFileName } from "./push.ts";
 import { readStdin, runSync } from "./sync.ts";
 import { API_TIMEOUT_MS, uploadLog } from "./upload.ts";
 
 const USAGE = `Usage:
+  session-coach init [--url <site url>] [--yes]   first time here? start with this
   session-coach login [--url <site url>] [--token]
   session-coach push <file.jsonl>
   session-coach push --latest
@@ -63,7 +66,7 @@ async function login(args: string[]): Promise<number> {
 }
 
 /** Login without a token to paste: approve in the browser, and the CLI collects its own token. */
-async function deviceLogin(url: string): Promise<number> {
+async function deviceLogin(url: string, showNext = true): Promise<number> {
   const started = await send(deviceStartRequest(url, clientName()), {
     timeoutMs: API_TIMEOUT_MS,
     retry: false,
@@ -99,7 +102,9 @@ async function deviceLogin(url: string): Promise<number> {
 
   await saveConfig(configPath(), { token: result.token, url });
   const who = result.email ? `Signed in as ${result.email}.` : `Signed in to ${url}.`;
-  return say(`${who} Saved to ${configPath()}.\nNext: session-coach push --latest`);
+  return say(
+    `${who} Saved to ${configPath()}.${showNext ? "\nNext: session-coach push --latest" : ""}`,
+  );
 }
 
 async function push(args: string[]): Promise<number> {
@@ -152,8 +157,114 @@ async function sync(): Promise<never> {
   process.exit(0);
 }
 
+const INIT_STEPS = 4;
+
+/**
+ * `init`: the guided first run. One step at a time, each explained before it happens, and nothing changes without a
+ * yes (or `--yes`, for agents and scripts). Without a terminal and without --yes, every question is a no.
+ */
+async function init(args: string[]): Promise<number> {
+  const parsed = parseInitArgs(args);
+  if ("error" in parsed) return say(`${parsed.error}\n${USAGE}`, 1);
+  let url = DEFAULT_URL;
+  if (parsed.url !== null) {
+    const cleaned = normalizeUrl(parsed.url);
+    if (!cleaned) return say("--url must be an https URL (http works only for localhost).", 1);
+    url = cleaned;
+  }
+
+  const ask = async (question: string): Promise<boolean> => {
+    if (parsed.yes) {
+      console.log(`${question} yes (--yes)`);
+      return true;
+    }
+    if (!process.stdin.isTTY) {
+      console.log(
+        `${question} skipped: there's no terminal to answer in. Run session-coach init --yes to say yes to every step.`,
+      );
+      return false;
+    }
+    for (;;) {
+      const answer = parseYesNo(await promptLine(`${question} [Y/n] `), true);
+      if (answer !== null) return answer;
+    }
+  };
+
+  console.log("Set up Session Coach for this project, in 4 steps. Nothing changes without a yes.");
+
+  console.log(stepHeading(1, INIT_STEPS, "Sign in"));
+  const saved = await loadConfig(configPath());
+  let signedIn = false;
+  if (saved && (parsed.url === null || saved.url === url)) {
+    url = saved.url;
+    const me = await send(meRequest(url, saved.token), { timeoutMs: API_TIMEOUT_MS, retry: true });
+    if (!("error" in me)) {
+      const checked = interpretMe(me.status, me.body, url);
+      if (checked.exitCode === 0) {
+        console.log(`${checked.message} Nothing to do.`);
+        signedIn = true;
+      }
+    }
+  }
+  if (!signedIn) {
+    console.log(
+      "Your browser opens a page with a code. Check it matches the one here, then click Approve. There's no token to copy.",
+    );
+    const code = await deviceLogin(url, false);
+    if (code !== 0) return code;
+  }
+
+  console.log(stepHeading(2, INIT_STEPS, "Turn on automatic uploads for this project"));
+  const cwd = resolveCwd(process.env, process.cwd());
+  const settingsFile = join(cwd, ".claude", "settings.json");
+  console.log(
+    [
+      "A SessionStart hook in this project's .claude/settings.json runs `session-coach sync` whenever a Claude Code session starts.",
+      "It uploads one finished session (quiet for 5 minutes, from the last 7 days), prints nothing and never holds Claude Code up.",
+      "Secrets are removed on your laptop before upload, as best it can; only add it to projects you're happy to send.",
+    ].join("\n"),
+  );
+  const current = await readFile(settingsFile, "utf8").catch(() => null);
+  const edit = addSyncHook(current);
+  if (edit.kind === "present") console.log("The hook is already in this project. Nothing to do.");
+  else if (edit.kind === "invalid") {
+    console.log(
+      `Left ${settingsFile} as it is: ${edit.reason}. Fix it, then run session-coach init again.`,
+    );
+  } else if (await ask(`Add the hook to ${settingsFile}?`)) {
+    await mkdir(dirname(settingsFile), { recursive: true });
+    await writeFile(settingsFile, edit.text);
+    console.log(
+      "Added. Commit .claude/settings.json if your team should share it, or keep it local.",
+    );
+  } else console.log("Skipped. Upload by hand with session-coach push --latest.");
+
+  console.log(stepHeading(3, INIT_STEPS, "Send your newest session"));
+  const found = await findLatestLog(defaultProjectsDir(), cwd);
+  if ("error" in found) {
+    console.log(
+      `${found.error}\nThat's fine: finish a Claude Code session in this folder and it uploads on your next session start.`,
+    );
+  } else if (await ask(`Upload ${found.name} (${formatSize(found.size)}) now?`)) {
+    const code = await pushFile(found.path);
+    if (code !== 0)
+      console.log("The upload didn't go through; the hook tries again on your next session start.");
+  } else console.log("Skipped. The hook sends it later, or run session-coach push --latest.");
+
+  console.log(stepHeading(4, INIT_STEPS, "What happens next"));
+  return say(
+    [
+      `1. Within a few minutes, up to 5 decision cards from each session appear at ${url}/dashboard.`,
+      "2. Explain each decision in your own words. A card comes back after 1 day, then 3, then 7, until you own it.",
+      "3. Defend any card you've explained, whenever you want harder practice.",
+      "Run session-coach init in another project to turn it on there too.",
+    ].join("\n"),
+  );
+}
+
 async function main(argv: string[]): Promise<number> {
   const [command, ...args] = argv;
+  if (command === "init") return init(args);
   if (command === "login") return login(args);
   if (command === "push") return push(args);
   if (command === "sync") return sync();
