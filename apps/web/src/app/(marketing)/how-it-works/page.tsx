@@ -32,7 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const metadata: Metadata = {
   title: "How it works | Session Coach",
   description:
-    "How a Claude Code session becomes up to 5 decision cards: signing in, the upload, extraction, the evidence check and review after 1 day, then 3, then 7.",
+    "How a Claude Code session becomes up to 5 decision cards: signing in, the upload, extraction, the evidence check and review on day 1, 4 and 11.",
 };
 
 // What the CLI prints, from packages/cli/src/cli.ts and push.ts. The code, address and file name are examples.
@@ -83,7 +83,7 @@ const review = [
   },
   {
     title: "The schedule",
-    body: "A 2 moves the card to the next gap: 1 day, then 3, then 7. A 0 or 1 moves it one step down (never below day 1) and it comes back tomorrow. “I don't know yet” is an honest skip: it scores 0 and shows you the reason. At most 5 cards a day, and up to 2 of them new. A daily email tells you when cards are due.",
+    body: "A 2 moves the card to its next review: day 1, then day 4, then day 11. A 0 or 1 moves it one step down (never below day 1) and it comes back tomorrow. “I don't know yet” is an honest skip: it scores 0 and shows you the reason. At most 5 cards a day, and up to 2 of them new. A daily email tells you when cards are due.",
   },
 ] as const;
 
