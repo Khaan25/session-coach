@@ -87,7 +87,8 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
   // The question and a running 3 minute clock from the server.
   await expect(page.getByRole("heading", { name: question })).toBeVisible();
   await expect(page.getByText(/^[23]:\d\d left$/)).toBeVisible();
-  const box = page.getByLabel("Your answer");
+  // Exact: the timer bar is labelled "1 of 2 · your answer" too.
+  const box = page.getByLabel("Your answer", { exact: true });
   // Paste is refused and says why.
   await box.focus();
   await page.evaluate(() => {
