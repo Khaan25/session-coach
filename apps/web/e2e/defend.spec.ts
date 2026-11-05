@@ -78,13 +78,15 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
   await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.getByRole("link", { name: "Defend it" }).click();
-  await expect(page.getByText("1 decision you explained right")).toBeVisible();
+  // One defendable card: the start button counts them.
+  const startButton = page.getByRole("button", { name: "Start: pick one of 1" });
+  await expect(startButton).toBeVisible();
   await shot(page, "1-start");
-  await page.getByRole("button", { name: "Start the timer" }).click();
+  await startButton.click();
 
   // The question and a running 3 minute clock from the server.
   await expect(page.getByRole("heading", { name: question })).toBeVisible();
-  await expect(page.getByText(/^[23]:\d\d$/)).toBeVisible();
+  await expect(page.getByText(/^[23]:\d\d left$/)).toBeVisible();
   const box = page.getByLabel("Your answer");
   // Paste is refused and says why.
   await box.focus();
@@ -99,10 +101,10 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
   await expect(box).toHaveValue("");
   await box.fill(modelAnswer);
   await shot(page, "2-answer");
-  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
 
   // The AI follow-up, with a fresh clock and an empty box.
-  await expect(page.getByText("Follow-up", { exact: true })).toBeVisible();
+  await expect(page.getByText("2 of 2 · follow-up", { exact: true })).toBeVisible();
   await expect(box).toHaveValue("");
   await shot(page, "3-follow-up");
   await box.fill(modelAnswer);
