@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-05 · A session with no decisions says why and what to do
+
+- **Decision:** copy only. A ready session with 0 visible cards shows "No decisions" as the short marker (sidebar, dashboard row) and, on /s/[id], the headline "No decisions to learn from this session." with a reason (mostly edits and commands, or we missed one) and a next step (ask the agent to explain why it picked an approach, and state reasons in prompts). The failed state is untouched: `status === "failed"` is its own branch, separate from `cards.length === 0`.
+- **Why:** "No cards to show" and "No decisions found" said what happened but not why, or how to get cards next time.
+- **Rejected:** passing `cardCount` to the header badge on /s/[id] (it still says "Ready"; a logic change, out of scope here).
+- Supersedes the wording in the 2026-11-03 entry "A ready session with no cards says 'No decisions found'"; the rule it describes is unchanged.
+
 ## 2026-11-05 · The canvas renders the real components; the app follows the picked designs
 
 - **Decision:** the picked options on /canvas are the source of truth for their routes (dashboard B, defend C,

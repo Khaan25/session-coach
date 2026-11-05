@@ -402,7 +402,7 @@ always ends at `ready` or `failed`, with a learner-readable `error`.
    grounded quote: verified and from a prompt, a reply, or the written words of a `DECISIONS.md` edit (DECISIONS.md,
    2026-10-31).
 5. **Insert, then ready:** all cards in one insert, then `ready`, so a crash in between leaves `failed`, never a ready
-   session with no cards. Zero cards is still `ready` ("No decisions found").
+   session with no cards. Zero cards is still `ready` ("No decisions").
 
 - **Known shortcut:** the insert isn't fenced by the run's start time. A run replaced mid-insert can leave stale cards,
   and the newer run then fails on `(session_id, position)` until the next push clears them. Move insert and ready into
