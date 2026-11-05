@@ -4,13 +4,7 @@
 // they see the why, what the review days mean, explained vs owned, and what to do next. Each option has a full state
 // and a first-visit state. Synthetic data only; nothing here calls an API, and no card shows its why or answer key.
 
-import {
-  CaretRightIcon,
-  CheckCircleIcon,
-  CircleIcon,
-  LockSimpleIcon,
-  TerminalWindowIcon,
-} from "@phosphor-icons/react";
+import { CaretRightIcon, LockSimpleIcon, TerminalWindowIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -31,19 +25,11 @@ import {
 } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@/components/ui/item";
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 
 import { AppFrame, FRAME_SESSIONS } from "../frames";
-import { IdeaNote, NOW, Terminal } from "../parts";
+import { IdeaNote, NOW } from "../parts";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Synthetic data, shared by every option.
@@ -107,8 +93,6 @@ const SCHEDULE =
   "Each answer scores 0 (missed), 1 (partly) or 2 (explained). A 2 brings the card back on day 1, then day 4, then day 11; below 2, it steps down one and comes back tomorrow. At most 5 cards a day.";
 const OWNERSHIP =
   "Explained means you got it right once. Owned means you still could on day 11, without looking.";
-const DEFEND =
-  "Optional: Defend it picks a card you’ve explained and asks you to argue for it on a clock, with one follow-up.";
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Small shared pieces.
@@ -150,25 +134,6 @@ function OwnershipBars() {
 }
 
 /** The project filter as the real page draws it: links styled as small buttons. */
-function ProjectLinks({ active = null }: { active?: string | null }) {
-  return (
-    <nav aria-label="Projects" className="flex flex-wrap gap-2">
-      {[null, ...PROJECTS.map((p) => p.repo)].map((name) => (
-        <Link
-          key={name ?? ""}
-          href={name ? `/dashboard?repo=${name}` : "/dashboard"}
-          aria-current={name === active ? "page" : undefined}
-          className={buttonVariants({
-            variant: name === active ? "secondary" : "ghost",
-            size: "sm",
-          })}
-        >
-          {name ?? "All projects"}
-        </Link>
-      ))}
-    </nav>
-  );
-}
 
 function SessionRows({ repo = null }: { repo?: string | null }) {
   return (
@@ -177,210 +142,6 @@ function SessionRows({ repo = null }: { repo?: string | null }) {
         <SessionRow key={s.id} session={s} cardCount={s.cardCount} now={NOW} />
       ))}
     </ItemGroup>
-  );
-}
-
-function SessionsCard({ children }: { children?: React.ReactNode }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2>Sessions</h2>
-        </CardTitle>
-        <CardDescription>
-          Each Claude Code session you send becomes up to 5 decision cards.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ProjectLinks />
-      </CardContent>
-      {children ?? <SessionRows />}
-    </Card>
-  );
-}
-
-const SETUP_COMMANDS = [
-  "$ npx session-coach login",
-  "Approved in the browser. Logged in.",
-  "$ npx session-coach push --latest",
-  "Sent. Making cards…",
-];
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Option A: a guided checklist. The page is the four things a learner does, in order, each with one line of why.
-
-type ChecklistStep = {
-  title: string;
-  /** One or two lines: ItemDescription is a clamped paragraph, so anything block-level goes in `extra`. */
-  body: string;
-  extra?: React.ReactNode;
-  state: "done" | "now" | "later";
-  action?: React.ReactNode;
-};
-
-function Checklist({ steps }: { steps: ChecklistStep[] }) {
-  return (
-    <ItemGroup>
-      {steps.map((step, i) => (
-        // ItemGroup is a div with role="list", so the row takes the matching role.
-        <Item
-          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-          role="listitem"
-          key={step.title}
-          variant={step.state === "now" ? "outline" : "default"}
-          aria-current={step.state === "now" ? "step" : undefined}
-        >
-          <ItemMedia variant="icon">
-            {step.state === "done" ? (
-              <CheckCircleIcon weight="fill" aria-label="Done" />
-            ) : (
-              <CircleIcon aria-label={step.state === "now" ? "Next" : "Later"} />
-            )}
-          </ItemMedia>
-          <ItemContent>
-            <ItemTitle>
-              <span className={step.state === "later" ? "text-text-3" : undefined}>
-                {i + 1}. {step.title}
-              </span>
-            </ItemTitle>
-            <ItemDescription>{step.body}</ItemDescription>
-            {step.extra}
-          </ItemContent>
-          {step.action && <ItemActions>{step.action}</ItemActions>}
-        </Item>
-      ))}
-    </ItemGroup>
-  );
-}
-
-export function DashboardHomeOptionA() {
-  const steps: ChecklistStep[] = [
-    {
-      title: "Send a session",
-      state: "done",
-      body: `4 sessions sent, 19 cards made. ${DECISION_CARD}`,
-    },
-    {
-      title: `Explain today’s ${DUE.length} cards`,
-      state: "now",
-      body: ANSWER_FIRST,
-      extra: (
-        <ul className="flex flex-col gap-1 pt-1 type-body-sm text-text-1">
-          {DUE.map((card) => (
-            <li key={card.id}>{card.question}</li>
-          ))}
-        </ul>
-      ),
-      action: (
-        <Link href="/review" className={buttonVariants()}>
-          Start review
-        </Link>
-      ),
-    },
-    {
-      title: "Bring them back on days 1, 4 and 11",
-      state: "later",
-      body: SCHEDULE,
-      extra: <ScheduleLadder />,
-    },
-    {
-      title: "Own a decision",
-      state: "later",
-      body: OWNERSHIP,
-      extra: <p className="type-body-sm text-text-3">{DEFEND}</p>,
-    },
-  ];
-  return (
-    <AppFrame path="/dashboard">
-      <Container>
-        <AppPageHeader
-          title="Dashboard"
-          description="Four steps turn your agent’s decisions into ones you can explain. You’re on step 2."
-        />
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <h2>Your next step</h2>
-            </CardTitle>
-            <CardDescription>Done steps stay ticked; the outlined one is today’s.</CardDescription>
-          </CardHeader>
-          <Checklist steps={steps} />
-        </Card>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                <h2>
-                  Explained {TOTAL.explained} · owned {TOTAL.owned} of {TOTAL.total}
-                </h2>
-              </CardTitle>
-              <CardDescription>{OWNERSHIP}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <OwnershipBars />
-            </CardContent>
-          </Card>
-          <SessionsCard />
-        </div>
-        <IdeaNote>
-          Option A: the dashboard leads with a numbered checklist of the daily loop. Each step
-          carries the one sentence that explains it, so the concepts arrive in the order the learner
-          needs them.
-        </IdeaNote>
-      </Container>
-    </AppFrame>
-  );
-}
-
-export function DashboardHomeOptionAEmpty() {
-  const steps: ChecklistStep[] = [
-    {
-      title: "Send your first session",
-      state: "now",
-      body: "Log in once, then send the session you just finished. Secrets are redacted on your machine before anything leaves it.",
-      extra: <Terminal lines={SETUP_COMMANDS} />,
-      action: (
-        <Link href="/setup" className={buttonVariants()}>
-          Open setup
-        </Link>
-      ),
-    },
-    {
-      title: "Explain your first cards",
-      state: "later",
-      body: DECISION_CARD,
-      extra: <p className="type-body-sm text-text-2">{ANSWER_FIRST}</p>,
-    },
-    {
-      title: "Bring them back on days 1, 4 and 11",
-      state: "later",
-      body: SCHEDULE,
-      extra: <ScheduleLadder />,
-    },
-    { title: "Own a decision", state: "later", body: OWNERSHIP },
-  ];
-  return (
-    <AppFrame path="/dashboard" sessions={[]} dueCount={0}>
-      <Container>
-        <AppPageHeader
-          title="Dashboard"
-          description="Four steps turn your agent’s decisions into ones you can explain. Start with step 1."
-        />
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <h2>Your next step</h2>
-            </CardTitle>
-            <CardDescription>Takes about two minutes. The rest unlock as you go.</CardDescription>
-          </CardHeader>
-          <Checklist steps={steps} />
-        </Card>
-        <IdeaNote>
-          Option A, first visit: the same checklist with step 1 open and the commands inline, so the
-          empty dashboard is the setup guide.
-        </IdeaNote>
-      </Container>
-    </AppFrame>
   );
 }
 
@@ -606,165 +367,6 @@ export function DashboardHomeOptionBEmpty() {
           rail shows a sample card, so the learner knows what they are setting up before they run a
           command.
         </IdeaNote>
-      </Container>
-    </AppFrame>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Option C: one focused task. The page is the next card to explain, where it sits on the ladder and one button. Every
-// thing else folds under it.
-
-export function DashboardHomeOptionC() {
-  const card = DUE[0];
-  return (
-    <AppFrame path="/dashboard">
-      <Container>
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-          <AppPageHeader
-            title="Explain this one next"
-            description={`Card 1 of ${DUE.length} due today, from ${card.repo}.`}
-          />
-          <Card size="lg">
-            <CardHeader>
-              <CardTitle>
-                <h2>{card.decision}</h2>
-              </CardTitle>
-              <CardDescription>{DECISION_CARD}</CardDescription>
-              <CardAction>
-                <Badge>{card.step} review</Badge>
-              </CardAction>
-            </CardHeader>
-            <CardContent>
-              <DataList>
-                <DataListItem>
-                  <DataListLabel>Question</DataListLabel>
-                  <DataListValue>{card.question}</DataListValue>
-                </DataListItem>
-                <DataListItem>
-                  <DataListLabel>Why</DataListLabel>
-                  <DataListValue>
-                    <span className="flex items-center gap-2 text-text-3">
-                      <LockSimpleIcon aria-hidden="true" />
-                      Locked until you answer. {ANSWER_FIRST}
-                    </span>
-                  </DataListValue>
-                </DataListItem>
-                <DataListItem>
-                  <DataListLabel>Where it is</DataListLabel>
-                  <DataListValue>
-                    <span className="flex flex-col gap-2">
-                      <ScheduleLadder at={card.step} />
-                      <span className="type-body-sm text-text-3">
-                        You explained it on day 1. Score 2 today and it comes back on day 11; below
-                        2, it steps back to day 1 and comes back tomorrow.
-                      </span>
-                    </span>
-                  </DataListValue>
-                </DataListItem>
-              </DataList>
-            </CardContent>
-            <CardFooter>
-              <div className="flex flex-wrap gap-2">
-                <Link href={`/review/${card.id}`} className={buttonVariants()}>
-                  Explain it
-                </Link>
-                <Link href="/review" className={buttonVariants({ variant: "secondary" })}>
-                  See all {DUE.length}
-                </Link>
-              </div>
-            </CardFooter>
-          </Card>
-          <Collapsible>
-            <CollapsibleRow summary={`Explained ${TOTAL.explained} · owned ${TOTAL.owned}`}>
-              Your projects
-            </CollapsibleRow>
-            <CollapsibleContent>
-              <div className="flex flex-col gap-3 pt-3">
-                <p className="type-body-sm text-text-2">{OWNERSHIP}</p>
-                <OwnershipBars />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-          <Collapsible>
-            <CollapsibleRow summary={`${ROWS.length} sessions`}>Your sessions</CollapsibleRow>
-            <CollapsibleContent>
-              <div className="pt-3">
-                <SessionsCard />
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-          <IdeaNote>
-            Option C: the dashboard is the next card, with its question, its locked why and its
-            place on the ladder spelled out for this card. Projects and sessions fold away until the
-            learner asks for them.
-          </IdeaNote>
-        </div>
-      </Container>
-    </AppFrame>
-  );
-}
-
-export function DashboardHomeOptionCEmpty() {
-  return (
-    <AppFrame path="/dashboard" sessions={[]} dueCount={0}>
-      <Container>
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-          <AppPageHeader
-            title="Send your first session"
-            description="One thing to do. Everything else on this page appears after it."
-          />
-          <Card size="lg">
-            <CardHeader>
-              <CardTitle>
-                <h2>Two commands in your project’s terminal</h2>
-              </CardTitle>
-              <CardDescription>
-                Secrets are redacted on your machine before the log is sent.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Terminal lines={SETUP_COMMANDS} />
-            </CardContent>
-            <CardFooter>
-              <Link href="/setup" className={buttonVariants()}>
-                Open setup
-              </Link>
-            </CardFooter>
-          </Card>
-          <Collapsible>
-            <CollapsibleRow summary="3 things">What happens after</CollapsibleRow>
-            <CollapsibleContent>
-              <DataList>
-                <DataListItem>
-                  <DataListLabel>Cards</DataListLabel>
-                  <DataListValue>Your session becomes up to 5 cards. {DECISION_CARD}</DataListValue>
-                </DataListItem>
-                <DataListItem>
-                  <DataListLabel>Explain</DataListLabel>
-                  <DataListValue>{ANSWER_FIRST}</DataListValue>
-                </DataListItem>
-                <DataListItem>
-                  <DataListLabel>Come back</DataListLabel>
-                  <DataListValue>
-                    <span className="flex flex-col gap-2">
-                      <ScheduleLadder />
-                      <span>{SCHEDULE}</span>
-                    </span>
-                  </DataListValue>
-                </DataListItem>
-              </DataList>
-            </CollapsibleContent>
-          </Collapsible>
-          <p className="type-body-sm text-text-3">
-            Working in more than one repo? Each one becomes a project here, with its own explained
-            and owned count.
-          </p>
-          <IdeaNote>
-            Option C, first visit: one task and nothing else. What comes after is one fold below,
-            for the learner who wants to know before they run it.
-          </IdeaNote>
-        </div>
       </Container>
     </AppFrame>
   );

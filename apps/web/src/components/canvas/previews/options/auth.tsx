@@ -5,16 +5,7 @@
 // B: the form on the left and an explain-as-you-go panel in place of the art. C: one focused task, with the
 // explanation behind progressive disclosure. Synthetic data only; no answer key is ever shown.
 
-import {
-  ArrowRightIcon,
-  CheckCircleIcon,
-  CircleDashedIcon,
-  CircleIcon,
-  EnvelopeSimpleIcon,
-  LinkBreakIcon,
-  LockKeyIcon,
-  SealCheckIcon,
-} from "@phosphor-icons/react";
+import { ArrowRightIcon, CheckCircleIcon, CircleIcon, SealCheckIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -32,7 +23,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import {
   Field,
@@ -50,13 +40,10 @@ import {
   ItemMedia,
   ItemTitle,
 } from "@/components/ui/item";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
-import { AuthFrame } from "../frames";
-
 // ---------------------------------------------------------------------------------------------------------------
-// Shells. AuthFrame is the real layout (option A). B and C replace the art, so they rebuild the browser bar here.
+// Shells. B replaces the art, so it rebuilds the browser bar here.
 
 const FOOTER = ["Privacy", "Terms", "Support"];
 
@@ -124,25 +111,6 @@ function SplitShell({
         <aside className="flex flex-col justify-center gap-6 border-s border-hair bg-surface px-16 py-16">
           {aside}
         </aside>
-      </div>
-    </Window>
-  );
-}
-
-/** Option C: no art, no second column. One centred task, with anything else folded away. */
-function FocusShell({ path, children }: { path: string; children: React.ReactNode }) {
-  return (
-    <Window path={path}>
-      <div className="flex min-h-full flex-1 flex-col bg-page">
-        <header className="flex h-20 items-center justify-center px-(--gutter)">
-          <BrandLink />
-        </header>
-        <main className="flex flex-1 flex-col justify-center">
-          <div className="mx-auto flex w-full max-w-lg flex-col gap-8 px-(--gutter) py-8">
-            {children}
-          </div>
-        </main>
-        <Footer />
       </div>
     </Window>
   );
@@ -264,107 +232,7 @@ function Glossary() {
   );
 }
 
-type StepState = "done" | "current" | "next";
-
-const FIRST_RUN = [
-  { title: "Create your account", body: "Email or Google." },
-  { title: "Confirm your email", body: "The link works once, on this device." },
-  {
-    title: "Connect the CLI",
-    body: "Setup gives your agent one prompt. You approve in one click.",
-  },
-  { title: "Push a session", body: "It becomes up to 5 decision cards." },
-  { title: "Answer your first card", body: "Explain it before you see the why." },
-] as const;
-
-function StepIcon({ state }: { state: StepState }) {
-  if (state === "done") return <CheckCircleIcon weight="fill" aria-hidden />;
-  if (state === "current") return <CircleDashedIcon weight="bold" aria-hidden />;
-  return <CircleIcon aria-hidden />;
-}
-
-/** A checklist of steps, with where the learner is now marked. */
-function Checklist({
-  steps,
-  current,
-  label,
-}: {
-  steps: readonly { title: string; body?: string }[];
-  current: number;
-  label: string;
-}) {
-  return (
-    <ItemGroup aria-label={label}>
-      {steps.map((step, i) => {
-        const state: StepState = i < current ? "done" : i === current ? "current" : "next";
-        return (
-          <Item key={step.title} size="sm" aria-current={state === "current" ? "step" : undefined}>
-            <ItemMedia variant="icon">
-              <StepIcon state={state} />
-            </ItemMedia>
-            <ItemContent>
-              <ItemTitle>
-                {step.title}
-                {state === "current" && <Badge variant="outline">You are here</Badge>}
-              </ItemTitle>
-              {step.body && <ItemDescription>{step.body}</ItemDescription>}
-            </ItemContent>
-          </Item>
-        );
-      })}
-    </ItemGroup>
-  );
-}
-
-/** The same steps as one compact row of tags, for a column the form already fills. */
-function StepStrip({
-  steps,
-  current,
-  label,
-}: {
-  steps: readonly { title: string }[];
-  current: number;
-  label: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="type-label-sm text-text-2">
-        Step {current + 1} of {steps.length}: {steps[current]?.title}
-      </p>
-      <ol aria-label={label} className="flex flex-wrap gap-1.5">
-        {steps.map((step, i) => (
-          <li key={step.title} aria-current={i === current ? "step" : undefined}>
-            <Badge variant={i === current ? "default" : "outline"}>
-              {i + 1}. {step.title}
-            </Badge>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
 /** A labelled fold: the explanation is one click away, not in the way. */
-function Fold({
-  title,
-  summary,
-  defaultOpen,
-  children,
-}: {
-  title: string;
-  summary?: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Collapsible defaultOpen={defaultOpen}>
-      <CollapsibleRow summary={summary}>{title}</CollapsibleRow>
-      <CollapsibleContent>
-        <div className="flex flex-col gap-4 ps-7 pt-3">{children}</div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
 
 function PanelHeading({ eyebrow, children }: { eyebrow: string; children: React.ReactNode }) {
   return (
@@ -470,38 +338,6 @@ function ResetForm({ id }: { id: string }) {
 // ---------------------------------------------------------------------------------------------------------------
 // /login
 
-/** A: the real layout. Under the form, what happens after sign-in, as three one-line steps. */
-export function AuthLoginOptionA() {
-  return (
-    <AuthFrame path="/login" scene="sign-in">
-      <AuthHeading
-        title={
-          <>
-            Sign <span className="italic">in</span>
-          </>
-        }
-      >
-        Pick up your decision cards where you left them.
-      </AuthHeading>
-      <div className="flex flex-col gap-4">
-        <LoginForm id="opt-login-a" />
-        <AuthSwitch prompt="New to Session Coach?" href="/sign-up">
-          Create an account
-        </AuthSwitch>
-      </div>
-      <Checklist
-        label="After you sign in"
-        current={0}
-        steps={[
-          { title: "Sign in" },
-          { title: "Answer today's due cards, never more than 5" },
-          { title: "Read the why, then the card waits for its next day" },
-        ]}
-      />
-    </AuthFrame>
-  );
-}
-
 /** B: the form, and beside it the anatomy of the card the learner is signing in to answer. */
 export function AuthLoginOptionB() {
   return (
@@ -537,60 +373,8 @@ export function AuthLoginOptionB() {
   );
 }
 
-/** C: only the form. A newcomer who landed here by mistake opens one fold to learn what this is. */
-export function AuthLoginOptionC() {
-  return (
-    <FocusShell path="/login">
-      <AuthHeading
-        title={
-          <>
-            Sign <span className="italic">in</span>
-          </>
-        }
-      />
-      <LoginForm id="opt-login-c" />
-      <div className="flex flex-col gap-2">
-        <AuthSwitch prompt="New to Session Coach?" href="/sign-up">
-          Create an account
-        </AuthSwitch>
-        <Fold title="What is Session Coach?" summary="30 seconds">
-          <p className="type-body-sm text-text-2">
-            After a Claude Code session, it turns the decisions your agent made into up to 5 cards.
-            You explain each one back before you see the why, on day 1, 4 and 11.
-          </p>
-          <Glossary />
-        </Fold>
-      </div>
-    </FocusShell>
-  );
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // /sign-up
-
-/** A: the real layout. The whole first run as a row of steps above the form, with this one marked. */
-export function AuthSignUpOptionA() {
-  return (
-    <AuthFrame path="/sign-up" scene="sign-up">
-      <AuthHeading
-        title={
-          <>
-            Create an <span className="italic">account</span>
-          </>
-        }
-      >
-        Five steps to your first decision card. This is the first.
-      </AuthHeading>
-      <StepStrip label="Your first run" steps={FIRST_RUN} current={0} />
-      <div className="flex flex-col gap-4">
-        <SignUpForm id="opt-signup-a" />
-        <AuthSwitch prompt="Already have an account?" href="/login">
-          Sign in
-        </AuthSwitch>
-      </div>
-    </AuthFrame>
-  );
-}
 
 /** B: the form, and beside it the loop explained in the order the learner meets it. */
 export function AuthSignUpOptionB() {
@@ -648,33 +432,6 @@ export function AuthSignUpOptionB() {
   );
 }
 
-/** C: one task. The sample card is the pitch, and it shows the one rule: answer before the why. */
-export function AuthSignUpOptionC() {
-  return (
-    <FocusShell path="/sign-up">
-      <AuthHeading
-        title={
-          <>
-            Create an <span className="italic">account</span>
-          </>
-        }
-      >
-        Then every session you push turns into cards like this one.
-      </AuthHeading>
-      <SampleCard id="opt-signup-c-card" compact />
-      <SignUpForm id="opt-signup-c" />
-      <div className="flex flex-col gap-2">
-        <AuthSwitch prompt="Already have an account?" href="/login">
-          Sign in
-        </AuthSwitch>
-        <Fold title="When do cards come back?" summary="Day 1, 4, 11">
-          <ScheduleStrip />
-        </Fold>
-      </div>
-    </FocusShell>
-  );
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // /sign-up/check-email
 
@@ -688,30 +445,6 @@ function ResendButton() {
 
 const CHECK_EMAIL_LEAD =
   "If that address can sign up, we sent it a link to confirm the account. Open the link on this device to finish.";
-
-/** A: the real layout, with the first-run checklist moved on by one. */
-export function AuthCheckEmailOptionA() {
-  return (
-    <AuthFrame path="/sign-up/check-email" scene="email">
-      <AuthHeading
-        title={
-          <>
-            Check your <span className="italic">email</span>
-          </>
-        }
-      >
-        {CHECK_EMAIL_LEAD}
-      </AuthHeading>
-      <Checklist label="Your first run" steps={FIRST_RUN} current={1} />
-      <div className="flex flex-wrap items-center gap-4">
-        <ResendButton />
-        <AuthSwitch prompt="Already confirmed?" href="/login">
-          Sign in
-        </AuthSwitch>
-      </div>
-    </AuthFrame>
-  );
-}
 
 /** B: the wait, and beside it the one thing worth knowing before the first card arrives. */
 export function AuthCheckEmailOptionB() {
@@ -748,75 +481,8 @@ export function AuthCheckEmailOptionB() {
   );
 }
 
-/** C: one instruction, and the troubleshooting folded under it for whoever needs it. */
-export function AuthCheckEmailOptionC() {
-  return (
-    <FocusShell path="/sign-up/check-email">
-      <AuthNotice title="Open the link we emailed you">{CHECK_EMAIL_LEAD}</AuthNotice>
-      <div className="flex flex-col gap-2">
-        <Fold title="Didn't get it?" summary="3 things to check">
-          <ItemGroup>
-            {[
-              { title: "Look in spam", body: "Links can land there." },
-              { title: "Open it on this device", body: "The link works once, here." },
-              { title: "Ask for another", body: "Resend unlocks after a short wait." },
-            ].map((row) => (
-              <Item key={row.title} size="sm">
-                <ItemMedia variant="icon">
-                  <EnvelopeSimpleIcon aria-hidden />
-                </ItemMedia>
-                <ItemContent>
-                  <ItemTitle>{row.title}</ItemTitle>
-                  <ItemDescription>{row.body}</ItemDescription>
-                </ItemContent>
-              </Item>
-            ))}
-          </ItemGroup>
-        </Fold>
-        <Fold title="What happens after?" summary="Setup, then your first cards">
-          <Checklist label="Your first run" steps={FIRST_RUN.slice(2)} current={0} />
-        </Fold>
-      </div>
-      <div className="flex flex-wrap items-center gap-4">
-        <ResendButton />
-        <AuthSwitch prompt="Already confirmed?" href="/login">
-          Sign in
-        </AuthSwitch>
-      </div>
-    </FocusShell>
-  );
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // /forgot-password
-
-const RESET_STEPS = [
-  { title: "Enter your email", body: "The one you sign in with." },
-  { title: "Open the link in this browser", body: "Reset links work once, where you asked." },
-  { title: "Set a new password", body: "Then you're back on your dashboard." },
-] as const;
-
-/** A: the real layout, with the three-step reset as a checklist so the email isn't a surprise. */
-export function AuthForgotPasswordOptionA() {
-  return (
-    <AuthFrame path="/forgot-password" scene="password">
-      <AuthHeading
-        title={
-          <>
-            Reset your <span className="italic">password</span>
-          </>
-        }
-      />
-      <Checklist label="Resetting your password" steps={RESET_STEPS} current={0} />
-      <div className="flex flex-col gap-4">
-        <ResetForm id="opt-forgot-a" />
-        <AuthSwitch prompt="Remembered it?" href="/login">
-          Sign in
-        </AuthSwitch>
-      </div>
-    </AuthFrame>
-  );
-}
 
 /** B: the form, and beside it the reassurance a worried learner needs: a reset touches nothing they learned. */
 export function AuthForgotPasswordOptionB() {
@@ -872,48 +538,6 @@ export function AuthForgotPasswordOptionB() {
   );
 }
 
-/** C: first ask how they sign in, so a Google user never waits for an email that can't help. */
-export function AuthForgotPasswordOptionC() {
-  return (
-    <FocusShell path="/forgot-password">
-      <AuthHeading
-        title={
-          <>
-            Reset your <span className="italic">password</span>
-          </>
-        }
-      >
-        How do you usually sign in?
-      </AuthHeading>
-      <Tabs defaultValue="email">
-        <TabsList aria-label="How you sign in">
-          <TabsTrigger value="email">With email</TabsTrigger>
-          <TabsTrigger value="google">With Google</TabsTrigger>
-        </TabsList>
-        <TabsContent value="email">
-          <div className="flex flex-col gap-4 pt-4">
-            <ResetForm id="opt-forgot-c" />
-            <p className="type-body-sm text-text-2">
-              Open the link in this browser. It works once.
-            </p>
-          </div>
-        </TabsContent>
-        <TabsContent value="google">
-          <div className="flex flex-col gap-4 pt-4">
-            <AuthNotice title="There's no password to reset">
-              Accounts made with Google sign in through Google.
-            </AuthNotice>
-            <GoogleButton />
-          </div>
-        </TabsContent>
-      </Tabs>
-      <AuthSwitch prompt="Remembered it?" href="/login">
-        Sign in
-      </AuthSwitch>
-    </FocusShell>
-  );
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // /update-password
 
@@ -948,28 +572,6 @@ function UpdateForm({ id }: { id: string }) {
         <Button size="lg">Save password</Button>
       </FieldGroup>
     </AuthCard>
-  );
-}
-
-/** A: the real layout, with the reset checklist on its last step and the live length check. */
-export function AuthUpdatePasswordOptionA() {
-  return (
-    <AuthFrame path="/update-password" scene="password">
-      <AuthHeading
-        title={
-          <>
-            Set a new <span className="italic">password</span>
-          </>
-        }
-      />
-      <Checklist label="Resetting your password" steps={RESET_STEPS} current={2} />
-      <div className="flex flex-col gap-4">
-        <UpdateForm id="opt-update-a" />
-        <AuthSwitch prompt="Link expired?" href="/forgot-password">
-          Request a new one
-        </AuthSwitch>
-      </div>
-    </AuthFrame>
   );
 }
 
@@ -1021,31 +623,6 @@ export function AuthUpdatePasswordOptionB() {
   );
 }
 
-/** C: one field. The only extra is the line that says where Save takes you. */
-export function AuthUpdatePasswordOptionC() {
-  return (
-    <FocusShell path="/update-password">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <LockKeyIcon weight="duotone" aria-hidden className="size-10 text-text-2" />
-        <AuthHeading
-          title={
-            <>
-              Set a new <span className="italic">password</span>
-            </>
-          }
-        />
-      </div>
-      <UpdateForm id="opt-update-c" />
-      <p className="type-body-sm text-text-2">
-        Save takes you to your dashboard. Your cards and their schedule are unchanged.
-      </p>
-      <AuthSwitch prompt="Link expired?" href="/forgot-password">
-        Request a new one
-      </AuthSwitch>
-    </FocusShell>
-  );
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // /auth/error. Copy from app/auth/error/page.tsx; the preview shows the link_expired code.
 
@@ -1053,21 +630,6 @@ const EXPIRED = {
   title: "This link was already used or has expired",
   body: "Each email link works once. If you opened it before, your account may already be confirmed: try signing in.",
 };
-
-const ERROR_CASES = [
-  {
-    title: "A confirm link from sign-up",
-    body: "You may be confirmed already. If not, signing in sends a new link.",
-    href: "/login",
-    action: "Sign in",
-  },
-  {
-    title: "A reset link",
-    body: "It works once, in the browser you asked from. Ask again here.",
-    href: "/forgot-password",
-    action: "Reset password",
-  },
-] as const;
 
 function ErrorHeading() {
   return (
@@ -1078,37 +640,6 @@ function ErrorHeading() {
         </>
       }
     />
-  );
-}
-
-/** A: the real layout. "Which link did you open?" as a short checklist, each row with its own next step. */
-export function AuthErrorOptionA() {
-  return (
-    <AuthFrame path="/auth/error?code=link_expired" scene="error">
-      <ErrorHeading />
-      <AuthNotice title={EXPIRED.title} fail>
-        {EXPIRED.body}
-      </AuthNotice>
-      <div className="flex flex-col gap-3">
-        <p className="type-label text-text-1">Which link did you open?</p>
-        <ItemGroup>
-          {ERROR_CASES.map((row) => (
-            <Item key={row.title} variant="outline" size="sm">
-              <ItemContent>
-                <ItemTitle>{row.title}</ItemTitle>
-                <ItemDescription>{row.body}</ItemDescription>
-              </ItemContent>
-              <Link
-                href={row.href}
-                className={buttonVariants({ variant: "secondary", size: "sm" })}
-              >
-                {row.action}
-              </Link>
-            </Item>
-          ))}
-        </ItemGroup>
-      </div>
-    </AuthFrame>
   );
 }
 
@@ -1155,38 +686,5 @@ export function AuthErrorOptionB() {
         </Link>
       </div>
     </SplitShell>
-  );
-}
-
-/** C: one next action picked from the code. The other routes wait behind a fold. */
-export function AuthErrorOptionC() {
-  return (
-    <FocusShell path="/auth/error?code=link_expired">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <LinkBreakIcon weight="duotone" aria-hidden className="size-10 text-text-2" />
-        <AuthHeading title={EXPIRED.title} />
-        <p className="type-body text-pretty text-text-2">
-          Most likely you&apos;re already confirmed. Sign in to find out.
-        </p>
-        <Link href="/login" className={buttonVariants({ size: "lg" })}>
-          Sign in
-        </Link>
-      </div>
-      <Fold title="It was a reset link" summary="Ask again here">
-        <ItemGroup>
-          {ERROR_CASES.slice(1).map((row) => (
-            <Item key={row.title} size="sm">
-              <ItemContent>
-                <ItemTitle>{row.title}</ItemTitle>
-                <ItemDescription>{row.body}</ItemDescription>
-              </ItemContent>
-              <Link href={row.href} className={buttonVariants({ variant: "link" })}>
-                {row.action}
-              </Link>
-            </Item>
-          ))}
-        </ItemGroup>
-      </Fold>
-    </FocusShell>
   );
 }

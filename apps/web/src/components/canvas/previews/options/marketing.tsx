@@ -7,13 +7,11 @@
 import {
   ArrowsClockwiseIcon,
   CardsIcon,
-  CheckCircleIcon,
   CloudArrowUpIcon,
   EnvelopeSimpleIcon,
   EyeSlashIcon,
   FlagIcon,
   LightbulbIcon,
-  LockKeyIcon,
   MagnifyingGlassIcon,
   QuotesIcon,
   TerminalWindowIcon,
@@ -525,39 +523,6 @@ const PIPELINE: {
   },
 ];
 
-/** A: the pipeline as a vertical list of disclosures. Closed, each row is one line; open, it explains and shows it. */
-export function MarketingHowItWorksOptionA() {
-  return (
-    <PublicFrame path="/how-it-works">
-      <div className={`${PAGE} gap-10 py-16`}>
-        <MarketingPageHeader title="How it works">
-          From a finished session to a decision you own, in five steps. Open a step for the detail
-          and what you’ll see.
-        </MarketingPageHeader>
-        <ol className="flex max-w-3xl flex-col divide-y divide-line-row">
-          {PIPELINE.map(({ icon: StepIcon, title, summary, body, example }, i) => (
-            <li key={title} className="py-2">
-              <Collapsible defaultOpen={i === 0}>
-                <CollapsibleRow size="row" summary={summary}>
-                  <StepIcon aria-hidden />
-                  {i + 1}. {title}
-                </CollapsibleRow>
-                <CollapsibleContent>
-                  <div className="grid grid-cols-2 gap-6 px-3 pt-2 pb-4">
-                    <p className="type-body text-text-2">{body}</p>
-                    {example}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </li>
-          ))}
-        </ol>
-        <Cta secondary="/support" />
-      </div>
-    </PublicFrame>
-  );
-}
-
 /** B: three tabs by where things happen (your laptop, our server, your review), each prose beside its artifact. */
 export function MarketingHowItWorksOptionB() {
   return (
@@ -629,247 +594,12 @@ export function MarketingHowItWorksOptionB() {
   );
 }
 
-const ANATOMY = [
-  { title: "The decision", body: "One choice your agent made, in a line." },
-  {
-    title: "The kind",
-    body: "Stated quotes the agent’s reason. Inferred is the model’s guess, labelled.",
-  },
-  { title: "The question", body: "Why the agent chose this. You answer in your own words." },
-  { title: "The why, locked", body: "Shown only after you answer, so the score is honest." },
-  {
-    title: "The quote, locked",
-    body: "Words from the session, at least 5, checked by plain code. It would give the answer away.",
-  },
-  { title: "The review day", body: "Day 1, 4 or 11. A 2 on day 11 and you own it." },
-] as const;
-
-function Marker({ n }: { n: number }) {
-  return (
-    <Badge size="sm" aria-label={`Part ${n}`}>
-      {n}
-    </Badge>
-  );
-}
-
-/** C: one card, taken apart. Numbered markers on the card match a legend beside it. */
-export function MarketingHowItWorksOptionC() {
-  return (
-    <PublicFrame path="/how-it-works">
-      <div className={`${PAGE} gap-10 py-16`}>
-        <MarketingPageHeader title="Anatomy of a decision card">
-          Each session you send becomes up to 5 of these. Here is what every part is for.
-        </MarketingPageHeader>
-        <div className="grid grid-cols-5 items-start gap-12">
-          <div className="col-span-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <span className="flex items-center gap-2">
-                    <Marker n={1} />
-                    {SAMPLE.decision}
-                  </span>
-                </CardTitle>
-                <CardDescription>
-                  {SAMPLE.repo} · {SAMPLE.file}
-                </CardDescription>
-                <CardAction>
-                  <span className="flex items-center gap-2">
-                    <Marker n={2} />
-                    <Badge variant="outline">
-                      <QuotesIcon aria-hidden />
-                      Stated
-                    </Badge>
-                  </span>
-                </CardAction>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col gap-5">
-                  <p className="flex gap-2 type-body text-text-1">
-                    <Marker n={3} />
-                    {SAMPLE.question}
-                  </p>
-                  <div className="flex flex-col gap-3 well p-4 type-body-sm text-text-2">
-                    <span className="flex items-center gap-2">
-                      <Marker n={4} />
-                      <LockKeyIcon aria-hidden />
-                      The why appears after you answer.
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <Marker n={5} />
-                      <LockKeyIcon aria-hidden />
-                      So does the quote from the session.
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <span className="flex items-center gap-2">
-                  <Marker n={6} />
-                  <Badge variant="outline">Day 1 review</Badge>
-                </span>
-              </CardFooter>
-            </Card>
-          </div>
-          <ol className="col-span-2 flex flex-col gap-4">
-            {ANATOMY.map((part, i) => (
-              <li key={part.title} className="flex gap-3">
-                <Marker n={i + 1} />
-                <span className="flex flex-col gap-1">
-                  <span className="type-label text-text-1">{part.title}</span>
-                  <span className="type-body-sm text-text-2">{part.body}</span>
-                </span>
-              </li>
-            ))}
-            <li>
-              <Cta secondary="/support" />
-            </li>
-          </ol>
-        </div>
-      </div>
-    </PublicFrame>
-  );
-}
-
 // ---------------------------------------------------------------------------------------------------------------
 // /pricing
 // ---------------------------------------------------------------------------------------------------------------
 
 const TRIAL = "Free during the 8x Playmakers trial, 28 Oct to 6 Nov 2026.";
 const NO_CHARGE = "No card needed, and we won’t charge you without asking first.";
-
-const INCLUDED = [
-  {
-    item: "The command-line tool",
-    plain:
-      "Sends your sessions, with an opt-in hook per project. Secrets are filtered on your laptop first.",
-  },
-  {
-    item: "Up to 5 decision cards per session",
-    plain:
-      "Each card is one choice your agent made, with a quote from the session that plain code checked.",
-  },
-  {
-    item: "Reviews on day 1, 4 and 11",
-    plain: "You answer before you see the why, and each answer is scored 0, 1 or 2.",
-  },
-  {
-    item: "Progress by project",
-    plain: "Explained means a 2 at least once. Owned means a 2 on the day-11 review.",
-  },
-  {
-    item: "A daily email when cards are due",
-    plain: "Only on days something is due. You can turn it off.",
-  },
-] as const;
-
-function PlanCard() {
-  return (
-    <Card size="lg">
-      <CardHeader>
-        <CardTitle>
-          <span className="flex items-center gap-3">
-            Trial
-            <Badge variant="success">Free</Badge>
-          </span>
-        </CardTitle>
-        <CardDescription>
-          {TRIAL} {NO_CHARGE}
-        </CardDescription>
-      </CardHeader>
-      <CardFooter>
-        <Link href="/setup" className={buttonVariants({ size: "lg" })}>
-          Set it up
-        </Link>
-      </CardFooter>
-    </Card>
-  );
-}
-
-/** A: the plan beside what the first two weeks look like, so "what do I get" is answered as a schedule. */
-export function MarketingPricingOptionA() {
-  const timeline = [
-    {
-      when: "Today",
-      what: "Sign in from your terminal and send a session. Cards are ready on your dashboard.",
-    },
-    { when: "Day 1", what: "First review. Answer each card before you see its reason." },
-    {
-      when: "Day 4",
-      what: "Cards you explained on day 1 come back. A card below 2 came back the next day instead.",
-    },
-    { when: "Day 11", what: "Last review. A 2 here and the decision is owned." },
-  ];
-  return (
-    <PublicFrame path="/pricing">
-      <div className={`${PAGE} gap-12 py-16`}>
-        <MarketingPageHeader title="Pricing">
-          One plan, and it’s free during the trial.
-        </MarketingPageHeader>
-        <div className="grid grid-cols-2 items-start gap-12">
-          <PlanCard />
-          <section aria-labelledby="opt-pricing-a-week" className="flex flex-col gap-4">
-            <h2 id="opt-pricing-a-week" className="type-label text-text-1">
-              What the plan looks like in use
-            </h2>
-            <ol className="flex flex-col gap-4">
-              {timeline.map((row) => (
-                <li key={row.when} className="grid grid-cols-4 gap-4">
-                  <span>
-                    <Badge variant="outline">{row.when}</Badge>
-                  </span>
-                  <span className="col-span-3 type-body-sm text-text-2">{row.what}</span>
-                </li>
-              ))}
-            </ol>
-          </section>
-        </div>
-      </div>
-    </PublicFrame>
-  );
-}
-
-/** B: what's included as rows, each with its plain-words meaning beside it instead of a bare checklist. */
-export function MarketingPricingOptionB() {
-  return (
-    <PublicFrame path="/pricing">
-      <div className={`${PAGE} gap-10 py-16`}>
-        <div className="flex items-end justify-between gap-8">
-          <MarketingPageHeader title="Pricing">
-            {TRIAL} {NO_CHARGE}
-          </MarketingPageHeader>
-          <Link href="/setup" className={buttonVariants({ size: "lg" })}>
-            Set it up
-          </Link>
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <span className="flex items-center gap-3">
-                Everything in the trial
-                <Badge variant="success">Free</Badge>
-              </span>
-            </CardTitle>
-            <CardDescription>What each part is, in plain words.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <dl className="flex flex-col divide-y divide-line-row">
-              {INCLUDED.map((row) => (
-                <div key={row.item} className="grid grid-cols-3 gap-6 py-4">
-                  <dt className="flex items-start gap-2 type-label text-text-1">
-                    <CheckCircleIcon weight="duotone" aria-hidden className="mt-0.5 shrink-0" />
-                    {row.item}
-                  </dt>
-                  <dd className="col-span-2 type-body-sm text-text-2">{row.plain}</dd>
-                </div>
-              ))}
-            </dl>
-          </CardContent>
-        </Card>
-      </div>
-    </PublicFrame>
-  );
-}
 
 /** C: one number, one button, and the three questions people ask before pressing it, answered in place. */
 export function MarketingPricingOptionC() {

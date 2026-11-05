@@ -6,85 +6,36 @@
 
 import type { CanvasItem } from "../../canvas";
 import {
-  MarketingHowItWorksOptionA,
   MarketingHowItWorksOptionB,
-  MarketingHowItWorksOptionC,
   MarketingLandingOptionA,
   MarketingLandingOptionB,
   MarketingLandingOptionC,
-  MarketingPricingOptionA,
-  MarketingPricingOptionB,
   MarketingPricingOptionC,
   MarketingSupportOptionA,
   MarketingSupportOptionB,
   MarketingSupportOptionC,
 } from "./marketing";
 import {
-  AuthCheckEmailOptionA,
   AuthCheckEmailOptionB,
-  AuthCheckEmailOptionC,
-  AuthErrorOptionA,
   AuthErrorOptionB,
-  AuthErrorOptionC,
-  AuthForgotPasswordOptionA,
   AuthForgotPasswordOptionB,
-  AuthForgotPasswordOptionC,
-  AuthLoginOptionA,
   AuthLoginOptionB,
-  AuthLoginOptionC,
-  AuthSignUpOptionA,
   AuthSignUpOptionB,
-  AuthSignUpOptionC,
-  AuthUpdatePasswordOptionA,
   AuthUpdatePasswordOptionB,
-  AuthUpdatePasswordOptionC,
 } from "./auth";
+import { OnboardingCliApproveOptionC } from "./onboarding";
+import { DashboardHomeOptionB, DashboardHomeOptionBEmpty } from "./dashboard";
 import {
-  OnboardingCliApproveOptionA,
-  OnboardingCliApproveOptionB,
-  OnboardingCliApproveOptionC,
-  OnboardingSetupOptionA,
-  OnboardingSetupOptionB,
-  OnboardingSetupOptionC,
-} from "./onboarding";
-import {
-  DashboardHomeOptionA,
-  DashboardHomeOptionAEmpty,
-  DashboardHomeOptionB,
-  DashboardHomeOptionBEmpty,
-  DashboardHomeOptionC,
-  DashboardHomeOptionCEmpty,
-} from "./dashboard";
-import {
-  SessionFailedOptionA,
   SessionFailedOptionB,
-  SessionFailedOptionC,
-  SessionNoCardsOptionA,
   SessionNoCardsOptionB,
-  SessionNoCardsOptionC,
-  SessionProcessingOptionA,
   SessionProcessingOptionB,
-  SessionProcessingOptionC,
-  SessionReadyOptionA,
   SessionReadyOptionB,
-  SessionReadyOptionC,
 } from "./session";
+import { ReviewCardOptionB, ReviewQueueOptionB } from "./review";
+import { DefendOptionC } from "./defend";
 import {
-  ReviewCardOptionA,
-  ReviewCardOptionB,
-  ReviewCardOptionC,
-  ReviewQueueOptionA,
-  ReviewQueueOptionB,
-  ReviewQueueOptionC,
-} from "./review";
-import { DefendOptionA, DefendOptionB, DefendOptionC } from "./defend";
-import {
-  ProgressSettingsProgressOptionA,
-  ProgressSettingsProgressOptionB,
   ProgressSettingsProgressOptionC,
   ProgressSettingsSettingsOptionA,
-  ProgressSettingsSettingsOptionB,
-  ProgressSettingsSettingsOptionC,
 } from "./progress-settings";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
@@ -115,42 +66,14 @@ export const optionRows: Entry[][] = [
   ],
   [
     {
-      id: "opt-how-a",
-      name: "Option · How it works · A · Pipeline disclosures",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingHowItWorksOptionA />,
-    },
-    {
       id: "opt-how-b",
       name: "Option · How it works · B · Tabs by place",
       width: 1440,
       height: 900,
       render: () => <MarketingHowItWorksOptionB />,
     },
-    {
-      id: "opt-how-c",
-      name: "Option · How it works · C · Card anatomy",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingHowItWorksOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-pricing-a",
-      name: "Option · Pricing · A · Plan plus timeline",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingPricingOptionA />,
-    },
-    {
-      id: "opt-pricing-b",
-      name: "Option · Pricing · B · Included, in plain words",
-      width: 1440,
-      height: 900,
-      render: () => <MarketingPricingOptionB />,
-    },
     {
       id: "opt-pricing-c",
       name: "Option · Pricing · C · One word, three answers",
@@ -184,35 +107,14 @@ export const optionRows: Entry[][] = [
   ],
   [
     {
-      id: "opt-login-a",
-      name: "Option · Login · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <AuthLoginOptionA />,
-    },
-    {
       id: "opt-login-b",
       name: "Option · Login · B · Explain panel",
       width: 1440,
       height: 900,
       render: () => <AuthLoginOptionB />,
     },
-    {
-      id: "opt-login-c",
-      name: "Option · Login · C · Focus",
-      width: 1440,
-      height: 900,
-      render: () => <AuthLoginOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-signup-a",
-      name: "Option · Sign up · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <AuthSignUpOptionA />,
-    },
     {
       id: "opt-signup-b",
       name: "Option · Sign up · B · Explain panel",
@@ -220,22 +122,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <AuthSignUpOptionB />,
     },
-    {
-      id: "opt-signup-c",
-      name: "Option · Sign up · C · Focus",
-      width: 1440,
-      height: 900,
-      render: () => <AuthSignUpOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-check-email-a",
-      name: "Option · Check email · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <AuthCheckEmailOptionA />,
-    },
     {
       id: "opt-check-email-b",
       name: "Option · Check email · B · Explain panel",
@@ -243,22 +131,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <AuthCheckEmailOptionB />,
     },
-    {
-      id: "opt-check-email-c",
-      name: "Option · Check email · C · Focus",
-      width: 1440,
-      height: 900,
-      render: () => <AuthCheckEmailOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-forgot-a",
-      name: "Option · Forgot password · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <AuthForgotPasswordOptionA />,
-    },
     {
       id: "opt-forgot-b",
       name: "Option · Forgot password · B · Explain panel",
@@ -266,22 +140,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <AuthForgotPasswordOptionB />,
     },
-    {
-      id: "opt-forgot-c",
-      name: "Option · Forgot password · C · Focus",
-      width: 1440,
-      height: 900,
-      render: () => <AuthForgotPasswordOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-update-a",
-      name: "Option · Update password · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <AuthUpdatePasswordOptionA />,
-    },
     {
       id: "opt-update-b",
       name: "Option · Update password · B · Explain panel",
@@ -289,22 +149,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <AuthUpdatePasswordOptionB />,
     },
-    {
-      id: "opt-update-c",
-      name: "Option · Update password · C · Focus",
-      width: 1440,
-      height: 900,
-      render: () => <AuthUpdatePasswordOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-auth-error-a",
-      name: "Option · Auth error · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <AuthErrorOptionA />,
-    },
     {
       id: "opt-auth-error-b",
       name: "Option · Auth error · B · Explain panel",
@@ -312,52 +158,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <AuthErrorOptionB />,
     },
-    {
-      id: "opt-auth-error-c",
-      name: "Option · Auth error · C · Focus",
-      width: 1440,
-      height: 900,
-      render: () => <AuthErrorOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-setup-a-guided-checklist",
-      name: "Option · Setup · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <OnboardingSetupOptionA />,
-    },
-    {
-      id: "opt-setup-b-explain-as-you-go",
-      name: "Option · Setup · B · Explain as you go",
-      width: 1440,
-      height: 900,
-      render: () => <OnboardingSetupOptionB />,
-    },
-    {
-      id: "opt-setup-c-focused-step",
-      name: "Option · Setup · C · Focused single step",
-      width: 1440,
-      height: 900,
-      render: () => <OnboardingSetupOptionC />,
-    },
-  ],
-  [
-    {
-      id: "opt-approve-a-match-side-by-side",
-      name: "Option · CLI approve · A · Match side by side",
-      width: 1440,
-      height: 900,
-      render: () => <OnboardingCliApproveOptionA />,
-    },
-    {
-      id: "opt-approve-b-road-ahead",
-      name: "Option · CLI approve · B · Approve with the road ahead",
-      width: 1440,
-      height: 900,
-      render: () => <OnboardingCliApproveOptionB />,
-    },
     {
       id: "opt-approve-c-one-question",
       name: "Option · CLI approve · C · One question",
@@ -367,20 +169,6 @@ export const optionRows: Entry[][] = [
     },
   ],
   [
-    {
-      id: "opt-dashboard-a",
-      name: "Option · Dashboard · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <DashboardHomeOptionA />,
-    },
-    {
-      id: "opt-dashboard-a-empty",
-      name: "Option · Dashboard · A · Guided checklist · First visit",
-      width: 1440,
-      height: 900,
-      render: () => <DashboardHomeOptionAEmpty />,
-    },
     {
       id: "opt-dashboard-b",
       name: "Option · Dashboard · B · Explain in place",
@@ -395,50 +183,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <DashboardHomeOptionBEmpty />,
     },
-    {
-      id: "opt-dashboard-c",
-      name: "Option · Dashboard · C · One focused card",
-      width: 1440,
-      height: 900,
-      render: () => <DashboardHomeOptionC />,
-    },
-    {
-      id: "opt-dashboard-c-empty",
-      name: "Option · Dashboard · C · One focused card · First visit",
-      width: 1440,
-      height: 900,
-      render: () => <DashboardHomeOptionCEmpty />,
-    },
   ],
   [
-    {
-      id: "opt-session-a-processing",
-      name: "Option · Session · A · Guided checklist · Processing",
-      width: 1440,
-      height: 900,
-      render: () => <SessionProcessingOptionA />,
-    },
-    {
-      id: "opt-session-a-ready",
-      name: "Option · Session · A · Guided checklist · Ready",
-      width: 1440,
-      height: 900,
-      render: () => <SessionReadyOptionA />,
-    },
-    {
-      id: "opt-session-a-failed",
-      name: "Option · Session · A · Guided checklist · Failed",
-      width: 1440,
-      height: 900,
-      render: () => <SessionFailedOptionA />,
-    },
-    {
-      id: "opt-session-a-no-cards",
-      name: "Option · Session · A · Guided checklist · No cards",
-      width: 1440,
-      height: 900,
-      render: () => <SessionNoCardsOptionA />,
-    },
     {
       id: "opt-session-b-processing",
       name: "Option · Session · B · Explain as you go · Processing",
@@ -467,43 +213,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <SessionNoCardsOptionB />,
     },
-    {
-      id: "opt-session-c-processing",
-      name: "Option · Session · C · Focused single task · Processing",
-      width: 1440,
-      height: 900,
-      render: () => <SessionProcessingOptionC />,
-    },
-    {
-      id: "opt-session-c-ready",
-      name: "Option · Session · C · Focused single task · Ready",
-      width: 1440,
-      height: 900,
-      render: () => <SessionReadyOptionC />,
-    },
-    {
-      id: "opt-session-c-failed",
-      name: "Option · Session · C · Focused single task · Failed",
-      width: 1440,
-      height: 900,
-      render: () => <SessionFailedOptionC />,
-    },
-    {
-      id: "opt-session-c-no-cards",
-      name: "Option · Session · C · Focused single task · No cards",
-      width: 1440,
-      height: 900,
-      render: () => <SessionNoCardsOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-review-queue-a",
-      name: "Option · Review queue · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <ReviewQueueOptionA />,
-    },
     {
       id: "opt-review-queue-b",
       name: "Option · Review queue · B · Split explain-as-you-go",
@@ -511,22 +222,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <ReviewQueueOptionB />,
     },
-    {
-      id: "opt-review-queue-c",
-      name: "Option · Review queue · C · Focused single task",
-      width: 1440,
-      height: 900,
-      render: () => <ReviewQueueOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-review-card-a",
-      name: "Option · Review card · A · Guided checklist",
-      width: 1440,
-      height: 900,
-      render: () => <ReviewCardOptionA />,
-    },
     {
       id: "opt-review-card-b",
       name: "Option · Review card · B · Split explain-as-you-go",
@@ -534,29 +231,8 @@ export const optionRows: Entry[][] = [
       height: 900,
       render: () => <ReviewCardOptionB />,
     },
-    {
-      id: "opt-review-card-c",
-      name: "Option · Review card · C · Focused single task",
-      width: 1440,
-      height: 900,
-      render: () => <ReviewCardOptionC />,
-    },
   ],
   [
-    {
-      id: "opt-defend-a-checklist-rail",
-      name: "Option · Defend it · A · Step rail",
-      width: 1440,
-      height: 900,
-      render: () => <DefendOptionA />,
-    },
-    {
-      id: "opt-defend-b-why-panel",
-      name: "Option · Defend it · B · Task with why panel",
-      width: 1440,
-      height: 900,
-      render: () => <DefendOptionB />,
-    },
     {
       id: "opt-defend-c-focused",
       name: "Option · Defend it · C · One focused column",
@@ -566,20 +242,6 @@ export const optionRows: Entry[][] = [
     },
   ],
   [
-    {
-      id: "opt-progress-a",
-      name: "Option · Progress · A · Guided ladder",
-      width: 1440,
-      height: 900,
-      render: () => <ProgressSettingsProgressOptionA />,
-    },
-    {
-      id: "opt-progress-b",
-      name: "Option · Progress · B · Explain as you go",
-      width: 1440,
-      height: 900,
-      render: () => <ProgressSettingsProgressOptionB />,
-    },
     {
       id: "opt-progress-c",
       name: "Option · Progress · C · Follow one card",
@@ -595,20 +257,6 @@ export const optionRows: Entry[][] = [
       width: 1440,
       height: 900,
       render: () => <ProgressSettingsSettingsOptionA />,
-    },
-    {
-      id: "opt-settings-b",
-      name: "Option · Settings · B · Live preview",
-      width: 1440,
-      height: 900,
-      render: () => <ProgressSettingsSettingsOptionB />,
-    },
-    {
-      id: "opt-settings-c",
-      name: "Option · Settings · C · One task at a time",
-      width: 1440,
-      height: 900,
-      render: () => <ProgressSettingsSettingsOptionC />,
     },
   ],
 ];
