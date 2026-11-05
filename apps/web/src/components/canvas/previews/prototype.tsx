@@ -113,15 +113,11 @@ type Answer = {
   next: string;
 };
 
-/** The real Learn nav, with the two proposed pages (Defend it, Report) where they would sit. */
+/** The real Learn nav, with the proposed Report page where it would sit. */
 const NAV: FrameNavItem[] = [
-  LEARN_NAV[0],
-  LEARN_NAV[1],
-  { title: "Defend it", url: "/defend", icon: <ShieldCheckIcon /> },
-  LEARN_NAV[2],
+  ...LEARN_NAV.slice(0, 4),
   { title: "Report", url: "/report", icon: <ShareNetworkIcon /> },
-  LEARN_NAV[3],
-  LEARN_NAV[4],
+  ...LEARN_NAV.slice(4),
 ];
 
 const SCREEN_FOR: Record<string, ScreenId> = {

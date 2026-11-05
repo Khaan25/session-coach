@@ -10,7 +10,6 @@ import { PASTE_OFF } from "@/components/review/quiz-form";
 import { DAILY_CAP, DAILY_CAP_MESSAGE } from "@/lib/review/today";
 
 import type { CanvasItem } from "../../canvas";
-import { DeleteAccountOpen, EmailPreview, FlowPreview } from "../more";
 import {
   AuthCheckEmailOptionB,
   AuthConfirm,
@@ -49,7 +48,9 @@ import {
   MapReviewError,
   MapSessionNotFound,
 } from "./learning";
-import { CanvasToast } from "./parts";
+import { CanvasToast, DeleteAccountOpen, FlowPreview } from "./parts";
+import { MapReport } from "./report";
+import { MapEmail, MapHome } from "./screens";
 import { MapSetup } from "./setup";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
@@ -87,6 +88,7 @@ const routeRows: Entry[][] = [
     page("app", "loading card", () => <MapReviewCardLoading />),
   ],
   [
+    page("/", "signed out", () => <MapHome />),
     page("/how-it-works", "default", () => <MarketingHowItWorksOptionB />),
     page("/pricing", "default", () => <MarketingPricingOptionC />),
   ],
@@ -231,7 +233,7 @@ const routeRows: Entry[][] = [
       name: "Map · email · daily review",
       width: 560,
       height: 520,
-      render: () => <EmailPreview />,
+      render: () => <MapEmail />,
     },
     page("/dashboard", "full", () => <DashboardHomeOptionB />),
     page("/dashboard", "first visit", () => <DashboardHomeOptionBEmpty />),
@@ -342,6 +344,15 @@ const routeRows: Entry[][] = [
     page("/progress", "error", () => <MapProgressEmpty state="error" />),
   ],
   [
+    page("/r/[slug]", "shared", () => <MapReport />),
+    page("/r/[slug]", "nothing owned yet", () => (
+      <MapReport report={{ name: "Sam Rivera", owned: 0, defended: 0, repos: [] }} />
+    )),
+    page("/r/[slug]", "turned off or wrong link", () => <MapReport report="off" />),
+    page("/r/[slug]", "rate limited", () => <MapReport report="limited" />),
+    page("/r/[slug]", "error", () => <MapReport report="error" />),
+  ],
+  [
     page("/settings", "default", () => <ProgressSettingsSettingsOptionA />),
     page("/settings", "saved", () => (
       <ProgressSettingsSettingsOptionA overlay={<CanvasToast title="Profile saved" />} />
@@ -410,6 +421,7 @@ const FLOWS: Flow[] = [
       ["Or: not defended", "map-defend-not-defended"],
       ["Or: time's up", "map-defend-time-s-up"],
       ["Before any 2: nothing to defend", "map-defend-nothing-to-defend"],
+      ["Shown on the public report", "map-r-slug-shared"],
     ],
   },
   {

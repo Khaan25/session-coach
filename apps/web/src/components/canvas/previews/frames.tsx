@@ -153,7 +153,8 @@ export function AppFrame({
   const title =
     crumb ??
     nav.find((item) => isActive(item.url))?.title ??
-    (path.startsWith("/s/") ? "Session" : undefined);
+    // As AppBreadcrumb: session and CLI approve pages are not in the nav, so they get their own crumb.
+    (path.startsWith("/s/") ? "Session" : path.startsWith("/cli/") ? "Connect the CLI" : undefined);
   return (
     <FrameWindow path={path} bar={bar} overlay={overlay}>
       <SidebarProvider className="min-h-0 flex-1">

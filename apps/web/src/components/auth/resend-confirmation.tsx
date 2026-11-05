@@ -15,6 +15,8 @@ export function ResendConfirmation({ email }: { email: string }) {
   const [left, setLeft] = useState(0);
   // /canvas: answers as a sent resend would, without sending one.
   const dryRun = useDryRun();
+  // A preview of a resend's answer, never the sign-in form's own (that is the notice above this button).
+  const preview = use(AuthPreviewContext);
   const [state, action, pending] = useActionState<AuthState, FormData>(
     async (prev, formData) => {
       const result = dryRun
@@ -26,7 +28,7 @@ export function ResendConfirmation({ email }: { email: string }) {
       if (result.status === "sent") setLeft(COOLDOWN_S);
       return result;
     },
-    use(AuthPreviewContext) ?? {},
+    preview?.status === "sent" ? preview : {},
   );
 
   useEffect(() => {
