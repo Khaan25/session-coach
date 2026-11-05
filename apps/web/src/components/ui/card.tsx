@@ -6,16 +6,22 @@ import * as React from "react";
 // is grey on its own. The edge darkens on hover with the zip's short shadow transition.
 // Size sets --card-spacing (12, 16, 24px), which pads the header, body and footer alike, and lg also
 // takes a heading-size title, so the three sizes read as different densities, not one card.
+// The panel variant is the outer card: grey, its header on the grey, and one CardInset inside it as the inner card.
 
 function Card({
   className,
   size = "default",
+  variant = "default",
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" | "lg" }) {
+}: React.ComponentProps<"div"> & {
+  size?: "default" | "sm" | "lg";
+  variant?: "default" | "panel";
+}) {
   return (
     <div
       data-slot="card"
       data-size={size}
+      data-variant={variant}
       className={cn(
         "group/card frame relative flex flex-col overflow-hidden bg-page type-body text-text-1",
         // The hover edge recolours the frame's own line (drawn above the content), so a child's
@@ -24,6 +30,7 @@ function Card({
         // A card holding a list becomes a panel: grey, header on the grey, the list inset in white. A plain `none`, not
         // `shadow-none`: that is five transparent shadows, which skullet 0.0.3 reads as a surface and draws the header as one block.
         "has-[>[data-slot=item-group]]:bg-(--surface-frame) has-[>[data-slot=item-group]]:*:data-[slot=card-header]:[box-shadow:none]",
+        "data-[variant=panel]:bg-(--surface-frame) data-[variant=panel]:*:data-[slot=card-header]:[box-shadow:none]",
         "[--card-spacing:var(--space-4)] data-[size=lg]:[--card-spacing:var(--space-6)] data-[size=sm]:[--card-spacing:var(--space-3)]",
         "*:[img:first-child]:rounded-t-frame *:[img:last-child]:rounded-b-frame",
         "forced-colors:outline forced-colors:outline-1",
@@ -111,4 +118,28 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle };
+function CardInset({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="card-inset"
+      className={cn(
+        // The inner card of a panel: paper with its own frame edge, inset by the card's spacing on three sides so the
+        // grey shows round it, the panel's header above it.
+        "frame mx-(--card-spacing) mb-(--card-spacing) bg-page",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardInset,
+  CardTitle,
+};
