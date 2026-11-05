@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
 import { parseLoginArgs, parsePushArgs } from "./args.ts";
@@ -185,7 +185,10 @@ async function init(args: string[]): Promise<number> {
       return false;
     }
     for (;;) {
-      const answer = parseYesNo(await promptLine(`${question} [Y/n] `), true);
+      const line = await promptLine(`${question} [Y/n] `);
+      // Ctrl-D or Ctrl-C is a no, never the default.
+      if (line === null) return false;
+      const answer = parseYesNo(line, true);
       if (answer !== null) return answer;
     }
   };
@@ -224,8 +227,18 @@ async function init(args: string[]): Promise<number> {
       "Secrets are removed on your laptop before upload, as best it can; only add it to projects you're happy to send.",
     ].join("\n"),
   );
-  const current = await readFile(settingsFile, "utf8").catch(() => null);
-  const edit = addSyncHook(current);
+  // Only a missing file is "no settings yet"; any other read error stops this step rather than risk a rewrite.
+  let current: string | null = null;
+  let unreadable: string | null = null;
+  try {
+    current = await readFile(settingsFile, "utf8");
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT") unreadable = code ?? "unreadable";
+  }
+  const edit = unreadable
+    ? ({ kind: "invalid", reason: `it couldn't be read (${unreadable})` } as const)
+    : addSyncHook(current);
   if (edit.kind === "present") console.log("The hook is already in this project. Nothing to do.");
   else if (edit.kind === "invalid") {
     console.log(
@@ -233,7 +246,10 @@ async function init(args: string[]): Promise<number> {
     );
   } else if (await ask(`Add the hook to ${settingsFile}?`)) {
     await mkdir(dirname(settingsFile), { recursive: true });
-    await writeFile(settingsFile, edit.text);
+    // Written beside it, then renamed over it, so an interrupted write never leaves half a settings file.
+    const temporary = `${settingsFile}.${process.pid}.tmp`;
+    await writeFile(temporary, edit.text);
+    await rename(temporary, settingsFile);
     console.log(
       "Added. Commit .claude/settings.json if your team should share it, or keep it local.",
     );
