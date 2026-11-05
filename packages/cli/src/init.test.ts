@@ -76,8 +76,10 @@ describe("runInit", () => {
 
   it("warns when git would commit settings.local.json, and not once it is ignored", async () => {
     const cwd = await mkdtemp(join(tmpdir(), "sc-init-git-"));
-    // The machine's own git config may already ignore the file globally; leave it out.
+    // The machine's own git config may already ignore the file globally, and a git hook running these tests sets
+    // GIT_DIR and friends to this repo; leave both out.
     const saved = { ...process.env };
+    for (const key of Object.keys(process.env)) if (key.startsWith("GIT_")) delete process.env[key];
     Object.assign(process.env, {
       GIT_CONFIG_GLOBAL: "/dev/null",
       GIT_CONFIG_NOSYSTEM: "1",
