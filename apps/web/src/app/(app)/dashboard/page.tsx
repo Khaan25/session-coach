@@ -6,6 +6,7 @@ import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { AppPageHeader } from "@/components/app/page-header";
+import { ProjectTabs } from "@/components/app/project-tabs";
 import { SessionRow } from "@/components/app/session-row";
 import {
   ANSWER_FIRST,
@@ -238,47 +239,35 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
     </Card>
   );
 
-  return (
-    <>
-      {repos && repos.length > 0 && (
-        <nav aria-label="Projects" className="flex flex-wrap gap-2">
-          {[null, ...repos].map((name) => (
-            <Link
-              key={name ?? ""}
-              href={dashboardHref(name)}
-              aria-current={name === repo ? "page" : undefined}
-              className={buttonVariants({
-                variant: name === repo ? "secondary" : "ghost",
-                size: "sm",
-              })}
-            >
-              {name ?? "All projects"}
-            </Link>
-          ))}
-        </nav>
-      )}
-      <DashboardGrid
-        rail={
-          anatomy ? <CardAnatomy card={anatomy} /> : <CardAnatomy card={SAMPLE_ANATOMY} sample />
-        }
-      >
-        {/* First visit: the sessions block leads, since its empty state is the first step (/setup), and it stays live,
+  const grid = (
+    <DashboardGrid
+      rail={anatomy ? <CardAnatomy card={anatomy} /> : <CardAnatomy card={SAMPLE_ANATOMY} sample />}
+    >
+      {/* First visit: the sessions block leads, since its empty state is the first step (/setup), and it stays live,
             so the first session shows up without a reload. */}
-        {firstVisit ? (
-          <>
-            {sessionsCard}
-            {dueCard}
-            {ownershipCard}
-          </>
-        ) : (
-          <>
-            {dueCard}
-            {ownershipCard}
-            {sessionsCard}
-          </>
-        )}
-      </DashboardGrid>
-    </>
+      {firstVisit ? (
+        <>
+          {sessionsCard}
+          {dueCard}
+          {ownershipCard}
+        </>
+      ) : (
+        <>
+          {dueCard}
+          {ownershipCard}
+          {sessionsCard}
+        </>
+      )}
+    </DashboardGrid>
+  );
+  if (!repos || repos.length === 0) return grid;
+  return (
+    <ProjectTabs
+      tabs={[null, ...repos].map((name) => ({ repo: name, href: dashboardHref(name) }))}
+      repo={repo}
+    >
+      {grid}
+    </ProjectTabs>
   );
 }
 
