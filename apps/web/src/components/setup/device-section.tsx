@@ -124,8 +124,11 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: DeviceListRow) => voi
   const [pending, setPending] = useState(false);
   // The raw token, held only while the dialog is open.
   const [token, setToken] = useState<string | null>(null);
+  const dryRun = useDryRun();
 
   async function create() {
+    // /canvas: no token is made for whoever is looking; the dialog shows where the token would be.
+    if (dryRun) return setToken("A new token shows here once, on the real page.");
     setPending(true);
     const response = await fetch("/api/cli/tokens", {
       method: "POST",

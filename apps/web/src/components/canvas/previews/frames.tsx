@@ -14,6 +14,7 @@ import Link from "next/link";
 
 import { AuthArt, type AuthScene } from "@/components/auth/auth-art";
 import { BrandLink } from "@/components/auth/auth-parts";
+import { DryRunContext } from "@/components/app/dry-run";
 import { BrandMark } from "@/components/brand-mark";
 import { navMain } from "@/components/nav-items";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -103,7 +104,8 @@ export function FrameWindow({
       </div>
       {bar}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {children}
+        {/* Every real control drawn in a frame saves nothing: see DryRunContext. */}
+        <DryRunContext value>{children}</DryRunContext>
         {overlay}
       </div>
     </div>
