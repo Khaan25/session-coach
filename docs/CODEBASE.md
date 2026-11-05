@@ -265,6 +265,33 @@ clocks, the card pick, the schemas and the prompts are pure and tested in
 - **No answer key leaves the server.** The routes read `model_answer` to build the prompts and return only the
   question, the follow-up, the score, `missing` and the label.
 
+## Ownership report
+
+An opt-in public page of the decisions a learner owns, at `/r/<report_slug>`, with the same data as JSON at
+`GET /api/report/[slug]`. Off by default (`profiles.report_on`), and only repos the learner ticked
+(`projects.report_shown`) are listed ([DATA_MODEL.md](DATA_MODEL.md#profiles)).
+
+- **Read:** `getReport` in [`lib/report/queries.ts`](../apps/web/src/lib/report/queries.ts) runs with the service role
+  (a visitor has no session): a malformed slug returns null before any query, then the profile `where report_slug and
+  report_on`, then that learner's ticked repos, mastered `reviews` with their cards (`not hidden`, `not flagged`) and
+  finished defenses scored 2. Columns are named; `why`, `model_answer`, `question` and `answers` are never selected.
+- **Shape:** `shapeReport` in [`lib/report/report.ts`](../apps/web/src/lib/report/report.ts) (pure, with a test)
+  builds `{ name, owned, defended, repos: [{ repo, owned, defended, decisions: [{ decision, quote, file, ownedOn,
+  defendedOn }] }] }`, picking each field by name and filtering hidden, flagged and unticked cards again. Owned is
+  `reviews.mastered` (as in `learner_ownership()`); `ownedOn` is the mastered row's `updated_at`. Defended counts the
+  owned cards on the page with a finished defense scored 2; `defendedOn` is the latest. The quote is the first
+  verified evidence quote, from the learner's own redacted log; the settings card says decisions and quotes become
+  public.
+- **Off, unknown or malformed** slugs get the same page and the same 404 body (`{ "error": "This report isn't
+  shared." }`), so links can't be probed. The JSON is `Cache-Control: no-store`; a failed read is a 500 with a sentence
+  and only the message logged. Both spend the per-IP `report` budget (the page and its metadata share one read through
+  React `cache()`). The page's metadata is `noindex, nofollow`, titled with the learner's name. `/r` isn't in the
+  proxy's `PROTECTED` list.
+- **Settings:** [`components/settings/report-card.tsx`](../apps/web/src/components/settings/report-card.tsx) on
+  /settings: the switch (`setReportOn`) and per-repo ticks (`setReportRepo`) are Server Actions through the RLS client;
+  "Make a new link" (`newReportLink`) writes a fresh slug with the service role after `getUser()`, so old links stop
+  working.
+
 ## CLI tokens
 
 `/setup` creates and revokes the tokens the CLI uploads with ([`api/cli/tokens/route.ts`](../apps/web/src/app/api/cli/tokens/route.ts),
@@ -317,6 +344,7 @@ clocks, the card pick, the schemas and the prompts are pure and tested in
 | `email`        | 5 per 1 h    | IP       | Reset and resend emails (shared)                                                  |
 | `deviceStart`  | 10 per 10 m  | IP       | `POST /api/cli/device`                                                            |
 | `devicePoll`   | 300 per 10 m | IP       | `POST /api/cli/device/token`                                                      |
+| `report`       | 60 per 10 m  | IP       | `/r/[slug]` and `GET /api/report/[slug]`                                          |
 | `push`         | 20 per 1 h   | Learner  | `POST /api/sessions`                                                              |
 | `process`      | 20 per 1 h   | Learner  | `POST /api/sessions/[id]/process`                                                 |
 | `grade`        | 60 per 1 h   | Learner  | `POST /api/review/answer`, `POST /api/defend/[defenseId]/answer` and `/follow-up` |

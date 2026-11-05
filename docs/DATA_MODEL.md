@@ -22,6 +22,8 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
   table, one timed defense of a card per row (see [`defenses`](#defenses)).
 - [`20261105000200_ownership.sql`](../supabase/migrations/20261105000200_ownership.sql): `learner_ownership()`, the
   dashboard meter's counts per repo (see [`projects`](#projects)).
+- [`20261105000300_report.sql`](../supabase/migrations/20261105000300_report.sql): the opt-in public report,
+  `profiles.report_on` and `report_slug`, and `projects.report_shown` (see [`profiles`](#profiles)).
 
 ## The one rule
 
@@ -35,11 +37,11 @@ caller in code first ([rules/authorization.md](rules/authorization.md)).
 
 The only learner writes:
 
-| Table        | Write                                                   | Why it is safe                                                   |
-| ------------ | ------------------------------------------------------- | ---------------------------------------------------------------- |
-| `profiles`   | update `display_name`, `timezone`, `notify_email`       | Column grants: nothing that affects scores, identity or billing. |
-| `cli_tokens` | delete own rows                                         | Revoking a token can only remove access, never add it.           |
-| `projects`   | insert own row; update `question_level`, `onboarded_at` | Only shapes future questions; no score, card or other learner.   |
+| Table        | Write                                                                   | Why it is safe                                                                              |
+| ------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `profiles`   | update `display_name`, `timezone`, `notify_email`, `report_on`          | Column grants: nothing that affects scores, identity or billing.                            |
+| `cli_tokens` | delete own rows                                                         | Revoking a token can only remove access, never add it.                                      |
+| `projects`   | insert own row; update `question_level`, `onboarded_at`, `report_shown` | Only shapes future questions and the learner's own report; no score, card or other learner. |
 
 Who's "server" in the tables below: a route handler or script using `createAdminClient()`
 ([`apps/web/src/lib/supabase/admin.ts`](../apps/web/src/lib/supabase/admin.ts)), or a Postgres trigger.
@@ -69,15 +71,17 @@ removes every row.
 One row per auth user, created by a trigger on sign-up. Learners can't read `auth.users`, so anything the app shows
 about a person (name, email) is copied here.
 
-| Column         | Stores                                                                 | Written by                               |
-| -------------- | ---------------------------------------------------------------------- | ---------------------------------------- |
-| `id`           | The `auth.users` id. Cascades on user delete.                          | Trigger `handle_new_user`                |
-| `email`        | Copy of `auth.users.email`, for RLS reads and the Play Stats roster.   | Triggers (`handle_new_user`, email sync) |
-| `display_name` | Trimmed, 1–100 characters, or null. Never `""`.                        | Trigger at sign-up; learner after        |
-| `avatar_url`   | `https://` only, from the provider's metadata.                         | Trigger                                  |
-| `timezone`     | IANA name, default `UTC`. Decides the learner's "today" for due dates. | Learner                                  |
-| `notify_email` | Whether the daily review email is sent. Default true.                  | Learner; server on one-click unsubscribe |
-| `created_at`   | Sign-up time; the Play Stats cohorts group by its UTC day.             | Default                                  |
+| Column         | Stores                                                                    | Written by                               |
+| -------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
+| `id`           | The `auth.users` id. Cascades on user delete.                             | Trigger `handle_new_user`                |
+| `email`        | Copy of `auth.users.email`, for RLS reads and the Play Stats roster.      | Triggers (`handle_new_user`, email sync) |
+| `display_name` | Trimmed, 1–100 characters, or null. Never `""`.                           | Trigger at sign-up; learner after        |
+| `avatar_url`   | `https://` only, from the provider's metadata.                            | Trigger                                  |
+| `timezone`     | IANA name, default `UTC`. Decides the learner's "today" for due dates.    | Learner                                  |
+| `notify_email` | Whether the daily review email is sent. Default true.                     | Learner; server on one-click unsubscribe |
+| `report_on`    | Whether the public report at `/r/<report_slug>` is shared. Default false. | Learner (column grant)                   |
+| `report_slug`  | The report link's random end: 32 hex characters, unique (check).          | Default; server on "Make a new link"     |
+| `created_at`   | Sign-up time; the Play Stats cohorts group by its UTC day.                | Default                                  |
 
 - **Policies:** `read own profile` (select where `id = auth.uid()`), `update own profile` (same, with check).
 - **Grants:** `update` is revoked from `anon` and `authenticated`, then granted back on `timezone`, `notify_email`
@@ -87,6 +91,11 @@ about a person (name, email) is copied here.
   stored; send `null` to clear it. `avatar_url like 'https://%'` keeps `javascript:` and `http:` URLs out of `<img>`.
 - **Why email is copied:** reading it from `auth.users` needs the service role on every request; the roster needs
   email and name in one query (DECISIONS.md, 2026-10-29).
+- **Report:** `report_slug` defaults to `replace(gen_random_uuid()::text, '-', '')` (122 random bits), so it can't be
+  guessed from the name, and the migration filled every existing row. Learners may update `report_on` only; a new slug
+  is written by the `newReportLink` Server Action with the service role, after `getUser()`, so a learner can't choose
+  a guessable slug or take someone else's. A learner reads only their own slug (the `read own profile` policy). The
+  public read (`lib/report/queries.ts`) uses the service role, keyed by slug and `where report_on`.
 
 ### `cli_tokens`
 
@@ -267,18 +276,20 @@ One row per email sent: the daily review email (`lib/email/daily-review.ts`).
 How hard a learner wants the questions for one repo. One row per `(user_id, repo)`; `repo` matches `sessions.repo`
 exactly. A repo with no row, and every session with no repo, gets `simple`.
 
-| Column           | Stores                                                                         | Written by              |
-| ---------------- | ------------------------------------------------------------------------------ | ----------------------- |
-| `id`             | Row id.                                                                        | Default                 |
-| `user_id`        | The learner.                                                                   | Learner on insert (RLS) |
-| `repo`           | The repo name, as the CLI uploaded it on `sessions.repo`. Never blank.         | Learner on insert       |
-| `question_level` | `simple`, `hard` or `complex`. Default `simple`.                               | Learner (column grant)  |
-| `onboarded_at`   | When the learner last chose a level (or "Not now"); null shows the setup card. | Learner (column grant)  |
-| `created_at`     | Insert time.                                                                   | Default                 |
+| Column           | Stores                                                                          | Written by              |
+| ---------------- | ------------------------------------------------------------------------------- | ----------------------- |
+| `id`             | Row id.                                                                         | Default                 |
+| `user_id`        | The learner.                                                                    | Learner on insert (RLS) |
+| `repo`           | The repo name, as the CLI uploaded it on `sessions.repo`. Never blank.          | Learner on insert       |
+| `question_level` | `simple`, `hard` or `complex`. Default `simple`.                                | Learner (column grant)  |
+| `onboarded_at`   | When the learner last chose a level (or "Not now"); null shows the setup card.  | Learner (column grant)  |
+| `report_shown`   | Whether the public report lists this repo. Default false: private until ticked. | Learner (column grant)  |
+| `created_at`     | Insert time.                                                                    | Default                 |
 
 - **Policies:** select and update own rows; insert only with `user_id = auth.uid()` **and** a session of theirs in
   that repo, so the table can't fill with made-up repos.
-- **Grants:** insert `(user_id, repo, question_level, onboarded_at)`, update `(question_level, onboarded_at)` only, so
+- **Grants:** insert `(user_id, repo, question_level, onboarded_at, report_shown)`, update `(question_level,
+  onboarded_at, report_shown)` only, so
   a row can't be moved to another learner or repo. Because of that, the app updates then inserts instead of a
   PostgREST upsert (which would write `user_id` and `repo` on conflict).
 - **`learner_repos()`:** the caller's distinct non-blank `sessions.repo`, A to Z. Runs as the caller (RLS applies),
