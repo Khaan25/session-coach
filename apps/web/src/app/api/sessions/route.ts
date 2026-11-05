@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     if (insertError?.code === UNIQUE_VIOLATION) {
       const { data: existing, error: readError } = await admin
         .from("sessions")
-        .select("id, status, processing_started_at")
+        .select("id, status, processing_started_at, created_at")
         .eq("user_id", userId)
         .eq("external_id", meta.external_id)
         .single();
