@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CodeBlock } from "@/components/ui/code-block";
+import { useDryRun } from "@/components/app/dry-run";
 import { toast } from "@/components/ui/toast";
 import {
   Dialog,
@@ -123,8 +124,11 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: DeviceListRow) => voi
   const [pending, setPending] = useState(false);
   // The raw token, held only while the dialog is open.
   const [token, setToken] = useState<string | null>(null);
+  const dryRun = useDryRun();
 
   async function create() {
+    // /canvas: no token is made for whoever is looking; the dialog shows where the token would be.
+    if (dryRun) return setToken("A new token shows here once, on the real page.");
     setPending(true);
     const response = await fetch("/api/cli/tokens", {
       method: "POST",
@@ -228,18 +232,26 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: DeviceListRow) => voi
   );
 }
 
-function RevokeTokenDialog({
+/**
+ * Revoke one device's token after a confirm. `verb` names the button: Revoke on /setup, Disconnect on /settings. Under
+ * DryRunContext (/canvas) the row goes without calling the route.
+ */
+export function RevokeTokenDialog({
   id,
   label,
   onRevoke,
+  verb = "Revoke",
 }: {
   id: string;
   label: string;
   onRevoke: () => void;
+  verb?: "Revoke" | "Disconnect";
 }) {
   const [pending, setPending] = useState(false);
+  const dryRun = useDryRun();
 
   async function revoke() {
+    if (dryRun) return onRevoke();
     setPending(true);
     const response = await fetch(`/api/cli/tokens?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
@@ -261,10 +273,18 @@ function RevokeTokenDialog({
   return (
     <AlertDialog>
       <AlertDialogTrigger
-        render={<Button variant="ghost" size="sm" disabled={pending} aria-busy={pending} />}
+        render={
+          <Button
+            variant={verb === "Revoke" ? "ghost" : "secondary"}
+            size="sm"
+            disabled={pending}
+            aria-busy={pending}
+          />
+        }
       >
         {pending && <Spinner label="" />}
-        Revoke<span className="sr-only"> {label}</span>
+        {verb}
+        <span className="sr-only"> {label}</span>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

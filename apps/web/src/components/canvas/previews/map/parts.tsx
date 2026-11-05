@@ -1,9 +1,11 @@
 // Small pieces the app map's states share. Synthetic data only, like every canvas preview.
 
-import { Container } from "@/components/app/container";
-import { AppPageHeader } from "@/components/app/page-header";
+import { AlertDialogFooter, AlertDialogHeader } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
-import { AppFrame } from "../frames";
+import { IdeaNote } from "../parts";
 
 /** The toast the real app raises (ui/toast), drawn still at the bottom of the window for an overlay. */
 export function CanvasToast({ title, description }: { title: string; description?: string }) {
@@ -20,28 +22,67 @@ export function CanvasToast({ title, description }: { title: string; description
   );
 }
 
-/** An (app) page: the shell, the container and the page's header, then the state. */
-export function MapAppPage({
-  path,
+/**
+ * DeleteAccountDialog open, drawn in place with its copy and parts: the real AlertDialog is modal and portals to the
+ * body, so held open it would trap the whole canvas.
+ */
+export function DeleteAccountOpen() {
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-overlay p-4">
+      <section
+        aria-labelledby="canvas-delete-title"
+        className="flex w-full max-w-overlay-sm flex-col rounded-frame bg-(--surface-frame) text-text-1 shadow-overlay"
+      >
+        <AlertDialogHeader>
+          <h2 id="canvas-delete-title" className="type-heading-xs break-words text-text-1">
+            Delete your account?
+          </h2>
+          <p className="type-body break-words text-text-2">
+            This deletes your sessions, cards, answers and tokens for good. It can&apos;t be undone.
+          </p>
+          <Field className="mt-3">
+            <FieldLabel htmlFor="canvas-delete-email">Type sam@example.com to confirm</FieldLabel>
+            <Input id="canvas-delete-email" type="email" autoComplete="off" defaultValue="sam@" />
+          </Field>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button variant="secondary">Keep account</Button>
+          <Button variant="destructive" disabled>
+            Delete account
+          </Button>
+        </AlertDialogFooter>
+      </section>
+    </div>
+  );
+}
+
+/** A flow map: each step links to its item on the canvas. */
+export function FlowPreview({
   title,
-  description,
-  crumb,
-  dueCount,
-  children,
+  steps,
+  note,
 }: {
-  path: string;
-  title: React.ReactNode;
-  description?: React.ReactNode;
-  crumb?: string;
-  dueCount?: number;
-  children: React.ReactNode;
+  title: string;
+  steps: { label: string; item: string }[];
+  note: string;
 }) {
   return (
-    <AppFrame path={path} crumb={crumb} dueCount={dueCount}>
-      <Container>
-        <AppPageHeader title={title} description={description} />
-        {children}
-      </Container>
-    </AppFrame>
+    <div className="flex flex-col gap-4 p-6">
+      <span className="type-heading">{title}</span>
+      <ol className="flex flex-col gap-2">
+        {steps.map((step, i) => (
+          <li key={step.item} className="flex items-baseline gap-3">
+            <span className="type-label text-text-3 tabular-nums">{i + 1}</span>
+            <a
+              href={`#item-${step.item}`}
+              className="type-body text-text-1 underline underline-offset-4"
+            >
+              {step.label}
+            </a>
+          </li>
+        ))}
+      </ol>
+      <IdeaNote>{note}</IdeaNote>
+    </div>
   );
 }

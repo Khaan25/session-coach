@@ -1,6 +1,7 @@
 "use client";
 
-import { useId } from "react";
+import { CheckCircleIcon, CircleIcon } from "@phosphor-icons/react";
+import { useId, useState } from "react";
 
 import { updatePassword } from "@/app/(auth)/actions";
 import { AuthNotice } from "@/components/auth/auth-notice";
@@ -24,6 +25,8 @@ export function UpdatePasswordForm() {
   const error = errors.password;
 
   const describedBy = `${id}-password-hint${error ? ` ${id}-password-error` : ""}`;
+  // The length rule, checked as the learner types, so the error never has to come after submit.
+  const [length, setLength] = useState(0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -39,9 +42,17 @@ export function UpdatePasswordForm() {
                 autoComplete="new-password"
                 aria-invalid={error ? true : undefined}
                 aria-describedby={describedBy}
+                onChange={(event) => setLength(event.target.value.length)}
               />
               <FieldDescription id={`${id}-password-hint`}>
-                At least {MIN_PASSWORD} characters.
+                <span className="inline-flex items-center gap-1.5">
+                  {length >= MIN_PASSWORD ? (
+                    <CheckCircleIcon weight="fill" aria-hidden />
+                  ) : (
+                    <CircleIcon aria-hidden />
+                  )}
+                  At least {MIN_PASSWORD} characters{length ? ` (${length} so far)` : ""}.
+                </span>
               </FieldDescription>
               <FieldError id={`${id}-password-error`}>{error}</FieldError>
             </Field>

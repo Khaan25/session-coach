@@ -122,7 +122,7 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
     .single();
   expect(defense.data?.status).toBe("finished");
   // The label shows only for a 2.
-  const defended = page.getByText("Defended (timed, follow-up).");
+  const defended = page.getByText(/is saved as defended \(timed, follow-up\)\./);
   if (defense.data?.score === 2) await expect(defended).toBeVisible();
   else await expect(defended).toHaveCount(0);
 });

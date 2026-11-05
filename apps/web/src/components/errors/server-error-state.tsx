@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 
+import { useDryRun } from "@/components/app/dry-run";
 import { ErrorState } from "@/components/app/error-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 
@@ -26,10 +27,12 @@ export function ServerErrorState({
   retry: () => void;
   home: { href: string; label: string };
 }) {
+  // /canvas draws this with a synthetic error: nothing to log.
+  const dryRun = useDryRun();
   useEffect(() => {
     // TODO(zia): send to an error reporting service once one is chosen.
-    console.error(error);
-  }, [error]);
+    if (!dryRun) console.error(error);
+  }, [error, dryRun]);
 
   const digest = digestOf(error);
   return (

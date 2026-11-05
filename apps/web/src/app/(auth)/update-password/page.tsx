@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { AuthHeading } from "@/components/auth/auth-parts";
 import { UpdatePasswordForm } from "@/components/auth/update-password-form";
+import { UpdatePasswordHeading } from "@/components/auth/auth-screens";
 
 export const metadata: Metadata = {
   title: "Set a new password | Session Coach",
@@ -12,15 +12,7 @@ export const metadata: Metadata = {
 export default function UpdatePasswordPage() {
   return (
     <>
-      <AuthHeading
-        title={
-          <>
-            Set a new <span className="italic">password</span>
-          </>
-        }
-      >
-        Choose the password you&apos;ll sign in with from now on.
-      </AuthHeading>
+      <UpdatePasswordHeading />
       <UpdatePasswordForm />
     </>
   );

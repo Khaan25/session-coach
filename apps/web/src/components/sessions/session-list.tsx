@@ -18,6 +18,7 @@ export function SessionList({
   prepend,
   limit,
   repo,
+  empty,
 }: {
   sessions: SessionListItem[];
   userId: string;
@@ -26,14 +27,30 @@ export function SessionList({
   limit: number;
   /** The project the list is filtered to: only its new sessions join. */
   repo?: string;
+  /** Shown while the list has no row; the plain "No sessions yet" by default. */
+  empty?: React.ReactNode;
 }) {
   const { rows, elapsedMs } = useLiveSessions(userId, sessions, { prepend, limit, repo });
-  if (rows.length === 0) return <NoSessionsEmpty variant="plain" />;
-  const clock = new Date(Date.parse(now) + (elapsedMs ?? 0));
+  return (
+    <SessionRows rows={rows} now={new Date(Date.parse(now) + (elapsedMs ?? 0))} empty={empty} />
+  );
+}
+
+/** The rows as they are, with no live updates: what SessionList draws, for the skeleton and the canvas. */
+export function SessionRows({
+  rows,
+  now,
+  empty = <NoSessionsEmpty variant="plain" />,
+}: {
+  rows: SessionListItem[];
+  now: Date;
+  empty?: React.ReactNode;
+}) {
+  if (rows.length === 0) return empty;
   return (
     <ItemGroup>
       {rows.map((session) => (
-        <SessionRow key={session.id} session={session} cardCount={session.cardCount} now={clock} />
+        <SessionRow key={session.id} session={session} cardCount={session.cardCount} now={now} />
       ))}
     </ItemGroup>
   );

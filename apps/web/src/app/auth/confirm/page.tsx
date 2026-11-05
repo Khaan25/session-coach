@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { AuthCard, AuthHeading, AuthSwitch } from "@/components/auth/auth-parts";
-import { AuthNotice } from "@/components/auth/auth-notice";
+import { AuthCard, AuthSwitch } from "@/components/auth/auth-parts";
+import { AuthErrorNotice, ConfirmHeading } from "@/components/auth/auth-screens";
 import { ConfirmButton } from "@/components/auth/confirm-button";
 import { isOtpType } from "@/lib/auth/otp";
 
@@ -43,12 +43,7 @@ async function ConfirmForm({ searchParams }: Pick<PageProps<"/auth/confirm">, "s
 
   const tokenHash = first(params.token_hash);
   const type = first(params.type);
-  if (!tokenHash || !isOtpType(type))
-    return (
-      <AuthNotice title="This link is incomplete" fail>
-        Open the link from the email again, or copy the whole address into the browser.
-      </AuthNotice>
-    );
+  if (!tokenHash || !isOtpType(type)) return <AuthErrorNotice code="invalid_link" />;
 
   const recovery = type === "recovery";
   return (
@@ -70,15 +65,7 @@ async function ConfirmForm({ searchParams }: Pick<PageProps<"/auth/confirm">, "s
 export default function ConfirmPage({ searchParams }: PageProps<"/auth/confirm">) {
   return (
     <>
-      <AuthHeading
-        title={
-          <>
-            One more <span className="italic">step</span>
-          </>
-        }
-      >
-        Press the button to finish. The link works once.
-      </AuthHeading>
+      <ConfirmHeading />
       <Suspense>
         <ConfirmForm searchParams={searchParams} />
       </Suspense>

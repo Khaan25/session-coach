@@ -2,16 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  ExamIcon,
-  ChartLineUpIcon,
-  GearIcon,
-  ShieldCheckIcon,
-  SquaresFourIcon,
-  TerminalWindowIcon,
-} from "@phosphor-icons/react";
 
 import { BrandMark } from "@/components/brand-mark";
+import { navMain } from "@/components/nav-items";
 import { NavMain } from "@/components/nav-main";
 import { NavSessions } from "@/components/nav-sessions";
 import { NavUser } from "@/components/nav-user";
@@ -26,16 +19,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import type { SessionListItem } from "@/lib/sessions/rows";
-
-// Routes from docs/plans/pages-and-dashboard.md.
-export const navMain = [
-  { title: "Dashboard", url: "/dashboard", icon: <SquaresFourIcon /> },
-  { title: "Review", url: "/review", icon: <ExamIcon /> },
-  { title: "Defend it", url: "/defend", icon: <ShieldCheckIcon /> },
-  { title: "Progress", url: "/progress", icon: <ChartLineUpIcon /> },
-  { title: "Setup", url: "/setup", icon: <TerminalWindowIcon /> },
-  { title: "Settings", url: "/settings", icon: <GearIcon /> },
-];
 
 export function AppSidebar({
   sessions,

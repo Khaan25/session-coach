@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useDryRun } from "@/components/app/dry-run";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 
@@ -14,7 +15,11 @@ export function RetrySessionButton({ sessionId }: { sessionId: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
+  const dryRun = useDryRun();
+
   async function retry() {
+    // /canvas: the session is synthetic, so there is nothing to retry.
+    if (dryRun) return;
     setPending(true);
     const response = await fetch(`/api/sessions/${sessionId}/retry`, { method: "POST" }).catch(
       () => null,

@@ -8,7 +8,14 @@ import { AuthCard, AuthStatus, AuthSwitch } from "@/components/auth/auth-parts";
 import { GoogleForm } from "@/components/auth/google-form";
 import { useAuthForm } from "@/components/auth/use-auth-form";
 import { Button } from "@/components/ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { validateResetRequest } from "@/lib/auth/validate";
 
@@ -41,8 +48,11 @@ export function ForgotPasswordForm() {
                   spellCheck={false}
                   defaultValue={email}
                   aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? `${id}-email-error` : undefined}
+                  aria-describedby={`${id}-email-hint${error ? ` ${id}-email-error` : ""}`}
                 />
+                <FieldDescription id={`${id}-email-hint`}>
+                  The address you sign in with.
+                </FieldDescription>
                 <FieldError id={`${id}-email-error`}>{error}</FieldError>
               </Field>
               <Button type="submit" size="lg" disabled={pending}>

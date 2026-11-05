@@ -1,16 +1,17 @@
 "use client";
 
-// The CLI half and the browser half of `session-coach login`, for the app map. Terminal lines from
-// packages/cli/src/cli.ts and push.ts; the /cli/approve states from app/(app)/cli/approve/page.tsx and
-// components/cli/approve-request.tsx. The pending question itself is the picked option (C), in options/onboarding.tsx.
+// The CLI half and the browser half of `session-coach login`, for the app map. The terminal lines are a copy of what
+// packages/cli/src/cli.ts and push.ts print (a terminal can't be rendered here). The /cli/approve states are the real
+// components in components/cli/approve-states.tsx; the pending question is ApproveRequest, in options/onboarding.tsx.
 
-import { ErrorState } from "@/components/app/error-state";
-import { EmptyState } from "@/components/app/empty-state";
-import { ApproveHeader } from "@/components/cli/approve-request";
+import {
+  ApproveCodeForm,
+  ApproveColumn,
+  ApproveDone,
+  ApproveNotice,
+  SETTLED_COPY,
+} from "@/components/cli/approve-states";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 
 import { AppFrame } from "../frames";
 import { Terminal } from "../parts";
@@ -33,7 +34,7 @@ const TERMINAL: Record<TerminalStep, string[]> = {
   "signed-in": [
     ...LOGIN,
     `Signed in as sam@example.com. Saved to ${CONFIG}.`,
-    "Next: session-coach push --latest",
+    "Next: session-coach init, in each project whose sessions you want uploaded.",
   ],
   expired: [
     ...LOGIN,
@@ -67,123 +68,52 @@ export type ApproveState =
   | "rate-limited"
   | "lookup-failed";
 
-/** Every answer but the pending question: the header, then one card that says what happened and what to do. */
-const RESULT: Record<
-  Exclude<ApproveState, "missing" | "unknown">,
-  { word?: string; title: string; message: string; ok?: boolean; fail?: boolean }
-> = {
-  approved: {
-    ok: true,
-    title: "CLI connected",
-    message:
-      "Go back to your terminal. sams-mbp (macOS) signs in within a few seconds, and it shows up under Connected devices on Setup.",
-  },
-  denied: {
-    ok: true,
-    title: "Login denied",
-    message:
-      "That computer wasn't signed in. If you didn't run session-coach login yourself, nothing else is needed.",
-  },
-  expired: {
-    word: "Expired",
-    title: "This code expired",
-    message: "Run session-coach login again for a new one.",
-  },
-  "already-approved": {
-    word: "Approved",
-    title: "Already approved",
-    message: "Go back to your terminal; it signs in on its next check.",
-  },
-  used: {
-    word: "Used",
-    title: "Already used",
-    message:
-      "That login already has its token. Run session-coach login again to connect another computer.",
-  },
-  "rate-limited": {
-    word: "Slow down",
-    title: "Too many codes",
-    message: "Too many CLI login requests in the last hour. Try again in 14 minutes.",
-  },
-  "lookup-failed": {
-    fail: true,
-    title: "Couldn't look up that code",
-    message: "Reload the page to try again.",
-  },
-};
-
-/** The code form: no code in the URL, or one that matched nothing. */
-function CodeForm({ code, error }: { code?: string; error?: string }) {
-  return (
-    <>
-      <ApproveHeader />
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Enter the code from your terminal</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4">
-            <Field data-invalid={error ? true : undefined}>
-              <FieldLabel htmlFor={`map-cli-code-${code ?? "empty"}`}>Code</FieldLabel>
-              <Input
-                id={`map-cli-code-${code ?? "empty"}`}
-                defaultValue={code}
-                placeholder="XXXX-XXXX"
-                autoComplete="off"
-                aria-invalid={error ? true : undefined}
-              />
-              <FieldDescription>
-                {error ?? "session-coach login prints it, like WDJB-MJHT."}
-              </FieldDescription>
-            </Field>
-            <div>
-              <Button>Continue</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </>
-  );
+/** Every answer but the pending question, from the real components the page renders. */
+function ApproveBody({ state }: { state: ApproveState }) {
+  switch (state) {
+    case "missing":
+      return <ApproveCodeForm />;
+    case "unknown":
+      return (
+        <ApproveCodeForm
+          code="WDJB-MJHX"
+          error="No login has that code. Check your terminal, or run session-coach login again."
+        />
+      );
+    case "approved":
+    case "denied":
+      return <ApproveDone done={state} clientName="sams-mbp (macOS)" />;
+    case "already-approved":
+      return <ApproveNotice {...SETTLED_COPY.approved} />;
+    case "expired":
+    case "used":
+      return <ApproveNotice {...SETTLED_COPY[state]} />;
+    case "rate-limited":
+      return (
+        <ApproveNotice
+          word="Slow down"
+          title="Too many codes"
+          message="Too many CLI login requests in the last hour. Try again in 14 minutes."
+        />
+      );
+    case "lookup-failed":
+      return (
+        <ApproveNotice
+          title="Couldn't look up that code"
+          message="Reload the page to try again."
+          action={<Button variant="secondary">Try again</Button>}
+        />
+      );
+  }
 }
 
 export function MapCliApprove({ state }: { state: ApproveState }) {
   const path = state === "missing" ? "/cli/approve" : `/cli/approve?code=${DEVICE_CODE}`;
-  let body: React.ReactNode;
-  if (state === "missing") body = <CodeForm />;
-  else if (state === "unknown")
-    body = (
-      <CodeForm
-        code="WDJB-MJHX"
-        error="No login has that code. Check your terminal, or run session-coach login again."
-      />
-    );
-  else {
-    const copy = RESULT[state];
-    body = (
-      <>
-        <ApproveHeader />
-        <Card>
-          {copy.ok ? (
-            <EmptyState variant="plain" title={copy.title} description={copy.message} />
-          ) : (
-            <ErrorState
-              variant="plain"
-              status={copy.fail ? "fail" : "warn"}
-              statusWord={copy.word}
-              title={copy.title}
-              message={copy.message}
-              action={copy.fail && <Button variant="secondary">Try again</Button>}
-            />
-          )}
-        </Card>
-      </>
-    );
-  }
   return (
-    <AppFrame path={path} crumb="Connect the CLI" sessions={[]} dueCount={0}>
-      <div className="mx-auto flex w-full max-w-xl flex-col gap-8 px-(--gutter) py-16">{body}</div>
+    <AppFrame path={path} sessions={[]} dueCount={0}>
+      <ApproveColumn>
+        <ApproveBody state={state} />
+      </ApproveColumn>
     </AppFrame>
   );
 }

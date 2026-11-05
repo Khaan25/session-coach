@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import type { ReportSettings } from "@/lib/report/queries";
 import { siteUrl } from "@/lib/site";
+import { useAction } from "@/components/app/dry-run";
 
 import { newReportLink, setReportOn, setReportRepo } from "@/app/(app)/settings/actions";
 
@@ -77,6 +78,8 @@ export function ReportCard({ report }: { report: ReportSettings | null }) {
 
 function ReportControls({ report }: { report: ReportSettings }) {
   const id = useId();
+  const saveOn = useAction(setReportOn);
+  const saveNewLink = useAction(newReportLink);
   const [on, setOn] = useState(report.on);
   const [pending, setPending] = useState(false);
   const link = `${siteUrl}/r/${report.slug}`;
@@ -94,7 +97,7 @@ function ReportControls({ report }: { report: ReportSettings }) {
               onCheckedChange={(next) => {
                 setOn(next);
                 setPending(true);
-                save(setReportOn({ on: next }), next ? "Report shared" : "Report turned off")
+                save(saveOn({ on: next }), next ? "Report shared" : "Report turned off")
                   .catch(() => setOn(!next))
                   .finally(() => setPending(false));
               }}
@@ -160,7 +163,7 @@ function ReportControls({ report }: { report: ReportSettings }) {
             disabled={pending}
             onClick={() => {
               setPending(true);
-              save(newReportLink(), "New link made. The old one no longer works.")
+              save(saveNewLink(), "New link made. The old one no longer works.")
                 .catch(() => {})
                 .finally(() => setPending(false));
             }}
@@ -174,6 +177,7 @@ function ReportControls({ report }: { report: ReportSettings }) {
 }
 
 function RepoField({ repo, shown, id }: { repo: string; shown: boolean; id: string }) {
+  const saveRepo = useAction(setReportRepo);
   const [checked, setChecked] = useState(shown);
   const [pending, setPending] = useState(false);
   return (
@@ -186,7 +190,7 @@ function RepoField({ repo, shown, id }: { repo: string; shown: boolean; id: stri
           setChecked(next);
           setPending(true);
           save(
-            setReportRepo({ repo, shown: next }),
+            saveRepo({ repo, shown: next }),
             next ? `${repo} is on your report` : `${repo} is off your report`,
           )
             .catch(() => setChecked(!next))

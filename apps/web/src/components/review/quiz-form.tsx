@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { createContext, use, useId, useState } from "react";
 import Link from "next/link";
 import type { Evidence } from "@session-coach/shared/decision";
 
@@ -27,7 +27,7 @@ import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
 const MAX_ANSWER = 4000;
 
 /** POST /api/review/answer's success body. */
-type Grade = {
+export type Grade = {
   score: Score;
   missing: string;
   why: string;
@@ -39,7 +39,9 @@ type Grade = {
   dropped: boolean;
 };
 
-const PASTE_OFF = "Paste is off here. Type it in your own words.";
+type Attempt = { answer: string } | { dontKnow: true };
+
+export const PASTE_OFF = "Paste is off here. Type it in your own words.";
 
 /** A calendar date as the learner reads it, e.g. "Fri, Oct 30". It has no time, so it is formatted in UTC. */
 const formatDue = (date: string) =>
@@ -51,10 +53,7 @@ const formatDue = (date: string) =>
   }).format(new Date(`${date}T00:00:00Z`));
 
 /** Sends an explanation, or `{ dontKnow: true }` for an honest skip. */
-async function postAnswer(
-  cardId: string,
-  attempt: { answer: string } | { dontKnow: true },
-): Promise<Grade> {
+async function postAnswer(cardId: string, attempt: Attempt): Promise<Grade> {
   const response = await fetch("/api/review/answer", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -65,6 +64,13 @@ async function postAnswer(
   if (!response.ok) throw new Error(body?.error ?? "Try again.");
   return body as Grade;
 }
+
+/**
+ * How an answer reaches the grader: the route by default. /canvas provides a stand-in, so a quiz drawn there never
+ * calls the API.
+ */
+export const QuizSendContext =
+  createContext<(cardId: string, attempt: Attempt) => Promise<Grade>>(postAnswer);
 
 /**
  * The quiz: the card's question, the learner's explanation and, after submit, the grade. Gets only the question; the
@@ -82,7 +88,7 @@ export function QuizForm({
   /** The next card in the queue, or null when this was the last. */
   nextHref: string | null;
 }) {
-  const id = useId();
+  const send = use(QuizSendContext);
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState<string | null>(null);
   // Which request is in flight, so each button says what it is doing.
@@ -101,7 +107,7 @@ export function QuizForm({
     setError(null);
     setPending("answer");
     toast
-      .promise(postAnswer(cardId, { answer: trimmed }), {
+      .promise(send(cardId, { answer: trimmed }), {
         loading: "Scoring your answer",
         success: (result) => {
           setGrade(result);
@@ -128,7 +134,7 @@ export function QuizForm({
     if (pending !== null) return;
     setError(null);
     setPending("skip");
-    postAnswer(cardId, { dontKnow: true })
+    send(cardId, { dontKnow: true })
       .then((result) => {
         setSkipped(true);
         setGrade(result);
@@ -148,103 +154,166 @@ export function QuizForm({
 
   if (grade)
     return (
-      <Card size="lg">
-        <CardHeader>
-          <CardTitle>
-            <h2 ref={resultHeading} tabIndex={-1}>
-              {skipped ? "Here's the why" : "Your result"}
-            </h2>
-          </CardTitle>
-          {skipped ? (
-            <CardDescription>
-              Not knowing yet is fine. This card comes back tomorrow at the same level.
-            </CardDescription>
-          ) : (
-            grade.dropped && (
-              <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
-            )
-          )}
-        </CardHeader>
-        <CardContent>
-          <DataList>
-            {!skipped && (
-              <>
-                <DataListItem>
-                  <DataListLabel>Score</DataListLabel>
-                  <DataListValue>
-                    <ScoreBadge score={grade.score} />
-                  </DataListValue>
-                </DataListItem>
-                <DataListItem>
-                  <DataListLabel>Your answer</DataListLabel>
-                  <DataListValue>{answer.trim()}</DataListValue>
-                </DataListItem>
-                <DataListItem>
-                  <DataListLabel>What was missing</DataListLabel>
-                  <DataListValue>{grade.missing || "Nothing"}</DataListValue>
-                </DataListItem>
-              </>
-            )}
-            <DataListItem>
-              <DataListLabel>Why</DataListLabel>
-              <DataListValue>{grade.why}</DataListValue>
-            </DataListItem>
-            <DataListItem>
-              <DataListLabel>Model answer</DataListLabel>
-              <DataListValue>{grade.modelAnswer}</DataListValue>
-            </DataListItem>
-            <DataListItem>
-              <DataListLabel>Next review</DataListLabel>
-              <DataListValue>
-                {grade.nextDue ? (
-                  <time dateTime={grade.nextDue}>{formatDue(grade.nextDue)}</time>
-                ) : (
-                  "None: you've mastered this card"
-                )}
-              </DataListValue>
-            </DataListItem>
-          </DataList>
-        </CardContent>
-        <ItemGroup aria-label="Evidence">
-          {grade.evidence.map((item) => (
-            // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
-            <Item key={`${item.event_index}-${item.quote}`} role="listitem">
-              <ItemContent>
-                <blockquote className="type-body text-text-1">
-                  &ldquo;{item.quote}&rdquo;
-                </blockquote>
-                <ItemDescription>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span>Event E{item.event_index}</span>
-                    {item.file && (
-                      <Code>
-                        {item.lines ? `${item.file}:${item.lines[0]}-${item.lines[1]}` : item.file}
-                      </Code>
-                    )}
-                  </span>
-                </ItemDescription>
-              </ItemContent>
-            </Item>
-          ))}
-        </ItemGroup>
-        <CardFooter>
-          <div className="flex flex-wrap gap-3">
-            {nextHref && (
-              <Link href={nextHref} className={buttonVariants()}>
-                Next card
-              </Link>
-            )}
-            <Link href="/review" className={buttonVariants({ variant: "secondary" })}>
-              Back to the queue
-            </Link>
-          </div>
-        </CardFooter>
-      </Card>
+      <QuizResult
+        grade={grade}
+        answer={answer}
+        skipped={skipped}
+        nextHref={nextHref}
+        headingRef={resultHeading}
+      />
     );
 
   return (
-    <form onSubmit={submit} noValidate>
+    <QuizAnswer
+      question={question}
+      answer={answer}
+      error={error}
+      pending={pending}
+      onAnswerChange={(value) => {
+        setAnswer(value);
+        // The error is about the old text; submit checks again.
+        setError(null);
+      }}
+      onSubmit={submit}
+      onSkip={skip}
+      onBlockedPaste={blockPaste}
+    />
+  );
+}
+
+/** The grade, the why and the model answer, once the answer is in. `skipped` is "I don't know yet": no score. */
+export function QuizResult({
+  grade,
+  answer,
+  skipped,
+  nextHref,
+  headingRef,
+}: {
+  grade: Grade;
+  answer: string;
+  skipped: boolean;
+  nextHref: string | null;
+  headingRef?: React.Ref<HTMLHeadingElement>;
+}) {
+  return (
+    <Card size="lg">
+      <CardHeader>
+        <CardTitle>
+          <h2 ref={headingRef} tabIndex={-1}>
+            {skipped ? "Here's the why" : "Your result"}
+          </h2>
+        </CardTitle>
+        {skipped ? (
+          <CardDescription>
+            Not knowing yet is fine. This card comes back tomorrow at the same level.
+          </CardDescription>
+        ) : (
+          grade.dropped && (
+            <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
+          )
+        )}
+      </CardHeader>
+      <CardContent>
+        <DataList>
+          {!skipped && (
+            <>
+              <DataListItem>
+                <DataListLabel>Score</DataListLabel>
+                <DataListValue>
+                  <ScoreBadge score={grade.score} />
+                </DataListValue>
+              </DataListItem>
+              <DataListItem>
+                <DataListLabel>Your answer</DataListLabel>
+                <DataListValue>{answer.trim()}</DataListValue>
+              </DataListItem>
+              <DataListItem>
+                <DataListLabel>What was missing</DataListLabel>
+                <DataListValue>{grade.missing || "Nothing"}</DataListValue>
+              </DataListItem>
+            </>
+          )}
+          <DataListItem>
+            <DataListLabel>Why</DataListLabel>
+            <DataListValue>{grade.why}</DataListValue>
+          </DataListItem>
+          <DataListItem>
+            <DataListLabel>Model answer</DataListLabel>
+            <DataListValue>{grade.modelAnswer}</DataListValue>
+          </DataListItem>
+          <DataListItem>
+            <DataListLabel>Next review</DataListLabel>
+            <DataListValue>
+              {grade.nextDue ? (
+                <time dateTime={grade.nextDue}>{formatDue(grade.nextDue)}</time>
+              ) : (
+                "None: you've mastered this card"
+              )}
+            </DataListValue>
+          </DataListItem>
+        </DataList>
+      </CardContent>
+      <ItemGroup aria-label="Evidence">
+        {grade.evidence.map((item) => (
+          // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
+          // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+          <Item key={`${item.event_index}-${item.quote}`} role="listitem">
+            <ItemContent>
+              <blockquote className="type-body text-text-1">&ldquo;{item.quote}&rdquo;</blockquote>
+              <ItemDescription>
+                <span className="flex flex-wrap items-center gap-2">
+                  <span>Event E{item.event_index}</span>
+                  {item.file && (
+                    <Code>
+                      {item.lines ? `${item.file}:${item.lines[0]}-${item.lines[1]}` : item.file}
+                    </Code>
+                  )}
+                </span>
+              </ItemDescription>
+            </ItemContent>
+          </Item>
+        ))}
+      </ItemGroup>
+      <CardFooter>
+        <div className="flex flex-wrap gap-3">
+          {nextHref && (
+            <Link href={nextHref} className={buttonVariants()}>
+              Next card
+            </Link>
+          )}
+          <Link href="/review" className={buttonVariants({ variant: "secondary" })}>
+            Back to the queue
+          </Link>
+        </div>
+      </CardFooter>
+    </Card>
+  );
+}
+
+/** The question and the answer box: as the learner types, after a blocked paste, or while scoring. */
+export function QuizAnswer({
+  question,
+  answer,
+  error,
+  pending,
+  onAnswerChange,
+  onSubmit,
+  onSkip,
+  onBlockedPaste,
+}: {
+  question: string;
+  answer: string;
+  error: string | null;
+  /** Which request is in flight, so each button says what it is doing. */
+  pending: "answer" | "skip" | null;
+  onAnswerChange?: (value: string) => void;
+  onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSkip?: () => void;
+  onBlockedPaste?: (event: React.ClipboardEvent | React.DragEvent) => void;
+}) {
+  const id = useId();
+  return (
+    <form onSubmit={onSubmit} noValidate>
       <Card size="lg">
         <CardHeader>
           <CardTitle>
@@ -263,13 +332,9 @@ export function QuizForm({
               value={answer}
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
-              onChange={(event) => {
-                setAnswer(event.target.value);
-                // The error is about the old text; submit checks again.
-                setError(null);
-              }}
-              onPaste={blockPaste}
-              onDrop={blockPaste}
+              onChange={(event) => onAnswerChange?.(event.target.value)}
+              onPaste={onBlockedPaste}
+              onDrop={onBlockedPaste}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
                   event.preventDefault();
@@ -298,7 +363,7 @@ export function QuizForm({
             <Button type="submit" disabled={pending !== null}>
               {pending === "answer" ? "Scoring" : "Submit answer"}
             </Button>
-            <Button type="button" variant="secondary" disabled={pending !== null} onClick={skip}>
+            <Button type="button" variant="secondary" disabled={pending !== null} onClick={onSkip}>
               {pending === "skip" ? "Showing the why" : "I don’t know yet"}
             </Button>
           </div>

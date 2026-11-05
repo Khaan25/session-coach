@@ -1,15 +1,14 @@
 "use client";
 
-// /setup as it ships (no redesign was picked for it): the real AiSetupCard, SetupSteps and DeviceSection, fed synthetic
-// rows the way app/(app)/setup/page.tsx feeds them. Nothing here fetches until someone presses Rename or Disconnect.
+// /setup as it ships (no redesign was picked for it): the real SetupView, SetupSteps and DeviceSection, fed synthetic rows
+// the way app/(app)/setup/page.tsx feeds them. The frame's DryRunContext keeps Revoke from calling the route.
 
 import { Container } from "@/components/app/container";
 import { LoadFailedState } from "@/components/app/error-state";
-import { AppPageHeader } from "@/components/app/page-header";
-import { AiSetupCard } from "@/components/setup/ai-setup-card";
 import { DeviceSection, type DeviceListRow } from "@/components/setup/device-section";
+import { RefreshButton } from "@/components/setup/refresh-button";
 import { SetupSteps } from "@/components/setup/setup-steps";
-import { Button } from "@/components/ui/button";
+import { SetupView } from "@/components/setup/setup-view";
 import { Card } from "@/components/ui/card";
 
 import { AppFrame, FRAME_SESSIONS } from "../frames";
@@ -33,25 +32,20 @@ export function MapSetup({ state }: { state: SetupState }) {
       dueCount={0}
     >
       <Container>
-        <AppPageHeader
-          title="Setup"
-          description="Connect Claude Code, so each session you finish becomes decision cards. Let your AI run the setup, or follow the steps by hand."
+        <SetupView
+          steps={<SetupSteps progress={{ device, sessions: pushed ? 1 : 0 }} />}
+          devices={
+            state === "devices-failed" ? (
+              <Card>
+                <LoadFailedState noun="your devices" variant="plain" action={<RefreshButton />} />
+              </Card>
+            ) : (
+              <DeviceSection
+                initialTokens={device ? [{ ...DEVICE, lastUsed: pushed ? "just now" : null }] : []}
+              />
+            )
+          }
         />
-        <AiSetupCard />
-        <SetupSteps progress={{ device, sessions: pushed ? 1 : 0 }} />
-        {state === "devices-failed" ? (
-          <Card>
-            <LoadFailedState
-              noun="your devices"
-              variant="plain"
-              action={<Button variant="secondary">Try again</Button>}
-            />
-          </Card>
-        ) : (
-          <DeviceSection
-            initialTokens={device ? [{ ...DEVICE, lastUsed: pushed ? "just now" : null }] : []}
-          />
-        )}
       </Container>
     </AppFrame>
   );

@@ -1,7 +1,7 @@
 /**
  * POST /api/defend/start: opens a timed defense of one random card the learner has answered 2 at least once. Returns
- * { defenseId, question, startedAt, answerDueAt, answerSeconds, serverNow }: the question and the server's clock, never
- * the answer key. A finished defense is labelled "defended (timed, follow-up)", never "verified".
+ * { defenseId, question, decision, sessionName, repo, startedAt, answerDueAt, answerSeconds, serverNow }: the question,
+ * the decision and its session, and the server's clock, never the answer key. A finished defense is labelled "defended (timed, follow-up)", never "verified".
  */
 import { NextResponse } from "next/server";
 
@@ -15,6 +15,7 @@ import {
 } from "@/lib/defend/defend";
 import { requireUser, serverError, UNIQUE_VIOLATION } from "@/lib/api/http";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sessionName } from "@/lib/sessions/name";
 
 /**
  * Starts a defense. Learners can't write `defenses` (RLS), so this route inserts the row with the service role.
@@ -23,11 +24,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * - One unfinished defense per learner: a running one is refused with 409 and its id; one past its deadline plus the
  *   grace is marked `expired` first, so an abandoned tab never locks the learner out. The unique index settles a race.
  * - The card is picked from the learner's visible cards with an answer scored 2, decided here from `user_id` and
- *   `hidden`, since the service role sees every learner's cards. Only `id` and `question` are read: no answer key.
+ *   `hidden`, since the service role sees every learner's cards. Only the id, question, decision and
+ *   session are read: no why, no answer key.
  * - Every timestamp is the server's `new Date()`.
  *
- * @returns 201 `{ defenseId, question, startedAt, answerDueAt, answerSeconds, serverNow }`; 401 signed out; 409 a
- *   defense is already running (`defenseId`, `status`) or no card has been answered 2 yet; 500 else.
+ * @returns 201 `{ defenseId, question, decision, sessionName, repo, startedAt, answerDueAt, answerSeconds, serverNow }`;
+ *   401 signed out; 409 a defense is already running (`defenseId`, `status`) or no card has been answered 2 yet; 500 else.
  */
 export async function POST() {
   const signedIn = await requireUser();
@@ -76,7 +78,7 @@ export async function POST() {
     const cards = answeredIds.length
       ? await admin
           .from("decision_cards")
-          .select("id, question, user_id, hidden")
+          .select("id, question, decision, user_id, hidden, session:sessions(title, repo, branch)")
           .in("id", answeredIds)
       : { data: [], error: null };
     if (cards.error) throw cards.error;
@@ -108,6 +110,10 @@ export async function POST() {
       {
         defenseId: created.data.id,
         question: card.question,
+        // Learner-readable, as on the session page: the decision and where it came from, never the why.
+        decision: card.decision,
+        sessionName: sessionName(card.session ?? {}),
+        repo: card.session?.repo ?? null,
         startedAt,
         answerDueAt: deadlineOf(startedAt, ANSWER_SECONDS).toISOString(),
         answerSeconds: ANSWER_SECONDS,

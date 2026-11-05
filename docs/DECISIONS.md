@@ -2,6 +2,23 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-05 · The canvas renders the real components; the app follows the picked designs
+
+- **Decision:** the picked options on /canvas are the source of truth for their routes (dashboard B, defend C,
+  progress C, settings A, CLI approve C, auth B over the art, how-it-works B, pricing C), and each route and its canvas
+  item now render the same component (`DashboardView`, `DefendStart`/`DefendTimed`/`DefendResult`, `ProgressSummary`,
+  `SettingsView`, `ApproveRequest`, the auth forms and `auth-screens.tsx`, the marketing route components). /s/[id]
+  and /review keep their #76 pages, and the canvas draws those (`SessionView`, `QuizAnswer`/`QuizResult`).
+- **Decision:** on the canvas, real controls run under `DryRunContext` (set by every canvas frame): Server Actions
+  and routes are swapped for no-ops, so a signed-in teammate clicking Save, Disconnect, Delete or Sign out on /canvas
+  never touches their own account. `QuizSendContext` and `AuthPreviewContext` let the canvas hold a quiz grade or an
+  auth answer without the API. Route modules, the landing page and the email are rendered by `app/canvas/page.tsx` on
+  the server and handed down (`ServerScreens`), since a client module can't import a page that exports metadata.
+- **Why:** the hand-built previews drifted within days of the designs being picked (#74 to #79). One component per
+  screen can't drift.
+- **Rejected:** keeping canvas copies and diffing them by hand; copying option copy that no longer matches the code
+  (how-it-works keeps its accurate notes and terminal, and #75's sign-up CTA).
+
 ## 2026-11-05 · Upload each session when it ends, retry from the web
 
 - **Decision:** `session-coach init` (CLI 0.4.0) writes the `sync` hooks into the project's `.claude/settings.local.json`, pinned to its own version: SessionStart as before, plus SessionEnd. From SessionEnd, `sync` re-spawns itself detached with the hook's JSON in `SESSION_COACH_HOOK_INPUT` and exits, and the copy uploads only the session that ended (same cwd check, no quiet window). `/setup` and the setup prompt run `init` instead of hand-merging JSON. `push --latest` run inside Claude Code (`CLAUDECODE` set) skips logs written in the last minute, so the setup prompt's first upload is a finished session, not the setup chat.

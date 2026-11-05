@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { cache, Suspense } from "react";
 import { Container } from "@/components/app/container";
 import { LoadFailedState } from "@/components/app/error-state";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
-import { AppPageHeader } from "@/components/app/page-header";
 import { RefreshButton } from "@/components/setup/refresh-button";
-import { AiSetupCard } from "@/components/setup/ai-setup-card";
 import { SetupSteps } from "@/components/setup/setup-steps";
+import { SetupView } from "@/components/setup/setup-view";
 import { DeviceSection, type DeviceListRow } from "@/components/setup/device-section";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Code } from "@/components/ui/code-block";
+import { Card } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeTime } from "@/lib/relative-time";
@@ -28,52 +24,21 @@ const SAMPLE_DEVICES: DeviceListRow[] = [
 export default function SetupPage() {
   return (
     <Container>
-      <AppPageHeader
-        title="Setup"
-        description="Connect Claude Code, so each session you finish becomes decision cards. Let your AI run the setup, or follow the steps by hand."
+      <SetupView
+        steps={
+          <Suspense fallback={<SetupSteps />}>
+            <Steps />
+          </Suspense>
+        }
+        devices={
+          <MeasuredSuspense
+            label="Loading your devices"
+            skeleton={<DeviceSection initialTokens={SAMPLE_DEVICES} />}
+          >
+            <Devices />
+          </MeasuredSuspense>
+        }
       />
-
-      <AiSetupCard />
-
-      <Suspense fallback={<SetupSteps />}>
-        <Steps />
-      </Suspense>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>What a push uploads</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="type-body">
-            <Code>push --latest</Code> finds the session&apos;s log in{" "}
-            <Code>~/.claude/projects/</Code>; <Code>push</Code> with a path reads that file. Either
-            way the CLI removes the secrets it recognises on your laptop (best-effort, not a
-            guarantee), compresses the log and uploads it.
-          </p>
-          <p className="type-body">
-            The server redacts again, then keeps your prompts, the agent&apos;s replies, file edit
-            summaries and shell commands. It drops thinking blocks and attachments.
-          </p>
-          <p className="type-body">
-            Cards are written by a third-party model provider&apos;s API, which is why redaction
-            stays strict.
-          </p>
-          <p>
-            <Link href="/privacy" className={buttonVariants({ variant: "link" })}>
-              Read the privacy policy
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-
-      <MeasuredSuspense
-        label="Loading your devices"
-        skeleton={<DeviceSection initialTokens={SAMPLE_DEVICES} />}
-      >
-        <Devices />
-      </MeasuredSuspense>
     </Container>
   );
 }

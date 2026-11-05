@@ -141,9 +141,7 @@ export default function Page() {
   return (
     <div className="mx-auto flex w-full max-w-(--container) flex-col gap-10 px-(--gutter-sm) py-16 sm:px-(--gutter) sm:py-20">
       <MarketingPageHeader title="How it works">
-        Each Claude Code session you send becomes up to 5 decision cards, and you explain them back
-        on day 1, 4 and 11. It happens in three places, in order. Pick one to see what happens
-        there.
+        Three places, in order. Pick one to see what happens there.
       </MarketingPageHeader>
 
       <Tabs defaultValue="laptop">

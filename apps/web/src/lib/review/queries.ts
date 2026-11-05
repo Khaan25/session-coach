@@ -47,6 +47,8 @@ export async function dueTodayCount(userId: string, now = new Date()): Promise<n
 export type QueueCard = {
   id: string;
   decision: string;
+  /** What the learner answers. Learner-readable; the why and the answer key are never in the queue. */
+  question: string;
   sessionId: string;
   sessionName: string;
   /** The session's repo, for the dashboard's project filter; null for a session sent without one. */
@@ -59,11 +61,13 @@ export type QueueCard = {
 type CardRow = {
   id: string;
   decision: string;
+  question: string;
   session_id: string;
   created_at: string;
   session: SessionName | null;
 };
-const CARD_COLUMNS = "id, decision, session_id, created_at, session:sessions(title, repo, branch)";
+const CARD_COLUMNS =
+  "id, decision, question, session_id, created_at, session:sessions(title, repo, branch)";
 
 /**
  * Today's review queue (plan, Phase 6 step 4), capped by `todayQueue` (`lib/review/today.ts`): at most 5 cards a local
@@ -113,6 +117,7 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
   const toQueue = (card: CardRow, step: Step, dueOn: string | null): QueueCard => ({
     id: card.id,
     decision: card.decision,
+    question: card.question,
     sessionId: card.session_id,
     sessionName: sessionName(card.session ?? {}),
     repo: card.session?.repo ?? null,

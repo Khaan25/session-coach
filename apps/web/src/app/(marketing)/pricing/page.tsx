@@ -24,7 +24,7 @@ const questions = [
   },
   {
     q: "What do I get?",
-    a: "The command-line tool, up to 5 decision cards per session, reviews on day 1, 4 and 11, progress by project, and a daily email when cards are due, which you can turn off.",
+    a: "Up to 5 decision cards per session, reviews on day 1, 4 and 11, and progress by project.",
   },
 ] as const;
 
