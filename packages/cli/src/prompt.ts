@@ -68,3 +68,23 @@ export function promptHidden(question: string): Promise<string> {
     input.on("data", onData);
   });
 }
+
+/**
+ * Asks one question and reads one line, echoed as typed. Resolves null when input ends or is cancelled (Ctrl-D,
+ * Ctrl-C, a closed pipe), so a caller never mistakes stopping for pressing Enter on a default.
+ */
+export function promptLine(question: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    let answered = false;
+    rl.question(question, (answer) => {
+      answered = true;
+      rl.close();
+      resolve(answer);
+    });
+    rl.once("SIGINT", () => rl.close());
+    rl.once("close", () => {
+      if (!answered) resolve(null);
+    });
+  });
+}

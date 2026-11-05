@@ -16,17 +16,17 @@ const ICONS: Record<SetupAgent, Icon> = {
 
 const AGENTS = Object.keys(AGENT_NAMES) as SetupAgent[];
 
-/** /setup's first card: one prompt per agent that installs, signs in through the browser and pushes. */
+/** /setup's first path, "Let your AI do it": one prompt per agent that installs, signs in through the browser and pushes. */
 export function AiSetupCard() {
   return (
     <Card>
       <CardHeader>
         <CardTitle>
-          <h2>Set up with your AI</h2>
+          <h2>Let your AI do it</h2>
         </CardTitle>
         <CardDescription>
-          Copy the prompt, paste it into your agent, then approve once in the browser. The prompt
-          never holds a token.
+          Set up with your AI: copy the prompt for your agent and paste it in. It runs the steps
+          below for you, and you approve once in the browser. The prompt never holds a token.
         </CardDescription>
       </CardHeader>
       <CardContent>

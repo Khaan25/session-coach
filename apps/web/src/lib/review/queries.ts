@@ -6,7 +6,8 @@ import { sessionName } from "@/lib/sessions/name";
 import { localDate } from "@/lib/sessions/rows";
 import { createClient } from "@/lib/supabase/server";
 
-import { newCardsSince, type Step } from "./schedule";
+import { levelOf, type Level } from "./level";
+import { newCardsSince, type ReviewState, type Step } from "./schedule";
 import { answeredSince, countAnsweredToday, DAILY_CAP, todayQueue } from "./today";
 
 // Learner reads through the RLS client: hidden cards and model_answer never come back. The caller passes the signed-in
@@ -49,6 +50,8 @@ export type QueueCard = {
   decision: string;
   sessionId: string;
   sessionName: string;
+  /** The session's repo, for the dashboard's project filter; null for a session sent without one. */
+  repo: string | null;
   step: Step;
   dueOn: string | null;
   createdAt: string;
@@ -113,6 +116,7 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
     decision: card.decision,
     sessionId: card.session_id,
     sessionName: sessionName(card.session ?? {}),
+    repo: card.session?.repo ?? null,
     step,
     dueOn,
     createdAt: card.created_at,
@@ -206,6 +210,8 @@ export type QuizCard = {
   question: string;
   sessionId: string;
   sessionName: string;
+  /** Where the card is on the ladder now, so the page can say what each answer would do to it. */
+  level: Level;
 };
 
 /**
@@ -219,11 +225,16 @@ export async function getQuizCard(userId: string, cardId: string): Promise<QuizC
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("decision_cards")
-    .select("id, decision, question, session_id, session:sessions(title, repo, branch)")
+    .select(
+      "id, decision, question, session_id, session:sessions(title, repo, branch), reviews(step, mastered)",
+    )
     .eq("id", cardId)
     .eq("user_id", userId)
     .maybeSingle()
-    .overrideTypes<CardRow & { question: string }, { merge: false }>();
+    .overrideTypes<
+      CardRow & { question: string; reviews: ReviewRow | ReviewRow[] | null },
+      { merge: false }
+    >();
   if (error) throw new Error(`getQuizCard: ${error.message}`);
   if (!data) return null;
   return {
@@ -232,5 +243,9 @@ export async function getQuizCard(userId: string, cardId: string): Promise<QuizC
     question: data.question,
     sessionId: data.session_id,
     sessionName: sessionName(data.session ?? {}),
+    // reviews(card_id) is one-to-one, but the embed can come back as a list: null or [] means never answered.
+    level: levelOf(Array.isArray(data.reviews) ? data.reviews[0] : data.reviews),
   };
 }
+
+type ReviewRow = Pick<ReviewState, "step" | "mastered">;
