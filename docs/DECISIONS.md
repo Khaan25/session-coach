@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-05 · Upload each session when it ends, retry from the web
+
+- **Decision:** `session-coach init` (CLI 0.4.0) writes the `sync` hooks into the project's `.claude/settings.local.json`, pinned to its own version: SessionStart as before, plus SessionEnd. From SessionEnd, `sync` re-spawns itself detached with the hook's JSON in `SESSION_COACH_HOOK_INPUT` and exits, and the copy uploads only the session that ended (same cwd check, no quiet window). `/setup` and the setup prompt run `init` instead of hand-merging JSON. `push --latest` run inside Claude Code (`CLAUDECODE` set) skips logs written in the last minute, so the setup prompt's first upload is a finished session, not the setup chat.
+- **Why:** with SessionStart alone a session uploaded only when the next one started in the same project, often days later or never. `settings.local.json` keeps the hook off teammates' machines; the old prompt put it in the committed `settings.json`.
+- **Decision:** a failed session, or one stuck in `processing` or `pending` past `STUCK_MS`, gets a Try again button on its page (`POST /api/sessions/[id]/retry`, cookie auth). The log is still in Storage, so the run restarts from it with the same claim-and-delete-cards steps as a re-push. The daily sweep now also fails `pending` rows past `STUCK_MS`.
+- **Decision:** a new account adopts the browser's time zone while its profile still says UTC and it is under a day old (`adoptBrowserTimezone`); after that only Settings changes it.
+- **Rejected:** a user-level hook for every project (uploads projects nobody opted in); retrying from the CLI only (the learner rarely knows the log's path); setting the time zone on every visit (would undo a deliberate UTC choice).
+- **Consequence:** the setup prompt calls `npx session-coach@latest init`, so 0.4.0 must be on npm before this deploys.
+
 ## 2026-11-04 · Model-written session titles
 
 - **Decision:** the extraction model writes the session title in the same call that makes the cards: the answer gains a top-level `title` string, one plain line under 70 characters, required even when there are no decisions. It is optional on our side: a missing, blank or non-string title is ignored and the cards are kept exactly as before; a long one is cut to the title limit with "…". `processSession` uses it when the session has no title yet and falls back to the first prompt (`sessionTitle`) when the model gave none. An existing title is never overwritten. The title rules add a little to each extract call.

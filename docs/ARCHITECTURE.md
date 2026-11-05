@@ -3,8 +3,8 @@
 ```
 laptop                              server (Vercel + Supabase)                       learner
 ──────                              ──────────────────────────                       ───────
-Claude Code session starts
-  └─ SessionStart hook: session-coach sync     (or `session-coach push` by hand)
+Claude Code session ends (or starts)
+  └─ SessionEnd / SessionStart hook: session-coach sync     (or `session-coach push` by hand)
        redact, gzip
        ① POST metadata ──────────────► /api/sessions ─► sessions(pending), signed upload URL (2 h)
        ② PUT gzip ───────────────────► Storage
@@ -17,15 +17,16 @@ Claude Code session starts
                                             daily cron ─ fail stuck sessions, email ───────► back to review
 ```
 
-## Why SessionStart sync
+## Why SessionEnd and SessionStart sync
 
-`session-coach sync` runs from a SessionStart hook the learner adds to one project's `.claude/settings.json`, so it is
-opt-in, project by project. On each start it uploads at most one of that project's logs: one untouched for 5 minutes
-or more and modified in the last 7 days, skipping the running session and every id it already sent
-(`packages/cli/src/sync.ts`). A SessionEnd hook runs inside a short time budget and can be killed mid-upload; a log
-that is quiet at the next start is finished. One log per start keeps model runs apart on the free tier's 8,000
-tokens a minute. It prints nothing and never fails the hook. `session-coach push <file>` or `push --latest` uploads by
-hand. See DECISIONS.md, 2026-11-03, "`sync` uploads finished sessions from a SessionStart hook".
+`session-coach init` adds two hooks to one project's `.claude/settings.local.json` (personal, not committed), so it is
+opt-in, project by project. On SessionEnd, `sync` hands the upload to a detached copy of itself and returns at once
+(a SessionEnd hook runs inside a short time budget and can be killed mid-upload), and that copy uploads the session
+that ended. On SessionStart it catches up: at most one of the project's logs untouched for 5 minutes or more and
+modified in the last 7 days, skipping the running session and every id it already sent (`packages/cli/src/sync.ts`).
+One log per start keeps model runs apart on the free tier's 8,000 tokens a minute. It prints nothing and never fails
+the hook. `session-coach push <file>` or `push --latest` uploads by hand. See DECISIONS.md, 2026-11-05, "Upload each
+session when it ends".
 
 ## Upload: three calls
 

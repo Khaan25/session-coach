@@ -8,10 +8,10 @@ Built by Kasam Thapa Magar and Zia Ur Rehman Khan for the 8x Playmakers trial (c
 
 ## How it works
 
-The full flow. The `SessionEnd` hook (step 1) isn't built yet, so for now you upload with `session-coach push --latest`: see [Status](#status).
+The full flow. Run `session-coach init` once per project to turn on the hooks in step 1.
 
-1. A Claude Code session ends. The `SessionEnd` hook starts a detached worker and exits, so Claude Code never waits.
-2. The worker redacts secrets, gzips the log and uploads it in three calls: register the session, `PUT` the log straight to Storage, start processing. `session-coach push --latest` does the same by hand.
+1. A Claude Code session ends. The `SessionEnd` hook runs `session-coach sync`, which starts a detached copy of itself and exits, so Claude Code never waits. A `SessionStart` hook catches any session the end missed.
+2. The detached `sync` redacts secrets, gzips the log and uploads it in three calls: register the session, `PUT` the log straight to Storage, start processing. `session-coach push --latest` does the same by hand.
 3. The server filters the log, numbers the events (E1, E2, …) and one model call extracts up to 5 decisions (none when the session made no real choices).
 4. Plain code checks every quote exists in the cited event. Cards with no grounded quote (from a prompt, a reply or `DECISIONS.md`) are dropped.
 5. The learner explains each decision in their own words. A model grades it 0 / 1 / 2.
@@ -69,25 +69,25 @@ Demo data from `pnpm seed:demo:local`; the graded answer is a real Groq call.
 
 ## Status
 
-| Part                                                                            | State   |
-| ------------------------------------------------------------------------------- | ------- |
-| Web app: auth, dashboard, session pages, review and grading, progress, settings | live    |
-| Upload API (`POST /api/sessions`, `POST /api/sessions/[id]/process`)            | live    |
-| CLI: `login`, `push <file>`, `push --latest`, redaction on your machine         | live    |
-| Card making: parse, extract (Groq), evidence check                              | live    |
-| Daily reminder email                                                            | live    |
-| `SessionEnd` hook and background worker (upload with no command)                | planned |
+| Part                                                                            | State |
+| ------------------------------------------------------------------------------- | ----- |
+| Web app: auth, dashboard, session pages, review and grading, progress, settings | live  |
+| Upload API (`POST /api/sessions`, `POST /api/sessions/[id]/process`)            | live  |
+| CLI: `login`, `init`, `push <file>`, `push --latest`, redaction on your machine | live  |
+| Card making: parse, extract (Groq), evidence check                              | live  |
+| Daily reminder email                                                            | live  |
+| `SessionEnd` and `SessionStart` hooks via `init` (upload with no command)       | live  |
 
 ## Repo layout
 
-| Path                  | What                                                              | Owner                          |
-| --------------------- | ----------------------------------------------------------------- | ------------------------------ |
-| `apps/web`            | Next.js app: pages, API routes, pipeline                          | both                           |
-| `packages/cli`        | the `session-coach` CLI: `login`, `push`; hook and worker planned | Kasam                          |
-| `packages/shared`     | Decision and Session types + zod schemas, sample fixture          | shared, change after agreement |
-| `supabase/migrations` | every schema change as a migration file                           | shared, change after agreement |
-| `docs/`               | architecture, decisions, rules, plans, Play Stats API             | both                           |
-| `.claude/`            | agent hooks, settings; `.claude-logs/` holds session transcripts  | both                           |
+| Path                  | What                                                             | Owner                          |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------ |
+| `apps/web`            | Next.js app: pages, API routes, pipeline                         | both                           |
+| `packages/cli`        | the `session-coach` CLI: `login`, `init`, `push`, `sync`         | Kasam                          |
+| `packages/shared`     | Decision and Session types + zod schemas, sample fixture         | shared, change after agreement |
+| `supabase/migrations` | every schema change as a migration file                          | shared, change after agreement |
+| `docs/`               | architecture, decisions, rules, plans, Play Stats API            | both                           |
+| `.claude/`            | agent hooks, settings; `.claude-logs/` holds session transcripts | both                           |
 
 ## Run it locally
 
