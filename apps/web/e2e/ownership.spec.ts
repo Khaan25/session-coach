@@ -107,3 +107,36 @@ test("the dashboard shows ownership per repo and filters sessions by project", a
   await expect(list.getByText("Stream the report export")).toBeVisible();
   await expect(list.getByText("Add rate limiting")).toHaveCount(0);
 });
+
+test("/progress shows ownership by project and narrows its numbers to a picked one", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await expect(page.getByLabel("Email")).toHaveCount(1);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+
+  await page.goto("/progress");
+  await expect(page.getByRole("heading", { name: "By project" })).toBeVisible();
+  await expect(page.getByText("3 cards · 1 explained · 1 owned")).toBeVisible();
+
+  await page
+    .getByRole("navigation", { name: "Projects" })
+    .getByRole("link", { name: "rapporteur", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/progress\?repo=rapporteur$/);
+  await expect(page.getByText("1 cards · 0 explained · 0 owned")).toBeVisible();
+  // The review queue isn't split by project, and says so.
+  await expect(page.getByText("From all your projects.")).toBeVisible();
+  const bySession = page
+    .getByRole("heading", { name: "By session" })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  await expect(bySession.getByText("Stream the report export")).toBeVisible();
+  await expect(bySession.getByText("Add rate limiting")).toHaveCount(0);
+
+  // A repo the learner has no session in goes back to every project.
+  await page.goto("/progress?repo=nope");
+  await expect(page).toHaveURL(/\/progress$/);
+});
