@@ -3,20 +3,22 @@
 // Full-page frames, so each canvas preview reads as the real route at desktop size: the (app) shell, the (auth) layout
 // and the public pages, each under a slim browser bar with the URL.
 //
-// Reused as they are: the Sidebar* primitives, BrandMark, ThemeToggle, BrandLink and AuthArt. Rebuilt here with the
-// same primitives and classes, because the production pieces can't run on a canvas: AppSidebar and NavUser import
-// the sign-out Server Action, NavSessions subscribes to live sessions through Supabase, NavMain and AppBreadcrumb read
-// the pathname, SiteNav reads the signed-in user, and the real Sidebar container is `fixed` at the viewport's height.
+// Reused as they are: the Sidebar* primitives, the nav items, BrandMark, ThemeToggle, AuthShell with AuthArt, and
+// SiteNavBar with SiteFooter. Only the (app) sidebar is rebuilt here, with the same primitives and classes, because
+// the production pieces can't run on a canvas: AppSidebar and NavUser import the sign-out Server Action, NavSessions
+// subscribes to live sessions through Supabase, NavMain and AppBreadcrumb read the pathname, and the real Sidebar
+// container is `fixed` at the viewport's height.
 
 import { CaretRightIcon, CaretUpDownIcon, FolderSimpleIcon } from "@phosphor-icons/react";
 import type { SessionStatus } from "@session-coach/shared/session";
-import Link from "next/link";
 
 import { AuthArt, type AuthScene } from "@/components/auth/auth-art";
-import { BrandLink } from "@/components/auth/auth-parts";
 import { AuthShell } from "@/components/auth/auth-screens";
 import { DryRunContext } from "@/components/app/dry-run";
 import { BrandMark } from "@/components/brand-mark";
+import { SiteFooter } from "@/components/marketing/site-footer";
+import { SiteNavAccount } from "@/components/marketing/site-nav-account";
+import { SiteNavBar } from "@/components/marketing/site-nav-bar";
 import { navMain } from "@/components/nav-items";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -29,7 +31,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { buttonVariants } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -366,39 +367,14 @@ export function AuthFrame({
   );
 }
 
-/** The marketing layout's header, signed out: brand, the three links, Sign in. Then the page. */
+/** The marketing layout, signed out: the real SiteNavBar with the signed-out corner, the page, the real footer. */
 export function PublicFrame({ path, children }: { path: string; children: React.ReactNode }) {
   return (
     <FrameWindow path={path}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-page">
-        <header>
-          <nav
-            aria-label="Main"
-            className="mx-auto flex h-18 w-full max-w-(--container) items-center justify-between gap-6 px-(--gutter-sm) sm:h-20 sm:px-(--gutter)"
-          >
-            <BrandLink />
-            <ul className="hidden items-center gap-8 md:flex">
-              {[
-                { href: "/how-it-works", label: "How it works" },
-                { href: "/pricing", label: "Pricing" },
-                { href: "/support", label: "Support" },
-              ].map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="type-label text-text-2 transition-colors duration-(--dur-fast) hover:text-text-1"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
-              Sign in
-            </Link>
-          </nav>
-        </header>
+        <SiteNavBar account={<SiteNavAccount user={null} />} />
         <main className="flex-1">{children}</main>
+        <SiteFooter />
       </div>
     </FrameWindow>
   );
