@@ -59,3 +59,31 @@ export async function setProjectLevel(input: unknown): Promise<{ error: string |
   }
   return result;
 }
+
+/** How long after sign-up the browser's time zone may replace the UTC default: one day, so it never undoes a choice. */
+const DETECT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Sets a new learner's time zone from their browser, so "due today" and the reminder email use their day from the
+ * start. Only while the profile still holds the UTC default and the account is under a day old; after that, only
+ * /settings changes it. Silent: a failure leaves UTC, which Settings can still fix.
+ *
+ * @param timezone - `Intl.DateTimeFormat().resolvedOptions().timeZone` from the browser.
+ */
+export async function adoptBrowserTimezone(timezone: unknown): Promise<void> {
+  const parsed = profileUpdateSchema.pick({ timezone: true }).required().safeParse({ timezone });
+  if (!parsed.success || parsed.data.timezone === "UTC") return;
+
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  const userId = claims?.claims.sub;
+  if (!userId) return;
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(parsed.data)
+    .eq("id", userId)
+    .eq("timezone", "UTC")
+    .gt("created_at", new Date(Date.now() - DETECT_WINDOW_MS).toISOString());
+  if (error) console.error("[settings/adoptBrowserTimezone] failed", error.message);
+}

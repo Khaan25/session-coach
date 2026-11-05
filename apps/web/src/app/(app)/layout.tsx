@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { DetectTimezone } from "@/components/settings/detect-timezone";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -31,16 +32,19 @@ async function SignedInSidebar() {
   const email = profile?.email ?? user.email;
   const name = profile?.display_name || email || "Learner";
   return (
-    <AppSidebar
-      sessions={sessions}
-      dueCount={dueCount}
-      userId={user.id}
-      user={{
-        name,
-        detail: email ?? "",
-        initials: initialsOf(profile?.display_name, email),
-      }}
-    />
+    <>
+      {profile?.timezone === "UTC" && <DetectTimezone />}
+      <AppSidebar
+        sessions={sessions}
+        dueCount={dueCount}
+        userId={user.id}
+        user={{
+          name,
+          detail: email ?? "",
+          initials: initialsOf(profile?.display_name, email),
+        }}
+      />
+    </>
   );
 }
 
