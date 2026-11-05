@@ -92,7 +92,7 @@ const statusBadge: Record<SessionStatus, { label: string; props: BadgeProps }> =
 };
 
 /** A browser window: the URL bar, an optional bar under it, then the page filling the rest. */
-function FrameWindow({
+export function FrameWindow({
   path,
   bar,
   overlay,
@@ -158,7 +158,8 @@ export function AppFrame({
   overlay?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const isActive = (url: string) => path === url || path.startsWith(`${url}/`);
+  const route = path.split("?")[0];
+  const isActive = (url: string) => route === url || route.startsWith(`${url}/`);
   const title =
     crumb ??
     nav.find((item) => isActive(item.url))?.title ??

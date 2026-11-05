@@ -219,7 +219,7 @@ export function ProgressPreview({ state }: { state: "full" | "empty" | "loading"
 const TIMEZONES = ["Asia/Karachi", "Europe/London", "America/New_York", "UTC"];
 
 /** The open delete confirmation, drawn in place: the real AlertDialog is modal and would trap the whole canvas. */
-function DeleteAccountOpen() {
+export function DeleteAccountOpen() {
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-overlay p-4">
       <section

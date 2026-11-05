@@ -1,22 +1,14 @@
 "use client";
 
-import { ProhibitIcon, ShieldCheckIcon, TimerIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
-import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { clockOffset, formatClock, secondsLeft } from "@/lib/defend/clock";
 import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
@@ -29,6 +21,15 @@ const TIME_UP = {
   failed: "Your answer couldn't be sent before the clock ran out, so this one ends here.",
 } as const;
 const PASTE_OFF = "Paste is off in Defend it. Type it in your own words.";
+/** Shown once, before the clock starts; while it runs each control carries one line instead. */
+const RULES = [
+  {
+    title: "One decision you've explained",
+    body: "A card you scored 2 on in a review, picked at random.",
+  },
+  { title: "3 minutes, then 2 more", body: "One answer, then one follow-up the AI asks from it." },
+  { title: "Your own words", body: "Paste is off. At 0:00 what you typed is sent." },
+];
 
 /** The routes' success bodies (see app/api/defend). Every time is the server's. */
 type Started = { defenseId: string; question: string; answerDueAt: string; serverNow: string };
@@ -43,6 +44,8 @@ type Step =
       question: string;
       dueAt: string;
       offset: number;
+      /** The whole window in seconds, by the server's clock, so the bar can show how much is used. */
+      total: number;
     }
   | { kind: "graded"; result: Graded }
   /** empty: nothing typed at 0:00; late: the answer reached the server after the deadline; failed: the send at 0:00 failed. */
@@ -126,6 +129,7 @@ export function DefendFlow({ defendable }: { defendable: number }) {
           question: started.question,
           dueAt: started.answerDueAt,
           offset: clockOffset(started.serverNow, Date.now()),
+          total: secondsLeft(started.answerDueAt, 0, new Date(started.serverNow).getTime()),
         });
       })
       .catch((reason: unknown) =>
@@ -162,6 +166,7 @@ export function DefendFlow({ defendable }: { defendable: number }) {
             question: next.followUpQuestion,
             dueAt: next.followUpDueAt,
             offset: clockOffset(next.serverNow, Date.now()),
+            total: secondsLeft(next.followUpDueAt, 0, new Date(next.serverNow).getTime()),
           });
         })
         .catch(failed)
@@ -206,173 +211,186 @@ export function DefendFlow({ defendable }: { defendable: number }) {
 
   if (step.kind === "ready")
     return (
-      <Card size="lg">
-        <CardHeader>
-          <CardTitle>
-            <h2 className="flex items-center gap-2">
-              <ShieldCheckIcon aria-hidden="true" />
-              Defend a decision
-            </h2>
-          </CardTitle>
-          <CardDescription>
-            We pick one decision you&rsquo;ve explained right at random. You get 3 minutes, no
-            paste, then one follow-up question with 2 more, like an interview.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataList>
-            <DataListItem>
-              <DataListLabel>From</DataListLabel>
-              <DataListValue>
-                {defendable} {defendable === 1 ? "decision" : "decisions"} you explained right
-              </DataListValue>
-            </DataListItem>
-            <DataListItem>
-              <DataListLabel>Counts as</DataListLabel>
-              <DataListValue>Defended (timed, follow-up) when you score 2.</DataListValue>
-            </DataListItem>
-            <DataListItem>
-              <DataListLabel>Your reviews</DataListLabel>
-              <DataListValue>
-                Not affected: a defense never moves a card&rsquo;s schedule.
-              </DataListValue>
-            </DataListItem>
-          </DataList>
-          {error && <FieldError className="mt-4">{error}</FieldError>}
-        </CardContent>
-        <CardFooter>
-          <Button onClick={start} disabled={pending}>
-            {pending ? "Picking a decision" : "Start the timer"}
-          </Button>
-        </CardFooter>
-      </Card>
+      <>
+        <div className="flex flex-col gap-2">
+          <h1 className="type-heading">Defend it</h1>
+          <p className="type-body text-text-2">
+            Optional practice, like an interview: explain why a decision in your code is right,
+            against the clock.
+          </p>
+        </div>
+        <ol className="flex flex-col gap-4">
+          {RULES.map((rule, i) => (
+            <li key={rule.title} className="flex gap-3">
+              <span className="type-label text-text-2 tabular-nums">{i + 1}</span>
+              <span className="flex flex-col gap-1">
+                <span className="type-label">{rule.title}</span>
+                <span className="type-body-sm text-text-2">{rule.body}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+        <div className="flex flex-col gap-2">
+          <div>
+            <Button onClick={start} disabled={pending}>
+              {pending ? "Picking a decision" : `Start: pick one of ${defendable}`}
+            </Button>
+          </div>
+          <p className="type-body-sm text-text-2">
+            The clock starts when the question appears. Your review days don&rsquo;t change.
+          </p>
+          {error && <FieldError>{error}</FieldError>}
+        </div>
+      </>
     );
 
   if (step.kind === "graded" || step.kind === "time-up") {
     const result = step.kind === "graded" ? step.result : null;
     const defended = result?.score === 2;
+    const again = (
+      <Button
+        variant={result && !defended ? "secondary" : "default"}
+        onClick={() => {
+          setStep({ kind: "ready" });
+          start();
+        }}
+        disabled={pending}
+      >
+        Defend another
+      </Button>
+    );
     return (
-      <Card size="lg">
-        <CardHeader>
-          <CardTitle>
-            <h2 ref={resultHeading} tabIndex={-1}>
-              {!result ? "Time's up" : defended ? "Defended" : "Not defended this time"}
-            </h2>
-          </CardTitle>
-          <CardDescription>
+      <>
+        <div className="flex flex-col gap-2">
+          {result && <ScoreBadge score={result.score} />}
+          <h1 ref={resultHeading} tabIndex={-1} className="type-heading">
+            {!result ? "Time's up" : defended ? "Defended" : "Not defended this time"}
+          </h1>
+          <p className="type-body text-text-2">
             {!result
               ? `${TIME_UP[step.kind === "time-up" ? step.reason : "empty"]} Start again for another decision.`
               : defended
                 ? "Defended (timed, follow-up)."
                 : "Explain it again in your next review, then defend it again."}
-          </CardDescription>
-        </CardHeader>
+          </p>
+        </div>
         {result && (
-          <CardContent>
-            <DataList>
-              <DataListItem>
-                <DataListLabel>Score</DataListLabel>
-                <DataListValue>
-                  <ScoreBadge score={result.score} />
-                </DataListValue>
-              </DataListItem>
-              <DataListItem>
-                <DataListLabel>What was missing</DataListLabel>
-                <DataListValue>{result.missing || "Nothing"}</DataListValue>
-              </DataListItem>
-            </DataList>
-          </CardContent>
+          <DataList>
+            <DataListItem>
+              <DataListLabel>What was missing</DataListLabel>
+              <DataListValue>{result.missing || "Nothing"}</DataListValue>
+            </DataListItem>
+            <DataListItem>
+              <DataListLabel>Why not &ldquo;verified&rdquo;</DataListLabel>
+              <DataListValue>
+                Paste was off, but help off screen is still possible. Defended is the honest word.
+              </DataListValue>
+            </DataListItem>
+            <DataListItem>
+              <DataListLabel>Your reviews</DataListLabel>
+              <DataListValue>
+                Unchanged: a defense never moves a card&rsquo;s schedule.
+              </DataListValue>
+            </DataListItem>
+          </DataList>
         )}
-        <CardFooter>
+        <div className="flex flex-col gap-3">
+          <h2 className="type-label text-text-2">What to do next</h2>
+          {/* Below a 2 the review is the way back to a defense, so it leads; otherwise another defense does. */}
           <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={() => {
-                setStep({ kind: "ready" });
-                start();
-              }}
-              disabled={pending}
-            >
-              Defend another
-            </Button>
-            <Link href="/dashboard" className={buttonVariants({ variant: "secondary" })}>
-              Back to dashboard
-            </Link>
+            {result && !defended ? (
+              <>
+                <Link href="/review" className={buttonVariants()}>
+                  See today&rsquo;s reviews
+                </Link>
+                {again}
+              </>
+            ) : (
+              <>
+                {again}
+                <Link href="/dashboard" className={buttonVariants({ variant: "secondary" })}>
+                  Back to dashboard
+                </Link>
+              </>
+            )}
           </div>
-        </CardFooter>
-      </Card>
+        </div>
+      </>
     );
   }
 
   const current = step;
   const followUp = current.kind === "follow-up";
   return (
-    <form onSubmit={submit} noValidate>
-      <Card size="lg">
-        <CardHeader>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{followUp ? "Follow-up" : "Question 1 of 2"}</Badge>
-            <Badge variant={left !== null && left <= 30 ? "warning" : "outline"}>
-              <TimerIcon aria-hidden="true" />
-              <span className="tabular-nums">{left === null ? "-:--" : formatClock(left)}</span>
-              <span className="sr-only"> left</span>
-            </Badge>
-          </div>
-          <CardTitle>
-            <h2>{current.question}</h2>
-          </CardTitle>
-          {followUp && (
-            <CardDescription>
-              Asked by the AI from your first answer and the session.
-            </CardDescription>
+    <form onSubmit={submit} noValidate className="flex flex-col gap-6">
+      <h1 className="sr-only">Defend it</h1>
+      <Progress
+        value={left ?? current.total}
+        max={current.total}
+        data-status={left !== null && left <= 30 ? "warn" : undefined}
+      >
+        <ProgressLabel>{followUp ? "2 of 2 · follow-up" : "1 of 2 · your answer"}</ProgressLabel>
+        <ProgressValue>{() => `${left === null ? "-:--" : formatClock(left)} left`}</ProgressValue>
+      </Progress>
+      <div className="flex flex-col gap-2">
+        <h2 className="type-heading-sm">{current.question}</h2>
+        {followUp && (
+          <p className="type-body-sm text-text-2">
+            The AI asked this after reading your first answer. It&rsquo;s the only one.
+          </p>
+        )}
+      </div>
+      <Field data-invalid={error ? true : undefined}>
+        <FieldLabel htmlFor={`${id}-answer`}>Your answer</FieldLabel>
+        <Textarea
+          ref={field}
+          id={`${id}-answer`}
+          rows={6}
+          maxLength={MAX_ANSWER}
+          readOnly={pending || expired}
+          value={answer}
+          autoComplete="off"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
+          onChange={(event) => {
+            setAnswer(event.target.value);
+            setError(null);
+          }}
+          onPaste={blockPaste}
+          onDrop={blockPaste}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
+        />
+        <FieldDescription id={`${id}-hint`}>
+          {followUp
+            ? "Graded together with your first answer."
+            : "No need to be long. The reason and what breaks without it."}
+        </FieldDescription>
+        <FieldError id={`${id}-error`}>{error}</FieldError>
+      </Field>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={pending || expired}>
+          {pending ? (
+            followUp ? (
+              "Grading"
+            ) : (
+              "Writing the follow-up"
+            )
+          ) : (
+            <>
+              {followUp ? "Finish" : "Send"}
+              <ArrowRightIcon aria-hidden="true" data-icon="inline-end" />
+            </>
           )}
-        </CardHeader>
-        <CardContent>
-          <Field data-invalid={error ? true : undefined}>
-            <FieldLabel htmlFor={`${id}-answer`}>Your answer</FieldLabel>
-            <Textarea
-              ref={field}
-              id={`${id}-answer`}
-              rows={5}
-              maxLength={MAX_ANSWER}
-              readOnly={pending || expired}
-              value={answer}
-              autoComplete="off"
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
-              onChange={(event) => {
-                setAnswer(event.target.value);
-                setError(null);
-              }}
-              onPaste={blockPaste}
-              onDrop={blockPaste}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
-                }
-              }}
-            />
-            <FieldDescription id={`${id}-hint`}>
-              <span className="flex items-center gap-1">
-                <ProhibitIcon aria-hidden="true" />
-                Paste and drop are off. At 0:00 what you&rsquo;ve typed is sent.
-              </span>
-            </FieldDescription>
-            <FieldError id={`${id}-error`}>{error}</FieldError>
-          </Field>
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" disabled={pending || expired}>
-            {pending
-              ? followUp
-                ? "Grading"
-                : "Writing the follow-up"
-              : followUp
-                ? "Finish"
-                : "Next"}
-          </Button>
-        </CardFooter>
-      </Card>
+        </Button>
+        <span className="type-body-sm text-text-2">
+          {followUp ? "Then you get one grade." : "Then the follow-up appears."}
+        </span>
+      </div>
     </form>
   );
 }

@@ -69,5 +69,6 @@ test("sign in, review a card, get a score", async ({ page }) => {
   await page.getByRole("button", { name: "Submit answer" }).click();
 
   await expect(page.getByRole("heading", { name: "Your result" })).toBeVisible();
-  await expect(page.getByText("Explained", { exact: true })).toBeVisible();
+  // The score sits in the result's Score value; the rail also shows an "Explained" badge per possible score.
+  await expect(page.getByRole("definition").getByText("Explained", { exact: true })).toBeVisible();
 });

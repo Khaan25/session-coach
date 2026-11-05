@@ -121,6 +121,8 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
       world.style.transform = `translate(${x}px, ${y}px) scale(${z})`;
       if (settleTimer.current) clearTimeout(settleTimer.current);
       settleTimer.current = setTimeout(() => {
+        // A pause mid-drag keeps the layer; dropping it would re-raster every visible preview when the drag resumes.
+        if (gesture.current) return;
         world.classList.remove("will-change-transform");
       }, SETTLE_MS);
     }
@@ -320,7 +322,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     const g = gesture.current;
     gesture.current = null;
     if (g?.kind === "move" || g?.kind === "pan" || g?.kind === "pinch") queueSave();
-  }, [queueSave]);
+    // Re-arms the settle timer, so the world drops its GPU layer once the gesture is over.
+    if (g?.kind === "pan" || g?.kind === "pinch") schedule();
+  }, [queueSave, schedule]);
 
   const startPan = (e: React.PointerEvent) => {
     gesture.current = {
@@ -719,6 +723,9 @@ const CanvasEntry = memo(function CanvasEntry({
           if (node) {
             node.style.width = `${width}px`;
             node.style.height = `${height}px`;
+            // Skips painting previews outside the view. With 125 full pages, a pan frame went from 14ms to 7ms at
+            // 50% zoom and 21ms to 7ms at fit. The fixed size above stands in for the skipped content.
+            node.style.contentVisibility = "auto";
           }
         }}
         className="overflow-auto rounded-soft border border-hair bg-background"
