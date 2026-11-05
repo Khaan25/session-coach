@@ -7,11 +7,13 @@ import { ChecklistStep } from "@/components/settings/checklist-step";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { ProjectsCard } from "@/components/settings/projects-card";
+import { ReportCard } from "@/components/settings/report-card";
 import { SettingsCard } from "@/components/settings/settings-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { listProjects, type ProjectListItem } from "@/lib/projects/queries";
+import { getReportSettings, type ReportSettings } from "@/lib/report/queries";
 import { getSettingsProfile, timeZoneOptions } from "@/lib/settings/profile";
 
 import { signOutEverywhere } from "@/app/(auth)/actions";
@@ -31,6 +33,7 @@ const SAMPLE_PROJECTS: ProjectListItem[] = [
   { repo: "acme/web", question_level: "simple", onboarded: true },
   { repo: "acme/api", question_level: "hard", onboarded: true },
 ];
+const SAMPLE_REPORT: ReportSettings = { on: false, slug: "0".repeat(32), repos: [] };
 
 export default function SettingsPage() {
   return (
@@ -42,7 +45,13 @@ export default function SettingsPage() {
       {/* cacheComponents: the profile read uses cookies, so it streams inside Suspense. */}
       <MeasuredSuspense
         label="Loading your settings"
-        skeleton={<SettingsView profile={SAMPLE_PROFILE} projects={SAMPLE_PROJECTS} />}
+        skeleton={
+          <SettingsView
+            profile={SAMPLE_PROFILE}
+            projects={SAMPLE_PROJECTS}
+            report={SAMPLE_REPORT}
+          />
+        }
       >
         <AccountSettings />
       </MeasuredSuspense>
@@ -54,7 +63,23 @@ async function AccountSettings() {
   const [profile, projects] = await Promise.all([getSettingsProfile(), loadProjects()]);
   // Signed out: proxy.ts redirects to sign-in, so show nothing here.
   if (!profile) return null;
-  return <SettingsView profile={profile} projects={projects} />;
+  const report = await loadReport(projects);
+  return <SettingsView profile={profile} projects={projects} report={report} />;
+}
+
+/** The report settings, or null when the read failed, so the rest of the page still loads. */
+async function loadReport(projects: ProjectListItem[] | null) {
+  const user = await getCurrentUser();
+  if (!user || !projects) return null;
+  try {
+    return await getReportSettings(
+      user.id,
+      projects.map((p) => p.repo),
+    );
+  } catch (error) {
+    console.error("[settings/loadReport]", error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 /** The learner's projects, or null when the read failed, so the profile still loads and the card shows the error. */
@@ -72,9 +97,11 @@ async function loadProjects() {
 function SettingsView({
   profile,
   projects,
+  report,
 }: {
   profile: SettingsProfile;
   projects: ProjectListItem[] | null;
+  report: ReportSettings | null;
 }) {
   // One block with the page's own gap: skullet wraps the skeleton in an element, so a fragment's parts would lose it.
   // ProfileForm is steps 1 to 3 in its own form and list, so this list carries on from 4.
@@ -96,6 +123,13 @@ function SettingsView({
               Manage tokens
             </Link>
           </div>
+        </ChecklistStep>
+        <ChecklistStep
+          n={6}
+          title="Share your report"
+          changes="Nothing in the review loop. It makes the decisions you own in the repos you tick readable at a public link, with their quotes; the why and your answers stay private."
+        >
+          <ReportCard report={report} />
         </ChecklistStep>
       </ol>
       <Separator />
