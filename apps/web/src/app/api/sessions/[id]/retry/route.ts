@@ -39,15 +39,15 @@ export const maxDuration = 300;
  */
 export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
   const invokedAt = Date.now();
-  const signedIn = await requireUser();
-  if (signedIn instanceof NextResponse) return signedIn;
-  const userId = signedIn.user.id;
-
-  const id = idSchema.safeParse((await context.params).id);
-  if (!id.success) {
-    return NextResponse.json({ error: "id must be a session id", field: "id" }, { status: 400 });
-  }
   try {
+    const signedIn = await requireUser();
+    if (signedIn instanceof NextResponse) return signedIn;
+    const userId = signedIn.user.id;
+
+    const id = idSchema.safeParse((await context.params).id);
+    if (!id.success) {
+      return NextResponse.json({ error: "id must be a session id", field: "id" }, { status: 400 });
+    }
     const admin = createAdminClient();
     const { data: session, error: readError } = await admin
       .from("sessions")
