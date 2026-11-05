@@ -93,7 +93,9 @@ test("sign in, log the CLI in from the browser, push, choose a level, answer, re
   });
   await expect.poll(() => code, { timeout: 30_000 }).not.toBe("");
   await page.goto(`/cli/approve?code=${code}`);
-  await expect(page.getByRole("heading", { name: "Approve this CLI login?" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Is this the code in your terminal?" }),
+  ).toBeVisible();
   await shot(page, "1-approve");
   await page.getByRole("button", { name: "Approve" }).click();
   await expect(page.getByText("CLI connected")).toBeVisible();
