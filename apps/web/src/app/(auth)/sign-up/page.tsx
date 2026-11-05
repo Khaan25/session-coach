@@ -18,7 +18,7 @@ export default function SignUpPage() {
           </>
         }
       >
-        Explain back the decisions your coding agent made, and keep what you learn.
+        Track the decisions your coding agent makes, project by project, until you own them.
       </AuthHeading>
       <SignUpForm />
     </>

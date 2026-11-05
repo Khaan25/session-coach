@@ -41,7 +41,7 @@ export function SiteFooter() {
     <footer className="rule-top">
       <div className="mx-auto flex w-full max-w-(--container) flex-col gap-4 px-(--gutter-sm) py-8 sm:flex-row sm:items-center sm:justify-between sm:px-(--gutter)">
         <p className="type-body-sm text-text-2">
-          Explain back the decisions your coding agent made.
+          Own the decisions your coding agent makes, project by project.
         </p>
         <ul className="flex gap-6">
           {links.map((link) => (
