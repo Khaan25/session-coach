@@ -1,6 +1,6 @@
-import { AsteriskIcon, CursorIcon, OpenAiLogoIcon, SparkleIcon } from "@phosphor-icons/react/ssr";
-import type { Icon } from "@phosphor-icons/react";
+import { OpenAiLogoIcon } from "@phosphor-icons/react/ssr";
 
+import { ClaudeLogo, CursorLogo, GeminiLogo } from "@/components/setup/agent-logos";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeader } from "@/components/setup/section-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,12 +8,12 @@ import { CodeBlock } from "@/components/ui/code-block";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AGENT_NAMES, setupPrompt, type SetupAgent } from "@/lib/setup/ai-prompt";
 
-// Stand-in marks from Phosphor, not the vendors' logos.
-const ICONS: Record<SetupAgent, Icon> = {
-  claude: AsteriskIcon,
+// Each product's own mark (components/setup/agent-logos.tsx).
+const ICONS: Record<SetupAgent, React.ComponentType<React.ComponentProps<"svg">>> = {
+  claude: ClaudeLogo,
   codex: OpenAiLogoIcon,
-  gemini: SparkleIcon,
-  cursor: CursorIcon,
+  gemini: GeminiLogo,
+  cursor: CursorLogo,
 };
 
 const AGENTS = Object.keys(AGENT_NAMES) as SetupAgent[];

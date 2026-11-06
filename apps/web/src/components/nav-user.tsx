@@ -90,7 +90,9 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
               </DropdownMenuRadioGroup>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem render={<button type="submit" form="sidebar-sign-out" />}>
+            <DropdownMenuItem
+              render={<button type="submit" form="sidebar-sign-out" className="w-full" />}
+            >
               <SignOutIcon />
               Sign out
             </DropdownMenuItem>
