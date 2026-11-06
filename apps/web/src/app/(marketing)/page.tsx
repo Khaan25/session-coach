@@ -1,14 +1,13 @@
 import {
-  CardSection,
   ClosingSection,
   Hero,
-  LoopSection,
+  BentoSection,
   TrustSection,
 } from "@/components/marketing/landing-sections";
 import { siteUrl } from "@/lib/site";
 
-// The landing page follows docs/design/serveros-redesign.md: a centred hero over the real dashboard, then four short
-// sections. The hero's text is there on first paint (no entrance, no LCP delay); the sections blur in on scroll.
+// The landing page follows docs/design/serveros-redesign.md: a centred hero over the real dashboard, then a bento grid,
+// the trust band and the install command. The hero's text is there on first paint (no entrance, no LCP delay); the sections blur in on scroll.
 // Structured data for search results: what the product is, that it's free during the trial, and who makes it.
 const jsonLd = {
   "@context": "https://schema.org",
@@ -33,8 +32,7 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(LESS_THAN, "\\u003c") }}
       />
       <Hero />
-      <LoopSection />
-      <CardSection />
+      <BentoSection />
       <TrustSection />
       <ClosingSection />
     </>

@@ -3,12 +3,12 @@ import Link from "next/link";
 
 import { DecisionCardPreview } from "@/components/marketing/decision-card-preview";
 import { Reveal } from "@/components/marketing/reveal";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CodeBlock } from "@/components/ui/code-block";
 
-// The landing page (docs/design/serveros-redesign.md): a centred hero, then four short sections that blur in on
-// scroll. Copy must match the code and docs/CODEBASE.md; anything they don't say is a TODO(zia).
+// The landing page (docs/design/serveros-redesign.md): a centred hero, then a bento grid, the trust band and the
+// install command, each blurring in on scroll. Copy must match the code and docs/CODEBASE.md; anything they don't say is a TODO(zia).
 
 const section =
   "mx-auto flex w-full max-w-(--container) flex-col gap-12 px-(--gutter-sm) sm:px-(--gutter)";
@@ -86,64 +86,105 @@ export function Hero() {
   );
 }
 
-const loop = [
-  {
-    title: "You send a session",
-    body: "The CLI uploads its log. Secrets are removed on your laptop first.",
-  },
-  {
-    title: "Up to 5 decision cards",
-    body: "Each names a decision, why your agent made it and the quotes that show it.",
-  },
-  {
-    title: "Explain it back",
-    body: "Answer in your own words on day 1, 4 and 11, scored 0, 1 or 2.",
-  },
-  {
-    title: "Own it",
-    body: "Pass the last review and the card is yours. Defend it any time.",
-  },
-] as const;
-
-export function LoopSection() {
+/** One bento tile: a static picture of the product on top, then its heading and one line. */
+function BentoTile({
+  title,
+  body,
+  className,
+  children,
+}: {
+  title: string;
+  body: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section aria-labelledby="loop-title" className="py-16 sm:py-24">
-      <Reveal className={section}>
-        <SectionHeading
-          id="loop-title"
-          title="From one session to decisions you own."
-          lead="Four steps, and the last one is yours to keep."
-        />
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {loop.map(({ title, body }, index) => (
-            <li key={title} className="flex">
-              <Card className="w-full">
-                <CardHeader>
-                  <CardTitle>
-                    <span className="sr-only">Step {index + 1}: </span>
-                    {title}
-                  </CardTitle>
-                  <CardDescription>{body}</CardDescription>
-                </CardHeader>
-              </Card>
-            </li>
-          ))}
-        </ol>
-      </Reveal>
-    </section>
+    <li className={`frame flex min-h-64 flex-col bg-page ${className ?? ""}`}>
+      <div aria-hidden className="flex flex-1 items-center justify-center overflow-clip p-6">
+        {children}
+      </div>
+      <div className="flex flex-col gap-1 px-6 pb-6">
+        <h3 className="type-heading-sm text-text-1">{title}</h3>
+        <p className="type-body text-pretty text-text-2">{body}</p>
+      </div>
+    </li>
   );
 }
 
-export function CardSection() {
+const reviewDays = ["Day 1", "Day 4", "Day 11"] as const;
+
+/**
+ * What Session Coach does, as a bento grid after Clerk's landing (2026-11-06): one tall tile with a real decision card,
+ * four tiles around it, each a picture over one claim. Three columns from lg, two from sm, one on phones.
+ */
+export function BentoSection() {
   return (
-    <section aria-labelledby="card-title" className="overflow-x-clip py-16 sm:py-24">
-      <Reveal className={`${section} items-center gap-16 lg:flex-row lg:justify-between`}>
+    <section aria-labelledby="bento-title" className="overflow-x-clip py-16 sm:py-24">
+      <Reveal className={section}>
         <SectionHeading
-          id="card-title"
-          title="Built from what the session shows."
-          lead="Plain code checks every quote against the session. A card with a quote it can't verify is flagged; a card with none is hidden."
+          id="bento-title"
+          title="From one session to decisions you own."
+          lead="Send a session, get up to 5 decision cards, explain each one back until it's yours."
         />
-        <DecisionCardPreview />
+        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-flow-col lg:grid-cols-3 lg:grid-rows-2">
+          <BentoTile
+            className="sm:col-span-2 lg:col-span-1 lg:row-span-2"
+            title="Cards built from your session"
+            body="Each names a decision, why your agent made it, and the quote from the log that shows it."
+          >
+            <div className="w-full scale-90">
+              <DecisionCardPreview />
+            </div>
+          </BentoTile>
+          <BentoTile
+            title="Secrets stay on your laptop"
+            body="The CLI removes keys and tokens before upload, and the server checks again."
+          >
+            <div className="frame flex w-full max-w-72 flex-col gap-2 bg-well p-4 type-code-sm text-text-2">
+              <span>OPENAI_API_KEY=[REDACTED]</span>
+              <span>Authorization: Bearer [REDACTED]</span>
+              <span>~/code/app/src/upload.ts</span>
+            </div>
+          </BentoTile>
+          <BentoTile
+            title="Reviews on day 1, 4 and 11"
+            body="Answer from memory, then see the why. A miss brings the card back tomorrow."
+          >
+            <ol className="flex flex-wrap items-center justify-center gap-2">
+              {reviewDays.map((day) => (
+                <li key={day}>
+                  <Badge variant="outline">{day}</Badge>
+                </li>
+              ))}
+              <li>
+                <Badge variant="success">Owned</Badge>
+              </li>
+            </ol>
+          </BentoTile>
+          <BentoTile
+            title="Explain it in your own words"
+            body="Every answer is scored 0, 1 or 2 against the session, not a multiple-choice key."
+          >
+            <div className="frame flex w-full max-w-72 flex-col gap-3 bg-page p-4">
+              <p className="type-body text-text-2">
+                Logs are repetitive text, so gzip shrinks them several times over…
+              </p>
+              <span className="flex items-center justify-between type-label-sm text-text-3">
+                Score
+                <Badge variant="success">2 · Explained</Badge>
+              </span>
+            </div>
+          </BentoTile>
+          <BentoTile
+            title="Defend it under time"
+            body="Pick a card you own and answer a follow-up against the clock, with paste turned off."
+          >
+            <div className="flex flex-col items-center gap-1">
+              <span className="type-stat-lg text-text-1 tabular-nums">4:32</span>
+              <span className="type-label-sm text-text-3">1 of 2 · your answer</span>
+            </div>
+          </BentoTile>
+        </ul>
       </Reveal>
     </section>
   );

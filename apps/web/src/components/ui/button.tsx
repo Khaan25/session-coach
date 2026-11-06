@@ -5,7 +5,7 @@ import { cn } from "cn";
 import { controlHeight } from "@/lib/ui/utils";
 
 // The design system's button skin: 32px tall (28 at sm, 44 at lg), the 6px control corner, a 14/16 label. Default is the one
-// flat brand-blue key in a view; outline and secondary are the paper key with the 1px control edge. Destructive is written,
+// brand-blue key in a view, lit like Clerk's (a top sheen, a light lip, two drops and a ring); outline and secondary are the paper key with the 1px control edge. Destructive is written,
 // not painted: paper, a fail edge and fail text, never a red fill. Focus is base.css's 2px ring on every variant.
 // Height is max(--control, one line plus padding), so a label at 200% text zoom grows the box instead of spilling.
 

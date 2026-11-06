@@ -456,29 +456,39 @@
     1 0 0
   ); /* white on the brand blue, fixed in both themes | primary button */
   --button-primary: var(--brand); /* the one blue action in a view | primary button */
-  /* The primary key is flat: one brand fill, a lighter 1px rim drawn inside, no lip, drop or sheen. Hover lifts the
-     fill a step toward white; press sinks it with a short inner shadow. */
-  --key-primary-body: var(--brand); /* flat brand fill | primary button */
+  /* The primary key, after Clerk's buttons (2026-11-06): the brand fill, a soft top sheen, a 1px light lip inside the top
+     edge, two short drops and a hairline ring. Hover lifts the fill a step toward white; press sinks it. */
+  --key-primary-body: var(--brand); /* brand fill | primary button */
   --key-primary-body-hover: color-mix(
     in oklch,
-    var(--brand) 88%,
+    var(--brand) 90%,
     white
   ); /* the fill a step lighter | primary hover */
-  --key-primary-edge: inset 0 0 0 1px oklch(62% 0.19 263 / 0.6); /* a lighter blue rim inside the box | primary button */
+  --key-primary-edge:
+    inset 0 1px 0.5px oklch(1 0 0 / 0.16), 0 2px 2px -1px oklch(0 0 0 / 0.16),
+    0 4px 4px -2px oklch(0 0 0 / 0.24), 0 0 0 1px oklch(0 0 0 / 0.12); /* lip, two drops, ring | primary button */
   --key-primary-edge-press:
-    inset 0 0 0 1px oklch(62% 0.19 263 / 0.6), inset 0 1px 2px oklch(0 0 0 / 0.3); /* pushed in | primary active */
-  --key-primary-sheen: none; /* flat: no glint or dome | primary button */
+    0 0 0 1px oklch(0 0 0 / 0.12), inset 0 1px 2px oklch(0 0 0 / 0.3); /* pushed in | primary active */
+  --key-primary-sheen: linear-gradient(
+    180deg,
+    oklch(1 0 0 / 0.2),
+    oklch(1 0 0 / 0) 100%
+  ); /* light from the top | primary button */
   --key-secondary-body: var(
     --paper
   ); /* flat paper, the same surface as a field, so a secondary button and an input beside it read as one family | secondary button */
   --key-secondary-body-hover: oklch(
     var(--ink-c) / 0.03
   ); /* a faint wash fading in over the paper on hover | secondary button */
-  --key-secondary-edge: var(
-    --elev-control
-  ); /* the same one-pixel lift as a field; the key-secondary utility adds the ring from --frame-color | secondary button */
+  --key-secondary-edge:
+    inset 0 1px 0 oklch(1 0 0 / 0.04), 0 2px 2px -1px oklch(0 0 0 / 0.06),
+    0 4px 4px -2px oklch(0 0 0 / 0.04); /* a raised paper key: the utility adds the ring from --frame-color | secondary button */
   --key-secondary-edge-press: inset 0 1px 2px oklch(var(--ink-c) / 0.12); /* pushed in; the utility adds the ring | secondary active */
-  --key-secondary-sheen: none; /* no sheen: secondary stays as quiet as a field | secondary button */
+  --key-secondary-sheen: linear-gradient(
+    180deg,
+    oklch(0 0 0 / 0) 30%,
+    oklch(0 0 0 / 0.04) 100%
+  ); /* a faint shade toward the base | secondary button */
   --button-primary-hover: var(--key-primary-body-hover); /* primary hover | primary button */
   --button-secondary: oklch(var(--grey-c)); /* the grey field button | secondary button */
   --button-secondary-hover: color-mix(
