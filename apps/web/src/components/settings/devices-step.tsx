@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { EmptyState } from "@/components/app/empty-state";
 import { ErrorState } from "@/components/app/error-state";
-import { ChecklistStep } from "@/components/settings/checklist-step";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { RevokeTokenDialog, type DeviceListRow } from "@/components/setup/device-section";
 import {
   Item,
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/item";
 
 /**
- * Step 5 of the settings checklist: every computer the CLI signed in on (one cli_tokens row each), with Disconnect,
+ * The Devices section of /settings: every computer the CLI signed in on (one cli_tokens row each), with Disconnect,
  * which revokes that token. New devices come from session-coach login; /setup also makes a token by hand.
  *
  * @param devices - The learner's devices, or null when they couldn't be read.
@@ -26,9 +26,11 @@ import {
 export function DevicesStep({ devices }: { devices: DeviceListRow[] | null }) {
   const [rows, setRows] = useState(devices);
   return (
-    <ChecklistStep
+    <SettingsSection
+      id="devices"
+      icon={<LaptopIcon />}
       title="Devices"
-      changes="Each device is the CLI token it signed in with. Disconnect revokes that token: the computer can't push until you run npx session-coach login there again."
+      description="Each device is the CLI token it signed in with. Disconnect revokes that token: the computer can't push until you run npx session-coach login there again."
       done={rows ? rows.length > 0 : undefined}
     >
       {rows === null ? (
@@ -73,6 +75,6 @@ export function DevicesStep({ devices }: { devices: DeviceListRow[] | null }) {
           ))}
         </ItemGroup>
       )}
-    </ChecklistStep>
+    </SettingsSection>
   );
 }
