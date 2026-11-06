@@ -29,7 +29,8 @@ import type { EmptyQueue, QueueCard } from "@/lib/review/queries";
 import { dueInWords } from "@/lib/review/schedule";
 import { DAILY_CAP } from "@/lib/review/today";
 
-// The dashboard, shared by /dashboard and /canvas so the two can't drift. Its one job: what should I do next? A small
+// The old dashboard, now drawn only by /canvas's picked-design preview: /dashboard is Today (today-view.tsx) since
+// 2026-11-06 (DECISIONS). Its one job: what should I do next? A small
 // header, three stats (due, explained, owned), then today's cards and the sessions side by side, and per-project bars
 // only with 2+ projects. Takes everything as props: the page reads the learner's
 // rows, the canvas passes synthetic ones.

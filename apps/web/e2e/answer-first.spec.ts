@@ -191,4 +191,8 @@ test("a skip keeps the card's step, and the day stops at 5 answers", async ({ pa
 
   await page.goto("/review");
   await expect(page.getByRole("main").getByText("Done for today")).toBeVisible();
+  // Today says so too, instead of a card.
+  await page.goto("/dashboard");
+  const done = page.getByRole("region", { name: "You're done for today" });
+  await expect(done.getByText("You did 5 cards today. The rest come back tomorrow.")).toBeVisible();
 });

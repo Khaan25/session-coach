@@ -1,4 +1,5 @@
 import { ShareNetworkIcon, SignOutIcon, WarningIcon } from "@phosphor-icons/react/ssr";
+import Link from "next/link";
 
 import { AppPageHeader } from "@/components/app/page-header";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
@@ -10,6 +11,7 @@ import { SettingsRow } from "@/components/settings/settings-card";
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { SettingsSection } from "@/components/settings/settings-section";
 import { SignOutEverywhereForm } from "@/components/settings/sign-out-everywhere";
+import { buttonVariants } from "@/components/ui/button";
 import type { DeviceListRow } from "@/components/setup/device-section";
 import type { ProjectListItem } from "@/lib/projects/queries";
 import type { ReportSettings } from "@/lib/report/queries";
@@ -28,7 +30,21 @@ export type SettingsProfile = {
 
 export function SettingsHeader() {
   return (
-    <AppPageHeader title="Settings" description="Your profile, computers, projects and account." />
+    <AppPageHeader
+      title="Settings"
+      description="Your profile, computers, projects and account."
+      // Off the sidebar since Today (DECISIONS, 2026-11-06): the CLI setup and the people on your projects.
+      actions={
+        <>
+          <Link href="/setup" className={buttonVariants({ variant: "secondary" })}>
+            Setup
+          </Link>
+          <Link href="/members" className={buttonVariants({ variant: "secondary" })}>
+            Members
+          </Link>
+        </>
+      }
+    />
   );
 }
 

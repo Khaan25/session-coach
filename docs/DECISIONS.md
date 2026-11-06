@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-06 · Today replaces the dashboard
+
+- **Decision:** `/dashboard` becomes Today: one calm column at the reading measure with exactly one thing to do. A small greeting with the learner's first name, then the hero: the next due card (question large, one "Explain it"), or "You're done for today" with when the next card comes back, or the first setup step on a first visit. One muted habit line ("You own N of N decisions · N explained") and two text links, Progress and Sessions. The sidebar keeps Today, Review, Progress and Settings; the recent sessions list is gone. Page jobs are in `docs/design/serveros-redesign.md`.
+- **Why:** Zia and Maham's review: the app looked like a system panel, not a learning product. Too many things per screen, it felt like work, and nothing pulled a learner back each day. The fix is structure, not colour: one task a day, capped at 5 cards, is the habit loop.
+- **Moved:** the stat cards, the ownership meter and the project tabs to /progress (which already had them, with By project and By session); the review-queue list to /review; the Sessions card to /progress "By session" (Today's Sessions link lands there); Setup to Today's first visit and a Settings header link; Defend it to Today's done state and a /progress header link; Members to a Settings header link. No route was deleted. `DashboardView` stays only for /canvas's picked-design preview.
+- **Rejected:** the question unframed under the greeting with a big button (read as more page text, not a card to work on); a streak (no loaded data counts days, and a new query was out of scope); keeping a sessions list in the sidebar (every screen showed it, which is the clutter the review named).
+
 ## 2026-11-06 · Plain palette, Mona Sans, route view transitions, marketing scroll reveals
 
 - **Decision:** the app takes its look from serveros.com: neutral graphite ink on white paper (dark: the same, inverted), hairline edges with no lift on controls, one brand blue (`--brand`, #1c4bb0) for the primary key only, and Mona Sans for UI and headlines with Geist Mono for code. Geist Sans and Instrument Serif are gone. Route changes crossfade with a short blur and lift through React's `<ViewTransition>` and the `::view-transition` recipes in `styles/theme.css`; the root snapshot does not animate, so the sidebar and nav hold still. Marketing pages may now blur sections in on scroll with `motion`; the app and auth stay free of scroll reveals. The landing page follows egm.dev's structure: a centred hero and four short sections. Per-page jobs and cuts are in `docs/design/serveros-redesign.md`.

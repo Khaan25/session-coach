@@ -153,7 +153,8 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
         <Card>
           <CardHeader>
             <CardTitle skullet-own="">
-              <h2>
+              {/* Today's "Sessions" link lands here. */}
+              <h2 id="by-session">
                 By session <Count n={progress.bySession.length} />
               </h2>
             </CardTitle>
@@ -194,6 +195,12 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
           <span skullet-own="" className="text-text-2">
             {DESCRIPTION}
           </span>
+        }
+        // Off the sidebar since Today (DECISIONS, 2026-11-06).
+        actions={
+          <Link href="/defend" className={buttonVariants({ variant: "secondary" })}>
+            Defend it
+          </Link>
         }
       />
 

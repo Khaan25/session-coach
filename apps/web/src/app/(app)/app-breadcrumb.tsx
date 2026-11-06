@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
-import { navMain } from "@/components/nav-items";
+import { navMain, navOther } from "@/components/nav-items";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,8 +13,8 @@ import {
 /** The topbar's current page title. The sidebar already names the app, so there is no root crumb. */
 export function AppBreadcrumb() {
   const pathname = usePathname();
-  const page = navMain.find((item) => pathname.startsWith(item.url));
-  // Session pages and the CLI approve page aren't in the main nav, so they get their own title.
+  const page = [...navMain, ...navOther].find((item) => pathname.startsWith(item.url));
+  // Session pages and the CLI approve page aren't in any nav list, so they get their own title.
   const title =
     page?.title ??
     (pathname.startsWith("/s/")

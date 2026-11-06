@@ -8,8 +8,8 @@ import { LoadErrorState } from "@/components/errors/load-error-state";
 export default function DashboardError({ error, retry }: { error: unknown; retry: () => void }) {
   return (
     <Container>
-      <AppPageHeader title="Dashboard" />
-      <LoadErrorState error={error} retry={retry} noun="your sessions" />
+      <AppPageHeader title="Today" />
+      <LoadErrorState error={error} retry={retry} noun="today's card" />
     </Container>
   );
 }
