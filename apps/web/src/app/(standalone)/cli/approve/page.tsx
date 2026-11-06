@@ -3,12 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ApproveRequest } from "@/components/cli/approve-request";
-import {
-  ApproveCodeForm,
-  ApproveColumn,
-  ApproveNotice,
-  SETTLED_COPY,
-} from "@/components/cli/approve-states";
+import { ApproveCodeForm, ApproveNotice, SETTLED_COPY } from "@/components/cli/approve-states";
 import { buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -25,11 +20,9 @@ export const metadata: Metadata = { title: "Connect the CLI", robots: { index: f
  */
 export default function CliApprovePage({ searchParams }: PageProps<"/cli/approve">) {
   return (
-    <ApproveColumn>
-      <Suspense fallback={<Spinner label="Loading the login request" />}>
-        <Request searchParams={searchParams} />
-      </Suspense>
-    </ApproveColumn>
+    <Suspense fallback={<Spinner label="Loading the login request" />}>
+      <Request searchParams={searchParams} />
+    </Suspense>
   );
 }
 

@@ -22,14 +22,19 @@ const FOOTER_LINKS = [
  */
 export function AuthShell({ art, children }: { art?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex min-h-full flex-1 bg-page">
+    <div className="relative isolate flex min-h-full flex-1 overflow-hidden bg-page">
+      {/* The bloom: a brand-blue glow centred on the top edge, fading to the page by two thirds down. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-x-1/2 -top-3/4 -z-10 h-3/2 bg-radial from-brand/10 via-brand/5 to-transparent to-60% sm:inset-x-0 dark:from-brand/30 dark:via-brand/50 dark:via-30%"
+      />
       <div className="flex flex-1 flex-col">
         <header className="flex h-18 items-center justify-center px-(--gutter-sm) sm:h-20 sm:px-(--gutter)">
           <BrandLink />
         </header>
-        <main className="flex flex-1 flex-col justify-center">
-          {/* The one form column every auth screen sits in. */}
-          <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-12 pb-16 sm:px-(--gutter) sm:pt-16 sm:pb-24">
+        <main className="flex flex-1 flex-col justify-center px-(--gutter-sm) pt-8 pb-16 sm:px-(--gutter) sm:pt-12 sm:pb-24">
+          {/* The one card every auth screen sits in. */}
+          <div className="mx-auto flex w-full max-w-100 flex-col gap-6 rounded-frame border border-hair bg-page px-6 pt-6 pb-5 sm:px-8 sm:pt-8 sm:pb-7">
             {children}
           </div>
         </main>
@@ -154,14 +159,11 @@ export function AuthErrorNotice({ code }: { code: string | undefined }) {
 
 export function AuthErrorActions() {
   return (
-    <div className="flex flex-wrap gap-3">
-      <Link href="/login" className={buttonVariants({ size: "lg" })}>
+    <div className="flex flex-col gap-3">
+      <Link href="/login" className={buttonVariants()}>
         Sign in
       </Link>
-      <Link
-        href="/forgot-password"
-        className={buttonVariants({ variant: "secondary", size: "lg" })}
-      >
+      <Link href="/forgot-password" className={buttonVariants({ variant: "secondary" })}>
         Reset password
       </Link>
     </div>

@@ -55,7 +55,7 @@ export function ForgotPasswordForm() {
                 </FieldDescription>
                 <FieldError id={`${id}-email-error`}>{error}</FieldError>
               </Field>
-              <Button type="submit" size="lg" disabled={pending}>
+              <Button type="submit" disabled={pending}>
                 Send reset link
               </Button>
             </FieldGroup>
