@@ -217,7 +217,9 @@ The 0–5 decisions extracted from a ready session, each with a question for the
 - **Indexes:** `decision_cards_user_idx (user_id) where not hidden`, matching the learner policy;
   `decision_cards_user_id_idx (user_id, id)` for service-role reads and the cascade, which include hidden cards;
   `decision_cards_session_user_idx (session_id, user_id)`, the foreign key's own columns, so a join from `sessions`
-  under RLS is one probe (see [LOAD_TEST.md](LOAD_TEST.md)).
+  under RLS is one probe (see [LOAD_TEST.md](LOAD_TEST.md));
+  `decision_cards_user_created_idx (user_id, created_at) where not hidden` for the review queue's new cards and the
+  daily cron.
 
 ### `answers`
 

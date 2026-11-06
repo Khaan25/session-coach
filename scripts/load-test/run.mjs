@@ -3,7 +3,7 @@
 // before and after a fix migration. See scripts/load-test/README.md.
 //
 //   node scripts/load-test/run.mjs --fix supabase/migrations/<fix>.sql            every tier, before and after
-//   node scripts/load-test/run.mjs --tiers 1,10 --phase before                     baseline only
+//   node scripts/load-test/run.mjs --fix <file> --tiers 1,10 --phase before --keep  baseline only, kept for after
 //   node scripts/load-test/run.mjs --fix <file> --phase after                      after, on databases kept from a before run
 //
 // It starts its own throwaway Postgres (initdb into --data-dir, port --port, 127.0.0.1 only), never the local Supabase
@@ -85,17 +85,30 @@ function startCluster() {
 const dbExists = (db) =>
   sql("postgres", `select count(*) from pg_database where datname = '${db}'`) === "1";
 
-/** The template: Supabase shim, then every migration except the fixes under test. */
+/**
+ * The template: Supabase shim, then every migration except the fixes under test. The applied list is stored as the
+ * database's comment, so a template built from another set of migrations or fixes is rebuilt, never reused.
+ */
 function buildTemplate() {
-  if (dbExists("lt_template")) return;
+  const files = readdirSync(MIGRATIONS)
+    .filter((f) => f.endsWith(".sql") && !fixNames.has(f))
+    .sort();
+  if (dbExists("lt_template")) {
+    if (
+      sql(
+        "postgres",
+        "select shobj_description(oid, 'pg_database') from pg_database where datname = 'lt_template'",
+      ) === files.join(",")
+    )
+      return;
+    log("template: migrations changed, rebuilding");
+    sql("postgres", "drop database lt_template");
+  }
   log("template: shim + migrations");
   sql("postgres", "create database lt_template");
   psql("lt_template", ["-f", join(HERE, "shim.sql")]);
-  for (const file of readdirSync(MIGRATIONS)
-    .filter((f) => f.endsWith(".sql"))
-    .sort()) {
-    if (!fixNames.has(file)) psql("lt_template", ["-f", join(MIGRATIONS, file)]);
-  }
+  for (const file of files) psql("lt_template", ["-f", join(MIGRATIONS, file)]);
+  sql("postgres", `comment on database lt_template is '${files.join(",")}'`);
 }
 
 function bench(db, tier, phase) {

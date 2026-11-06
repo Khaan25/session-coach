@@ -2,9 +2,12 @@
 -- auth.users and auth.uid(), the storage bucket table and the realtime publication. auth.uid() is Supabase's own
 -- definition, so RLS policies read the learner from request.jwt.claims exactly as they do behind PostgREST.
 
-create role anon nologin noinherit;
-create role authenticated nologin noinherit;
-create role service_role nologin noinherit bypassrls;
+-- Roles belong to the cluster, not the database, so a rebuilt template finds them already there.
+do $$ begin
+  if not exists (select from pg_roles where rolname = 'anon') then create role anon nologin noinherit; end if;
+  if not exists (select from pg_roles where rolname = 'authenticated') then create role authenticated nologin noinherit; end if;
+  if not exists (select from pg_roles where rolname = 'service_role') then create role service_role nologin noinherit bypassrls; end if;
+end $$;
 
 create schema auth;
 create table auth.users (
