@@ -1,4 +1,11 @@
-import { CalendarCheckIcon } from "@phosphor-icons/react/ssr";
+import {
+  ArrowRightIcon,
+  CalendarBlankIcon,
+  CalendarCheckIcon,
+  CardsIcon,
+  SealCheckIcon,
+} from "@phosphor-icons/react/ssr";
+import type { Icon } from "@phosphor-icons/react";
 import Link from "next/link";
 
 import { Container } from "@/components/app/container";
@@ -7,8 +14,8 @@ import { ProjectTabs } from "@/components/app/project-tabs";
 import { AnswersChart } from "@/components/progress/answers-chart";
 import { OwnershipMeter } from "@/components/progress/ownership-meter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
-import { Stat, StatDescription, StatGroup, StatLabel, StatValue } from "@/components/ui/stat";
+import { Item, ItemActions, ItemContent, ItemLink, ItemTitle } from "@/components/ui/item";
+import { Stat, StatDescription, StatLabel, StatValue } from "@/components/ui/stat";
 import type { Ownership } from "@/lib/progress/ownership";
 import {
   REVIEW_STEPS,
@@ -17,18 +24,19 @@ import {
   type ReviewStep,
 } from "@/lib/progress/progress";
 
-// /progress answers "am I making these decisions mine?": the summary line as the hero, today's task, the one chart,
-// then By project and By session. Shared by the page, its skeleton and /canvas; everything comes in as props.
+// /progress answers "am I making these decisions mine?": the summary line as the hero with today's task under it, the
+// cards per review step, the one chart, then By project and By session. Shared by the page, its skeleton and /canvas;
+// everything comes in as props.
 
 const DESCRIPTION = "How many of your decisions you can explain, and how many you own.";
 
-/** What each step means, under its count. Reviews are on day 1, 4 and 11 (gaps of 1, 3 and 7 days). */
-const stepMeans: Record<ReviewStep, string> = {
-  new: "Made from a session. Not answered yet.",
-  "day-1": "Answered once, or sent back by a miss.",
-  "day-4": "Explained on day 1.",
-  "day-11": "Explained on day 4.",
-  mastered: "Explained again on day 11.",
+/** Each step's icon and what it means, short enough for a 2-column phone grid. Reviews are on day 1, 4 and 11. */
+const stepMeta: Record<ReviewStep, { icon: Icon; means: string }> = {
+  new: { icon: CardsIcon, means: "Not answered yet" },
+  "day-1": { icon: CalendarBlankIcon, means: "Answered once, or missed" },
+  "day-4": { icon: CalendarBlankIcon, means: "Explained on day 1" },
+  "day-11": { icon: CalendarBlankIcon, means: "Explained on day 4" },
+  mastered: { icon: SealCheckIcon, means: "Explained on day 11" },
 };
 
 /** Everything the page shows. */
@@ -67,57 +75,89 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
     : ownership.overall;
   const body = (
     <>
-      <section>
-        <p className="type-stat-xl text-text-1">
-          {`${counts.total} cards · ${counts.explained} explained · ${counts.owned} owned`}
+      <section className="flex flex-col gap-4">
+        {/* Each count keeps its word on the line, so a phone breaks between them, never inside one. */}
+        <p className="type-stat text-text-1 sm:type-stat-lg">
+          <span className="whitespace-nowrap">{`${counts.total} cards`}</span>
+          {" · "}
+          <span className="whitespace-nowrap">{`${counts.explained} explained`}</span>
+          {" · "}
+          <span className="whitespace-nowrap">{`${counts.owned} owned`}</span>
         </p>
+        <TodayBanner dueToday={dueToday} dueOnDay11={dueOnDay11} allProjects={repo !== null} />
       </section>
 
-      <TodayBanner dueToday={dueToday} dueOnDay11={dueOnDay11} allProjects={repo !== null} />
+      <section className="flex flex-col gap-4">
+        <SectionTitle count={progress.totalCards}>Cards by step</SectionTitle>
+        {/* Equal cards, one per step: two across on a phone, three on a tablet, all five from lg. */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {REVIEW_STEPS.map((step) => {
+            const { icon: StepIcon, means } = stepMeta[step];
+            return (
+              <Stat key={step} variant="framed">
+                <div className="flex items-center justify-between gap-2 text-text-3">
+                  <StatLabel>{stepLabels[step]}</StatLabel>
+                  <StepIcon aria-hidden />
+                </div>
+                <StatValue>{progress.steps[step]}</StatValue>
+                <StatDescription>{means}</StatDescription>
+              </Stat>
+            );
+          })}
+        </div>
+      </section>
 
       <Card>
+        <CardHeader>
+          <CardTitle skullet-own="">
+            <h2>Answers per day</h2>
+          </CardTitle>
+        </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-6">
-            <StatGroup variant="plain">
-              {REVIEW_STEPS.map((step) => (
-                <Stat key={step}>
-                  <StatLabel>{stepLabels[step]}</StatLabel>
-                  <StatValue>{progress.steps[step]}</StatValue>
-                  <StatDescription>{stepMeans[step]}</StatDescription>
-                </Stat>
-              ))}
-            </StatGroup>
-            <AnswersChart data={progress.answersPerDay} />
-          </div>
+          <AnswersChart data={progress.answersPerDay} />
         </CardContent>
       </Card>
 
       {ownership.repos.length > 0 && (
-        <OwnershipMeter ownership={ownership} title="By project" path="/progress" />
+        <OwnershipMeter
+          ownership={ownership}
+          title={
+            <>
+              By project <Count n={ownership.repos.length} />
+            </>
+          }
+          path="/progress"
+        />
       )}
 
       <Card>
         <CardHeader>
           <CardTitle skullet-own="">
-            <h2>By session</h2>
+            <h2>
+              By session <Count n={progress.bySession.length} />
+            </h2>
           </CardTitle>
         </CardHeader>
-        <ItemGroup aria-label="Cards by session">
+        {/* A plain list, not an ItemGroup: rows straight in the card share its frame and rules, no inset panel. */}
+        <ul aria-label="Cards by session">
           {progress.bySession.map(({ id, title, mastered, total }) => (
-            // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
-            <Item key={id} role="listitem">
+            <Item key={id} render={<li />}>
               <ItemContent>
                 <ItemTitle>
-                  <Link href={`/s/${id}`}>{title}</Link>
+                  <ItemLink render={<Link href={`/s/${id}`} />}>{title}</ItemLink>
                 </ItemTitle>
-                <ItemDescription>
-                  {mastered} of {total} cards owned
-                </ItemDescription>
               </ItemContent>
+              <ItemContent>
+                <span className="type-body-sm text-text-2">
+                  {mastered} of {total} cards owned
+                </span>
+              </ItemContent>
+              <ItemActions>
+                <ArrowRightIcon aria-hidden className="text-text-3 rtl:-scale-x-100" />
+              </ItemActions>
             </Item>
           ))}
-        </ItemGroup>
+        </ul>
       </Card>
     </>
   );
@@ -149,6 +189,18 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
         body
       )}
     </Container>
+  );
+}
+
+/** A section's count, muted, after its title on the same line. */
+const Count = ({ n }: { n: number }) => <span className="data text-text-3">{n}</span>;
+
+/** A section's h2 outside a card: the title, then its count. */
+function SectionTitle({ count, children }: { count: number; children: React.ReactNode }) {
+  return (
+    <h2 className="type-heading-xs text-text-1">
+      {children} <Count n={count} />
+    </h2>
   );
 }
 
