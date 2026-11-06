@@ -17,11 +17,8 @@ const FOOTER_LINKS = [
 /**
  * Signed-out screens: one centred column with the brand at the top and the footer links at the bottom. Only the
  * brand, never the marketing nav or the account menu.
- *
- * @param art - shortcut: only /canvas still passes the old scene art (canvas/previews/frames.tsx); drop the prop and
- * auth-art.tsx once the canvas stops.
  */
-export function AuthShell({ art, children }: { art?: React.ReactNode; children: React.ReactNode }) {
+export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative isolate flex min-h-full flex-1 overflow-hidden bg-page">
       {/* The bloom: a brand-blue glow centred on the top edge, fading to the page by two thirds down. */}
@@ -57,7 +54,6 @@ export function AuthShell({ art, children }: { art?: React.ReactNode; children: 
           </ul>
         </footer>
       </div>
-      {art}
     </div>
   );
 }

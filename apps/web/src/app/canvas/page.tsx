@@ -10,12 +10,12 @@ import { dailyReviewCopy } from "@/lib/email/daily-review";
 import { siteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Ideas canvas",
+  title: "UI flow canvas",
   robots: { index: false },
 };
 
 /**
- * /canvas: every screen and state of the app, live and side by side, for the team and the demo. Synthetic data only,
+ * /canvas: the app's UI flow, one row per stage, every screen live, for the team and the demo. Synthetic data only,
  * so it is safe to serve on production; it stays out of search results. The landing page and the daily email render
  * here, on the server, and go down to the client canvas as finished screens.
  */

@@ -8,16 +8,7 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
 // /cli/approve's answers other than the pending question (approve-request.tsx): the code form, and one notice that says
-// what happened and what to do. The page renders them inside the auth card ((standalone)/layout.tsx); /canvas shares them.
-
-/** One narrow column, centred like the auth pages. shortcut: only /canvas uses it; the page sits in AuthShell. Drop it with the canvas. */
-export function ApproveColumn({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
-      {children}
-    </div>
-  );
-}
+// what happened and what to do. The page renders them inside the auth card ((standalone)/layout.tsx).
 
 /** The code form: a plain GET back to the page, so it works before any JavaScript loads. */
 export function ApproveCodeForm({ code, error }: { code?: string; error?: string }) {
