@@ -2,6 +2,8 @@
 
 import { createContext, use, useId, useState } from "react";
 import Link from "next/link";
+
+import { Sprite } from "@/components/art/sprite";
 import type { Evidence } from "@session-coach/shared/decision";
 
 import { ScoreBadge, type Score } from "@/components/app/score-badge";
@@ -201,6 +203,7 @@ export function QuizResult({
       {/* Top-down: the score, what was missing, the why and the model answer, the evidence, then the next step. */}
       <Card size="lg">
         <CardHeader>
+          <Sprite name="explain" className="w-16" />
           <CardTitle>
             <h2 ref={headingRef} tabIndex={-1}>
               {skipped ? "Here's the why" : "Your result"}

@@ -28,13 +28,15 @@ function SectionHeading({ id, title, lead }: { id: string; title: string; lead: 
 export function Hero() {
   return (
     <section aria-labelledby="hero-title" className="relative isolate overflow-x-clip">
-      {/* Small watercolour desk objects in the white space either side of the copy, wide screens only. */}
+      {/* The learning loop as six watercolour objects in the white space, wide screens only: down the left, send a
+          session, the evidence, explain it; down the right, the review days, own it, defend it. */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden lg:block">
-        <Sprite name="tea" className="absolute top-28 left-1/12 w-16 -rotate-6" />
-        <Sprite name="pencil" className="absolute top-72 left-1/6 w-20 rotate-12" />
-        <Sprite name="letter" className="absolute top-24 right-1/12 w-20 rotate-6" />
-        <Sprite name="plant" className="absolute top-64 right-1/20 w-14" />
-        <Sprite name="cards" className="absolute top-104 right-1/6 w-16 -rotate-3" />
+        <Sprite name="laptop" className="absolute top-20 left-1/12 w-20 -rotate-3" />
+        <Sprite name="evidence" className="absolute top-60 left-1/20 w-20 rotate-3" />
+        <Sprite name="explain" className="absolute top-100 left-1/10 w-20 -rotate-6" />
+        <Sprite name="calendar" className="absolute top-20 right-1/12 w-18 rotate-3" />
+        <Sprite name="owned" className="absolute top-60 right-1/20 w-20 -rotate-3" />
+        <Sprite name="hourglass" className="absolute top-96 right-1/10 w-14 rotate-6" />
       </div>
       <div className={`${section} items-center gap-6 pt-16 text-center sm:pt-24`}>
         <h1 id="hero-title" className="type-display text-balance text-text-1 sm:type-display-xl">
@@ -62,24 +64,24 @@ export function Hero() {
           </p>
         </div>
       </div>
-      {/* The team's own watercolour scene in place of the product shot: the learner at work, the agent beside them. */}
-      <div className="relative mx-auto mt-8 w-full max-w-(--container) px-(--gutter-sm) sm:px-(--gutter)">
+      {/* The team's two characters in watercolour: the learner at work in a meadow, the agent beside them with a card. */}
+      <div className="mx-auto mt-4 w-full max-w-(--container) px-(--gutter-sm) sm:px-(--gutter)">
         <Image
-          src="/art/companion/engineer-meadow.webp"
-          alt="A developer sitting cross-legged in a meadow, working on a laptop."
-          width={2172}
-          height={724}
+          src="/art/hero-meadow.webp"
+          alt="A developer sitting cross-legged in a meadow, working on a laptop, with a small friendly robot holding a card beside them."
+          width={1903}
+          height={465}
           sizes="(min-width: 1120px) 1072px, 100vw"
           preload
-          className="h-auto w-full"
+          className="h-auto w-full dark:hidden"
         />
         <Image
-          src="/art/companion/agent.webp"
-          alt="A small friendly robot holding a decision card."
-          width={1312}
-          height={1199}
-          sizes="(min-width: 640px) 160px, 96px"
-          className="absolute right-1/5 bottom-4 h-auto w-24 sm:w-40"
+          src="/art/hero-meadow-night.webp"
+          alt="A developer sitting cross-legged in a meadow, working on a laptop, with a small friendly robot holding a card beside them."
+          width={1903}
+          height={465}
+          sizes="(min-width: 1120px) 1072px, 100vw"
+          className="hidden h-auto w-full dark:block"
         />
       </div>
     </section>

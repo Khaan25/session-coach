@@ -5,6 +5,7 @@ import {
   CardsIcon,
   SealCheckIcon,
 } from "@phosphor-icons/react/ssr";
+import { Sprite } from "@/components/art/sprite";
 import type { Icon } from "@phosphor-icons/react";
 import Link from "next/link";
 
@@ -84,6 +85,7 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
   const body = (
     <>
       <section className="flex flex-col gap-4">
+        {counts.owned > 0 && <Sprite name="owned" className="w-16" />}
         {/* Each count keeps its word on the line, so a phone breaks between them, never inside one. */}
         <p className="type-stat text-text-1 sm:type-stat-lg">
           <span className="whitespace-nowrap">{`${counts.total} cards`}</span>
