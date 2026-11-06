@@ -20,7 +20,7 @@ export function DecisionCard({ card }: { card: CardView }) {
     // The decision over its card, as an unanswered one is laid out, so the list reads the same either way.
     <section aria-label={decision} className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h2 className="type-heading-sm">{decision}</h2>
+        <h2 className="type-heading-xs">{decision}</h2>
         {flagged && (
           <Badge
             status="warn"
@@ -113,7 +113,7 @@ export function DecisionCard({ card }: { card: CardView }) {
 export function LockedDecisionCard({ card }: { card: CardHead }) {
   return (
     <section aria-label={card.decision} className="flex flex-col gap-3">
-      <h2 className="type-heading-sm">{card.decision}</h2>
+      <h2 className="type-heading-xs">{card.decision}</h2>
       <QuizForm cardId={card.id} question={card.question} nextHref={null} />
     </section>
   );

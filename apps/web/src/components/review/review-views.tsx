@@ -39,7 +39,7 @@ export function QueueList({ queue }: { queue: QueueCard[] }) {
         {/* skullet-own: static text stays real in the skeleton; only the queue is drawn as bars. */}
         <h2 skullet-own="" className="flex items-baseline gap-2 type-heading-xs">
           Due today
-          <span className="type-body-sm text-text-2">{queue.length}</span>
+          <span className="data type-body-sm text-text-3">{queue.length}</span>
         </h2>
         {first && (
           <Link
