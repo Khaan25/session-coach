@@ -7,42 +7,35 @@ import {
   Heading,
   Hr,
   Html,
-  Img,
   Link,
   Preview,
   Section,
   Text,
 } from "react-email";
 
-import { color, font } from "./brand";
+import { color, font, primaryButton } from "./brand";
 
-// The auth emails Supabase sends (./auth), in the daily review email's look. They're exported to
+// The auth emails Supabase sends (./auth), in the app's look: neutral paper, one brand-blue button, no illustration. They're exported to
 // supabase/templates/*.html, so the links and the address are Supabase's Go template tags, such as {{ .TokenHash }},
 // filled in when Supabase sends. {{ .SiteURL }} is the project's Site URL: localhost locally, coach.ziaa.me in
 // production.
 
-/** Where the illustration is served from; the daily review email uses the same file. */
-const CARDS = "{{ .SiteURL }}/email/cards.png";
-
 /**
- * The frame every email shares: brand line, a paper card with the illustration and heading, then a rule and a footer
- * line. The auth emails and the daily review fill it.
+ * The frame every email shares: brand line, a paper card with the heading, then a rule and a footer line. The auth
+ * emails and the daily review fill it. public/email/cards.png stays on the site for emails already sent.
  *
  * @param preview - The inbox preview line.
- * @param image - The illustration's URL.
  * @param heading - The card's heading.
  * @param children - The card's body, under the heading.
  * @param footer - The footer line's content.
  */
 export function EmailShell({
   preview,
-  image,
   heading,
   children,
   footer,
 }: {
   preview: string;
-  image: string;
   heading: string;
   children: React.ReactNode;
   footer: React.ReactNode;
@@ -56,7 +49,15 @@ export function EmailShell({
       <Preview>{preview}</Preview>
       <Body style={{ margin: 0, backgroundColor: color.canvas, fontFamily: font }}>
         <Container style={{ maxWidth: 520, margin: "0 auto", padding: "40px 16px" }}>
-          <Text style={{ margin: "0 0 16px", fontSize: 14, lineHeight: "20px", color: color.ink }}>
+          <Text
+            style={{
+              margin: "0 0 16px",
+              fontSize: 14,
+              lineHeight: "20px",
+              fontWeight: 600,
+              color: color.ink,
+            }}
+          >
             Session Coach
           </Text>
           <Section
@@ -67,21 +68,14 @@ export function EmailShell({
               padding: "32px 32px 28px",
             }}
           >
-            <Img
-              src={image}
-              width={96}
-              height={80}
-              alt=""
-              style={{ display: "block", margin: "0 0 20px" }}
-            />
             <Heading
               as="h1"
               style={{
                 margin: "0 0 12px",
-                fontSize: 28,
-                lineHeight: "34px",
-                fontWeight: 400,
-                letterSpacing: "-0.01em",
+                fontSize: 22,
+                lineHeight: "28px",
+                fontWeight: 600,
+                letterSpacing: "-0.02em",
                 color: color.ink,
               }}
             >
@@ -127,23 +121,9 @@ export function AuthEmail({
   footer: string;
 }) {
   return (
-    <EmailShell preview={preview} image={CARDS} heading={heading} footer={footer}>
+    <EmailShell preview={preview} heading={heading} footer={footer}>
       {children}
-      <Button
-        href={href}
-        style={{
-          display: "inline-block",
-          margin: "4px 0 0",
-          backgroundColor: color.ink,
-          color: color.paper,
-          borderRadius: 8,
-          padding: "12px 20px",
-          fontSize: 15,
-          lineHeight: "20px",
-          fontWeight: 500,
-          textDecoration: "none",
-        }}
-      >
+      <Button href={href} style={{ ...primaryButton, margin: "4px 0 0" }}>
         {cta}
       </Button>
       <Text style={{ margin: "24px 0 0", fontSize: 13, lineHeight: "19px", color: color.text3 }}>
