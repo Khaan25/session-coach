@@ -4,11 +4,11 @@ import { Container } from "@/components/app/container";
 import { AppPageHeader } from "@/components/app/page-header";
 import { LoadErrorState } from "@/components/errors/load-error-state";
 
-// Keeps the page's title and reading column, so the learner still knows where they are, over the framed load error.
+// Keeps the page's title and width, so the learner still knows where they are, over the framed load error.
 export default function CardError({ error, retry }: { error: unknown; retry: () => void }) {
   return (
     <Container>
-      <div className="mx-auto flex w-full max-w-(--measure) flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <AppPageHeader title="Explain it back" />
         <LoadErrorState error={error} retry={retry} noun="this card" />
       </div>

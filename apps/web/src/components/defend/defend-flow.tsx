@@ -265,9 +265,9 @@ export function DefendFlow({ defendable }: { defendable: number }) {
   );
 }
 
-/** The one focused column every step sits in: the reading measure, the same column as a review card. */
+/** The column every step sits in: the app container width, like every other page. */
 export function DefendColumn({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto flex w-full max-w-(--measure) flex-col gap-8">{children}</div>;
+  return <div className="flex flex-col gap-8">{children}</div>;
 }
 
 /** Before the clock: what this is, the three rules, and Start. */

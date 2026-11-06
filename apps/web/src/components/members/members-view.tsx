@@ -48,7 +48,7 @@ export function MembersView({
 }) {
   const id = useId();
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <Item variant="muted">
         <ItemMedia variant="icon">
           <InfoIcon aria-hidden />

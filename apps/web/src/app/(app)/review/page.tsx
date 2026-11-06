@@ -18,8 +18,8 @@ export default function ReviewPage() {
   return (
     <CardTransition>
       <Container>
-        {/* One reading column, the same as each card's, so moving along the queue keeps its place. */}
-        <div className="mx-auto flex w-full max-w-(--measure) flex-col gap-6">
+        {/* The container width every app page shares, so moving along the queue keeps its place. */}
+        <div className="flex flex-col gap-6">
           <ReviewHeader />
           {/* Skullet measures the real queue, drawn from sample cards, so each row keeps its shape when the data lands.
             The queue length isn't known until then, so the list can still grow or shrink. */}

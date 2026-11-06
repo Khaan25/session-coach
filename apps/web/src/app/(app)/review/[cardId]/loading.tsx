@@ -8,7 +8,7 @@ import { QuizView } from "@/components/review/review-views";
 export default function CardLoading() {
   return (
     <Container>
-      <div className="mx-auto flex w-full max-w-(--measure) flex-col gap-6">
+      <div className="flex flex-col gap-6">
         <MeasuredSkeleton label="Loading the card">
           <QuizView card={SAMPLE_QUIZ_CARD} nextHref={null} />
         </MeasuredSkeleton>
