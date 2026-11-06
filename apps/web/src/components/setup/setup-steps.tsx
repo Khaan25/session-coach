@@ -11,7 +11,7 @@ import { Code, CodeBlock } from "@/components/ui/code-block";
 export type SetupProgress = { device: string | null; sessions: number | null };
 
 /**
- * /setup's by-hand path: sign in, turn on the hook, push, then what happens next. Each step says what it does and
+ * /setup's by-hand path: sign in, turn on the hook, push, then one line on what happens next. Each step says what it does and
  * why before its command. Steps the page can see are marked done: a connected device (1) and an uploaded session (3).
  * The hook (2) lives on the learner's disk, so it is never marked.
  */
@@ -80,30 +80,14 @@ export function SetupSteps({ progress }: { progress?: SetupProgress }) {
               </p>
             )}
           </Step>
-
-          <Step
-            number={4}
-            title="What happens next"
-            what="Within a few minutes the session becomes up to 5 decision cards on your dashboard, one for each real choice your agent made."
-          >
-            <ul className="flex list-disc flex-col gap-2 ps-5 type-body text-text-2">
-              <li>
-                Explain each card in your own words before you see the why. A model grades the
-                answer 0, 1 or 2.
-              </li>
-              <li>
-                Each card comes back on days 1, 4 and 11. Pass the day-11 review and the decision is
-                owned.
-              </li>
-              <li>Defend it, a harder follow-up question on an explained card, is optional.</li>
-            </ul>
-            <p>
-              <Link href="/dashboard" className={buttonVariants({ variant: "link" })}>
-                Go to the dashboard
-              </Link>
-            </p>
-          </Step>
         </ol>
+        <p className="mt-8 type-body text-text-2">
+          Within a few minutes the session becomes up to 5 decision cards on your{" "}
+          <Link href="/dashboard" className={buttonVariants({ variant: "link" })}>
+            dashboard
+          </Link>
+          , one for each real choice your agent made.
+        </p>
       </CardContent>
     </Card>
   );

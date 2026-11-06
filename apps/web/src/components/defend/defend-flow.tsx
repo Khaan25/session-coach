@@ -30,12 +30,9 @@ export const PASTE_OFF = "Paste is off in Defend it. Type it in your own words."
 const PASTE_NOTE_MS = 4000;
 /** Shown once, before the clock starts; while it runs each control carries one line instead. */
 const RULES = [
-  {
-    title: "One decision you've explained",
-    body: "A card you scored 2 on in a review, picked at random.",
-  },
-  { title: "3 minutes, then 2 more", body: "One answer, then one follow-up the AI asks from it." },
-  { title: "Your own words", body: "Paste is off. At 0:00 what you typed is sent." },
+  "One card you scored 2 on, picked at random.",
+  "3 minutes to answer, then 2 for one AI follow-up.",
+  "Your own words: paste is off, and at 0:00 what you typed is sent.",
 ];
 
 /** The card being defended: learner-readable columns only, never the why or the answer key. */
@@ -294,17 +291,11 @@ export function DefendStart({
           against the clock.
         </p>
       </div>
-      <ol className="flex flex-col gap-4">
-        {RULES.map((rule, i) => (
-          <li key={rule.title} className="flex gap-3">
-            <span className="type-label text-text-2 tabular-nums">{i + 1}</span>
-            <span className="flex flex-col gap-1">
-              <span className="type-label">{rule.title}</span>
-              <span className="type-body-sm text-text-2">{rule.body}</span>
-            </span>
-          </li>
+      <ul className="flex flex-col gap-1 type-body-sm text-text-2">
+        {RULES.map((rule) => (
+          <li key={rule}>{rule}</li>
         ))}
-      </ol>
+      </ul>
       <div className="flex flex-col gap-2">
         <div>
           <Button onClick={onStart} disabled={pending}>

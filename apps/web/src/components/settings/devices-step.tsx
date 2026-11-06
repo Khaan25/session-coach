@@ -27,7 +27,6 @@ export function DevicesStep({ devices }: { devices: DeviceListRow[] | null }) {
   const [rows, setRows] = useState(devices);
   return (
     <ChecklistStep
-      n={5}
       title="Devices"
       changes="Each device is the CLI token it signed in with. Disconnect revokes that token: the computer can't push until you run npx session-coach login there again."
       done={rows ? rows.length > 0 : undefined}

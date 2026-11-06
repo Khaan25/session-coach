@@ -14,7 +14,6 @@ import type { ProjectListItem } from "@/lib/projects/queries";
 export function ProjectsCard({ projects }: { projects: ProjectListItem[] | null }) {
   return (
     <ChecklistStep
-      n={4}
       title="Question level per project"
       changes="Applies to sessions processed after the change. Cards you already have keep their questions."
       done={projects?.length ? projects.every((project) => project.onboarded) : undefined}

@@ -61,9 +61,8 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
           .finally(() => setPending(false));
       }}
     >
-      <ol className="flex flex-col gap-8">
+      <div className="flex flex-col gap-8">
         <ChecklistStep
-          n={1}
           title="Your name"
           changes="Shown in your account menu."
           done={Boolean(profile.display_name)}
@@ -87,7 +86,6 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
           </Field>
         </ChecklistStep>
         <ChecklistStep
-          n={2}
           title="Time zone"
           changes="Your day starts at midnight here, so it decides which day a card is due."
           // UTC is the column's default, so it may never have been chosen.
@@ -115,7 +113,6 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
           </Field>
         </ChecklistStep>
         <ChecklistStep
-          n={3}
           title="Daily reminder"
           changes="Cards come back on day 1, 4 and 11. The email tells you when one is due."
           done
@@ -135,13 +132,12 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
             />
           </Field>
         </ChecklistStep>
-      </ol>
-      {/* One save for steps 1 to 3: they are one row in profiles, saved by one Server Action. */}
+      </div>
+      {/* One save for the three sections above: they are one row in profiles, saved by one Server Action. */}
       <div className="mt-4 flex flex-wrap items-center gap-3 md:ms-auto md:w-2/3">
         <Button type="submit" disabled={pending}>
           Save profile
         </Button>
-        <p className="type-body-sm text-text-2">Saves steps 1 to 3.</p>
       </div>
     </form>
   );

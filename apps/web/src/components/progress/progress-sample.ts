@@ -26,46 +26,6 @@ export const SAMPLE_PROGRESS: ProgressPageData = {
   },
   dueToday: 3,
   dueOnDay11: 1,
-  path: {
-    decision: "Rate limit uploads per CLI token",
-    session: "Add rate limiting to the upload route",
-    stops: [
-      {
-        date: "Oct 23",
-        what: "Made from your session",
-        step: "New",
-        outcome: "Waiting for your first answer.",
-      },
-      {
-        date: "Oct 23",
-        what: "First answer",
-        score: 1,
-        step: "Day 1",
-        outcome: "Partly, so it starts on day 1: due Oct 24.",
-      },
-      {
-        date: "Oct 24",
-        what: "Day 1 review",
-        score: 2,
-        step: "Day 4",
-        outcome: "Explained, so it moves up to day 4: due Oct 27.",
-      },
-      {
-        date: "Oct 27",
-        what: "Day 4 review",
-        score: 2,
-        step: "Day 11",
-        outcome: "Explained, so it moves up to day 11: due today.",
-      },
-    ],
-    next: {
-      date: "Today",
-      what: "Day 11 review",
-      outcome:
-        "Explain it now and it becomes owned. Partly or Missed sends it back to day 4, due tomorrow.",
-      dueToday: true,
-    },
-  },
   repo: null,
   repos: null,
 };

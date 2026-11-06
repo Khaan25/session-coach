@@ -196,97 +196,106 @@ export function QuizResult({
   headingRef?: React.Ref<HTMLHeadingElement>;
 }) {
   return (
-    <Card size="lg">
-      <CardHeader>
-        <CardTitle>
-          <h2 ref={headingRef} tabIndex={-1}>
-            {skipped ? "Here's the why" : "Your result"}
-          </h2>
-        </CardTitle>
-        {skipped ? (
-          <CardDescription>
-            Not knowing yet is fine. This card comes back tomorrow at the same level.
-          </CardDescription>
-        ) : (
-          grade.dropped && (
-            <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
-          )
-        )}
-      </CardHeader>
-      <CardContent>
-        <DataList>
-          {!skipped && (
-            <>
-              <DataListItem>
-                <DataListLabel>Score</DataListLabel>
-                <DataListValue>
-                  <ScoreBadge score={grade.score} />
-                </DataListValue>
-              </DataListItem>
-              <DataListItem>
-                <DataListLabel>Your answer</DataListLabel>
-                <DataListValue>{answer.trim()}</DataListValue>
-              </DataListItem>
-              <DataListItem>
-                <DataListLabel>What was missing</DataListLabel>
-                <DataListValue>{grade.missing || "Nothing"}</DataListValue>
-              </DataListItem>
-            </>
+    // motion-safe: the reduced-motion reset only reaches [data-slot] parts, and this wrapper has none.
+    <div className="motion-safe:animate-enter">
+      <Card size="lg">
+        <CardHeader>
+          <CardTitle>
+            <h2 ref={headingRef} tabIndex={-1}>
+              {skipped ? "Here's the why" : "Your result"}
+            </h2>
+          </CardTitle>
+          {skipped ? (
+            <CardDescription>
+              Not knowing yet is fine. This card comes back tomorrow at the same level.
+            </CardDescription>
+          ) : (
+            grade.dropped && (
+              <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
+            )
           )}
-          <DataListItem>
-            <DataListLabel>Why</DataListLabel>
-            <DataListValue>{grade.why}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Model answer</DataListLabel>
-            <DataListValue>{grade.modelAnswer}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Next review</DataListLabel>
-            <DataListValue>
-              {grade.nextDue ? (
-                <time dateTime={grade.nextDue}>{formatDue(grade.nextDue)}</time>
-              ) : (
-                "None: you've mastered this card"
-              )}
-            </DataListValue>
-          </DataListItem>
-        </DataList>
-      </CardContent>
-      <ItemGroup aria-label="Evidence">
-        {grade.evidence.map((item) => (
-          // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-          // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
-          <Item key={`${item.event_index}-${item.quote}`} role="listitem">
-            <ItemContent>
-              <blockquote className="type-body text-text-1">&ldquo;{item.quote}&rdquo;</blockquote>
-              <ItemDescription>
-                <span className="flex flex-wrap items-center gap-2">
-                  <span>Event E{item.event_index}</span>
-                  {item.file && (
-                    <Code>
-                      {item.lines ? `${item.file}:${item.lines[0]}-${item.lines[1]}` : item.file}
-                    </Code>
-                  )}
-                </span>
-              </ItemDescription>
-            </ItemContent>
-          </Item>
-        ))}
-      </ItemGroup>
-      <CardFooter>
-        <div className="flex flex-wrap gap-3">
-          {nextHref && (
-            <Link href={nextHref} className={buttonVariants()}>
-              Next card
+        </CardHeader>
+        <CardContent>
+          <DataList>
+            {!skipped && (
+              <>
+                <DataListItem>
+                  <DataListLabel>Score</DataListLabel>
+                  <DataListValue>
+                    <ScoreBadge score={grade.score} />
+                  </DataListValue>
+                </DataListItem>
+                <DataListItem>
+                  <DataListLabel>Your answer</DataListLabel>
+                  <DataListValue>{answer.trim()}</DataListValue>
+                </DataListItem>
+                <DataListItem>
+                  <DataListLabel>What was missing</DataListLabel>
+                  <DataListValue>{grade.missing || "Nothing"}</DataListValue>
+                </DataListItem>
+              </>
+            )}
+            <DataListItem>
+              <DataListLabel>Why</DataListLabel>
+              <DataListValue>{grade.why}</DataListValue>
+            </DataListItem>
+            <DataListItem>
+              <DataListLabel>Model answer</DataListLabel>
+              <DataListValue>{grade.modelAnswer}</DataListValue>
+            </DataListItem>
+            <DataListItem>
+              <DataListLabel>Next review</DataListLabel>
+              <DataListValue>
+                {grade.nextDue ? (
+                  <time dateTime={grade.nextDue}>{formatDue(grade.nextDue)}</time>
+                ) : (
+                  "None: you've mastered this card"
+                )}
+              </DataListValue>
+            </DataListItem>
+          </DataList>
+        </CardContent>
+        <ItemGroup aria-label="Evidence">
+          {grade.evidence.map((item) => (
+            // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
+            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+            <Item key={`${item.event_index}-${item.quote}`} role="listitem">
+              <ItemContent>
+                <blockquote className="type-body text-text-1">
+                  &ldquo;{item.quote}&rdquo;
+                </blockquote>
+                <ItemDescription>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span>Event E{item.event_index}</span>
+                    {item.file && (
+                      <Code>
+                        {item.lines ? `${item.file}:${item.lines[0]}-${item.lines[1]}` : item.file}
+                      </Code>
+                    )}
+                  </span>
+                </ItemDescription>
+              </ItemContent>
+            </Item>
+          ))}
+        </ItemGroup>
+        <CardFooter>
+          <div className="flex flex-wrap gap-3">
+            {nextHref && (
+              <Link href={nextHref} transitionTypes={["forward"]} className={buttonVariants()}>
+                Next card
+              </Link>
+            )}
+            <Link
+              href="/review"
+              transitionTypes={["back"]}
+              className={buttonVariants({ variant: "secondary" })}
+            >
+              Back to the queue
             </Link>
-          )}
-          <Link href="/review" className={buttonVariants({ variant: "secondary" })}>
-            Back to the queue
-          </Link>
-        </div>
-      </CardFooter>
-    </Card>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
 
