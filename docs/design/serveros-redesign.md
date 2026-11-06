@@ -1,6 +1,6 @@
 # Serveros-style redesign: page jobs and cuts
 
-The brief is in `prompts/001-serveros-style-redesign.md`. Every page gets one job, written as the question it answers. An element stays only if it serves that job or an e2e spec depends on it.
+Every page gets one job, written as the question it answers. An element stays only if it serves that job or an e2e spec depends on it.
 
 "Keep (e2e)" marks text or controls that specs assert on. Their names and roles stay exactly as they are. "Cut" means delete. "Move" means the element goes to the page where it does serve the job. Zia can veto any cut in the PR.
 
