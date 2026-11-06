@@ -84,12 +84,14 @@ function AlertDialogContent({
         data-slot="alert-dialog-content"
         data-size={size}
         className={cn(
-          "group/alert-dialog-content fixed inset-s-1/2 top-1/2 z-(--z-overlay) flex max-h-[calc(100%-var(--gutter-sm)*2)] w-[calc(100%-var(--gutter-sm)*2)] -translate-x-1/2 -translate-y-1/2 flex-col data-[size=default]:max-w-overlay-sm data-[size=sm]:max-w-popover rtl:translate-x-1/2",
+          // Centred by inset-0 and auto margins, not translate: tw-animate's enter keyframes animate translate, so a centring
+          // translate was overwritten on the first frame and the popup slid in from the bottom right.
+          "group/alert-dialog-content fixed inset-0 z-(--z-overlay) m-auto flex h-fit max-h-[calc(100%-var(--gutter-sm)*2)] w-[calc(100%-var(--gutter-sm)*2)] flex-col data-[size=default]:max-w-overlay-sm data-[size=sm]:max-w-popover",
           // A tall alert on a short screen scrolls instead of running past the viewport edges.
           "overflow-y-auto overscroll-contain",
           overlayShellSurface,
           "duration-(--dur-200) ease-out-quint data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:duration-(--dur-150) data-closed:fade-out-0 data-closed:zoom-out-95",
-          "top-[calc(50%+1.25rem*var(--nested-dialogs,0))] scale-[calc(1-0.1*var(--nested-dialogs,0))] transition-[top,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-(--dur-200) data-nested-dialog-open:after:opacity-100",
+          "top-[calc(2.5rem*var(--nested-dialogs,0))] scale-[calc(1-0.1*var(--nested-dialogs,0))] transition-[top,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-(--dur-200) data-nested-dialog-open:after:opacity-100",
           className,
         )}
         {...props}
