@@ -185,17 +185,17 @@
   --type-display-lg: 500 44px/48px var(--font-sans); /* section heads, line-height 1.09 | marketing sections */
   --type-display: 500 36px/40px var(--font-sans); /* mobile hero, page titles with stats | app page title, docs H1 */
   --type-heading-lg: 500 28px/32px var(--font-sans); /* page titles | docs H1 on mobile, settings title */
-  --type-heading: 500 22px/28px var(--font-sans); /* panel and section titles | docs H2, dialog title */
-  --type-heading-sm: 500 18px/24px var(--font-sans); /* subsection titles | docs H3, card title */
-  --type-heading-xs: 500 16px/20px var(--font-sans); /* in-thread headings | response ## */
-  --type-body-lg: 400 17px/26px var(--font-sans); /* marketing and docs prose, line-height 1.5 | docs lede */
-  --type-body: 400 14px/20px var(--font-sans); /* app prose | descriptions, table text */
-  --type-body-sm: 400 13px/18px var(--font-sans); /* dense meta, a step heavier than body so meta on text-3 still reads | captions, helper text */
-  --type-button: 500 14px/18px var(--font-sans); /* default and large button label | button */
-  --type-label: 500 13px/16px var(--font-sans); /* controls and table cells | input, menu item, tab */
-  --type-label-sm: 500 12px/16px var(--font-sans); /* small tags, column heads | badge, table head */
-  --type-code: 400 13px/20px var(--font-mono); /* code blocks | code block, log line */
-  --type-code-sm: 400 12px/16px var(--font-mono); /* IDs, ordinals, paths in tables | inline code, kbd */
+  --type-heading: 500 24px/30px var(--font-sans); /* panel and section titles | docs H2, dialog title */
+  --type-heading-sm: 500 19px/26px var(--font-sans); /* subsection titles | docs H3, card title */
+  --type-heading-xs: 500 17px/22px var(--font-sans); /* in-thread headings | response ## */
+  --type-body-lg: 400 18px/28px var(--font-sans); /* marketing and docs prose, line-height 1.5 | docs lede */
+  --type-body: 400 15px/22px var(--font-sans); /* app prose | descriptions, table text */
+  --type-body-sm: 400 14px/20px var(--font-sans); /* dense meta, a step heavier than body so meta on text-3 still reads | captions, helper text */
+  --type-button: 500 15px/20px var(--font-sans); /* default and large button label | button */
+  --type-label: 500 14px/18px var(--font-sans); /* controls and table cells | input, menu item, tab */
+  --type-label-sm: 500 13px/16px var(--font-sans); /* small tags, column heads | badge, table head */
+  --type-code: 400 14px/22px var(--font-mono); /* code blocks | code block, log line */
+  --type-code-sm: 400 13px/18px var(--font-mono); /* IDs, ordinals, paths in tables | inline code, kbd */
   --type-tag: var(
     --type-code-sm
   ); /* ids, methods, status codes and paths in a row or a code tag; the metrics of code-sm under its own name so the two cannot drift | row id, code tag, key tail */

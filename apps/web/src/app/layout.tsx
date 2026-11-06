@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, Mona_Sans } from "next/font/google";
+import { Geist_Mono, Instrument_Serif, Mona_Sans } from "next/font/google";
 import { SkulletProvider } from "skullet/react";
 
 import { UiSounds } from "@/components/sound/ui-sounds";
@@ -15,6 +15,14 @@ import "./globals.css";
 const monaSans = Mona_Sans({
   variable: "--font-mona-sans",
   subsets: ["latin"],
+});
+
+// The landing's one hand-made accent: an italic serif word in the hero (font-accent). The UI stays on Mona Sans.
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
 });
 
 const geistMono = Geist_Mono({
@@ -61,7 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${monaSans.variable} ${geistMono.variable} h-full`}
+      className={`${monaSans.variable} ${instrumentSerif.variable} ${geistMono.variable} h-full`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

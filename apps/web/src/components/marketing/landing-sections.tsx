@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { DecisionCardPreview } from "@/components/marketing/decision-card-preview";
+import { HandUnderline } from "@/components/marketing/hand-underline";
 import { Reveal } from "@/components/marketing/reveal";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -26,62 +27,74 @@ function SectionHeading({ id, title, lead }: { id: string; title: string; lead: 
 
 export function Hero() {
   return (
-    <section
-      aria-labelledby="hero-title"
-      className={`${section} items-center pt-16 pb-16 text-center sm:pt-24 sm:pb-24`}
-    >
-      <div className="flex max-w-4xl flex-col items-center gap-6">
+    <section aria-labelledby="hero-title" className="relative isolate overflow-x-clip">
+      {/* A soft watercolour wash: three blurred kind fields behind the copy and the scene, never behind body text alone. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div
+          data-kind="agent"
+          className="absolute top-24 -left-24 size-96 rounded-full bg-accent-field opacity-40 blur-3xl"
+        />
+        <div
+          data-kind="key"
+          className="absolute top-8 -right-16 size-96 rounded-full bg-accent-field opacity-40 blur-3xl"
+        />
+        <div
+          data-kind="model"
+          className="absolute bottom-0 left-1/3 size-96 rounded-full bg-accent-field opacity-30 blur-3xl"
+        />
+      </div>
+      <div className={`${section} items-center gap-8 pt-16 text-center sm:pt-24`}>
+        <p className="type-label text-text-3">
+          For Claude Code sessions ·{" "}
+          <span className="font-accent type-body-lg text-brand italic">understood by you</span>
+        </p>
         <h1 id="hero-title" className="type-display text-balance text-text-1 sm:type-display-xl">
-          Own the code your agent writes.{" "}
-          <span className="block text-text-2">Explain it until it&rsquo;s yours.</span>
+          <span className="relative inline-block font-accent font-normal italic">
+            Own
+            <HandUnderline className="absolute inset-x-0 -bottom-2 h-3 w-full text-brand" />
+          </span>{" "}
+          the code
+          <br />
+          your agent writes.
         </h1>
-        <p className="max-w-160 type-body-lg text-pretty text-text-2">
-          Each Claude Code session becomes up to 5 decision cards, filed by project. Answer each in
-          your own words on day 1, 4 and 11, and defend it against a follow-up whenever you like.
+        <p className="max-w-120 type-body-lg text-pretty text-text-2">
+          Keep the thinking behind every choice. Each session becomes up to 5 decision cards you
+          explain in your own words until they&rsquo;re yours.
         </p>
         <div className="flex flex-col items-center gap-3">
-          <div className="flex flex-wrap items-center justify-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href="/sign-up" className={buttonVariants({ size: "lg" })}>
               Get started
             </Link>
             <Link
               href="/how-it-works"
-              className="type-label text-text-2 transition-colors duration-(--dur-fast) hover:text-text-1"
+              className={buttonVariants({ size: "lg", variant: "secondary" })}
             >
               See how it works
             </Link>
           </div>
-          <p className="type-body-sm text-text-3">
-            Free during the trial. Built for Claude Code sessions.
-          </p>
+          <p className="type-body-sm text-text-3">Free during the trial.</p>
         </div>
       </div>
-      <div className="w-full">
-        {/* The real dashboard, shot by e2e/screens.spec.ts at 1440x900, in a plain browser frame. */}
-        <figure className="frame bg-page">
-          <div aria-hidden className="flex gap-1.5 px-4 py-3 rule-row-frame">
-            {[0, 1, 2].map((dot) => (
-              <span key={dot} className="size-2.5 rounded-full bg-line-row" />
-            ))}
-          </div>
-          <Image
-            src="/art/dashboard.webp"
-            alt="The Session Coach dashboard: two cards due today, ownership by project and the sessions list."
-            width={1440}
-            height={900}
-            sizes="(min-width: 1120px) 1072px, 100vw"
-            preload
-            className="h-auto w-full dark:hidden"
-          />
-          <Image
-            src="/art/dashboard-night.webp"
-            alt="The Session Coach dashboard: two cards due today, ownership by project and the sessions list."
-            width={1440}
-            height={900}
-            sizes="(min-width: 1120px) 1072px, 100vw"
-            className="hidden h-auto w-full dark:block"
-          />
-        </figure>
+      {/* The team's own watercolour scene: the learner at work, and the agent beside them holding a card. */}
+      <div className="relative mx-auto mt-8 w-full max-w-(--container) px-(--gutter-sm) sm:px-(--gutter)">
+        <Image
+          src="/art/companion/engineer-meadow.webp"
+          alt="A developer sitting cross-legged in a meadow, working on a laptop."
+          width={2172}
+          height={724}
+          sizes="(min-width: 1120px) 1072px, 100vw"
+          preload
+          className="h-auto w-full"
+        />
+        <Image
+          src="/art/companion/agent.webp"
+          alt="A small friendly robot holding a decision card."
+          width={1312}
+          height={1199}
+          sizes="(min-width: 640px) 160px, 96px"
+          className="absolute right-1/5 bottom-4 h-auto w-24 sm:w-40"
+        />
       </div>
     </section>
   );

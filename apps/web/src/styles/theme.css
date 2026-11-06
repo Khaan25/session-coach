@@ -40,6 +40,7 @@
   --color-warning-wash: var(--warn-wash);
   --color-warning-text: var(--warn-text);
   --font-display: var(--font-display);
+  --font-accent: var(--font-accent);
 }
 
 /*

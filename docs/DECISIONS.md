@@ -2,6 +2,11 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-06 · A warmer landing hero and a larger type scale
+
+- **Decision:** the landing hero gets the team's own watercolour scene (the learner in the meadow and the agent robot, from Kasam's learning-first redesign branch), a soft wash of the kind fields behind it, and one italic serif accent word ("Own", Instrument Serif via `font-accent`) with the hand-drawn underline. Instrument Serif is back for that accent only; the UI stays on Mona Sans. The app's type steps up by about 1px each (body 15, label 14, body-sm 14, label-sm 13, headings +1-2px).
+- **Why:** review feedback: the landing was "just text" with no creative presentation, and the app looked zoomed out. The illustration and one hand-made accent give the page character without adding sections; the larger scale fixes the zoomed-out feel without a layout change.
+
 ## 2026-11-06 · Today replaces the dashboard
 
 - **Decision:** `/dashboard` becomes Today: one calm column (max-w-4xl, narrower than the other pages) with exactly one thing to do. A small greeting with the learner's first name, then the hero: the next due card (question large, one "Explain it"), or "You're done for today" with when the next card comes back, or the first setup step on a first visit. One muted habit line ("You own N of N decisions · N explained") and two text links, Progress and Sessions. The sidebar keeps Today, Review, Progress and Settings; the recent sessions list is gone.
