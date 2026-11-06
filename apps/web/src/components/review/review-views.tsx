@@ -4,7 +4,7 @@ import { AppPageHeader } from "@/components/app/page-header";
 import { QuizForm } from "@/components/review/quiz-form";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Item,
   ItemContent,
@@ -25,7 +25,7 @@ export function ReviewHeader() {
   return (
     <AppPageHeader
       title="Review"
-      description="Explain each decision from memory, then see the reason. A card comes back on day 1, 4 and 11 until you own it."
+      description={`Up to ${DAILY_CAP} a day: cards due again, and new cards from the last 7 days.`}
     />
   );
 }
@@ -40,12 +40,13 @@ export function QueueList({ queue }: { queue: QueueCard[] }) {
         <CardTitle skullet-own="">
           <h2>Due today</h2>
         </CardTitle>
-        <CardDescription skullet-own="">
-          Up to {DAILY_CAP} a day: cards due again, and new cards from the last 7 days.
-        </CardDescription>
         {first && (
           <CardAction>
-            <Link href={`/review/${first.id}`} className={buttonVariants()}>
+            <Link
+              href={`/review/${first.id}`}
+              transitionTypes={["forward"]}
+              className={buttonVariants()}
+            >
               Start review
             </Link>
           </CardAction>
@@ -58,7 +59,11 @@ export function QueueList({ queue }: { queue: QueueCard[] }) {
           <Item key={card.id} role="listitem">
             <ItemContent>
               <ItemTitle>
-                <ItemLink render={<Link href={`/review/${card.id}`} />}>{card.decision}</ItemLink>
+                <ItemLink
+                  render={<Link href={`/review/${card.id}`} transitionTypes={["forward"]} />}
+                >
+                  {card.decision}
+                </ItemLink>
               </ItemTitle>
               <ItemDescription>{card.sessionName}</ItemDescription>
             </ItemContent>

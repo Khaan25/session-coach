@@ -11,10 +11,10 @@ import { Input } from "@/components/ui/input";
 // /cli/approve's answers other than the pending question (approve-request.tsx): the code form, and one card that says
 // what happened and what to do. Shared by the page and /canvas.
 
-/** One narrow column, centred: the page asks a single question. */
+/** One narrow column, centred like the auth pages: the page asks a single question. */
 export function ApproveColumn({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-8 px-(--gutter-sm) py-16 sm:px-(--gutter)">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
       {children}
     </div>
   );
