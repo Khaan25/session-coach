@@ -1,5 +1,5 @@
-// Dashboard ownership meter and project filter: a learner with sessions in two repos sees the counts from
-// `learner_ownership()`, one row per repo, and a repo's link filters the session list. Creates its own learner on the
+// Ownership and the project filter: a learner with sessions in two repos sees the counts from `learner_ownership()` as
+// Today's habit line and as one row per repo on /progress, and a repo's link narrows /progress, its sessions included. Creates its own learner on the
 // LOCAL stack and deletes it at the end (rows cascade).
 
 import { randomUUID } from "node:crypto";
@@ -79,7 +79,7 @@ test.afterAll(async () => {
   if (userId) await admin.auth.admin.deleteUser(userId);
 });
 
-test("the dashboard shows ownership per repo and filters sessions by project", async ({ page }) => {
+test("Today shows what the learner owns, and /progress splits it per repo", async ({ page }) => {
   await page.goto("/login");
   // The Suspense fallback form and the real one are both in the page for a moment while it streams.
   await expect(page.getByLabel("Email")).toHaveCount(1);
@@ -88,22 +88,15 @@ test("the dashboard shows ownership per repo and filters sessions by project", a
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
-  await expect(page.getByRole("heading", { name: "Explained 1 · owned 1 of 3" })).toBeVisible();
+  // Today keeps one quiet line of the overall counts; the per-repo rows moved to /progress (DECISIONS, 2026-11-06).
+  await expect(page.getByText("You own 1 of 3 decisions · 1 explained")).toBeVisible();
+  // The link's target, then a direct visit: a click during /progress's cold compile can outlast the 5 s wait.
+  await expect(
+    page.getByRole("navigation", { name: "More" }).getByRole("link", { name: "Progress" }),
+  ).toHaveAttribute("href", "/progress");
+  await page.goto("/progress");
   await expect(page.getByText("Explained 1 · owned 1 of 2", { exact: true })).toBeVisible();
   await expect(page.getByText("Explained 0 · owned 0 of 1", { exact: true })).toBeVisible();
-
-  // The project filter above the session list, not the sidebar's session links.
-  await page
-    .getByRole("navigation", { name: "Projects" })
-    .getByRole("link", { name: "rapporteur", exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/dashboard\?repo=rapporteur$/);
-  const list = page
-    .getByRole("main")
-    .getByRole("heading", { name: "Sessions" })
-    .locator("xpath=ancestor::*[@data-slot='card'][1]");
-  await expect(list.getByText("Stream the report export")).toBeVisible();
-  await expect(list.getByText("Add rate limiting")).toHaveCount(0);
 });
 
 test("/progress shows ownership by project and narrows its numbers to a picked one", async ({

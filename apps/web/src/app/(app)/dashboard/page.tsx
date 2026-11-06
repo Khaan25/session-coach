@@ -1,150 +1,152 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
-import { DashboardView, FirstSessionEmpty } from "@/components/dashboard/dashboard-view";
+import { NextCard, TodayMessage, TodayView } from "@/components/dashboard/today-view";
 import { SetupGuide } from "@/components/onboarding/setup-guide";
 import { ProjectSetup } from "@/components/projects/project-setup";
-import { SessionList } from "@/components/sessions/session-list";
 import { buttonVariants } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import type { Ownership } from "@/lib/progress/ownership";
 import { getOwnership } from "@/lib/progress/queries";
-
-import { DashboardSampleView } from "./dashboard-sample-view";
-import { listProjects } from "@/lib/projects/queries";
 import { emptyQueue, reviewQueue } from "@/lib/review/queries";
-import { listSessions } from "@/lib/sessions/queries";
-import { PAGE_SIZE, parsePage, parseRepo } from "@/lib/sessions/rows";
+import { dueInWords } from "@/lib/review/schedule";
+import { DAILY_CAP } from "@/lib/review/today";
+import { recentSessions } from "@/lib/sessions/queries";
+import { getSettingsProfile } from "@/lib/settings/profile";
+import { greeting } from "@/lib/ui/greeting";
 
-export const metadata: Metadata = { title: "Dashboard" };
+import { TodayColumn, TodaySampleView } from "./dashboard-sample-view";
 
-// shortcut: the page and repo are read from searchParams directly; nuqs isn't installed (no new dependencies this phase).
-export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
+export const metadata: Metadata = { title: "Today" };
+
+export default function TodayPage() {
   return (
-    <Container>
-      {/* Skullet measures the real blocks, drawn from sample data, so each keeps its shape when the data lands. The
-          row counts, the filter and the page links aren't known until then, so the blocks can still grow or shrink. */}
-      <MeasuredSuspense label="Loading your dashboard" skeleton={<DashboardSampleView />}>
-        <Dashboard searchParams={searchParams} />
+    <TodayColumn>
+      <MeasuredSuspense label="Loading today" skeleton={<TodaySampleView />}>
+        <Today />
       </MeasuredSuspense>
-    </Container>
+    </TodayColumn>
   );
 }
 
-/** The dashboard's URL for a page of sessions, keeping the repo filter. */
-function dashboardHref(repo: string | null, page = 1) {
-  const params = new URLSearchParams();
-  if (repo) params.set("repo", repo);
-  if (page > 1) params.set("page", String(page));
-  return params.size > 0 ? `/dashboard?${params}` : "/dashboard";
-}
-
-async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "searchParams">) {
+async function Today() {
   const user = await getCurrentUser();
   if (!user) return <NoSessionsEmpty />;
-  const params = await searchParams;
-  const page = parsePage(params.page);
-  const repo = parseRepo(params.repo);
-  const { now, sessions, hasMore, queue, repos, ownership } = await load(user.id, page, repo);
-  // A repo the learner has no session in: show every session rather than an empty list.
-  if (repo && repos && !repos.includes(repo)) redirect("/dashboard");
-  // Past the last page: go to the first rather than show "no sessions yet".
-  if (page > 1 && sessions.length === 0) redirect(dashboardHref(repo));
-  const firstVisit = !repo && page === 1 && sessions.length === 0;
-  const due = repo ? queue.filter((card) => card.repo === repo) : queue;
-  const empty = await loadEmpty(user.id, now, queue.length > 0 || firstVisit);
+  const { now, hasSession, queue, ownership, profile } = await load(user.id);
+  const hello = greeting(profile?.display_name, profile?.timezone ?? "UTC", now);
+  const habit = habitLine(ownership);
 
+  if (!hasSession)
+    return (
+      <TodayView
+        greeting={hello}
+        lede="A few minutes of setup, then your agent's decisions turn into cards."
+        habit={null}
+        hero={
+          <TodayMessage
+            title="Send your first session"
+            description="Log in with the CLI, then send the session you just finished. It shows up here within a minute."
+            action={
+              <>
+                <SetupGuide autoOpen />
+                <Link href="/setup" className={buttonVariants({ variant: "secondary" })}>
+                  Open setup
+                </Link>
+              </>
+            }
+          />
+        }
+      />
+    );
+
+  const next = queue[0];
+  if (next)
+    return (
+      <TodayView
+        greeting={hello}
+        lede="Explain it from memory first. The why comes after."
+        before={<ProjectSetup />}
+        habit={habit}
+        hero={<NextCard card={next} left={queue.length} />}
+      />
+    );
+
+  const empty = await emptyQueue(user.id, now).catch((error: unknown) => {
+    console.error("[dashboard] emptyQueue", error);
+    return null;
+  });
+  if (empty && !empty.hasCards)
+    return (
+      <TodayView
+        greeting={hello}
+        lede="Your first cards are being written."
+        before={<ProjectSetup />}
+        habit={null}
+        hero={
+          <TodayMessage
+            title="Your cards are on the way"
+            description={`Each session is read for the decisions your agent made. They land here, at most ${DAILY_CAP} a day.`}
+          />
+        }
+      />
+    );
+
+  // Defend it picks from cards explained at least once, the same rule as POST /api/defend/start.
+  const canDefend = (ownership?.overall.explained ?? 0) > 0;
   return (
-    <DashboardView
-      firstVisit={firstVisit}
-      actions={firstVisit ? <SetupGuide autoOpen /> : undefined}
+    <TodayView
+      greeting={hello}
+      lede="A few minutes a day is what makes it stick."
       before={<ProjectSetup />}
-      tabs={
-        repos?.length
-          ? [null, ...repos].map((name) => ({ repo: name, href: dashboardHref(name) }))
-          : null
-      }
-      repo={repo}
-      queue={queue}
-      due={due}
-      empty={empty}
-      ownership={ownership}
-      sessions={
-        <SessionList
-          key={`${repo}:${page}`}
-          sessions={sessions}
-          userId={user.id}
-          now={now.toISOString()}
-          prepend={page === 1}
-          repo={repo ?? undefined}
-          limit={PAGE_SIZE}
-          empty={firstVisit ? <FirstSessionEmpty /> : undefined}
+      habit={habit}
+      hero={
+        <TodayMessage
+          title="You're done for today"
+          description={
+            empty?.doneToday
+              ? `You did ${DAILY_CAP} cards today. The rest come back tomorrow.`
+              : empty?.nextDue
+                ? `Your next card comes back ${dueInWords(empty.nextDue, empty.today)}.`
+                : "Nothing is due. New sessions bring new cards."
+          }
+          action={
+            canDefend && (
+              <Link href="/defend" className={buttonVariants({ variant: "secondary" })}>
+                Defend a decision
+              </Link>
+            )
+          }
         />
-      }
-      pager={
-        (page > 1 || hasMore) && (
-          <nav aria-label="Session pages" className="flex w-full justify-between gap-2">
-            {page > 1 ? (
-              <Link
-                href={dashboardHref(repo, page - 1)}
-                className={buttonVariants({ variant: "secondary" })}
-              >
-                Newer
-              </Link>
-            ) : (
-              <span />
-            )}
-            {hasMore && (
-              <Link
-                href={dashboardHref(repo, page + 1)}
-                className={buttonVariants({ variant: "secondary" })}
-              >
-                Older
-              </Link>
-            )}
-          </nav>
-        )
       }
     />
   );
 }
 
+/** The one habit line: what the learner already owns and has explained. Null when there is nothing to count. */
+function habitLine(ownership: Ownership | null) {
+  if (!ownership || ownership.overall.total === 0) return null;
+  const { explained, owned, total } = ownership.overall;
+  return `You own ${owned} of ${total} ${total === 1 ? "decision" : "decisions"} · ${explained} explained`;
+}
+
 /** Reads the clock outside render (cacheComponents and the compiler's purity rule), then the queries. */
-async function load(userId: string, page: number, repo: string | null) {
+async function load(userId: string) {
   const now = new Date();
-  const [{ sessions, hasMore }, queue, projects, ownership] = await Promise.all([
-    listSessions({ userId, page, repo }),
+  const [sessions, queue, ownership, profile] = await Promise.all([
+    recentSessions(userId, 1),
     reviewQueue(userId, now),
-    // Only the filter links need it, so a failed read hides them instead of failing the session list.
-    listProjects(userId).catch((error: unknown) => {
-      console.error("[dashboard] listProjects", error);
-      return null;
-    }),
-    // A summary above the list: a failed read hides the meter rather than taking the dashboard down. /progress shows
-    // the error.
+    // The habit line only: a failed read leaves it out. /progress shows the error.
     getOwnership().catch((error: unknown) => {
       console.error("[dashboard] getOwnership", error);
       return null;
     }),
+    // The greeting only (memoized; the layout already read it): a failure greets without a name.
+    getSettingsProfile().catch((error: unknown) => {
+      console.error("[dashboard] getSettingsProfile", error);
+      return null;
+    }),
   ]);
-  return {
-    now,
-    sessions,
-    hasMore,
-    queue,
-    repos: projects?.map((project) => project.repo) ?? null,
-    ownership,
-  };
-}
-
-/** Why the queue is empty, read only when it is (and not on a first visit). Optional: a failure falls back, never throws. */
-async function loadEmpty(userId: string, now: Date, skip: boolean) {
-  if (skip) return null;
-  return emptyQueue(userId, now).catch((error: unknown) => {
-    console.error("[dashboard] emptyQueue", error);
-    return null;
-  });
+  return { now, hasSession: sessions.length > 0, queue, ownership, profile };
 }

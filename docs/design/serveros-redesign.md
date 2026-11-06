@@ -8,21 +8,30 @@ The brief is in `prompts/001-serveros-style-redesign.md`. Every page gets one jo
 
 Job: get to any page in one click and always know where you are.
 
-- Keep: brand link, the nav (Dashboard, Review with its due badge, Defend it, Progress, Setup, Settings), the sessions list, the account menu.
+- Keep: brand link, the nav (Today, Review with its due badge, Progress, Settings), the account menu.
+- Move (2026-11-06, Today): Setup, Defend it and Members leave the sidebar. Setup is reached from Today's first visit and Settings, Defend it from Today's done state and /progress, Members from Settings. The topbar still names each of them.
+- Cut (2026-11-06, Today): the sidebar's recent sessions list. Sessions live on /progress "By session" and Today links there.
 - Move: the theme toggle goes into the account menu, so the sidebar footer holds one control.
-- Cut: the topbar breadcrumb's "Session Coach" root crumb. The sidebar already names the app; the topbar keeps the trigger and the current page title.
+- Cut: the topbar breadcrumb's "Session Coach" root crumb. The sidebar already names the app; the topbar keeps the trigger and the current page title ("Today" on /dashboard).
 - Motion: the page content crossfades with a slight lift and blur on each route change through `<ViewTransition>`. The sidebar never animates on navigation.
 
-## /dashboard
+## /dashboard (Today)
 
-Job: what should I do next?
+Job: what is my one thing to do today? Replaced the dashboard on 2026-11-06 (DECISIONS): the review said it looked like a system panel, not a learning product. The URL stays `/dashboard`.
 
-- Keep (e2e): the "Dashboard" heading, the project tabs (nav "Projects"), the due block with "Start review" and its "Done for today" and "All caught up" states, the ownership heading "Explained N · owned N of N" with per-project lines, the "Sessions" card with its rows and pager.
-- Keep: ProjectSetup when a repo needs a level (FF asserts its heading, "Hard" and "Save"). Keep FirstSessionEmpty on the first visit.
-- Cut: the CardAnatomy rail ("Inside a decision card"). It explains a card instead of showing one. The how-it-works page already covers it.
-- Cut: the three "What's this" disclosures in the due, ownership and sessions blocks. Move each one-line answer into the block's description text instead.
-- Cut: the step badges on due rows. The review queue shows them; here the decision and question are enough.
-- Layout: one column. The due block comes first as the hero (large count, one primary button), then ownership, then sessions.
+- Layout: one calm column at the reading measure (`--measure`), the one page narrower than the app container. Exactly one thing to do.
+- Greeting: a small h1 with the part of the learner's day and first name ("Evening, Sam", `lib/ui/greeting.ts`) and one muted sentence.
+- Hero, one of four:
+  - Cards due: the next card, framed like the cards in /review. Its decision and session as one muted line in the header, the question large, one primary "Explain it" to `/review/[cardId]` (forward transition), and "N cards left today · at most 5 a day" beside it.
+  - Done: "You're done for today" with why (the 5 a day are in, or when the next card comes back) and, when the learner has explained a card, one secondary "Defend a decision".
+  - First visit (no session): "Send your first session" with the SetupGuide ("Get started", opens itself once) and "Open setup".
+  - Sessions but no cards yet: "Your cards are on the way".
+- Habit: one muted line from `getOwnership()`, "You own N of N decisions · N explained". No streak: nothing the page loads counts days, and a new query was out of scope.
+- Below: two text links, Progress and Sessions (`/progress#by-session`).
+- Keep (e2e): ProjectSetup above the hero when a repo needs a level (FF asserts its heading, "Hard" and "Save"); "Explain it"; "You're done for today" and its "You did 5 cards today" line; the habit line; the "More" nav's Progress link.
+- Moved off: the stat cards, the Sessions card and its pager, the review-queue list (on /review), the ownership meter and the project tabs (on /progress, with By project and By session).
+- Motion: the hero enters once with `animate-enter`; nothing else moves.
+- Rejected variant: the question unframed under the greeting with a big button. It read as more page text, not as a card to work on.
 
 ## /review
 
@@ -58,6 +67,7 @@ Job: am I making these decisions mine?
 - Cut: ExplainedOwnedBars. It repeats the summary line as a chart. Keep AnswersChart as the one chart.
 - Cut: the TodayBanner's "Start review" duplicate. Keep the banner text (e2e) and link to /review once.
 - Layout: the summary line as the hero, then one chart, then By project, then By session.
+- Add (2026-11-06, Today): a secondary "Defend it" in the header, since Defend it left the sidebar; By session takes `id="by-session"` for Today's Sessions link.
 
 ## /defend
 
@@ -73,6 +83,7 @@ Job: change my profile, devices or account.
 - Keep: the profile form, question level per project, devices (FF asserts "No computer connected yet", "Revoke" and its dialog), share your report, sign out everywhere, delete account.
 - Cut: the step numbers 1-6. Settings are not a sequence. Each becomes a plain section with a heading.
 - Cut: "Saves steps 1 to 3." The Save button sits inside the profile section, so its scope is visible.
+- Add (2026-11-06, Today): secondary "Setup" and "Members" links in the header, since both left the sidebar.
 
 ## /setup
 

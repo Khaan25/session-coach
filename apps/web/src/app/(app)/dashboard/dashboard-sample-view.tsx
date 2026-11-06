@@ -1,24 +1,23 @@
-import { DashboardView } from "@/components/dashboard/dashboard-view";
-import {
-  SAMPLE_NOW,
-  SAMPLE_OWNERSHIP,
-  SAMPLE_QUEUE,
-  SAMPLE_SESSIONS,
-} from "@/components/dashboard/dashboard-sample";
-import { SessionRows } from "@/components/sessions/session-list";
+import { Container } from "@/components/app/container";
+import { NextCard, TodayView } from "@/components/dashboard/today-view";
+import { SAMPLE_QUEUE } from "@/components/dashboard/dashboard-sample";
 
-/** The dashboard drawn from sample rows: what the page's loading skeleton measures, in loading.tsx and the page. */
-export function DashboardSampleView() {
+/**
+ * Today's frame: the app container narrowed to the reading measure, the one page that is (DECISIONS, 2026-11-06), so
+ * the single thing to do sits in a calm column.
+ */
+export function TodayColumn({ children }: { children: React.ReactNode }) {
+  return <Container className="max-w-(--measure) gap-8 sm:py-16">{children}</Container>;
+}
+
+/** Today drawn from a sample card: what the page's loading skeleton measures, in loading.tsx and the page. */
+export function TodaySampleView() {
   return (
-    <DashboardView
-      firstVisit={false}
-      tabs={null}
-      repo={null}
-      queue={SAMPLE_QUEUE}
-      due={SAMPLE_QUEUE}
-      empty={null}
-      ownership={SAMPLE_OWNERSHIP}
-      sessions={<SessionRows rows={SAMPLE_SESSIONS} now={SAMPLE_NOW} />}
+    <TodayView
+      greeting="Evening"
+      lede="Explain it from memory first. The why comes after."
+      habit="You own 4 of 12 decisions · 9 explained"
+      hero={<NextCard card={SAMPLE_QUEUE[0]} left={SAMPLE_QUEUE.length} />}
     />
   );
 }
