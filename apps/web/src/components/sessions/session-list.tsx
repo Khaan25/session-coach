@@ -2,7 +2,6 @@
 
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { SessionRow } from "@/components/app/session-row";
-import { ItemGroup } from "@/components/ui/item";
 import type { SessionListItem } from "@/lib/sessions/rows";
 import { useLiveSessions } from "@/lib/sessions/use-live-sessions";
 
@@ -48,10 +47,13 @@ export function SessionRows({
 }) {
   if (rows.length === 0) return empty;
   return (
-    <ItemGroup>
+    // The rows sit straight in the Sessions card, split by its row rules; an ItemGroup would draw a second frame
+    // inside it. A div with role="list", because SessionRow renders a div.
+    // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+    <div role="list" aria-label="Sessions">
       {rows.map((session) => (
         <SessionRow key={session.id} session={session} cardCount={session.cardCount} now={now} />
       ))}
-    </ItemGroup>
+    </div>
   );
 }
