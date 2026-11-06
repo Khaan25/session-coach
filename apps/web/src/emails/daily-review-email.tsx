@@ -10,9 +10,9 @@ import {
 import { listUnsubscribeHeaders } from "@/lib/email/unsubscribe";
 
 import { EmailShell } from "./auth-layout";
-import { color } from "./brand";
+import { color, primaryButton } from "./brand";
 
-// The daily review reminder in the app's look: icy paper, navy-graphite ink, Geist, the watercolour card stack.
+// The daily review reminder in the app's look: neutral paper, graphite ink, the system sans and one brand-blue button.
 
 /** New cards in the model green, due-again ones in the run blue: the two kind tints the app already uses. */
 const tagColor: Record<ListedCard["tag"], { background: string; foreground: string }> = {
@@ -24,13 +24,11 @@ const tagColor: Record<ListedCard["tag"], { background: string; foreground: stri
  * The reminder email. Every word comes from `dailyReviewCopy`, so the plain-text part says the same thing.
  *
  * @param copy - The words and links.
- * @param siteUrl - The deployed origin, for the illustration.
  */
-export function DailyReviewEmail({ copy, siteUrl }: { copy: DailyReviewCopy; siteUrl: string }) {
+export function DailyReviewEmail({ copy }: { copy: DailyReviewCopy }) {
   return (
     <EmailShell
       preview={copy.preview}
-      image={`${siteUrl}/email/cards.png`}
       heading={copy.heading}
       footer={
         <>
@@ -100,20 +98,7 @@ export function DailyReviewEmail({ copy, siteUrl }: { copy: DailyReviewCopy; sit
       <Text style={{ margin: "0 0 24px", fontSize: 14, lineHeight: "20px", color: color.text3 }}>
         {copy.progress}
       </Text>
-      <Button
-        href={copy.reviewUrl}
-        style={{
-          display: "inline-block",
-          backgroundColor: color.ink,
-          color: color.paper,
-          borderRadius: 8,
-          padding: "12px 20px",
-          fontSize: 15,
-          lineHeight: "20px",
-          fontWeight: 500,
-          textDecoration: "none",
-        }}
-      >
+      <Button href={copy.reviewUrl} style={primaryButton}>
         {copy.cta}
       </Button>
     </EmailShell>
@@ -161,7 +146,7 @@ export async function composeDailyReview(
   unsubscribeUrl: string | null = null,
 ) {
   const copy = dailyReviewCopy(recipient, siteUrl, unsubscribeUrl);
-  const html = await render(<DailyReviewEmail copy={copy} siteUrl={siteUrl} />);
+  const html = await render(<DailyReviewEmail copy={copy} />);
   return {
     subject: copy.subject,
     text: copy.text,
