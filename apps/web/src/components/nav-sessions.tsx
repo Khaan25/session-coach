@@ -15,6 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useOptimisticNavigation } from "@/hooks/use-optimistic-navigation";
 import { sessionName } from "@/lib/sessions/name";
 import type { SessionListItem } from "@/lib/sessions/rows";
 import { isEmptyReady, sessionLabel } from "@/lib/sessions/status-label";
@@ -39,7 +40,7 @@ export function NavSessions({
   sessions: SessionListItem[];
   userId?: string | null;
 }) {
-  const pathname = usePathname();
+  const { current: pathname, navigate } = useOptimisticNavigation(usePathname());
   const { rows } = useLiveSessions(userId, sessions, { limit: 5 });
   if (rows.length === 0) return null;
   return (
@@ -71,7 +72,7 @@ export function NavSessions({
                 <SidebarMenuButton
                   size="lg"
                   isActive={pathname === href}
-                  render={<Link href={href} />}
+                  render={<Link href={href} onNavigate={navigate(href, href)} />}
                   // Native tooltip: the full title (it truncates) and what the second line means.
                   title={[name, session.repo && `Repository: ${session.repo}`, badge.label]
                     .filter(Boolean)
