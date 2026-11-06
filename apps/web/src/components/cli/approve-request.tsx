@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { useDryRun } from "@/components/app/dry-run";
 import { ApproveDone, ApproveNotice, SETTLED_COPY } from "@/components/cli/approve-states";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
 import { FieldError } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
@@ -79,50 +78,44 @@ export function ApproveRequest({ request }: { request: ApproveRequestData }) {
 
   return (
     <>
-      <Card>
-        <CardContent>
-          <section
-            aria-labelledby="approve-title"
-            className="flex flex-col items-center gap-4 text-center"
+      <section
+        aria-labelledby="approve-title"
+        className="flex flex-col items-center gap-4 text-center"
+      >
+        <LaptopIcon weight="duotone" className="size-8 text-text-2" aria-hidden="true" />
+        <h1 id="approve-title" className="type-heading-sm tracking-heading text-pretty text-text-1">
+          Is this the code in your terminal?
+        </h1>
+        {/* Mono, so 0 and O, 1 and I read apart when matching the terminal. */}
+        <p className="type-code-display text-text-1">{request.userCode}</p>
+        {/* Where it came from stays on the page: an address you don't know is a reason to deny. */}
+        <p className="type-body-sm text-text-2">
+          {request.clientName}
+          {request.requestedIp && ` · from ${request.requestedIp}`} · requested{" "}
+          {request.requestedAgo} · expires in{" "}
+          <span className="tabular-nums">{clock(secondsLeft)}</span>
+        </p>
+        <div className="grid w-full grid-cols-2 gap-3">
+          <Button
+            onClick={() => void decide("approve")}
+            disabled={pending !== null}
+            aria-busy={pending === "approve"}
           >
-            <LaptopIcon weight="duotone" className="size-8 text-text-2" aria-hidden="true" />
-            <h1 id="approve-title" className="type-heading-lg text-pretty text-text-1">
-              Is this the code in your terminal?
-            </h1>
-            {/* Mono, so 0 and O, 1 and I read apart when matching the terminal. */}
-            <p className="type-code-display text-text-1">{request.userCode}</p>
-            {/* Where it came from stays on the page: an address you don't know is a reason to deny. */}
-            <p className="type-body-sm text-text-2">
-              {request.clientName}
-              {request.requestedIp && ` · from ${request.requestedIp}`} · requested{" "}
-              {request.requestedAgo} · expires in{" "}
-              <span className="tabular-nums">{clock(secondsLeft)}</span>
-            </p>
-            <div className="grid w-full grid-cols-2 gap-3">
-              <Button
-                size="lg"
-                onClick={() => void decide("approve")}
-                disabled={pending !== null}
-                aria-busy={pending === "approve"}
-              >
-                {pending === "approve" && <Spinner label="" />}
-                Yes, approve
-              </Button>
-              <Button
-                size="lg"
-                variant="secondary"
-                onClick={() => void decide("deny")}
-                disabled={pending !== null}
-                aria-busy={pending === "deny"}
-              >
-                {pending === "deny" && <Spinner label="" />}
-                No, deny
-              </Button>
-            </div>
-            {error && <FieldError role="alert">{error}</FieldError>}
-          </section>
-        </CardContent>
-      </Card>
+            {pending === "approve" && <Spinner label="" />}
+            Yes, approve
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => void decide("deny")}
+            disabled={pending !== null}
+            aria-busy={pending === "deny"}
+          >
+            {pending === "deny" && <Spinner label="" />}
+            No, deny
+          </Button>
+        </div>
+        {error && <FieldError role="alert">{error}</FieldError>}
+      </section>
 
       <div className="flex flex-col gap-1">
         <Collapsible defaultOpen>

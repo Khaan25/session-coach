@@ -68,7 +68,7 @@ export function LoginForm({ next }: { next?: string }) {
                 />
                 <FieldError id={`${id}-password-error`}>{errors.password}</FieldError>
               </Field>
-              <Button type="submit" size="lg" disabled={pending}>
+              <Button type="submit" disabled={pending}>
                 Sign in
               </Button>
             </FieldGroup>

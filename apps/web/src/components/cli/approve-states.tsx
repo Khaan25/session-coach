@@ -4,14 +4,13 @@ import { ErrorState } from "@/components/app/error-state";
 import { EmptyState } from "@/components/app/empty-state";
 import { ApproveHeader } from "@/components/cli/approve-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-// /cli/approve's answers other than the pending question (approve-request.tsx): the code form, and one card that says
-// what happened and what to do. Shared by the page and /canvas.
+// /cli/approve's answers other than the pending question (approve-request.tsx): the code form, and one notice that says
+// what happened and what to do. The page renders them inside the auth card ((standalone)/layout.tsx); /canvas shares them.
 
-/** One narrow column, centred like the auth pages: the page asks a single question. */
+/** One narrow column, centred like the auth pages. shortcut: only /canvas uses it; the page sits in AuthShell. Drop it with the canvas. */
 export function ApproveColumn({ children }: { children: React.ReactNode }) {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
@@ -26,38 +25,28 @@ export function ApproveCodeForm({ code, error }: { code?: string; error?: string
   return (
     <>
       <ApproveHeader />
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Enter the code from your terminal</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form action="/cli/approve" className="flex flex-col gap-4">
-            <Field data-invalid={error ? true : undefined}>
-              <FieldLabel htmlFor={id}>Code</FieldLabel>
-              <Input
-                id={id}
-                name="code"
-                defaultValue={code}
-                placeholder="XXXX-XXXX"
-                autoComplete="off"
-                autoCapitalize="characters"
-                spellCheck={false}
-                maxLength={9}
-                aria-invalid={error ? true : undefined}
-                required
-              />
-              <FieldDescription>
-                {error ?? "session-coach login prints it, like WDJB-MJHT."}
-              </FieldDescription>
-            </Field>
-            <div>
-              <Button type="submit">Continue</Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <form action="/cli/approve" className="flex flex-col gap-4">
+        <h2 className="type-label text-text-1">Enter the code from your terminal</h2>
+        <Field data-invalid={error ? true : undefined}>
+          <FieldLabel htmlFor={id}>Code</FieldLabel>
+          <Input
+            id={id}
+            name="code"
+            defaultValue={code}
+            placeholder="XXXX-XXXX"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            maxLength={9}
+            aria-invalid={error ? true : undefined}
+            required
+          />
+          <FieldDescription>
+            {error ?? "session-coach login prints it, like WDJB-MJHT."}
+          </FieldDescription>
+        </Field>
+        <Button type="submit">Continue</Button>
+      </form>
     </>
   );
 }
@@ -78,15 +67,13 @@ export function ApproveNotice({
   return (
     <>
       <ApproveHeader />
-      <Card>
-        <ErrorState
-          variant="plain"
-          {...(word ? { status: "warn" as const, statusWord: word } : {})}
-          title={title}
-          message={message}
-          action={action}
-        />
-      </Card>
+      <ErrorState
+        variant="plain"
+        {...(word ? { status: "warn" as const, statusWord: word } : {})}
+        title={title}
+        message={message}
+        action={action}
+      />
     </>
   );
 }
@@ -102,21 +89,19 @@ export function ApproveDone({
   return (
     <>
       <ApproveHeader />
-      <Card>
-        {done === "approved" ? (
-          <EmptyState
-            variant="plain"
-            title="CLI connected"
-            description={`Go back to your terminal. ${clientName} signs in within a few seconds, and it shows up under Connected devices on Setup.`}
-          />
-        ) : (
-          <EmptyState
-            variant="plain"
-            title="Login denied"
-            description="That computer wasn't signed in. If you didn't run session-coach login yourself, nothing else is needed."
-          />
-        )}
-      </Card>
+      {done === "approved" ? (
+        <EmptyState
+          variant="plain"
+          title="CLI connected"
+          description={`Go back to your terminal. ${clientName} signs in within a few seconds, and it shows up under Connected devices on Setup.`}
+        />
+      ) : (
+        <EmptyState
+          variant="plain"
+          title="Login denied"
+          description="That computer wasn't signed in. If you didn't run session-coach login yourself, nothing else is needed."
+        />
+      )}
     </>
   );
 }

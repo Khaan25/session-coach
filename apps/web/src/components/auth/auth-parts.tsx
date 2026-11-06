@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { BrandMark } from "@/components/brand-mark";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 /** The Session Coach mark and name, linking home. */
 export function BrandLink() {
@@ -29,20 +28,16 @@ export function AuthHeading({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h1 className="type-display text-balance text-text-1">{title}</h1>
-      {children && <p className="type-body text-pretty text-text-2">{children}</p>}
+    <div className="flex flex-col gap-1 text-center">
+      <h1 className="type-heading-sm tracking-heading text-balance text-text-1">{title}</h1>
+      {children && <p className="type-body-sm text-pretty text-text-2">{children}</p>}
     </div>
   );
 }
 
-/** The large card an auth form sits in. */
+/** The fields and buttons of an auth form. AuthShell's panel is the card, so this is only the group, never a second card. */
 export function AuthCard({ children }: { children: React.ReactNode }) {
-  return (
-    <Card size="lg">
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
+  return <div className="flex flex-col gap-3">{children}</div>;
 }
 
 /** The form's live region: always mounted, so a notice is read out when it appears. Put AuthNotice inside. */
@@ -69,7 +64,7 @@ export function AuthSwitch({
   children: React.ReactNode;
 }) {
   return (
-    <p className="type-body-sm text-text-2">
+    <p className="text-center type-body-sm text-text-2">
       {prompt}{" "}
       <Link href={href} className={buttonVariants({ variant: "link" })}>
         {children}
