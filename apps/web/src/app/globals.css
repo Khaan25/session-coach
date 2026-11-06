@@ -13,8 +13,6 @@
 /* Big headlines (font-display): the UI's own Mona Sans, so a headline and the page share one family. */
 :root {
   --font-display: var(--font-mona-sans), ui-sans-serif, system-ui, sans-serif;
-  /* The landing hero's italic accent word only. */
-  --font-accent: var(--font-instrument-serif), ui-serif, Georgia, serif;
 }
 
 /* skullet hides skeleton text with a transparent fill on its loading root, and the fill inherits, so it reaches

@@ -4,8 +4,8 @@ Newest first. Each entry: what we decided, why, and what we rejected.
 
 ## 2026-11-06 · A warmer landing hero and a larger type scale
 
-- **Decision:** the landing hero gets the team's own watercolour scene (the learner in the meadow and the agent robot, from Kasam's learning-first redesign branch), a soft wash of the kind fields behind it, and one italic serif accent word ("Own", Instrument Serif via `font-accent`) with the hand-drawn underline. Instrument Serif is back for that accent only; the UI stays on Mona Sans. The app's type steps up by about 1px each (body 15, label 14, body-sm 14, label-sm 13, headings +1-2px).
-- **Why:** review feedback: the landing was "just text" with no creative presentation, and the app looked zoomed out. The illustration and one hand-made accent give the page character without adding sections; the larger scale fixes the zoomed-out feel without a layout change.
+- **Decision:** the landing hero keeps its copy and buttons, and the product screenshot under them becomes the team's own watercolour scene (the learner in the meadow and the agent robot, from Kasam's learning-first redesign branch). Small watercolour desk objects (tea, pencil, letter, plant, cards) sit in the white space either side of the copy on wide screens, and the same objects return to the learner screens (Today's states, Check your email) and the landing's closing desk scene. The app's type steps up by about 1px each (body 15, label 14, body-sm 14, label-sm 13, headings +1-2px).
+- **Why:** review feedback: the landing was "just text" with no creative presentation, and the app looked zoomed out. The illustration and the desk objects give the page character without new sections; the larger scale fixes the zoomed-out feel without a layout change.
 
 ## 2026-11-06 · Today replaces the dashboard
 

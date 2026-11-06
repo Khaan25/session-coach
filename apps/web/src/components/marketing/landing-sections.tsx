@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { Sprite } from "@/components/art/sprite";
 import { DecisionCardPreview } from "@/components/marketing/decision-card-preview";
-import { HandUnderline } from "@/components/marketing/hand-underline";
 import { Reveal } from "@/components/marketing/reveal";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -28,55 +28,41 @@ function SectionHeading({ id, title, lead }: { id: string; title: string; lead: 
 export function Hero() {
   return (
     <section aria-labelledby="hero-title" className="relative isolate overflow-x-clip">
-      {/* A soft watercolour wash: three blurred kind fields behind the copy and the scene, never behind body text alone. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div
-          data-kind="agent"
-          className="absolute top-24 -left-24 size-96 rounded-full bg-accent-field opacity-40 blur-3xl"
-        />
-        <div
-          data-kind="key"
-          className="absolute top-8 -right-16 size-96 rounded-full bg-accent-field opacity-40 blur-3xl"
-        />
-        <div
-          data-kind="model"
-          className="absolute bottom-0 left-1/3 size-96 rounded-full bg-accent-field opacity-30 blur-3xl"
-        />
+      {/* Small watercolour desk objects in the white space either side of the copy, wide screens only. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden lg:block">
+        <Sprite name="tea" className="absolute top-28 left-1/12 w-16 -rotate-6" />
+        <Sprite name="pencil" className="absolute top-72 left-1/6 w-20 rotate-12" />
+        <Sprite name="letter" className="absolute top-24 right-1/12 w-20 rotate-6" />
+        <Sprite name="plant" className="absolute top-64 right-1/20 w-14" />
+        <Sprite name="cards" className="absolute top-104 right-1/6 w-16 -rotate-3" />
       </div>
-      <div className={`${section} items-center gap-8 pt-16 text-center sm:pt-24`}>
-        <p className="type-label text-text-3">
-          For Claude Code sessions ·{" "}
-          <span className="font-accent type-body-lg text-brand italic">understood by you</span>
-        </p>
+      <div className={`${section} items-center gap-6 pt-16 text-center sm:pt-24`}>
         <h1 id="hero-title" className="type-display text-balance text-text-1 sm:type-display-xl">
-          <span className="relative inline-block font-accent font-normal italic">
-            Own
-            <HandUnderline className="absolute inset-x-0 -bottom-2 h-3 w-full text-brand" />
-          </span>{" "}
-          the code
-          <br />
-          your agent writes.
+          Own the code your agent writes.{" "}
+          <span className="block text-text-2">Explain it until it&rsquo;s yours.</span>
         </h1>
-        <p className="max-w-120 type-body-lg text-pretty text-text-2">
-          Keep the thinking behind every choice. Each session becomes up to 5 decision cards you
-          explain in your own words until they&rsquo;re yours.
+        <p className="max-w-160 type-body-lg text-pretty text-text-2">
+          Each Claude Code session becomes up to 5 decision cards, filed by project. Answer each in
+          your own words on day 1, 4 and 11, and defend it against a follow-up whenever you like.
         </p>
         <div className="flex flex-col items-center gap-3">
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-6">
             <Link href="/sign-up" className={buttonVariants({ size: "lg" })}>
               Get started
             </Link>
             <Link
               href="/how-it-works"
-              className={buttonVariants({ size: "lg", variant: "secondary" })}
+              className="type-label text-text-2 transition-colors duration-(--dur-fast) hover:text-text-1"
             >
               See how it works
             </Link>
           </div>
-          <p className="type-body-sm text-text-3">Free during the trial.</p>
+          <p className="type-body-sm text-text-3">
+            Free during the trial. Built for Claude Code sessions.
+          </p>
         </div>
       </div>
-      {/* The team's own watercolour scene: the learner at work, and the agent beside them holding a card. */}
+      {/* The team's own watercolour scene in place of the product shot: the learner at work, the agent beside them. */}
       <div className="relative mx-auto mt-8 w-full max-w-(--container) px-(--gutter-sm) sm:px-(--gutter)">
         <Image
           src="/art/companion/engineer-meadow.webp"
