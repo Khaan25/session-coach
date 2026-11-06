@@ -7,6 +7,7 @@ import {
   ShieldCheckIcon,
   SquaresFourIcon,
   TerminalWindowIcon,
+  UsersIcon,
 } from "@phosphor-icons/react";
 
 /** The sidebar's Learn group, in its own file so the breadcrumb and /canvas's frame read it without the sidebar. */
@@ -17,5 +18,6 @@ export const navMain = [
   { title: "Defend it", url: "/defend", icon: <ShieldCheckIcon /> },
   { title: "Progress", url: "/progress", icon: <ChartLineUpIcon /> },
   { title: "Setup", url: "/setup", icon: <TerminalWindowIcon /> },
+  { title: "Members", url: "/members", icon: <UsersIcon /> },
   { title: "Settings", url: "/settings", icon: <GearIcon /> },
 ];
