@@ -12,7 +12,9 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
+  FieldLegend,
   FieldSeparator,
+  FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -97,22 +99,23 @@ function ReportControls({ report }: { report: ReportSettings }) {
             </FieldDescription>
           </Field>
           <FieldSeparator />
-          <Field>
-            <FieldLabel>Repos on the page</FieldLabel>
+          {/* One named group, so a screen reader hears what the repo checkboxes are for. */}
+          <FieldSet>
+            <FieldLegend variant="label">Repos on the page</FieldLegend>
             <FieldDescription>
               Private work stays off unless you tick it. The decisions and quotes from a ticked repo
               become public.
             </FieldDescription>
-          </Field>
-          {report.repos.length === 0 ? (
-            <FieldDescription>
-              A repo shows up here after you upload a session from it.
-            </FieldDescription>
-          ) : (
-            report.repos.map((r) => (
-              <RepoField key={r.repo} repo={r.repo} shown={r.shown} id={`${id}-repo-${r.repo}`} />
-            ))
-          )}
+            {report.repos.length === 0 ? (
+              <FieldDescription>
+                A repo shows up here after you upload a session from it.
+              </FieldDescription>
+            ) : (
+              report.repos.map((r) => (
+                <RepoField key={r.repo} repo={r.repo} shown={r.shown} id={`${id}-repo-${r.repo}`} />
+              ))
+            )}
+          </FieldSet>
         </>
       )}
       {on && (

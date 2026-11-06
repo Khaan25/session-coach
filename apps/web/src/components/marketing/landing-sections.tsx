@@ -137,8 +137,8 @@ export function BentoSection() {
             </div>
           </BentoTile>
           <BentoTile
-            title="Secrets stay on your laptop"
-            body="The CLI removes keys and tokens before upload, and the server checks again."
+            title="Secrets removed before upload"
+            body="The CLI strips the keys and tokens it recognises, and the server redacts again. It can miss some, so check what you send."
           >
             <div className="frame flex w-full max-w-72 flex-col gap-2 bg-well p-4 type-code-sm text-text-2">
               <span>OPENAI_API_KEY=[REDACTED]</span>

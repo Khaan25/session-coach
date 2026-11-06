@@ -51,7 +51,7 @@ export function SessionView({
           {title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session"}
         </h1>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 type-body text-text-2">
-          <StatusBadge status={status} />
+          <StatusBadge status={status} cardCount={cards.length} />
           {repo && <Code>{repo}</Code>}
           {branch && <Code>{branch}</Code>}
           {meta && <span className="data">{meta}</span>}

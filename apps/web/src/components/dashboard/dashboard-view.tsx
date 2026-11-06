@@ -82,7 +82,7 @@ export function DashboardView({
       {firstVisit ? (
         // The first step leads, and the list stays live under it, so the first session shows up without a reload.
         <div className="grid items-start gap-4 lg:grid-cols-2">
-          {sessions}
+          <SessionsCard>{sessions}</SessionsCard>
           <DueCard
             title="Due today"
             description={`Cards to explain land here, at most ${DAILY_CAP} a day. ${ANSWER_FIRST}`}
@@ -97,18 +97,7 @@ export function DashboardView({
           {/* Two lists side by side from lg, stacked under it: today's cards first. */}
           <div className="grid items-start gap-4 lg:grid-cols-2">
             <DueBlock queue={queue} due={due} repo={repo} empty={empty} />
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <h2>Sessions</h2>
-                </CardTitle>
-                <CardDescription>
-                  Each one the CLI sends keeps up to 5 decisions backed by a quote from the log.
-                </CardDescription>
-              </CardHeader>
-              {sessions}
-              {pager && <CardFooter>{pager}</CardFooter>}
-            </Card>
+            <SessionsCard pager={pager}>{sessions}</SessionsCard>
           </div>
           {/* The stats above carry the totals; the bars only add something with 2+ projects to compare. */}
           {ownership && ownership.overall.total > 0 && ownership.repos.length > 1 && (
@@ -148,10 +137,32 @@ export function DashboardView({
   );
 }
 
-/** A first visit's sessions block: the one step to take. */
+/**
+ * The Sessions card. On a first visit it holds the one step to take, and the live list replaces that step in place
+ * when the first session arrives, so the rows are framed either way.
+ */
+function SessionsCard({ pager, children }: { pager?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2>Sessions</h2>
+        </CardTitle>
+        <CardDescription>
+          Each one the CLI sends keeps up to 5 decisions backed by a quote from the log.
+        </CardDescription>
+      </CardHeader>
+      {children}
+      {pager && <CardFooter>{pager}</CardFooter>}
+    </Card>
+  );
+}
+
+/** A first visit's sessions block, inside the Sessions card: the one step to take. */
 export function FirstSessionEmpty() {
   return (
     <EmptyState
+      variant="plain"
       icon={TerminalWindowIcon}
       title="Send your first session"
       description="Log in with the CLI, then send the session you just finished. It shows up here within a minute."

@@ -79,7 +79,9 @@ export function SetupGuide({ autoOpen = false }: { autoOpen?: boolean }) {
 
   const change = (next: boolean) => {
     setChosen(next);
-    if (!next) markSeen();
+    // Reopening walks the steps again from the first.
+    if (next) setStep(0);
+    else markSeen();
   };
   const close = () => change(false);
   const current = STEPS[step];
