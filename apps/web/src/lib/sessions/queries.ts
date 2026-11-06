@@ -1,4 +1,5 @@
 import "server-only";
+import type { ProjectScope } from "../projects/scope";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,17 +18,22 @@ import { PAGE_SIZE, SESSION_COLUMNS, type SessionListItem, type SessionSummary }
 export async function listSessions({
   userId,
   page,
+  scope = "all",
+  repo,
 }: {
   userId: string;
   page: number;
+  scope?: ProjectScope;
+  repo?: string | null;
 }): Promise<{ sessions: SessionListItem[]; hasMore: boolean }> {
   const supabase = await createClient();
   const from = (page - 1) * PAGE_SIZE;
   // One extra row tells whether a next page exists without a count query.
-  const { data, error } = await supabase
-    .from("sessions")
-    .select(SESSION_COLUMNS)
-    .eq("user_id", userId)
+  let query = supabase.from("sessions").select(SESSION_COLUMNS).eq("user_id", userId);
+  if (repo) query = query.eq("repo", repo);
+  if (scope === "unassigned") query = query.or("repo.is.null,repo.eq.");
+  else if (scope !== "all") query = query.eq("repo", scope.slice(5));
+  const { data, error } = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, from + PAGE_SIZE)
@@ -94,12 +100,15 @@ export type Cardless =
  *
  * @param userId - The signed-in learner.
  */
-export async function cardlessReason(userId: string): Promise<Cardless> {
+export async function cardlessReason(
+  userId: string,
+  scope: ProjectScope = "all",
+): Promise<Cardless> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("sessions")
-    .select("id, status")
-    .eq("user_id", userId)
+  let query = supabase.from("sessions").select("id, status").eq("user_id", userId);
+  if (scope === "unassigned") query = query.or("repo.is.null,repo.eq.");
+  else if (scope !== "all") query = query.eq("repo", scope.slice(5));
+  const { data, error } = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(1)

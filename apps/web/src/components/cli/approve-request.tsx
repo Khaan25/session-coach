@@ -1,23 +1,16 @@
 "use client";
 
+import { LaptopIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
-import { EmptyState } from "@/components/app/empty-state";
-import { ErrorState } from "@/components/app/error-state";
+import { useDryRun } from "@/components/app/dry-run";
+import { ApproveDone, ApproveNotice, SETTLED_COPY } from "@/components/cli/approve-states";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
+import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
 import { FieldError } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 
-type Request = {
+export type ApproveRequestData = {
   /** XXXX-XXXX. */
   userCode: string;
   clientName: string;
@@ -51,16 +44,19 @@ function clock(seconds: number): string {
 }
 
 /**
- * One pending CLI login: what asked, from where and when, with Approve and Deny. Nothing happens until a click, so a
- * link someone else sent can't sign their computer in to this account.
+ * One pending CLI login as option C draws it (canvas: "CLI approve · C · One question"): the code huge, what asked and
+ * when, two answers, and every explanation folded below. Nothing happens until a click, so a link someone else sent
+ * can't sign their computer in to this account. Under DryRunContext (/canvas) the answer shows without the route.
  */
-export function ApproveRequest({ request }: { request: Request }) {
+export function ApproveRequest({ request }: { request: ApproveRequestData }) {
   const secondsLeft = useSecondsLeft(request.secondsLeft);
+  const dryRun = useDryRun();
   const [pending, setPending] = useState<"approve" | "deny" | null>(null);
   const [done, setDone] = useState<"approved" | "denied" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function decide(decision: "approve" | "deny") {
+    if (dryRun) return setDone(decision === "approve" ? "approved" : "denied");
     setPending(decision);
     setError(null);
     const response = await fetch(`/api/cli/device/${decision}`, {
@@ -77,99 +73,80 @@ export function ApproveRequest({ request }: { request: Request }) {
     setError(body?.error ?? "Check your connection and try again.");
   }
 
-  if (done === "approved") {
-    return (
-      <Card>
-        <EmptyState
-          variant="plain"
-          title="CLI connected"
-          description={`Go back to your terminal. ${request.clientName} signs in within a few seconds, and it shows up under Connected devices on Setup.`}
-        />
-      </Card>
-    );
-  }
-  if (done === "denied") {
-    return (
-      <Card>
-        <EmptyState
-          variant="plain"
-          title="Login denied"
-          description="That computer wasn't signed in. If you didn't run session-coach login yourself, nothing else is needed."
-        />
-      </Card>
-    );
-  }
-  if (secondsLeft <= 0) {
-    return (
-      <Card>
-        <ErrorState
-          variant="plain"
-          status="warn"
-          statusWord="Expired"
-          title="This code expired"
-          message="Run session-coach login again for a new one."
-        />
-      </Card>
-    );
-  }
+  if (done) return <ApproveDone done={done} clientName={request.clientName} />;
+  if (secondsLeft <= 0) return <ApproveNotice {...SETTLED_COPY.expired} />;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2>Approve this CLI login?</h2>
-        </CardTitle>
-        <CardDescription>
-          Only approve if you just ran session-coach login on this computer and the code below
-          matches your terminal. Approving lets that computer upload sessions to your account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <DataList variant="framed">
-          <DataListItem>
-            <DataListLabel>Code</DataListLabel>
-            <DataListValue>{request.userCode}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Device</DataListLabel>
-            <DataListValue>{request.clientName}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Requested from</DataListLabel>
-            <DataListValue>{request.requestedIp}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Requested</DataListLabel>
-            <DataListValue>{request.requestedAgo}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Expires in</DataListLabel>
-            <DataListValue>
-              <span className="tabular-nums">{clock(secondsLeft)}</span>
-            </DataListValue>
-          </DataListItem>
-        </DataList>
+    <>
+      <section
+        aria-labelledby="approve-title"
+        className="flex flex-col items-center gap-4 text-center"
+      >
+        <LaptopIcon weight="duotone" className="size-8 text-text-2" aria-hidden="true" />
+        <h1 id="approve-title" className="type-heading-lg text-pretty text-text-1">
+          Is this the code in your terminal?
+        </h1>
+        <p className="type-stat-xl text-text-1 tabular-nums">{request.userCode}</p>
+        {/* Where it came from stays on the page: an address you don't know is a reason to deny. */}
+        <p className="type-body-sm text-text-2">
+          {request.clientName}
+          {request.requestedIp && ` · from ${request.requestedIp}`} · requested{" "}
+          {request.requestedAgo} · expires in{" "}
+          <span className="tabular-nums">{clock(secondsLeft)}</span>
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button
+            size="lg"
+            onClick={() => void decide("approve")}
+            disabled={pending !== null}
+            aria-busy={pending === "approve"}
+          >
+            {pending === "approve" && <Spinner label="" />}
+            Yes, approve
+          </Button>
+          <Button
+            size="lg"
+            variant="secondary"
+            onClick={() => void decide("deny")}
+            disabled={pending !== null}
+            aria-busy={pending === "deny"}
+          >
+            {pending === "deny" && <Spinner label="" />}
+            No, deny
+          </Button>
+        </div>
         {error && <FieldError role="alert">{error}</FieldError>}
-      </CardContent>
-      <CardFooter>
-        <Button
-          onClick={() => void decide("approve")}
-          disabled={pending !== null}
-          aria-busy={pending === "approve"}
-        >
-          {pending === "approve" && <Spinner label="" />}
-          Approve
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => void decide("deny")}
-          disabled={pending !== null}
-          aria-busy={pending === "deny"}
-        >
-          {pending === "deny" && <Spinner label="" />}
-          Deny
-        </Button>
-      </CardFooter>
-    </Card>
+      </section>
+
+      <div className="flex flex-col gap-1">
+        <Collapsible defaultOpen>
+          <CollapsibleRow>What does approving do?</CollapsibleRow>
+          <CollapsibleContent>
+            <p className="py-2 ps-7 type-body-sm text-text-2">
+              It gives that computer a token of its own, so it can upload your Claude Code sessions.
+              Each session becomes up to 5 decision cards to explain back. Then go back to your
+              terminal: it signs in by itself.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
+        <Collapsible>
+          <CollapsibleRow>Why a code and not a token?</CollapsibleRow>
+          <CollapsibleContent>
+            <p className="py-2 ps-7 type-body-sm text-text-2">
+              A pasted token ends up in shell history and chat logs. This code works once and
+              expires after 10 minutes.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
+        <Collapsible>
+          <CollapsibleRow>Didn&apos;t run session-coach login?</CollapsibleRow>
+          <CollapsibleContent>
+            <p className="py-2 ps-7 type-body-sm text-text-2">
+              Deny it. Nothing is signed in, and nothing else is needed.
+            </p>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    </>
   );
 }

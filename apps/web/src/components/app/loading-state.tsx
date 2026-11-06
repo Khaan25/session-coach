@@ -1,13 +1,11 @@
+import { SessionState } from "@/components/sessions/session-state";
 import type { SessionStatus } from "@session-coach/shared/session";
 
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Item, ItemContent, ItemGroup } from "@/components/ui/item";
-import { Progress, ProgressLabel } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { StatRow } from "./stat-row";
-import { StatusBadge } from "./status-badge";
 
 // Skeletons in the geometry of the real thing, so nothing moves when the data lands. The blocks are aria-hidden;
 // each loader says once, in a status region, what is loading.
@@ -105,22 +103,5 @@ export function ProcessingState({
 }: {
   status: Extract<SessionStatus, "pending" | "processing">;
 }) {
-  const processing = status === "processing";
-  return (
-    <Empty>
-      <StatusBadge status={status} />
-      <EmptyHeader>
-        <EmptyTitle>
-          {processing ? "Making cards from this session" : "Waiting to start"}
-        </EmptyTitle>
-        <EmptyDescription>
-          Each session becomes 3 to 5 decision cards. This page updates when they are ready.
-        </EmptyDescription>
-      </EmptyHeader>
-      {/* TODO(zia): a time estimate, once the pipeline reports one. */}
-      <Progress value={null}>
-        <ProgressLabel>{processing ? "Reading the session" : "Uploaded"}</ProgressLabel>
-      </Progress>
-    </Empty>
-  );
+  return <SessionState phase={status} />;
 }

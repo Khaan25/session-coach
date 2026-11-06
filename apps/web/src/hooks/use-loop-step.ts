@@ -1,4 +1,4 @@
-import { useReducedMotion } from "motion/react";
+import { useMotionPreference } from "./use-motion-preference";
 import { useEffect, useState } from "react";
 
 /**
@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
  */
 export function useLoopStep(count: number, stepMs: number, start = 0) {
   const [step, setStep] = useState(start);
-  const reduced = useReducedMotion();
+  const reduced = useMotionPreference();
 
   useEffect(() => {
     if (reduced) return;

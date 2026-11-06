@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 /** The Session Coach mark and name, linking home. */
 export function BrandLink() {
   return (
-    <Link href="/" className="flex items-center gap-2 type-label text-text-1">
+    <Link href="/" className="brand-link flex items-center gap-2.5 text-text-1">
       <BrandMark className="size-6" />
       Session Coach
     </Link>
@@ -29,10 +29,8 @@ export function AuthHeading({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h1 className="font-display text-5xl leading-none tracking-tight text-text-1 sm:text-6xl">
-        {title}
-      </h1>
+    <div className="auth-heading flex flex-col gap-3">
+      <h1 className="text-text-1">{title}</h1>
       {children && <p className="type-body text-pretty text-text-2">{children}</p>}
     </div>
   );
@@ -41,7 +39,7 @@ export function AuthHeading({
 /** The large card an auth form sits in. */
 export function AuthCard({ children }: { children: React.ReactNode }) {
   return (
-    <Card size="lg">
+    <Card size="lg" variant="auth">
       <CardContent>{children}</CardContent>
     </Card>
   );

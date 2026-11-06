@@ -18,14 +18,23 @@ export function MeasuredSuspense({
   children: React.ReactNode;
 }) {
   return (
-    <Suspense
-      fallback={
-        <Skeleton loading label={label}>
-          {skeleton}
-        </Skeleton>
-      }
-    >
+    <Suspense fallback={<MeasuredSkeleton label={label}>{skeleton}</MeasuredSkeleton>}>
       {children}
     </Suspense>
+  );
+}
+
+/** The fallback alone: what a page shows while it loads. /canvas draws it to show a page's loading state. */
+export function MeasuredSkeleton({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Skeleton loading label={label}>
+      {children}
+    </Skeleton>
   );
 }

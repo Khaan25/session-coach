@@ -14,15 +14,15 @@ import { mergeClass } from "@/lib/ui/utils";
 // side it opened on. The design system's own opacity-only overlayMotion is left out, the zip's motion wins.
 // Select and combobox reuse these classes, so every list popup moves and looks the same.
 const popupMotionClass =
-  "origin-(--transform-origin) duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95";
+  "origin-(--transform-origin) duration-(--dur-150) data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-start-2 data-[side=inline-start]:slide-in-from-end-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-98 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-98";
 
 // The popup takes focus when a menu opens by keyboard with nothing highlighted; menu-popup opts it out of the ring,
 // the highlighted item is the focus indicator.
-const menuPopupClass = cn("menu-popup", overlaySurface, popupMotionClass);
+const menuPopupClass = cn("control-menu menu-popup", overlaySurface, popupMotionClass);
 
 // A destructive item reads in the fail word at rest and takes the fail wash when highlighted (menu-item does both).
 const menuItemClass =
-  "group/dropdown-menu-item menu-item data-inset:ps-8 [&_svg:not([class*='size-'])]:size-4";
+  "control-menu-item group/dropdown-menu-item menu-item data-inset:ps-8 [&_svg:not([class*='size-'])]:size-4";
 
 // Checkbox and radio items reserve the 32px leading column for their indicator.
 const menuCheckItemClass = cn(menuItemClass, "ps-8");
@@ -40,7 +40,9 @@ function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
 }
 
 function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
-  return <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+  return (
+    <MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" data-cuelume-open="" {...props} />
+  );
 }
 
 type DropdownMenuContentProps = MenuPrimitive.Popup.Props &
@@ -111,6 +113,7 @@ function DropdownMenuItem({
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
+      data-cuelume-select=""
       data-inset={inset || undefined}
       data-variant={variant}
       className={mergeClass(menuItemClass, className)}
@@ -150,6 +153,7 @@ function DropdownMenuSubTrigger({
   return (
     <MenuPrimitive.SubmenuTrigger
       data-slot="dropdown-menu-sub-trigger"
+      data-cuelume-open=""
       data-inset={inset || undefined}
       className={mergeClass(
         [
@@ -198,6 +202,7 @@ function DropdownMenuCheckboxItem({
   return (
     <MenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
+      data-cuelume-toggle=""
       data-inset={inset || undefined}
       className={mergeClass(menuCheckItemClass, className)}
       {...props}
@@ -230,6 +235,7 @@ function DropdownMenuRadioItem({
   return (
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
+      data-cuelume-select=""
       data-inset={inset || undefined}
       className={mergeClass(menuCheckItemClass, className)}
       {...props}

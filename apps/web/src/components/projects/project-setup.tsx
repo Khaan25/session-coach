@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { projectMatches, type ProjectScope } from "@/lib/projects/scope";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { listProjects } from "@/lib/projects/queries";
@@ -6,15 +7,15 @@ import { listProjects } from "@/lib/projects/queries";
 import { ProjectSetupCard } from "./project-setup-card";
 
 /** One setup card per repo the learner hasn't chosen a question level for. Nothing while loading or when all are set. */
-export function ProjectSetup() {
+export function ProjectSetup({ scope = "all" }: { scope?: ProjectScope }) {
   return (
     <Suspense fallback={null}>
-      <SetupCards />
+      <SetupCards scope={scope} />
     </Suspense>
   );
 }
 
-async function SetupCards() {
+async function SetupCards({ scope }: { scope: ProjectScope }) {
   const user = await getCurrentUser();
   if (!user) return null;
   let projects: Awaited<ReturnType<typeof listProjects>>;
@@ -26,6 +27,6 @@ async function SetupCards() {
     return null;
   }
   return projects
-    .filter((project) => !project.onboarded)
+    .filter((project) => !project.onboarded && projectMatches(project.repo, scope))
     .map((project) => <ProjectSetupCard key={project.repo} repo={project.repo} />);
 }

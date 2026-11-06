@@ -11,6 +11,7 @@ import {
   type ExtractOptions,
 } from "./extract.ts";
 import type { TimelineEvent } from "./parser.ts";
+import { MAX_TITLE_CHARS } from "./process-rows.ts";
 
 const events: TimelineEvent[] = [
   { id: "E1", kind: "prompt", text: "Keep the shared styles in one tokens file.", line: 3 },
@@ -63,7 +64,7 @@ function fakeModel(...answers: unknown[]) {
 
 test("valid on the first try: one call, task extract, timeline without line numbers", async () => {
   const { model, calls } = fakeModel({ decisions: three });
-  const cards = await extractCards(events, model);
+  const { cards } = await extractCards(events, model);
   assert.deepEqual(cards, parsedThree);
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.[0], "extract");
@@ -79,7 +80,7 @@ test("valid on the first try: one call, task extract, timeline without line numb
 test("invalid then valid: the second call carries the failed answer and the validation error", async () => {
   const badAnswer = { decisions: [{ ...card, source: "guess" }] };
   const { model, calls } = fakeModel(badAnswer, { decisions: three });
-  const cards = await extractCards(events, model, noWait().options);
+  const { cards } = await extractCards(events, model, noWait().options);
   assert.deepEqual(cards, parsedThree);
   assert.equal(calls.length, 2);
   assert.equal(calls[0]?.[1].data.validation_error, undefined);
@@ -134,7 +135,7 @@ test("0 to 5 decisions are accepted on the first call", async () => {
   for (const count of [0, 1, 2, 3, 5]) {
     const answer = { decisions: Array.from({ length: count }, () => card) };
     const { model, calls } = fakeModel(answer);
-    assert.equal((await extractCards(events, model)).length, count);
+    assert.equal((await extractCards(events, model)).cards.length, count);
     assert.equal(calls.length, 1);
   }
 });
@@ -144,7 +145,7 @@ test("more than 5 valid decisions keeps the first 5, without a retry", async () 
     decisions: Array.from({ length: 7 }, (_, i) => ({ ...card, decision: `D${i}` })),
   };
   const { model, calls } = fakeModel(answer);
-  const cards = await extractCards(events, model);
+  const { cards } = await extractCards(events, model);
   assert.equal(MAX_CARDS, 5);
   assert.deepEqual(
     cards.map((c) => c.decision),
@@ -156,11 +157,13 @@ test("more than 5 valid decisions keeps the first 5, without a retry", async () 
 test("the cap counts valid cards: invalid ones are dropped first", async () => {
   const bad = { ...card, source: "guess" };
   const answer = { decisions: [bad, card, bad, card, card, card, card, card] };
-  assert.deepEqual(await extractCards(events, fakeModel(answer).model), Array(5).fill(parsedCard));
+  const { cards } = await extractCards(events, fakeModel(answer).model);
+  assert.deepEqual(cards, Array(5).fill(parsedCard));
 });
 
 test('"E2" converts to event_index 2', async () => {
-  const [first] = await extractCards(events, fakeModel({ decisions: three }).model);
+  const { cards } = await extractCards(events, fakeModel({ decisions: three }).model);
+  const [first] = cards;
   assert.deepEqual(first?.evidence, [
     { event_index: 2, quote: "put them in tokens.css so every page reuses them" },
   ]);
@@ -170,7 +173,7 @@ test('a card citing an event other than "E<positive number>" is dropped, the oth
   for (const event of ["X2", "2", "E", "e2", "E1.5", "E0", "E01"]) {
     const bad = { ...card, evidence: [{ event, quote: "x" }] };
     const { model, calls } = fakeModel({ decisions: [bad, card, card] });
-    assert.deepEqual(await extractCards(events, model), [parsedCard, parsedCard]);
+    assert.deepEqual((await extractCards(events, model)).cards, [parsedCard, parsedCard]);
     assert.equal(calls.length, 1);
   }
 });
@@ -178,14 +181,14 @@ test('a card citing an event other than "E<positive number>" is dropped, the oth
 test("a whitespace-only quote drops its card", async () => {
   const bad = { ...card, evidence: [{ event: "E2", quote: " \n\t " }] };
   const answer = { decisions: [bad, card, card] };
-  assert.equal((await extractCards(events, fakeModel(answer).model)).length, 2);
+  assert.equal((await extractCards(events, fakeModel(answer).model)).cards.length, 2);
 });
 
 test("evidence needs 1 to 3 items, else the card is dropped", async () => {
   const item = card.evidence[0];
   for (const evidence of [[], [item, item, item, item]]) {
     const answer = { decisions: [{ ...card, evidence }, card, card] };
-    assert.equal((await extractCards(events, fakeModel(answer).model)).length, 2);
+    assert.equal((await extractCards(events, fakeModel(answer).model)).cards.length, 2);
   }
 });
 
@@ -197,7 +200,7 @@ test("cards that are all invalid trigger the retry, with each card's error", asy
     ],
   };
   const { model, calls } = fakeModel(bad, { decisions: three });
-  assert.deepEqual(await extractCards(events, model, noWait().options), parsedThree);
+  assert.deepEqual((await extractCards(events, model, noWait().options)).cards, parsedThree);
   assert.equal(calls.length, 2);
   const error = String(calls[1]?.[1].data.validation_error);
   assert.match(error, /decisions\[0\]/);
@@ -255,6 +258,37 @@ test("each level puts its own question instructions in the prompt, and nothing e
   }
 });
 
+test("the prompt is written for a learner on a phone, with the examples and the style rules after the level line", () => {
+  for (const level of ["simple", "hard", "complex"] as const) {
+    const prompt = extractInstructions(level);
+    assert.match(prompt, /^You turn one AI coding session into a few review cards/);
+    assert.match(prompt, /Who reads the cards: that developer, a few days later, often on a phone/);
+    assert.match(prompt, /Ids can jump: the first prompt is always kept/);
+    assert.match(prompt, /<examples>[\s\S]*<\/examples>/);
+    assert.equal(prompt.match(/<example>/g)?.length, 3);
+    assert.equal(prompt.match(/question \(style, every level\)/g)?.length, 1);
+    assert.ok(
+      prompt.indexOf(QUESTION_LEVELS[level]) < prompt.indexOf("question (style, every level)"),
+      `${level}: the level line comes before the style rules`,
+    );
+    // The replaced lines are gone, the kept rules are still there.
+    assert.ok(!prompt.includes("decision: one plain sentence."));
+    assert.ok(!prompt.includes("model_answer: 1 to 2 sentences."));
+    assert.match(prompt, /Return at most 5 decisions, most important first/);
+    assert.match(prompt, /never invent one to fill the list/);
+  }
+});
+
+test("the prompt tells the model not to make cards from the working rules in a prompt, at every level", () => {
+  for (const level of ["simple", "hard", "complex"] as const) {
+    assert.ok(extractInstructions(level).includes("never make a card from them"), level);
+  }
+});
+
+test("the example keeps its backticks around SYNC_DEADLINE_MS", () => {
+  assert.ok(extractInstructions().includes("`SYNC_DEADLINE_MS`"));
+});
+
 test("the default level is simple, and extractCards sends the level it is given", async () => {
   assert.equal(extractInstructions(), extractInstructions("simple"));
   const { model, calls } = fakeModel({ decisions: [card] }, { decisions: [card] });
@@ -271,4 +305,57 @@ test("the retry keeps the level", async () => {
   );
   await extractCards(events, model, { ...noWait().options, level: "hard" });
   assert.equal(calls[1]?.[1].instructions, extractInstructions("hard"));
+});
+
+test("the prompt asks for a title and says it is required even with no decisions", () => {
+  const prompt = extractInstructions("simple");
+  assert.match(prompt, /\{ "title": string, "decisions": \[/);
+  assert.match(prompt, /under 70 characters/);
+  assert.match(prompt, /Always write a title, even when "decisions" is empty/);
+});
+
+test("a title is returned trimmed, with the cards unchanged", async () => {
+  const answer = {
+    title: "  Keep the first prompt when trimming long sessions \n",
+    decisions: three,
+  };
+  const { model, calls } = fakeModel(answer);
+  const result = await extractCards(events, model);
+  assert.equal(result.title, "Keep the first prompt when trimming long sessions");
+  assert.deepEqual(result.cards, parsedThree);
+  assert.equal(calls.length, 1);
+});
+
+test("a missing, empty, blank or non-string title is ignored; the cards are kept and nothing is retried", async () => {
+  const titles: unknown[] = [undefined, "", " \n\t ", 7, null, ["a"], { title: "x" }, true];
+  for (const title of titles) {
+    const { model, calls } = fakeModel({ title, decisions: three });
+    const result = await extractCards(events, model);
+    assert.equal(result.title, undefined);
+    assert.deepEqual(result.cards, parsedThree);
+    assert.equal(calls.length, 1);
+  }
+});
+
+test("a title too long is cut to the limit with an ellipsis; the cards are kept", async () => {
+  const { model } = fakeModel({ title: "x".repeat(200), decisions: three });
+  const result = await extractCards(events, model);
+  assert.equal(result.title, `${"x".repeat(MAX_TITLE_CHARS)}…`);
+  assert.deepEqual(result.cards, parsedThree);
+});
+
+test("a title with no decisions is still returned", async () => {
+  const result = await extractCards(
+    events,
+    fakeModel({ title: "Fixed a typo", decisions: [] }).model,
+  );
+  assert.deepEqual(result, { title: "Fixed a typo", cards: [] });
+});
+
+test("a bad title never fails an answer whose cards are invalid: the retry's title is used", async () => {
+  const bad = { title: "From the failed answer", decisions: "none" };
+  const { model } = fakeModel(bad, { title: "From the retry", decisions: three });
+  const result = await extractCards(events, model, noWait().options);
+  assert.equal(result.title, "From the retry");
+  assert.deepEqual(result.cards, parsedThree);
 });

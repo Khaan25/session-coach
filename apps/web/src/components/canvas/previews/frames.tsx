@@ -3,27 +3,23 @@
 // Full-page frames, so each canvas preview reads as the real route at desktop size: the (app) shell, the (auth) layout
 // and the public pages, each under a slim browser bar with the URL.
 //
-// Reused as they are: the Sidebar* primitives, BrandMark, ThemeToggle, BrandLink and AuthArt. Rebuilt here with the
-// same primitives and classes, because the production pieces can't run on a canvas: AppSidebar and NavUser import
-// the sign-out Server Action, NavSessions subscribes to live sessions through Supabase, NavMain and AppBreadcrumb read
-// the pathname, SiteNav reads the signed-in user, and the real Sidebar container is `fixed` at the viewport's height.
+// Reused as they are: the Sidebar* primitives, the nav items, BrandMark, ThemeToggle, AuthShell with AuthArt, and
+// SiteNavBar with SiteFooter. Only the (app) sidebar is rebuilt here, with the same primitives and classes, because
+// the production pieces can't run on a canvas: AppSidebar and NavUser import the sign-out Server Action, NavSessions
+// subscribes to live sessions through Supabase, NavMain and AppBreadcrumb read the pathname, and the real Sidebar
+// container is `fixed` at the viewport's height.
 
-import {
-  CaretRightIcon,
-  CaretUpDownIcon,
-  ChartLineUpIcon,
-  ExamIcon,
-  FolderSimpleIcon,
-  GearIcon,
-  SquaresFourIcon,
-  TerminalWindowIcon,
-} from "@phosphor-icons/react";
+import { CaretRightIcon, CaretUpDownIcon, FolderSimpleIcon } from "@phosphor-icons/react";
 import type { SessionStatus } from "@session-coach/shared/session";
-import Link from "next/link";
 
 import { AuthArt, type AuthScene } from "@/components/auth/auth-art";
-import { BrandLink } from "@/components/auth/auth-parts";
+import { AuthShell } from "@/components/auth/auth-screens";
+import { DryRunContext } from "@/components/app/dry-run";
 import { BrandMark } from "@/components/brand-mark";
+import { SiteFooter } from "@/components/marketing/site-footer";
+import { SiteNavAccount } from "@/components/marketing/site-nav-account";
+import { SiteNavBar } from "@/components/marketing/site-nav-bar";
+import { navMain } from "@/components/nav-items";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -35,7 +31,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { buttonVariants } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -57,14 +52,8 @@ import {
 
 export type FrameNavItem = { title: string; url: string; icon: React.ReactNode };
 
-/** The real sidebar's Learn group, from app-sidebar.tsx. */
-export const LEARN_NAV: FrameNavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: <SquaresFourIcon /> },
-  { title: "Review", url: "/review", icon: <ExamIcon /> },
-  { title: "Progress", url: "/progress", icon: <ChartLineUpIcon /> },
-  { title: "Setup", url: "/setup", icon: <TerminalWindowIcon /> },
-  { title: "Settings", url: "/settings", icon: <GearIcon /> },
-];
+/** The real sidebar's Learn group. */
+export const LEARN_NAV: FrameNavItem[] = navMain;
 
 export type FrameSession = { id: string; title: string; repo: string; status: SessionStatus };
 
@@ -92,7 +81,7 @@ const statusBadge: Record<SessionStatus, { label: string; props: BadgeProps }> =
 };
 
 /** A browser window: the URL bar, an optional bar under it, then the page filling the rest. */
-function FrameWindow({
+export function FrameWindow({
   path,
   bar,
   overlay,
@@ -117,7 +106,8 @@ function FrameWindow({
       </div>
       {bar}
       <div className="relative flex min-h-0 flex-1 flex-col">
-        {children}
+        {/* Every real control drawn in a frame saves nothing: see DryRunContext. */}
+        <DryRunContext value>{children}</DryRunContext>
         {overlay}
       </div>
     </div>
@@ -158,11 +148,13 @@ export function AppFrame({
   overlay?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const isActive = (url: string) => path === url || path.startsWith(`${url}/`);
+  const route = path.split("?")[0];
+  const isActive = (url: string) => route === url || route.startsWith(`${url}/`);
   const title =
     crumb ??
     nav.find((item) => isActive(item.url))?.title ??
-    (path.startsWith("/s/") ? "Session" : undefined);
+    // As AppBreadcrumb: session and CLI approve pages are not in the nav, so they get their own crumb.
+    (path.startsWith("/s/") ? "Session" : path.startsWith("/cli/") ? "Connect the CLI" : undefined);
   return (
     <FrameWindow path={path} bar={bar} overlay={overlay}>
       <SidebarProvider className="min-h-0 flex-1">
@@ -357,7 +349,7 @@ function FrameSidebar({
   );
 }
 
-/** The (auth) layout: the brand, the one form column and the footer links on the left, the scene's art on the right. */
+/** The (auth) layout: the real AuthShell, with the scene's art the route would pick. */
 export function AuthFrame({
   path,
   scene,
@@ -370,71 +362,20 @@ export function AuthFrame({
   return (
     <FrameWindow path={path}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="grid min-h-full flex-1 bg-page lg:grid-cols-2">
-          <div className="flex flex-col">
-            <header className="flex h-18 items-center px-(--gutter-sm) sm:h-20 sm:px-(--gutter)">
-              <BrandLink />
-            </header>
-            <main className="flex flex-1 flex-col justify-center">
-              <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
-                {children}
-              </div>
-            </main>
-            <footer className="px-(--gutter-sm) py-8 sm:px-(--gutter)">
-              <ul className="flex justify-center gap-6">
-                {["Privacy", "Terms", "Support"].map((label) => (
-                  <li key={label}>
-                    <Link
-                      href={`/${label.toLowerCase()}`}
-                      className="type-body-sm text-text-2 transition-colors duration-(--dur-fast) hover:text-text-1"
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </footer>
-          </div>
-          <AuthArt scene={scene} />
-        </div>
+        <AuthShell art={<AuthArt scene={scene} />}>{children}</AuthShell>
       </div>
     </FrameWindow>
   );
 }
 
-/** The marketing layout's header, signed out: brand, the three links, Sign in. Then the page. */
+/** The marketing layout, signed out: the real SiteNavBar with the signed-out corner, the page, the real footer. */
 export function PublicFrame({ path, children }: { path: string; children: React.ReactNode }) {
   return (
     <FrameWindow path={path}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-page">
-        <header>
-          <nav
-            aria-label="Main"
-            className="mx-auto flex h-18 w-full max-w-(--container) items-center justify-between gap-6 px-(--gutter-sm) sm:h-20 sm:px-(--gutter)"
-          >
-            <BrandLink />
-            <ul className="hidden items-center gap-8 md:flex">
-              {[
-                { href: "/how-it-works", label: "How it works" },
-                { href: "/pricing", label: "Pricing" },
-                { href: "/support", label: "Support" },
-              ].map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="type-label text-text-2 transition-colors duration-(--dur-fast) hover:text-text-1"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
-              Sign in
-            </Link>
-          </nav>
-        </header>
+        <SiteNavBar account={<SiteNavAccount user={null} />} />
         <main className="flex-1">{children}</main>
+        <SiteFooter />
       </div>
     </FrameWindow>
   );

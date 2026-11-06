@@ -1,4 +1,6 @@
 import "server-only";
+import { projectMatches, type ProjectScope } from "../projects/scope";
+import { fetchAll } from "../supabase/fetch-all";
 
 import type { Session } from "@session-coach/shared/session";
 
@@ -27,7 +29,7 @@ async function learnerTimeZone(supabase: Supabase, userId: string) {
     .from("profiles")
     .select("timezone")
     .eq("id", userId)
-    .maybeSingle<{ timezone: string }>();
+    .maybeSingle();
   if (error) throw new Error(`learnerTimeZone: ${error.message}`);
   return data?.timezone ?? "UTC";
 }
@@ -39,16 +41,24 @@ async function learnerTimeZone(supabase: Supabase, userId: string) {
  * @param userId - The signed-in learner.
  * @param now - The current time; defaults to now.
  */
-export async function dueTodayCount(userId: string, now = new Date()): Promise<number> {
-  return (await reviewQueue(userId, now)).length;
+export async function dueTodayCount(
+  userId: string,
+  now = new Date(),
+  scope: ProjectScope = "all",
+): Promise<number> {
+  return (await reviewQueue(userId, now, scope)).length;
 }
 
 /** One row of the review queue. `step` 0 is a card never answered. */
 export type QueueCard = {
   id: string;
   decision: string;
+  /** What the learner answers. Learner-readable; the why and the answer key are never in the queue. */
+  question: string;
   sessionId: string;
   sessionName: string;
+  /** The session's repo, for the dashboard's project filter; null for a session sent without one. */
+  repo: string | null;
   step: Step;
   dueOn: string | null;
   createdAt: string;
@@ -57,11 +67,13 @@ export type QueueCard = {
 type CardRow = {
   id: string;
   decision: string;
+  question: string;
   session_id: string;
   created_at: string;
   session: SessionName | null;
 };
-const CARD_COLUMNS = "id, decision, session_id, created_at, session:sessions(title, repo, branch)";
+const CARD_COLUMNS =
+  "id, decision, question, session_id, created_at, session:sessions(title, repo, branch)";
 
 /**
  * Today's review queue (plan, Phase 6 step 4), capped by `todayQueue` (`lib/review/today.ts`): at most 5 cards a local
@@ -75,7 +87,11 @@ const CARD_COLUMNS = "id, decision, session_id, created_at, session:sessions(tit
  * @param now - The current time, from the page.
  * @returns Due cards first, then new ones.
  */
-export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[]> {
+export async function reviewQueue(
+  userId: string,
+  now: Date,
+  scope: ProjectScope = "all",
+): Promise<QueueCard[]> {
   const supabase = await createClient();
   const [timeZone, recent, answers] = await Promise.all([
     learnerTimeZone(supabase, userId),
@@ -111,11 +127,13 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
   const toQueue = (card: CardRow, step: Step, dueOn: string | null): QueueCard => ({
     id: card.id,
     decision: card.decision,
+    question: card.question,
     sessionId: card.session_id,
     sessionName: sessionName(card.session ?? {}),
     step,
     dueOn,
     createdAt: card.created_at,
+    repo: card.session?.repo ?? null,
   });
   // RLS drops a hidden card from the embed, leaving card null.
   const dueCards = due.data.flatMap(({ step, due_on, card }) =>
@@ -126,8 +144,8 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
     .filter(({ reviews }) => reviews === null || (Array.isArray(reviews) && reviews.length === 0))
     .map((card) => toQueue(card, 0, null));
   const queue = todayQueue({
-    due: dueCards,
-    fresh,
+    due: dueCards.filter((card) => projectMatches(card.repo, scope)),
+    fresh: fresh.filter((card) => projectMatches(card.repo, scope)),
     answeredToday: countAnsweredToday(
       answers.data.map(({ created_at }) => created_at),
       timeZone,
@@ -157,7 +175,12 @@ export type EmptyQueue = {
  * @returns Whether the learner has any visible card, whether today's `DAILY_CAP` answers are in, and the earliest
  *   `due_on` after today (null when none is scheduled: every answered card is mastered).
  */
-export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue> {
+export async function emptyQueue(
+  userId: string,
+  now: Date,
+  scope: ProjectScope = "all",
+): Promise<EmptyQueue> {
+  if (scope !== "all") return scopedEmptyQueue(userId, now, scope);
   const supabase = await createClient();
   const [cards, timeZone, answers] = await Promise.all([
     supabase
@@ -189,7 +212,7 @@ export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue>
     .gt("due_on", today)
     .order("due_on")
     .limit(1)
-    .maybeSingle<{ due_on: string; card: { id: string } }>();
+    .maybeSingle();
   if (next.error) throw new Error(`emptyQueue: ${next.error.message}`);
   return {
     hasCards: (cards.count ?? 0) > 0,
@@ -201,6 +224,7 @@ export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue>
 
 /** What the quiz shows before an answer: the decision and the question, never the why or the answer key. */
 export type QuizCard = {
+  repo?: string | null;
   id: string;
   decision: string;
   question: string;
@@ -232,5 +256,70 @@ export async function getQuizCard(userId: string, cardId: string): Promise<QuizC
     question: data.question,
     sessionId: data.session_id,
     sessionName: sessionName(data.session ?? {}),
+    repo: data.session?.repo ?? null,
+  };
+}
+
+/** Empty-state details use the selected project's cards and the account-wide answer allowance. */
+async function scopedEmptyQueue(
+  userId: string,
+  now: Date,
+  scope: ProjectScope,
+): Promise<EmptyQueue> {
+  const client = await createClient();
+  const [sessions, cards, reviews, timeZone, answers] = await Promise.all([
+    fetchAll<{ id: string; repo: string | null }>((from, to) =>
+      client.from("sessions").select("id,repo").eq("user_id", userId).order("id").range(from, to),
+    ),
+    fetchAll<{ id: string; session_id: string }>((from, to) =>
+      client
+        .from("decision_cards")
+        .select("id,session_id")
+        .eq("user_id", userId)
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAll<{ card_id: string; due_on: string | null; mastered: boolean }>((from, to) =>
+      client
+        .from("reviews")
+        .select("card_id,due_on,mastered")
+        .eq("user_id", userId)
+        .order("card_id")
+        .range(from, to),
+    ),
+    learnerTimeZone(client, userId),
+    client
+      .from("answers")
+      .select("created_at")
+      .eq("user_id", userId)
+      .gte("created_at", answeredSince(now))
+      .overrideTypes<{ created_at: string }[], { merge: false }>(),
+  ]);
+  if (answers.error) throw new Error("scopedEmptyQueue: " + answers.error.message);
+  const today = localDate(timeZone, now);
+  const sessionIds = new Set(
+    sessions.filter((session) => projectMatches(session.repo, scope)).map((session) => session.id),
+  );
+  const visible = new Set(
+    cards.filter((card) => sessionIds.has(card.session_id)).map((card) => card.id),
+  );
+  const next =
+    reviews
+      .filter(
+        (review) =>
+          visible.has(review.card_id) && !review.mastered && review.due_on && review.due_on > today,
+      )
+      .map((review) => review.due_on as string)
+      .sort()[0] ?? null;
+  return {
+    hasCards: visible.size > 0,
+    doneToday:
+      countAnsweredToday(
+        answers.data.map((row) => row.created_at),
+        timeZone,
+        today,
+      ) >= DAILY_CAP,
+    nextDue: next,
+    today,
   };
 }

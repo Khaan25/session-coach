@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { ProjectLink as Link } from "@/components/projects/project-link";
 import { CaretUpDownIcon, GearIcon, SignOutIcon } from "@phosphor-icons/react";
 
 import { signOut } from "@/app/(auth)/actions";
@@ -43,7 +43,7 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
         <form id="sidebar-sign-out" action={signOut} hidden />
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<SidebarMenuButton size="lg" />}
+            render={<SidebarMenuButton size="lg" variant="account" />}
             aria-label={`Account menu for ${user.name}`}
           >
             {who}
@@ -62,12 +62,15 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuLinkItem render={<Link href="/settings" />}>
-              <GearIcon />
+              <GearIcon aria-hidden />
               Settings
             </DropdownMenuLinkItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem render={<button type="submit" form="sidebar-sign-out" />}>
-              <SignOutIcon />
+            <DropdownMenuItem
+              nativeButton
+              render={<button type="submit" form="sidebar-sign-out" aria-label="Sign out" />}
+            >
+              <SignOutIcon aria-hidden />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

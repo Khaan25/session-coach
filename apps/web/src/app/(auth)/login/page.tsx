@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { AuthHeading } from "@/components/auth/auth-parts";
 import { LoginForm } from "@/components/auth/login-form";
+import { LoginHeading } from "@/components/auth/auth-screens";
 
 export const metadata: Metadata = {
   title: "Sign in | Session Coach",
@@ -18,15 +18,7 @@ async function LoginFormWithNext({ searchParams }: Pick<PageProps<"/login">, "se
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <>
-      <AuthHeading
-        title={
-          <>
-            Sign <span className="italic">in</span>
-          </>
-        }
-      >
-        Pick up your decision cards where you left them.
-      </AuthHeading>
+      <LoginHeading />
       <Suspense fallback={<LoginForm />}>
         <LoginFormWithNext searchParams={searchParams} />
       </Suspense>

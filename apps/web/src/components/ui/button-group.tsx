@@ -12,7 +12,7 @@ import { cn } from "cn";
 // A press does not scale a cell, so the joints never open. Groups inside a group sit 8px apart.
 const buttonGroupVariants = cva(
   [
-    "flex w-fit items-stretch gap-0 *:focus-visible:relative *:focus-visible:z-10",
+    "flex w-fit items-stretch gap-0 *:focus-visible:relative *:focus-visible:z-(--z-raised)",
     "*:active:scale-none! [&>:not([data-variant=default])]:shadow-none!",
     "*:focus-visible:focus-ring-inset *:data-pressed:focus-visible:focus-ring-ink *:data-[variant=default]:focus-visible:focus-ring-ink",
     "has-[>[data-variant=default]]:gap-px *:data-[variant=default]:rounded-none!",

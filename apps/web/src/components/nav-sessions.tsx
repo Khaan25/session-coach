@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { SessionStatus } from "@session-coach/shared/session";
+import { ProjectLink } from "@/components/projects/project-link";
+import { parseProjectScope, type ProjectScope } from "@/lib/projects/scope";
+import { useSearchParams, usePathname } from "next/navigation";
 import { CaretRightIcon, FolderSimpleIcon } from "@phosphor-icons/react";
 
-import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
@@ -19,14 +18,10 @@ import { sessionName } from "@/lib/sessions/name";
 import type { SessionListItem } from "@/lib/sessions/rows";
 import { isEmptyReady, sessionLabel } from "@/lib/sessions/status-label";
 import { useLiveSessions } from "@/lib/sessions/use-live-sessions";
+import { NavigationFeedback } from "@/components/app/navigation-feedback";
+import { useSidebar } from "@/components/ui/sidebar";
 
 // What the badge says about the session's cards, one shape per meaning so it reads in grayscale too.
-const statusBadge: Record<SessionStatus, { label: string; props: BadgeProps }> = {
-  pending: { label: "Queued", props: { variant: "outline" } },
-  processing: { label: "Making cards", props: { variant: "default" } },
-  ready: { label: "Cards ready", props: { variant: "success" } },
-  failed: { label: "Failed", props: { status: "fail" } },
-};
 
 /**
  * The sidebar's latest sessions, live. Each row: the title, then the repository (folder icon) and a badge saying
@@ -35,12 +30,15 @@ const statusBadge: Record<SessionStatus, { label: string; props: BadgeProps }> =
 export function NavSessions({
   sessions,
   userId,
+  scope = "all",
 }: {
   sessions: SessionListItem[];
   userId?: string | null;
+  scope?: ProjectScope;
 }) {
   const pathname = usePathname();
-  const { rows } = useLiveSessions(userId, sessions, { limit: 5 });
+  const { setOpenMobile } = useSidebar();
+  const { rows } = useLiveSessions(userId, sessions, { limit: 5, scope });
   if (rows.length === 0) return null;
   return (
     <Collapsible
@@ -56,30 +54,24 @@ export function NavSessions({
           <SidebarMenu>
             {rows.map((session) => {
               const name = sessionName(session);
-              const label = sessionLabel(session.status, session.cardCount, {
-                ready: statusBadge.ready.label,
-              });
-              // A ready session with no cards is not "ready" to review: the plain outline, not the success badge.
-              const badge = {
-                label,
-                props: isEmptyReady(session.status, session.cardCount)
-                  ? statusBadge.pending.props
-                  : statusBadge[session.status].props,
-              };
+              const label = sessionLabel(session.status, session.cardCount);
               return (
                 <SidebarMenuItem key={session.id}>
                   <SidebarMenuButton
                     size="lg"
+                    variant="session"
                     isActive={pathname === `/s/${session.id}`}
-                    render={<Link href={`/s/${session.id}`} />}
+                    render={
+                      <ProjectLink href={`/s/${session.id}`} onClick={() => setOpenMobile(false)} />
+                    }
                     // Native tooltip: the full title (it truncates) and what the second line means.
-                    title={[name, session.repo && `Repository: ${session.repo}`, badge.label]
+                    title={[name, session.repo && `Repository: ${session.repo}`, label]
                       .filter(Boolean)
                       .join("\n")}
                   >
-                    <div className="grid min-w-0 flex-1 gap-0.5">
+                    <div className="sidebar-session-copy">
                       <span className="truncate">{name}</span>
-                      <span className="flex min-w-0 items-center gap-1.5 type-label-sm text-text-2">
+                      <span className="sidebar-session-meta">
                         {session.repo && (
                           <>
                             <FolderSimpleIcon aria-hidden className="shrink-0" />
@@ -88,11 +80,19 @@ export function NavSessions({
                           </>
                         )}
                         <span className="sr-only">Status:</span>
-                        <Badge size="sm" {...badge.props}>
-                          {badge.label}
-                        </Badge>
+                        <span
+                          className="sidebar-session-status"
+                          data-session-status={
+                            isEmptyReady(session.status, session.cardCount)
+                              ? "empty"
+                              : session.status
+                          }
+                        >
+                          {label}
+                        </span>
                       </span>
                     </div>
+                    <NavigationFeedback />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               );
@@ -102,4 +102,9 @@ export function NavSessions({
       </CollapsibleContent>
     </Collapsible>
   );
+}
+
+export function ScopedNavSessions(props: React.ComponentProps<typeof NavSessions>) {
+  const search = useSearchParams();
+  return <NavSessions {...props} scope={parseProjectScope(search.get("project"))} />;
 }

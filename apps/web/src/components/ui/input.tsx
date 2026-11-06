@@ -13,9 +13,11 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
     <InputPrimitive
       type={type}
       data-slot="input"
+      // cuelume plays on keys in a read-only field too, where nothing is typed.
+      data-cuelume-type={props.readOnly ? undefined : ""}
       className={cn(
         fieldControlVariants({ size: "default" }),
-        "read-only:cursor-default",
+        "control-input read-only:cursor-default",
         // The file button is a segment on the field's start edge: full height, the grey well, a rule before the name.
         "file:-ms-3 file:me-3 file:h-full file:cursor-pointer file:rounded-s-soft file:border-0 file:border-e file:border-solid file:border-(--line-control) file:bg-well file:px-3 file:type-label file:text-text-1 file:transition-colors hover:file:bg-hover",
         className,

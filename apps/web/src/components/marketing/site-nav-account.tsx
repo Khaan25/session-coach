@@ -28,8 +28,11 @@ export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
     return (
       <>
         <ForgetShapes />
-        <Link href="/login" className={buttonVariants({ variant: "secondary" })}>
+        <Link href="/login" data-nav-auth="signin" className={buttonVariants({ variant: "quiet" })}>
           Sign in
+        </Link>
+        <Link href="/sign-up" className={buttonVariants()}>
+          Get started
         </Link>
       </>
     );

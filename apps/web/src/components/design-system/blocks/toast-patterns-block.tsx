@@ -128,7 +128,7 @@ function VaryingHeightExample() {
       className="w-full"
       onClick={() => {
         toast.add({ title: "Answer saved" });
-        toast.add({ type: "success", title: "Day 3 review done", description: cards[1].decision });
+        toast.add({ type: "success", title: "Day 4 review done", description: cards[1].decision });
         toast.add({
           type: "warning",
           title: "One card is flagged",
@@ -176,7 +176,7 @@ function BottomStartExample() {
         bottomStart.add({
           type: "error",
           title: "Review missed",
-          description: "TODO(zia): what happens when a day 7 review is missed.",
+          description: "TODO(zia): what happens when a day-11 review is missed.",
         })
       }
     >

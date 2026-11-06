@@ -137,7 +137,7 @@ function TextFields() {
                 />
               </Field>
               <Field data-disabled>
-                <FieldLabel htmlFor="field-disabled">Locked until day 3</FieldLabel>
+                <FieldLabel htmlFor="field-disabled">Locked until day 4</FieldLabel>
                 <Input id="field-disabled" disabled />
               </Field>
             </FieldGroup>
@@ -149,7 +149,7 @@ function TextFields() {
                 <Checkbox id="field-email" defaultChecked />
                 <FieldContent>
                   <FieldLabel htmlFor="field-email">Email me on review days</FieldLabel>
-                  <FieldDescription>Day 1, 3 and 7 after a session ends.</FieldDescription>
+                  <FieldDescription>On day 1, 4 and 11.</FieldDescription>
                 </FieldContent>
               </Field>
               <FieldSeparator>or</FieldSeparator>

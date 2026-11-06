@@ -1,8 +1,12 @@
 import "server-only";
+import { projectScope, type ProjectScope } from "../projects/scope";
+import { sessionName } from "../sessions/name";
+import { cardPath, type CardPath, type CardPathInput } from "./card-path";
 
 import { createClient } from "@/lib/supabase/server";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
+import { computeOwnership, type Ownership } from "./ownership";
 import { CHART_DAYS, computeProgress, type Progress, type ProgressInput } from "./progress";
 
 /**
@@ -14,12 +18,22 @@ import { CHART_DAYS, computeProgress, type Progress, type ProgressInput } from "
  * @param now - The current time, from the page.
  * @returns The computed progress (see `computeProgress`).
  */
-export async function getProgress(userId: string, now: Date): Promise<Progress> {
+export async function getProgress(
+  userId: string,
+  now: Date,
+  selection: ProjectScope | string | null = "all",
+): Promise<Progress> {
+  const scope: ProjectScope =
+    !selection || selection === "all"
+      ? "all"
+      : selection === "unassigned" || selection.startsWith("repo:")
+        ? (selection as ProjectScope)
+        : projectScope(selection);
   const supabase = await createClient();
   // One extra day so the oldest chart day is whole in any time zone.
   const since = new Date(now.getTime() - (CHART_DAYS + 1) * 24 * 60 * 60 * 1000).toISOString();
 
-  const [profile, cards, reviews, answers, sessions] = await Promise.all([
+  const [profile, cards, reviews, answers, sessions, explained, defended] = await Promise.all([
     supabase
       .from("profiles")
       .select("timezone")
@@ -48,26 +62,123 @@ export async function getProgress(userId: string, now: Date): Promise<Progress> 
         .eq("user_id", userId)
         .gte("created_at", since)
         .order("id")
-        .range(from, to),
+        .range(from, to)
+        // score has a check constraint (0, 1 or 2) that the generated types read as number.
+        .overrideTypes<ProgressInput["answers"], { merge: false }>(),
     ),
     fetchAll<ProgressInput["sessions"][number]>((from, to) =>
       supabase
         .from("sessions")
-        .select("id, title, repo, branch")
+        .select("id, title, repo, branch, status")
         .eq("user_id", userId)
-        .eq("status", "ready")
         .order("created_at", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAll<{ card_id: string }>((from, to) =>
+      supabase
+        .from("answers")
+        .select("card_id")
+        .eq("user_id", userId)
+        .eq("score", 2)
+        .lte("created_at", now.toISOString())
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAll<{ card_id: string }>((from, to) =>
+      supabase
+        .from("defenses")
+        .select("card_id")
+        .eq("user_id", userId)
+        .eq("status", "finished")
+        .eq("score", 2)
         .order("id")
         .range(from, to),
     ),
   ]);
   if (profile.error) throw new Error(`getProgress: ${profile.error.message}`);
 
-  return computeProgress({
-    cards,
-    reviews,
-    answers,
-    sessions,
+  return computeProgress(
+    {
+      cards,
+      reviews,
+      answers,
+      sessions,
+      timeZone: profile.data?.timezone ?? "UTC",
+      now,
+      explainedCardIds: explained.map((row) => row.card_id),
+      defendedCardIds: defended.map((row) => row.card_id),
+    },
+    scope,
+  );
+}
+
+/**
+ * The dashboard's ownership meter: `learner_ownership()` counts explained, owned and visible cards per repo in Postgres
+ * (one row per repo, RLS applies since it runs as the learner), then `computeOwnership` adds the overall line.
+ *
+ * @returns See `computeOwnership`.
+ */
+export async function getOwnership(): Promise<Ownership> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("learner_ownership");
+  if (error) throw error;
+  return computeOwnership(data);
+}
+
+/**
+ * One of the learner's own cards to teach the schedule with: the furthest along (owned first, then the highest step),
+ * with all its answers. Learner reads through RLS; the inner embed drops a hidden card. Only the decision's title is
+ * read, never its why, evidence or answer key.
+ *
+ * @param userId - The signed-in learner.
+ * @param now - The current time, from the page.
+ * @param repo - Pick the card from this project only (`?repo=`); null for every project.
+ * @returns The card's path (see `cardPath`), or null when no card has been answered.
+ */
+export async function getCardPath(
+  userId: string,
+  now: Date,
+  repo: string | null = null,
+): Promise<CardPath | null> {
+  const supabase = await createClient();
+  // Both embeds are inner so the repo filter drops the review row, not just its session; every card has a session.
+  let reviewQuery = supabase
+    .from("reviews")
+    .select(
+      "card_id, step, due_on, mastered, card:decision_cards!inner(decision, created_at, session:sessions!inner(title, repo, branch))",
+    )
+    .eq("user_id", userId);
+  if (repo) reviewQuery = reviewQuery.eq("card.session.repo", repo);
+  const [profile, review] = await Promise.all([
+    supabase.from("profiles").select("timezone").eq("id", userId).maybeSingle(),
+    reviewQuery
+      .order("mastered", { ascending: false })
+      .order("step", { ascending: false })
+      .order("due_on")
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  if (profile.error) throw new Error(`getCardPath: ${profile.error.message}`);
+  if (review.error) throw new Error(`getCardPath: ${review.error.message}`);
+  if (!review.data) return null;
+
+  const answers = await supabase
+    .from("answers")
+    .select("score, review_step, skipped, created_at")
+    .eq("user_id", userId)
+    .eq("card_id", review.data.card_id)
+    .order("created_at")
+    .overrideTypes<CardPathInput["answers"], { merge: false }>();
+  if (answers.error) throw new Error(`getCardPath: ${answers.error.message}`);
+
+  const { card, step, due_on, mastered } = review.data;
+  return cardPath({
+    decision: card.decision,
+    session: card.session ? sessionName(card.session) : "your session",
+    createdAt: card.created_at,
+    answers: answers.data,
+    review: { step, due_on, mastered },
     timeZone: profile.data?.timezone ?? "UTC",
     now,
   });

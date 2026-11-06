@@ -138,11 +138,11 @@ function NestedDialogExample() {
             </DialogTrigger>
             <DialogContent size="sm">
               <DialogHeader>
-                <DialogTitle>Why day 1, 3 and 7</DialogTitle>
+                <DialogTitle>Why day 1, 4 and 11</DialogTitle>
                 {/* TODO(zia): the reason for this spacing. Until then the copy says how the schedule moves. */}
                 <DialogDescription>
-                  Explain a card well and it moves to the next gap; miss it and it starts again at
-                  day 1. Pass day 7 and it is mastered.
+                  Explain a card well and it moves to the next gap; miss it and it drops a step.
+                  Pass the day-11 review and it is mastered.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>

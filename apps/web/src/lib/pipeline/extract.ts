@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { ModelInput } from "../model/call-model.ts";
 import { sleep as wait } from "../model/retry.ts";
 import type { TimelineEvent } from "./parser.ts";
+import { cutTitle } from "./process-rows.ts";
 
 /** Same signature as `callModel`, injected so tests never call a real API. */
 export type ExtractModel = (task: "extract", input: ModelInput) => Promise<unknown>;
@@ -22,26 +23,48 @@ export const QUESTION_LEVELS: Record<QuestionLevel, string> = {
  * are the same at every level.
  */
 export function extractInstructions(level: QuestionLevel = DEFAULT_QUESTION_LEVEL): string {
-  return `You find the decisions an AI coding agent made in one working session.
+  return `You turn one AI coding session into a few review cards for the developer who worked in it.
 
 The timeline arrives as JSON in the user message: { "events": [ { "id": "E1", "kind": "prompt", "text": "..." } ] }.
 Each event has an id (E1, E2, ...), a kind and its text. The kinds are prompt, reply, write, edit, bash, read and result. Ids can start at any number because older events may have been cut, and evidence must cite only ids that appear in the timeline.
 A prompt is the user's words. A reply is the agent's words. The others are what the agent did.
 
+Who reads the cards: that developer, a few days later, often on a phone, without the code open. They are learning to explain their own project out loud. So every card must make sense without reading code.
+
+Where reasons are in this timeline: mostly in prompts (the developer's plans, rules and constraints, often pasted as long lists) and in replies (the agent's plans and explanations). Write, edit, bash and result events show what happened, rarely why. Ids can jump: the first prompt is always kept, then events after it may have been cut (for example E1, then E57). Prompts often start with working rules for the agent (plan only, do not edit or commit, do not read env files, run the tests). Those are how the session was run, not decisions about the project: never make a card from them.
+
 Return JSON only, exactly this shape:
-{ "decisions": [ { "decision": string, "why": string, "source": "stated" | "inferred", "evidence": [ { "event": string, "quote": string } ], "files": [string], "question": string, "model_answer": string } ] }
+{ "title": string, "decisions": [ { "decision": string, "why": string, "source": "stated" | "inferred", "evidence": [ { "event": string, "quote": string } ], "files": [string], "question": string, "model_answer": string } ] }
 
 A decision is a choice between at least two real options that changed the code or the plan. A file write, a deletion, a command or a test result alone is not a decision. Examples: where shared styles live, whether a file may be touched, how data is stored. These are NOT decisions: running a command, reading a file, naming, formatting, writing a commit message. A bug fix is not a decision unless it chose between different approaches.
 
-For each decision:
+First choose. Look for the choices a teammate would ask about in a code review ("why did you do it this way?"). Rank them by how much the project would change if the choice had gone the other way. Adding a test, a comment or a log line is not a decision; the choice the test protects can be. Writing a test, a doc line or a DECISIONS.md entry that records a choice is never a card by itself; make the card about the choice it records, or make no card.
 
-decision: one plain sentence.
-why: the reason in plain words.
+title: one line in plain English, under 70 characters, saying what this session decided or built (for example "Keep the first prompt when trimming long sessions"). No file paths, backticks, code names or instructions to the agent ("plan only", "edit X only"). Always write a title, even when "decisions" is empty; then describe what the session did.
+
+Then write each card:
+
+decision: one short sentence in plain English saying what was chosen, and what it was chosen over when the session names the alternative ("We do X instead of Y."). Do not include the reason: the learner sees this sentence before answering, so it must not give the answer away. Describe things by what they do ("the upload's time limit"), not by code names. Use a code name only when no plain words work, at most once.
+why: the reason in plain words, 1 to 2 sentences, as you would explain it to a teammate.
 source: “stated” only if the user or the agent wrote the reason somewhere in the timeline. Otherwise “inferred”.
 evidence: 1 to 3 items. Each has event (the event id, like E2) and quote: 5 to 30 words copied exactly from that one event. Do not paraphrase, shorten with “...”, fix typos, or join text from two events. If source is “stated”, one quote must contain the reason. At least one quote must state the choice or its reason in words. A file-write line or a shell command does not count as that quote. If no quote states the reason, source must be “inferred” and the why must say the reason is inferred.
 files: file paths from write or edit events that belong to this decision, or [] if none.
 ${QUESTION_LEVELS[level]}
-model_answer: 1 to 2 sentences.
+question (style, every level): ask what a teammate would ask out loud, in plain words, under 20 words. Ask for the reason, the trade-off, or what would break; never for something the decision sentence already says.
+model_answer: 1 to 2 plain sentences the developer could say out loud.
+
+<examples>
+<example>
+Poor card: decision "Add a test that asserts \`SYNC_DEADLINE_MS\` > \`UPLOAD_TIMEOUT_MS\` + 2 * \`API_TIMEOUT_MS\`." question "What does the newly added test check?"
+Good card: decision "We gave the sync command one time limit for the whole run, set to 3 minutes." why "A slow upload that is still working must be allowed to finish, so the overall limit has to be longer than the upload's own timeout plus two server calls." question "Why must sync's overall time limit be longer than the upload's own timeout?" model_answer "Otherwise it could cut off an upload that was slow but still working; it should only stop a run that is really stuck."
+</example>
+<example>
+"Add a one-line comment explaining the slice logic." This is an action, not a decision: no card.
+</example>
+<example>
+A session that only fixes a typo and runs the tests: { "decisions": [] }
+</example>
+</examples>
 
 Use only the timeline. Return at most 5 decisions, most important first. If the session has fewer real decisions, return fewer, or an empty list; never invent one to fill the list.`;
 }
@@ -71,6 +94,17 @@ export const MAX_CARDS = 5;
 /** The answer's outer shape. Cards are parsed one by one (`parseAnswer`), so one bad card can't sink the rest. */
 const extractOutputSchema = z.object({ decisions: z.array(z.unknown()) });
 
+/** The answer's title, or undefined when it is missing, blank or not a string. Never fails the answer. */
+function parseTitle(answer: unknown): string | undefined {
+  const title = (answer as { title?: unknown } | null)?.title;
+  if (typeof title !== "string") return undefined;
+  const trimmed = title.trim();
+  return trimmed === "" ? undefined : cutTitle(trimmed);
+}
+
+/** What `extractCards` returns: the valid cards and, when the model gave a usable one, the session title. */
+export type Extracted = { cards: ExtractedCard[]; title: string | undefined };
+
 /** A card as the model wrote it, before `checkEvidence` verifies the quotes. */
 export type ExtractedCard = z.infer<typeof modelCardSchema>;
 
@@ -97,7 +131,7 @@ export type ExtractOptions = {
  * Keeps the valid cards of one answer, up to `MAX_CARDS`. Invalid cards are dropped. The answer counts as failed only
  * when its outer shape is wrong, or when it has cards and none of them is valid, so the retry can fix them.
  */
-function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: string } {
+function parseAnswer(answer: unknown): Extracted | { error: string } {
   const outer = extractOutputSchema.safeParse(answer);
   if (!outer.success) return { error: z.prettifyError(outer.error) };
   const results = outer.data.decisions.map((card) => modelCardSchema.safeParse(card));
@@ -108,7 +142,7 @@ function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: str
     );
     return { error: errors.join("\n") };
   }
-  return { cards: cards.slice(0, MAX_CARDS) };
+  return { cards: cards.slice(0, MAX_CARDS), title: parseTitle(answer) };
 }
 
 /**
@@ -120,14 +154,15 @@ function parseAnswer(answer: unknown): { cards: ExtractedCard[] } | { error: str
  * @param model - `callModel` in production, a fake in tests.
  * @param options - `retryDelayMs` (default `RETRY_DELAY_MS`) and `sleep` change the wait; `signal` cancels; `level`
  *   picks the question level (default simple).
- * @returns 0 to `MAX_CARDS` cards, unverified. Zero is a valid answer: a session can have no real decisions.
+ * @returns 0 to `MAX_CARDS` cards, unverified, and the model's title, cut to the title limit; undefined when the answer
+ *   had none. Zero cards is a valid answer: a session can have no real decisions.
  * @throws ExtractError when both answers are invalid. Errors from `model` itself pass through.
  */
 export async function extractCards(
   events: readonly TimelineEvent[],
   model: ExtractModel,
   { retryDelayMs = RETRY_DELAY_MS, sleep = wait, signal, level }: ExtractOptions = {},
-): Promise<ExtractedCard[]> {
+): Promise<Extracted> {
   const instructions = extractInstructions(level);
   const timeline = events.map(({ id, kind, text }) => ({ id, kind, text }));
   const cancel = signal ? { signal } : {};
@@ -137,7 +172,7 @@ export async function extractCards(
     ...cancel,
   });
   const first = parseAnswer(firstAnswer);
-  if ("cards" in first) return first.cards;
+  if ("cards" in first) return first;
 
   await sleep(retryDelayMs, signal);
   signal?.throwIfAborted();
@@ -153,7 +188,7 @@ export async function extractCards(
       ...cancel,
     }),
   );
-  if ("cards" in second) return second.cards;
+  if ("cards" in second) return second;
 
   throw new ExtractError(`The model returned invalid cards twice. Last error:\n${second.error}`);
 }

@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useDryRun } from "@/components/app/dry-run";
 import { toast } from "@/components/ui/toast";
 
 /**
@@ -27,7 +28,9 @@ export function DeleteAccountDialog({ email }: { email: string }) {
   const router = useRouter();
   const [typed, setTyped] = useState("");
   const [pending, setPending] = useState(false);
-  const matches = email !== "" && typed.trim().toLowerCase() === email.toLowerCase();
+  // On /canvas the confirm never turns on, so nobody deletes their own account from a preview.
+  const dryRun = useDryRun();
+  const matches = !dryRun && email !== "" && typed.trim().toLowerCase() === email.toLowerCase();
 
   async function deleteAccount() {
     setPending(true);

@@ -12,6 +12,7 @@ import {
   MAX_TITLE_CHARS,
   buildCardRows,
   durationMinutes,
+  cutTitle,
   sessionTitle,
   trimTimeline,
   unzipLog,
@@ -50,12 +51,12 @@ test("trimTimeline keeps everything that fits and cuts nothing", () => {
 });
 
 test("trimTimeline keeps the newest events that fit and counts the older ones as cut", () => {
-  // 1,500 chars of text cost about 1,540 as JSON: 10 fit in 16,000, the 11th would not.
+  // 1,500 chars of text cost about 1,540 as JSON: 8 fit in 13,500, the 9th would not.
   const events = Array.from({ length: 12 }, (_, i) => event(i + 1, MAX_EVENT_CHARS));
   const { kept, cut } = trimTimeline(events);
-  assert.equal(kept.length, 10);
-  assert.equal(cut, 2);
-  assert.deepEqual(kept, events.slice(2));
+  assert.equal(kept.length, 8);
+  assert.equal(cut, 4);
+  assert.deepEqual(kept, events.slice(4));
 });
 
 test("trimTimeline keeps the original ids and chronological order", () => {
@@ -63,7 +64,7 @@ test("trimTimeline keeps the original ids and chronological order", () => {
   const { kept } = trimTimeline(events);
   assert.deepEqual(
     kept.map((e) => e.id),
-    ["E3", "E4", "E5", "E6", "E7", "E8", "E9", "E10", "E11", "E12"],
+    ["E5", "E6", "E7", "E8", "E9", "E10", "E11", "E12"],
   );
   assert.deepEqual(
     kept.map((e) => e.line),
@@ -72,9 +73,9 @@ test("trimTimeline keeps the original ids and chronological order", () => {
 });
 
 test("trimTimeline accepts an event that lands exactly on the budget", () => {
-  const events = Array.from({ length: 15 }, (_, i) => event(i + 1, 1_000));
+  const events = Array.from({ length: 12 }, (_, i) => event(i + 1, 1_000));
   const used = events.reduce((sum, e) => sum + size(e), 0);
-  const last = event(16, 0);
+  const last = event(13, 0);
   last.text = "x".repeat(MAX_TIMELINE_CHARS - used - size(last));
   assert.equal(trimTimeline([...events, last]).cut, 0);
   assert.equal(trimTimeline([...events, last, event(99, 0)]).cut, 1);
@@ -128,6 +129,66 @@ test("trimTimeline caps a multi-million-character event and a long emoji run exa
   assert.equal([...text].length, MAX_EVENT_CHARS);
   assert.equal(text, "😀".repeat(MAX_EVENT_CHARS));
   assert.equal([...text].at(-1), "😀");
+});
+
+const prompt = (n: number, length: number): TimelineEvent => ({
+  ...event(n, length),
+  kind: "prompt",
+});
+
+test("trimTimeline always keeps the first prompt, even when newer events fill the budget", () => {
+  const events = [
+    prompt(1, 400),
+    ...Array.from({ length: 12 }, (_, i) => event(i + 2, MAX_EVENT_CHARS)),
+  ];
+  const { kept, cut } = trimTimeline(events);
+  // The prompt costs 438, leaving 13,062: 8 replies of about 1,540 fit, the 9th would not.
+  assert.deepEqual(
+    kept.map((e) => e.id),
+    ["E1", "E6", "E7", "E8", "E9", "E10", "E11", "E12", "E13"],
+  );
+  assert.equal(cut, 4);
+  assert.deepEqual(kept[0], events[0]);
+  const sent = kept.reduce((sum, e) => sum + size(e), 0);
+  assert.ok(sent <= MAX_TIMELINE_CHARS, `sent ${sent}`);
+});
+
+test("trimTimeline counts the first prompt against the budget, capped at MAX_EVENT_CHARS", () => {
+  const events = [
+    prompt(1, 5_000),
+    ...Array.from({ length: 12 }, (_, i) => event(i + 2, MAX_EVENT_CHARS)),
+  ];
+  const { kept } = trimTimeline(events);
+  assert.equal(kept[0].text.length, MAX_EVENT_CHARS);
+  // The capped prompt costs about 1,540, leaving room for 7 replies, not 8.
+  assert.deepEqual(
+    kept.map((e) => e.id),
+    ["E1", "E7", "E8", "E9", "E10", "E11", "E12", "E13"],
+  );
+});
+
+test("trimTimeline does not keep the first prompt twice when it is also among the newest", () => {
+  const events = [event(1, 50), prompt(2, 100), event(3, 100)];
+  const { kept, cut } = trimTimeline(events);
+  assert.deepEqual(
+    kept.map((e) => e.id),
+    ["E2", "E3"],
+  );
+  assert.equal(cut, 1);
+  const only = trimTimeline([prompt(1, 100)]);
+  assert.deepEqual(only, { kept: [prompt(1, 100)], cut: 0 });
+});
+
+test("trimTimeline sends a first prompt that is over budget alone, cut to its start", () => {
+  const first: TimelineEvent = { ...prompt(1, 0), text: "abcdefghij" };
+  const { kept, cut } = trimTimeline([first, event(2, 5), event(3, 5)], 4);
+  assert.equal(cut, 2);
+  assert.deepEqual(kept, [{ ...first, text: "abcd" }]);
+});
+
+test("trimTimeline with no prompt behaves as before: newest first, nothing pinned", () => {
+  const events = Array.from({ length: 12 }, (_, i) => event(i + 1, MAX_EVENT_CHARS));
+  assert.deepEqual(trimTimeline(events).kept, events.slice(4));
 });
 
 test("trimTimeline does not change the events it was given", () => {
@@ -261,5 +322,15 @@ test("unzipLog throws LogTooBigError when the log unzips past the limit", () => 
   assert.throws(
     () => unzipLog(Buffer.from("not gzip")),
     (e: unknown) => !(e instanceof LogTooBigError),
+  );
+});
+
+test("cutTitle keeps a short title, cuts a long one with an ellipsis and never splits an emoji", () => {
+  assert.equal(cutTitle("Keep the first prompt"), "Keep the first prompt");
+  assert.equal(cutTitle("y".repeat(MAX_TITLE_CHARS)), "y".repeat(MAX_TITLE_CHARS));
+  assert.equal(cutTitle("x".repeat(200)), `${"x".repeat(MAX_TITLE_CHARS)}…`);
+  assert.equal(
+    cutTitle(`${"x".repeat(MAX_TITLE_CHARS - 1)}😀 and more`),
+    `${"x".repeat(MAX_TITLE_CHARS - 1)}😀…`,
   );
 });

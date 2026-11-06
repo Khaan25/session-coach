@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Suspense } from "react";
 
-import { AuthHeading, AuthSwitch } from "@/components/auth/auth-parts";
+import { AuthSwitch } from "@/components/auth/auth-parts";
+import { CheckEmailHeading } from "@/components/auth/auth-screens";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 import { SIGNUP_EMAIL_COOKIE } from "@/lib/auth/signup-email";
 
@@ -21,16 +22,7 @@ async function Resend() {
 export default function CheckEmailPage() {
   return (
     <>
-      <AuthHeading
-        title={
-          <>
-            Check your <span className="italic">email</span>
-          </>
-        }
-      >
-        If that address can sign up, we sent it a link to confirm the account. Open the link on this
-        device to finish.
-      </AuthHeading>
+      <CheckEmailHeading />
       <Suspense>
         <Resend />
       </Suspense>

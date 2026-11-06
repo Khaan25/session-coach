@@ -260,6 +260,7 @@ function SegmentedControlItem({
   const shared = {
     "data-slot": "segmented-control-item",
     "data-kind": kind,
+
     "aria-describedby": count !== undefined ? countId : undefined,
     title,
     style: { "--segment-shrink": shrink, "--segment-min": minWidth } as React.CSSProperties,

@@ -6,7 +6,7 @@ import { MarketingPageHeader } from "@/components/marketing/marketing-page-heade
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supportEmail } from "@/lib/site";
 
-// Answers come only from docs/ARCHITECTURE.md and docs/plans/pages-and-dashboard.md.
+// Every answer must match the code and docs/CODEBASE.md.
 
 export const metadata: Metadata = {
   title: "Support | Session Coach",
@@ -17,7 +17,7 @@ const faq = [
   {
     question: "What does Session Coach send from my laptop?",
     answer:
-      "When a Claude Code session ends, a hook sends that session's log. We try to remove secrets on your laptop before anything leaves it.",
+      "Only the session logs you send. session-coach push sends one, and in projects where you ran session-coach init, a Claude Code hook sends each session when it ends. We try to remove secrets on your laptop before anything leaves it.",
   },
   {
     question: "Are my secrets stored?",
@@ -25,9 +25,14 @@ const faq = [
       "We try not to. Secrets are removed on your laptop before the log is sent, and again on the server before it is stored, but removal is not a guarantee: check what your sessions contain.",
   },
   {
-    question: "What happens if I'm offline when a session ends?",
+    question: "What happens if I'm offline?",
     answer:
-      "The upload is retried up to 3 times. If it still fails, the log is kept in an outbox on your laptop. A session that was already sent is not taken twice.",
+      "The hook sends nothing and tries again the next time a session starts in that project. What went wrong is written to ~/.session-coach/sync.log. A session that was already sent is not taken twice.",
+  },
+  {
+    question: "A session failed. What now?",
+    answer:
+      "Open the session on your dashboard to see why, then press Try again. That works when the log reached us, so nothing needs sending again. If it says the log never reached Session Coach, run npx session-coach push on the computer that recorded the session to send it again.",
   },
   {
     question: "Where is my data stored?",
@@ -47,7 +52,7 @@ const faq = [
   {
     question: "How are my answers scored?",
     answer:
-      "Each answer gets 0, 1 or 2 against the card's reason, its quotes and a model answer. A 2 moves the card to the next review (day 1, 3, then 7); a 0 or 1 moves it one step down (never below day 1) and it comes back tomorrow. Passing the last review masters the card.",
+      "Each answer gets 0, 1 or 2 against the card's reason, its quotes and a model answer. A 2 moves the card to its next review (day 1, then day 4, then day 11); a 0 or 1 moves it one step down (never below day 1) and it comes back tomorrow. Passing the last review masters the card. “I don't know yet” scores 0 but keeps the card where it is.",
   },
 ] as const;
 

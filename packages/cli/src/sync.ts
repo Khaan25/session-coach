@@ -1,35 +1,27 @@
-// `session-coach sync`: run by a Claude Code SessionStart hook, uploads the project's recent finished sessions.
+// `session-coach sync`: run by a Claude Code SessionStart hook, uploads the project's recent finished sessions; run by a
+// SessionEnd hook, uploads the session that just ended.
 // Whatever the hook's stdout holds goes into Claude's context, so nothing here prints. Every outcome, error or not,
 // is a line in sync.log, and `runSync` never throws.
 
-import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Readable } from "node:stream";
 
-import { configPath, loadConfig, type Config } from "./config.ts";
-import { send } from "./http.ts";
-import { defaultProjectsDir, findRecentLogs, resolveCwd, type LogFile } from "./latest.ts";
-import {
-  createRequest,
-  interpretCreate,
-  interpretPut,
-  MAX_UPLOAD_BYTES,
-  prepareLog,
-  processRequest,
-  putRequest,
-  sessionMetadata,
-  validateFileName,
-} from "./push.ts";
-import { loadState, saveState, syncPaths } from "./state.ts";
+import type { SessionStatus } from "@session-coach/shared/session";
 
-/** Timeouts: the log upload can be up to 50 MB, so it gets longer than the small JSON calls. */
-export const API_TIMEOUT_MS = 15_000;
-export const UPLOAD_TIMEOUT_MS = 120_000;
+import { configPath, loadConfig, type Config } from "./config.ts";
+import { defaultProjectsDir, findRecentLogs, resolveCwd, type LogFile } from "./latest.ts";
+import { validateFileName } from "./push.ts";
+import { loadState, saveState, syncPaths } from "./state.ts";
+import { uploadLog } from "./upload.ts";
+
+// Kept here too: the deadline below is sized from them, and tests import them from this file.
+export { API_TIMEOUT_MS, UPLOAD_TIMEOUT_MS } from "./upload.ts";
 
 /** Only sessions modified in the last 7 days: the web app drops cards for older ones from the review queue anyway. */
 export const SYNC_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-/** A log modified more recently than this may still be written to, so it waits for a later start. */
-export const SYNC_QUIET_MS = 10 * 60 * 1000;
+/** A log modified more recently than this (5 minutes) may still be written to, so it waits for a later start. */
+export const SYNC_QUIET_MS = 5 * 60 * 1000;
 /** One log per run: each upload starts a model run, and the free tier's 8,000 tokens a minute can't take several. */
 export const SYNC_MAX_LOGS = 1;
 /**
@@ -83,8 +75,11 @@ export function readStdin(
   });
 }
 
-/** What the hook's stdin JSON tells sync: the folder, and the session that is running now. */
-export type HookInput = { cwd: string | null; currentIds: Set<string> };
+/**
+ * What the hook's stdin JSON tells sync: the folder, the session that is running now, and, from a SessionEnd hook, the
+ * session that just ended.
+ */
+export type HookInput = { cwd: string | null; currentIds: Set<string>; ended: string | null };
 
 /** Session id of a log file name or path: the base name without `.jsonl`. */
 function sessionIdOf(fileName: string): string {
@@ -93,7 +88,7 @@ function sessionIdOf(fileName: string): string {
 
 /** Reads the hook's JSON. Anything that isn't the expected shape is ignored, so bad input never stops a sync. */
 export function parseHookInput(text: string | null): HookInput {
-  const input: HookInput = { cwd: null, currentIds: new Set() };
+  const input: HookInput = { cwd: null, currentIds: new Set(), ended: null };
   if (!text) return input;
   let parsed: unknown;
   try {
@@ -101,12 +96,18 @@ export function parseHookInput(text: string | null): HookInput {
   } catch {
     return input;
   }
-  const { session_id, cwd, transcript_path } = (parsed ?? {}) as Record<string, unknown>;
-  if (typeof session_id === "string" && session_id) input.currentIds.add(session_id);
-  if (typeof transcript_path === "string" && transcript_path) {
-    input.currentIds.add(sessionIdOf(transcript_path));
-  }
+  const { session_id, cwd, transcript_path, hook_event_name } = (parsed ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const fileId =
+    typeof transcript_path === "string" && transcript_path ? sessionIdOf(transcript_path) : null;
+  const sessionId = typeof session_id === "string" && session_id ? session_id : null;
+  if (sessionId) input.currentIds.add(sessionId);
+  if (fileId) input.currentIds.add(fileId);
   if (typeof cwd === "string" && cwd) input.cwd = cwd;
+  // The log is found by its file name, so the transcript's name wins over the session id.
+  if (hook_event_name === "SessionEnd") input.ended = fileId ?? sessionId;
   return input;
 }
 
@@ -146,62 +147,37 @@ async function writeLog(path: string, time: number, message: string): Promise<vo
 
 /** Pushes one log the way `push` does, but returns what happened instead of printing it. */
 async function syncLog(file: LogFile, config: Config, deps: SyncDeps): Promise<LogResult> {
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(file.path);
-  } catch {
-    return { kind: "skip", reason: "couldn't read the file" };
-  }
-  const { gzipped, text } = prepareLog(bytes);
-  if (gzipped.length > MAX_UPLOAD_BYTES) return { kind: "failed", reason: "over 50 MB" };
-
-  const http = (timeoutMs: number, retry: boolean) => ({
-    timeoutMs,
-    retry,
-    backoffMs: deps.backoffMs ?? 1000,
-    fetchImpl: deps.fetchImpl ?? fetch,
-  });
   const stop = (reason: string): LogResult => ({ kind: "stop", reason });
+  const uploaded = await uploadLog(file.path, file.name, config, {
+    backoffMs: deps.backoffMs,
+    fetchImpl: deps.fetchImpl,
+  });
+  if (uploaded.kind === "unreadable") return { kind: "skip", reason: "couldn't read the file" };
+  if (uploaded.kind === "too_big") return { kind: "failed", reason: "over 50 MB" };
+  if (uploaded.kind === "unreachable") return stop(uploaded.error);
 
-  // ① register the session
-  const meta = sessionMetadata(text, file.name, gzipped.length);
-  const created = await send(
-    createRequest(config.url, config.token, meta),
-    http(API_TIMEOUT_MS, true),
-  );
-  if ("error" in created) return stop(created.error);
-  const { status } = created;
-  if (status === 401) return stop("the token was refused, run session-coach login");
-  if (status === 429 || status >= 500) return stop(`server answered HTTP ${status}`);
-  const next = interpretCreate(status, created.body);
-  if (next.action === "stop") {
+  if (uploaded.kind === "not_created") {
+    const { status } = uploaded.answer;
+    if (status === 401) return stop("the token was refused, run session-coach login");
+    if (status === 429 || status >= 500) return stop(`server answered HTTP ${status}`);
     // 409 with no upload url: ready or processing already.
-    if (next.exitCode === 0) return { kind: "already" };
+    if (uploaded.result.exitCode === 0) return { kind: "already" };
     if (status === 400 || status === 413)
       return { kind: "failed", reason: `rejected (HTTP ${status})` };
     return stop(`server answered HTTP ${status}`);
   }
+  if (uploaded.kind === "not_stored") return stop(`upload answered HTTP ${uploaded.status}`);
 
-  // ② PUT the log to the signed URL
-  const stored = await send(putRequest(next.uploadUrl, gzipped), http(UPLOAD_TIMEOUT_MS, true));
-  if ("error" in stored) return stop(stored.error);
-  if (interpretPut(stored.status).exitCode !== 0)
-    return stop(`upload answered HTTP ${stored.status}`);
-
-  // ③ start processing; not retried, a later start asks again (a pending session answers 409 with a fresh URL)
-  const processed = await send(
-    processRequest(config.url, config.token, next.id),
-    http(API_TIMEOUT_MS, false),
-  );
-  if ("error" in processed) return stop(processed.error);
-  if (processed.status === 202) return { kind: "uploaded" };
-  if (processed.status === 409) {
-    const state = (processed.body as { status?: unknown } | null)?.status;
+  // ③ answered; it isn't retried, a later start asks again (a pending session answers 409 with a fresh URL)
+  const { status, body } = uploaded.answer;
+  if (status === 202) return { kind: "uploaded" };
+  if (status === 409) {
+    const state = (body as { status?: SessionStatus } | null)?.status;
     return state === "failed"
       ? { kind: "failed", reason: "processing failed" }
       : { kind: "already" };
   }
-  return stop(`processing answered HTTP ${processed.status}`);
+  return stop(`processing answered HTTP ${status}`);
 }
 
 async function syncProject(
@@ -218,16 +194,16 @@ async function syncProject(
   const now = (deps.now ?? Date.now)();
   const state = await loadState(paths.state);
 
+  // A session that just ended is finished, so it skips the quiet window; it still goes through the same cwd check.
   const recent = await findRecentLogs(deps.projectsDir ?? defaultProjectsDir(deps.home), cwd, {
     since: now - SYNC_MAX_AGE_MS,
-    until: now - SYNC_QUIET_MS,
+    until: hook.ended ? now : now - SYNC_QUIET_MS,
   });
   const queue = recent
     .filter((file) => {
       const id = sessionIdOf(file.name);
-      return (
-        !hook.currentIds.has(id) && validateFileName(file.name) === null && !(id in state.done)
-      );
+      const wanted = hook.ended ? id === hook.ended : !hook.currentIds.has(id);
+      return wanted && validateFileName(file.name) === null && !(id in state.done);
     })
     .slice(0, SYNC_MAX_LOGS);
   if (queue.length === 0) return;
@@ -266,7 +242,8 @@ async function syncProject(
 
 /**
  * Uploads the project's recent finished sessions: the newest `SYNC_MAX_LOGS` top-level logs modified between
- * `SYNC_MAX_AGE_MS` and `SYNC_QUIET_MS` ago, except the running session and those the state file already lists. Writes
+ * `SYNC_MAX_AGE_MS` and `SYNC_QUIET_MS` ago, except the running session and those the state file already lists. From a
+ * SessionEnd hook it uploads only the session that ended, unless the state file already lists it. Writes
  * nothing to stdout or stderr and never throws; not signed in, offline or a server error end the run quietly.
  */
 export async function runSync(deps: SyncDeps): Promise<void> {

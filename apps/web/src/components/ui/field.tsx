@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
  */
 const fieldControlVariants = cva(
   [
-    "w-full min-w-0 rounded-soft bg-page type-label text-text-1 control-edge outline-none forced-colors:border pointer-coarse:text-base",
+    "w-full min-w-0 rounded-soft bg-page type-label text-text-1 control-edge outline-none forced-colors:border pointer-coarse:type-input-touch",
     "transition-[color,background-color,border-color,box-shadow,outline-color] duration-(--dur-fast) ease-(--ease-step)",
     "placeholder:text-text-3",
     // Focus is the edge turning ink, eased in: no outline floating off the control.
@@ -185,17 +185,21 @@ function FieldSeparator({
     <div
       data-slot="field-separator"
       data-content={!!children}
-      className={cn("relative -my-2 flex h-5 items-center", className)}
+      className={cn("-my-2 flex min-h-5 items-center gap-2", className)}
       {...props}
     >
-      <div aria-hidden className="h-px w-full bg-line-row" />
+      <div aria-hidden className="h-px flex-1 bg-line-row" />
       {children && (
-        <span
-          className="absolute start-1/2 -translate-x-1/2 bg-page px-2 type-body-sm text-text-3 rtl:translate-x-1/2"
-          data-slot="field-separator-content"
-        >
-          {children}
-        </span>
+        <>
+          {/* In the row, not on top of the line, so long text wraps centred instead of into half the width. */}
+          <span
+            className="max-w-3/4 text-center type-body-sm text-balance text-text-3"
+            data-slot="field-separator-content"
+          >
+            {children}
+          </span>
+          <div aria-hidden className="h-px flex-1 bg-line-row" />
+        </>
       )}
     </div>
   );

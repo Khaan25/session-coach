@@ -1,0 +1,115 @@
+/* Warm paper and charcoal from the reference, with Session Coach's periwinkle, petrol and soft coral accents. */
+:root {
+  --flow-cream: #ffffeb;
+  --flow-paper: #fffdf9;
+  --flow-ink: #1a1a1a;
+  --flow-lavender: #d8d7f5;
+  --flow-green: #164f52;
+  --flow-coral: #ec806a;
+  --flow-pink: #ffbcf2;
+  --flow-gold: #ffa946;
+  --flow-olive: #e4e4d0;
+  --ink-c: 21.7787% 0 0;
+  --paper-c: 99.47% 0.0261 106.865;
+  --grey-c: 96.3% 0.0261 106.865;
+  --canvas-c: 98.4% 0.0261 106.865;
+  --text-on-field-c: 21.7787% 0 0;
+  --hue-1-mark: #8cb9a9;
+  --hue-1-field: #cbded3;
+  --hue-1-wash: #e5ede1;
+  --hue-1-line: #286657;
+  --hue-1-tint: #d8e5d8;
+  --hue-1-label: #034f46;
+  --hue-2-mark: #ffbcf2;
+  --hue-2-field: #ffdbf7;
+  --hue-2-wash: #fff0fb;
+  --hue-2-line: #995382;
+  --hue-2-tint: #f4d5eb;
+  --hue-2-label: #663057;
+  --hue-3-mark: #b9b4e3;
+  --hue-3-field: #e5e3f8;
+  --hue-3-wash: #f0effb;
+  --hue-3-line: #655886;
+  --hue-3-tint: #e5e1f1;
+  --hue-3-label: #4e456b;
+  --hue-4-mark: var(--flow-coral);
+  --hue-4-field: #ffc6b9;
+  --hue-4-wash: #fff0e9;
+  --hue-4-line: #ad4833;
+  --hue-4-tint: #fbd9cc;
+  --hue-4-label: #783a2c;
+  --hue-5-mark: #b7c1a3;
+  --hue-5-field: #e4e4d0;
+  --hue-5-wash: #f0f0dd;
+  --hue-5-line: #526b42;
+  --hue-5-tint: #e0e7d6;
+  --hue-5-label: #354d2c;
+  --stage-ink: var(--flow-ink);
+  --stage-paper: var(--flow-cream);
+  --stage-muted: var(--flow-olive);
+  --sculpture-paper: var(--flow-cream);
+  --sculpture-ink: var(--flow-ink);
+  --sculpture-blue: var(--flow-lavender);
+}
+:root[data-theme="dark"],
+:root.dark:not([data-theme="light"]),
+:root [data-surface="ink"],
+:root [data-surface="inverse"] {
+  --ink-c: 99.47% 0.0261 106.865;
+  --paper-c: 21.7787% 0 0;
+  --grey-c: 27% 0.008 106;
+  --canvas-c: 18% 0.008 106;
+  --hue-1-wash: #203e33;
+  --hue-1-tint: #284638;
+  --hue-1-label: #cbded3;
+  --hue-1-line: #8cb9a9;
+  --hue-2-wash: #442737;
+  --hue-2-tint: #4e3044;
+  --hue-2-label: #ffdbf7;
+  --hue-2-line: #ffbcf2;
+  --hue-3-wash: #2e3045;
+  --hue-3-tint: #3b3d56;
+  --hue-3-label: var(--flow-lavender);
+  --hue-3-line: var(--flow-lavender);
+  --hue-4-wash: #4c2b23;
+  --hue-4-tint: #573329;
+  --hue-4-label: #ffc6b9;
+  --hue-4-line: #ff947c;
+  --hue-5-wash: #323c28;
+  --hue-5-tint: #3c4730;
+  --hue-5-label: #e0e7d6;
+  --hue-5-line: #b7c1a3;
+}
+:root [data-surface="paper"] {
+  --ink-c: 21.7787% 0 0;
+  --paper-c: 99.47% 0.0261 106.865;
+  --grey-c: 96.3% 0.0261 106.865;
+  --canvas-c: 98.4% 0.0261 106.865;
+}
+.flow-button {
+  background: var(--flow-lavender);
+  color: var(--flow-ink);
+  border: 1.5px solid var(--flow-ink);
+  border-radius: 8px;
+  box-shadow: none;
+}
+.flow-button:hover {
+  background: var(--flow-pink);
+}
+.flow-button:disabled {
+  opacity: 0.5;
+}
+.site-header {
+  border-radius: 12px;
+  box-shadow: none;
+  background: color-mix(in oklch, var(--surface-page) 94%, transparent);
+}
+.site-header nav {
+  height: 64px;
+}
+.site-footer {
+  background: var(--surface-page);
+}
+.auth-observatory {
+  background: var(--hue-3-field);
+}

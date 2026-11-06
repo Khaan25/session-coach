@@ -9,22 +9,15 @@
  *   500 anything else.
  * Auth: `Authorization: Bearer sc_…`, a CLI token from /setup. Never log the token.
  */
+import { MAX_UPLOAD_BYTES } from "@session-coach/shared/limits";
+import { uploadRequestSchema } from "@session-coach/shared/upload";
 import { NextResponse } from "next/server";
 
+import { requireCliUser, serverError, UNIQUE_VIOLATION } from "@/lib/api/http";
 import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
 import { isStuck } from "@/lib/sessions/stuck";
-import {
-  bearerToken,
-  MAX_UPLOAD_BYTES,
-  rawPathFor,
-  SESSIONS_BUCKET,
-  uploadRequestSchema,
-} from "@/lib/sessions/upload";
+import { rawPathFor, SESSIONS_BUCKET } from "@/lib/sessions/upload";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { userForToken } from "@/lib/tokens/verify";
-
-/** Postgres unique_violation: the same (user_id, external_id) was uploaded before. */
-const UNIQUE_VIOLATION = "23505";
 
 /**
  * A signed URL the CLI PUTs the log to, straight into Storage. `upsert` lets a retry overwrite a half-finished upload.
@@ -52,17 +45,9 @@ async function signedUploadUrl(admin: ReturnType<typeof createAdminClient>, path
  * @param request - JSON metadata, see `uploadRequestSchema`.
  */
 export async function POST(request: Request) {
-  const token = bearerToken(request.headers.get("authorization"));
-  if (!token) return NextResponse.json({ error: "Missing CLI token" }, { status: 401 });
-
   try {
-    const userId = await userForToken(token);
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unknown CLI token. Run session-coach login again." },
-        { status: 401 },
-      );
-    }
+    const userId = await requireCliUser(request);
+    if (userId instanceof NextResponse) return userId;
 
     const body: unknown = await request.json().catch(() => null);
     const parsed = uploadRequestSchema.safeParse(body);
@@ -91,18 +76,26 @@ export async function POST(request: Request) {
       .from("sessions")
       .insert({ ...meta, user_id: userId, raw_path: rawPath })
       .select("id")
-      .single<{ id: string }>();
+      .single();
 
     if (insertError?.code === UNIQUE_VIOLATION) {
       const { data: existing, error: readError } = await admin
         .from("sessions")
-        .select("id, status, processing_started_at")
+        .select("id, status, processing_started_at, created_at")
         .eq("user_id", userId)
         .eq("external_id", meta.external_id)
-        .single<{ id: string; status: string; processing_started_at: string | null }>();
+        .single();
       if (readError) throw new Error(readError.message);
-      if (existing.status === "pending")
+      if (existing.status === "pending") {
+        // Restarts the stuck clock for this upload attempt (see isStuck), so the sweep can't fail it mid-upload.
+        const { error: touchError } = await admin
+          .from("sessions")
+          .update({ processing_started_at: new Date().toISOString() })
+          .eq("id", existing.id)
+          .eq("status", "pending");
+        if (touchError) throw new Error(touchError.message);
         return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 409 });
+      }
       if (existing.status !== "failed" && !isStuck(existing, new Date()))
         return NextResponse.json({ id: existing.id }, { status: 409 });
 
@@ -110,7 +103,13 @@ export async function POST(request: Request) {
       // and a push that read an older run can't reset a newer one.
       const reset = admin
         .from("sessions")
-        .update({ ...meta, status: "pending", error: null, processing_started_at: null })
+        // On a pending row, processing_started_at is when this upload attempt began (see isStuck).
+        .update({
+          ...meta,
+          status: "pending",
+          error: null,
+          processing_started_at: new Date().toISOString(),
+        })
         .eq("id", existing.id)
         .eq("status", existing.status);
       const { data: resetRows, error: resetError } = await (
@@ -132,10 +131,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ id: created.id, upload_url: await uploadUrl }, { status: 201 });
   } catch (err) {
-    console.error("[api/sessions] create failed", err instanceof Error ? err.message : err);
-    return NextResponse.json(
-      { error: "The session couldn't be registered. Try again." },
-      { status: 500 },
+    return serverError(
+      "[api/sessions] create",
+      err,
+      "The session couldn't be registered. Try again.",
     );
   }
 }

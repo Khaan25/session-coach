@@ -1,39 +1,65 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// A run lives at most 300 s (the process route's maxDuration), so `processing` past this means it was killed.
+// A run lives at most 300 s (the process route's maxDuration), so `processing` past this means it was killed. An upload
+// takes at most about 2.5 min (two API calls around a 120 s PUT), so `pending` past this means the CLI gave up.
 export const STUCK_MS = 10 * 60 * 1000;
 
-const STUCK_ERROR =
-  "Making cards from this session didn't finish. Run session-coach push again to retry.";
+const STUCK_ERROR = "Making cards from this session didn't finish. Try again.";
+const UPLOAD_ERROR = "The upload didn't finish. Try again.";
 
 /**
- * Whether a session's run was killed: still `processing` more than `STUCK_MS` after the run claimed it.
+ * Whether a session will never settle by itself: still `processing` more than `STUCK_MS` after the run claimed it
+ * (the run was killed), or still `pending` more than `STUCK_MS` after its latest upload URL was issued (the upload
+ * died). `POST /api/sessions` sets `processing_started_at` on a pending row when it hands a repeat a fresh URL; a first
+ * upload has none, so its age counts from `created_at`.
  *
- * @param session - `status` and `processing_started_at` from `sessions`.
+ * @param session - `status`, `processing_started_at` and `created_at` from `sessions`.
  * @param now - The current time.
  */
 export function isStuck(
-  { status, processing_started_at }: { status: string; processing_started_at: string | null },
+  {
+    status,
+    processing_started_at,
+    created_at,
+  }: { status: string; processing_started_at: string | null; created_at: string },
   now: Date,
 ): boolean {
-  if (status !== "processing" || !processing_started_at) return false;
-  return now.getTime() - Date.parse(processing_started_at) > STUCK_MS;
+  const since =
+    status === "processing"
+      ? processing_started_at
+      : status === "pending"
+        ? (processing_started_at ?? created_at)
+        : null;
+  return since !== null && now.getTime() - Date.parse(since) > STUCK_MS;
 }
 
 /**
- * Marks every stuck session `failed`, so a killed run doesn't spin on the dashboard forever.
+ * Marks every stuck session `failed` (see `isStuck`), so a killed run or a dead upload doesn't spin on the dashboard
+ * forever. The learner can then retry it from the session page.
  *
  * @param admin - The service-role client.
  * @param now - The current time.
  * @returns How many sessions were failed.
  */
 export async function failStuckSessions(admin: SupabaseClient, now: Date): Promise<number> {
-  const { data, error } = await admin
-    .from("sessions")
-    .update({ status: "failed", error: STUCK_ERROR })
-    .eq("status", "processing")
-    .lt("processing_started_at", new Date(now.getTime() - STUCK_MS).toISOString())
-    .select("id");
-  if (error) throw new Error(error.message);
-  return data.length;
+  const cutoff = new Date(now.getTime() - STUCK_MS).toISOString();
+  const [runs, uploads] = await Promise.all([
+    admin
+      .from("sessions")
+      .update({ status: "failed", error: STUCK_ERROR })
+      .eq("status", "processing")
+      .lt("processing_started_at", cutoff)
+      .select("id"),
+    admin
+      .from("sessions")
+      .update({ status: "failed", error: UPLOAD_ERROR })
+      .eq("status", "pending")
+      .or(
+        `processing_started_at.lt."${cutoff}",and(processing_started_at.is.null,created_at.lt."${cutoff}")`,
+      )
+      .select("id"),
+  ]);
+  if (runs.error) throw new Error(runs.error.message);
+  if (uploads.error) throw new Error(uploads.error.message);
+  return runs.data.length + uploads.data.length;
 }

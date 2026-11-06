@@ -12,10 +12,18 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
   (see [`tracker_members` and `tracker_tasks`](#tracker_members-and-tracker_tasks)).
 - [`20261103000000_session_processing_started.sql`](../supabase/migrations/20261103000000_session_processing_started.sql):
   `sessions.processing_started_at`, so stuck runs are timed from their claim and `created_at` stays the upload time.
+- [`20261104000000_answer_first_why_and_skips.sql`](../supabase/migrations/20261104000000_answer_first_why_and_skips.sql):
+  revokes learners' `select` on `decision_cards.why` and `evidence`, and adds `answers.skipped`.
 - [`20261104000100_cli_device_codes.sql`](../supabase/migrations/20261104000100_cli_device_codes.sql): the
   server-only `cli_device_codes` table for the CLI's device-code login.
 - [`20261104000200_projects.sql`](../supabase/migrations/20261104000200_projects.sql): `projects`, the question level
   per repo, and `learner_repos()` (see [`projects`](#projects)).
+- [`20261105000100_defenses.sql`](../supabase/migrations/20261105000100_defenses.sql): the server-written `defenses`
+  table, one timed defense of a card per row (see [`defenses`](#defenses)).
+- [`20261105000200_ownership.sql`](../supabase/migrations/20261105000200_ownership.sql): `learner_ownership()`, the
+  dashboard meter's counts per repo (see [`projects`](#projects)).
+- [`20261105000300_report.sql`](../supabase/migrations/20261105000300_report.sql): the opt-in public report,
+  `profiles.report_on` and `report_slug`, and `projects.report_shown` (see [`profiles`](#profiles)).
 
 ## The one rule
 
@@ -24,16 +32,16 @@ change is a new migration ([rules/migrations.md](rules/migrations.md)), and this
 A learner's browser holds a JWT and the public anon key, and can send any query PostgREST allows. If a learner could
 write `answers.score`, `reviews.mastered` or `decision_cards.evidence`, they could fake progress or un-hide a card the
 evidence check rejected. So RLS grants learners `select` on their own rows and almost nothing else. Writes go through
-route handlers (and, later, the pipeline) using the service-role client, which bypasses RLS; those routes check the
+route handlers and the pipeline using the service-role client, which bypasses RLS; those routes check the
 caller in code first ([rules/authorization.md](rules/authorization.md)).
 
 The only learner writes:
 
-| Table        | Write                                                   | Why it is safe                                                   |
-| ------------ | ------------------------------------------------------- | ---------------------------------------------------------------- |
-| `profiles`   | update `display_name`, `timezone`, `notify_email`       | Column grants: nothing that affects scores, identity or billing. |
-| `cli_tokens` | delete own rows                                         | Revoking a token can only remove access, never add it.           |
-| `projects`   | insert own row; update `question_level`, `onboarded_at` | Only shapes future questions; no score, card or other learner.   |
+| Table        | Write                                                                   | Why it is safe                                                                              |
+| ------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `profiles`   | update `display_name`, `timezone`, `notify_email`, `report_on`          | Column grants: nothing that affects scores, identity or billing.                            |
+| `cli_tokens` | delete own rows                                                         | Revoking a token can only remove access, never add it.                                      |
+| `projects`   | insert own row; update `question_level`, `onboarded_at`, `report_shown` | Only shapes future questions and the learner's own report; no score, card or other learner. |
 
 Who's "server" in the tables below: a route handler or script using `createAdminClient()`
 ([`apps/web/src/lib/supabase/admin.ts`](../apps/web/src/lib/supabase/admin.ts)), or a Postgres trigger.
@@ -48,6 +56,7 @@ profiles.id
        └─ decision_cards (session_id, user_id) → sessions (id, user_id)
             └─ answers (card_id, user_id) → decision_cards (id, user_id)
             └─ reviews (card_id, user_id) → decision_cards (id, user_id)
+            └─ defenses (card_id, user_id) → decision_cards (id, user_id)
 ```
 
 **Attack prevented:** a server bug (or a future pipeline stage) that writes a card under learner A's `user_id` for
@@ -62,15 +71,17 @@ removes every row.
 One row per auth user, created by a trigger on sign-up. Learners can't read `auth.users`, so anything the app shows
 about a person (name, email) is copied here.
 
-| Column         | Stores                                                                 | Written by                               |
-| -------------- | ---------------------------------------------------------------------- | ---------------------------------------- |
-| `id`           | The `auth.users` id. Cascades on user delete.                          | Trigger `handle_new_user`                |
-| `email`        | Copy of `auth.users.email`, for RLS reads and the Play Stats roster.   | Triggers (`handle_new_user`, email sync) |
-| `display_name` | Trimmed, 1–100 characters, or null. Never `""`.                        | Trigger at sign-up; learner after        |
-| `avatar_url`   | `https://` only, from the provider's metadata.                         | Trigger                                  |
-| `timezone`     | IANA name, default `UTC`. Decides the learner's "today" for due dates. | Learner                                  |
-| `notify_email` | Whether the daily review email is sent. Default true.                  | Learner; server on one-click unsubscribe |
-| `created_at`   | Sign-up time; the Play Stats cohorts group by its UTC day.             | Default                                  |
+| Column         | Stores                                                                    | Written by                               |
+| -------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
+| `id`           | The `auth.users` id. Cascades on user delete.                             | Trigger `handle_new_user`                |
+| `email`        | Copy of `auth.users.email`, for RLS reads and the Play Stats roster.      | Triggers (`handle_new_user`, email sync) |
+| `display_name` | Trimmed, 1–100 characters, or null. Never `""`.                           | Trigger at sign-up; learner after        |
+| `avatar_url`   | `https://` only, from the provider's metadata.                            | Trigger                                  |
+| `timezone`     | IANA name, default `UTC`. Decides the learner's "today" for due dates.    | Learner                                  |
+| `notify_email` | Whether the daily review email is sent. Default true.                     | Learner; server on one-click unsubscribe |
+| `report_on`    | Whether the public report at `/r/<report_slug>` is shared. Default false. | Learner (column grant)                   |
+| `report_slug`  | The report link's random end: 32 hex characters, unique (check).          | Default; server on "Make a new link"     |
+| `created_at`   | Sign-up time; the Play Stats cohorts group by its UTC day.                | Default                                  |
 
 - **Policies:** `read own profile` (select where `id = auth.uid()`), `update own profile` (same, with check).
 - **Grants:** `update` is revoked from `anon` and `authenticated`, then granted back on `timezone`, `notify_email`
@@ -80,6 +91,11 @@ about a person (name, email) is copied here.
   stored; send `null` to clear it. `avatar_url like 'https://%'` keeps `javascript:` and `http:` URLs out of `<img>`.
 - **Why email is copied:** reading it from `auth.users` needs the service role on every request; the roster needs
   email and name in one query (DECISIONS.md, 2026-10-29).
+- **Report:** `report_slug` defaults to `replace(gen_random_uuid()::text, '-', '')` (122 random bits), so it can't be
+  guessed from the name, and the migration filled every existing row. Learners may update `report_on` only; a new slug
+  is written by the `newReportLink` Server Action with the service role, after `getUser()`, so a learner can't choose
+  a guessable slug or take someone else's. A learner reads only their own slug (the `read own profile` policy). The
+  public read (`lib/report/queries.ts`) uses the service role, keyed by slug and `where report_on`.
 
 ### `cli_tokens`
 
@@ -87,14 +103,14 @@ Bearer tokens the CLI uses to upload sessions, listed on `/setup` as connected d
 `session-coach login` (device code, `POST /api/cli/device/token`, labelled with the device name) or on `/setup`
 through `POST /api/cli/tokens`.
 
-| Column         | Stores                                                                             | Written by                   |
-| -------------- | ---------------------------------------------------------------------------------- | ---------------------------- |
-| `id`           | Token id, used to revoke it.                                                       | Default                      |
-| `user_id`      | Owner.                                                                             | Server                       |
-| `token_hash`   | sha256 of the raw token, 64 hex characters. Unique. The raw token is never stored. | Server                       |
-| `label`        | Optional name ("work laptop"), at most 100 characters (route check).               | Server                       |
-| `last_used_at` | When the upload API last accepted it.                                              | Server (upload API, planned) |
-| `created_at`   | Creation time.                                                                     | Default                      |
+| Column         | Stores                                                                             | Written by |
+| -------------- | ---------------------------------------------------------------------------------- | ---------- |
+| `id`           | Token id, used to revoke it.                                                       | Default    |
+| `user_id`      | Owner.                                                                             | Server     |
+| `token_hash`   | sha256 of the raw token, 64 hex characters. Unique. The raw token is never stored. | Server     |
+| `label`        | Optional name ("work laptop"), at most 100 characters (route check).               | Server     |
+| `last_used_at` | When the upload API last accepted it (`lib/tokens/verify.ts`).                     | Server     |
+| `created_at`   | Creation time.                                                                     | Default    |
 
 - **Policies:** `read own tokens`, `delete own tokens`. No insert or update policy.
 - **Why hash:** a leaked database dump or log can't be replayed as a token. sha256 without a salt is enough here
@@ -131,20 +147,20 @@ grants. Written by `/api/cli/device*` with the service role.
 
 One uploaded Claude Code session and its processing status.
 
-| Column                                      | Stores                                                                                                | Written by                      |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `id`                                        | Session id.                                                                                           | Default                         |
-| `user_id`                                   | Owner.                                                                                                | Server                          |
-| `external_id`                               | Claude Code's `session_id`. `unique (user_id, external_id)`: see repeat uploads below.                | Server                          |
-| `agent`                                     | `claude-code` or `codex`.                                                                             | Server                          |
-| `title`                                     | The agent's title for the session, if the log had one.                                                | Server                          |
-| `repo`, `branch`                            | Where the work happened; the fallback name ("repo on branch").                                        | Server                          |
-| `started_at`, `duration_min`, `event_count` | Session facts from the log (non-negative checks).                                                     | Server                          |
-| `raw_path`                                  | Storage path of the redacted `.jsonl.gz`. Not empty.                                                  | Server                          |
-| `status`                                    | `pending`, `processing`, `ready` or `failed`.                                                         | Server (pipeline)               |
-| `error`                                     | A learner-readable reason when `failed`.                                                              | Server (pipeline)               |
-| `processing_started_at`                     | When the current run claimed the row; the stuck check reads it. Null until then, and after a re-push. | Server (process claim, re-push) |
-| `created_at`                                | Upload time. Indexed with `user_id` for the newest-first list.                                        | Default                         |
+| Column                                      | Stores                                                                                                                                                 | Written by                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| `id`                                        | Session id.                                                                                                                                            | Default                         |
+| `user_id`                                   | Owner.                                                                                                                                                 | Server                          |
+| `external_id`                               | Claude Code's `session_id`. `unique (user_id, external_id)`: see repeat uploads below.                                                                 | Server                          |
+| `agent`                                     | `claude-code` or `codex`.                                                                                                                              | Server                          |
+| `title`                                     | The agent's title for the session, if the log had one.                                                                                                 | Server                          |
+| `repo`, `branch`                            | Where the work happened; the fallback name ("repo on branch").                                                                                         | Server                          |
+| `started_at`, `duration_min`, `event_count` | Session facts from the log (non-negative checks).                                                                                                      | Server                          |
+| `raw_path`                                  | Storage path of the redacted `.jsonl.gz`. Not empty.                                                                                                   | Server                          |
+| `status`                                    | `pending`, `processing`, `ready` or `failed`.                                                                                                          | Server (pipeline)               |
+| `error`                                     | A learner-readable reason when `failed`.                                                                                                               | Server (pipeline)               |
+| `processing_started_at`                     | When the current run claimed the row, or on a `pending` repeat when its fresh upload URL was issued; the stuck check reads it. Null on a first upload. | Server (process claim, re-push) |
+| `created_at`                                | Upload time. Indexed with `user_id` for the newest-first list.                                                                                         | Default                         |
 
 - **Policies:** `read own sessions`. **No learner delete:** the server deletes the Storage object first, then the row;
   a learner delete would orphan the log in Storage.
@@ -207,7 +223,7 @@ Every explanation a learner submitted and its grade. Append-only history.
 | -------------------- | ----------------------------------------------------------------------- | ---------- |
 | `id`                 | Answer id.                                                              | Default    |
 | `card_id`, `user_id` | The card and owner (composite foreign key).                             | Server     |
-| `review_step`        | The card's step when answered: 0 first try, 1–3 the day 1/3/7 reviews.  | Server     |
+| `review_step`        | The card's step when answered: 0 first try, 1–3 the day 1/4/11 reviews. | Server     |
 | `answer`             | The learner's text (1–4000 characters, checked by the route).           | Server     |
 | `score`              | 0 wrong, 1 partly, 2 got it.                                            | Server     |
 | `missing`            | What the grader said the answer left out, or null.                      | Server     |
@@ -218,16 +234,16 @@ Every explanation a learner submitted and its grade. Append-only history.
 
 ### `reviews`
 
-One row per answered card: where it is in the day 1/3/7 schedule.
+One row per answered card: where it is in the review schedule (gaps of 1, 3, then 7 days).
 
 | Column       | Stores                                                             | Written by |
 | ------------ | ------------------------------------------------------------------ | ---------- |
 | `card_id`    | Primary key: one row per card.                                     | Server     |
 | `user_id`    | Owner (composite foreign key with `card_id`).                      | Server     |
-| `step`       | 0–3: the next review is day 1, 3 or 7.                             | Server     |
+| `step`       | 0–3: the next review is on day 1, 4 or 11.                         | Server     |
 | `due_on`     | The learner-local date the card is next due; null once mastered.   | Server     |
 | `last_score` | The latest score.                                                  | Server     |
-| `mastered`   | Passed the day 7 review.                                           | Server     |
+| `mastered`   | Passed the day-11 review.                                          | Server     |
 | `updated_at` | Last change. The grading route uses it as a compare-and-set guard. | Server     |
 
 - **Check:** `mastered = (due_on is null)`, so a card can't be both pending and undated, or mastered and still due.
@@ -239,14 +255,15 @@ One row per answered card: where it is in the day 1/3/7 schedule.
 
 ### `email_log`
 
-One row per email sent (the daily review email, planned).
+One row per email sent: the daily review email (`lib/email/daily-review.ts`).
 
-| Column      | Stores                                    | Written by |
-| ----------- | ----------------------------------------- | ---------- |
-| `user_id`   | Recipient.                                | Server     |
-| `kind`      | `lesson_ready` or `daily_review`.         | Server     |
-| `sent_on`   | The day it counts for.                    | Server     |
-| `resend_id` | The provider's message id, after sending. | Server     |
+| Column      | Stores                                                                       | Written by |
+| ----------- | ---------------------------------------------------------------------------- | ---------- |
+| `id`        | Row id.                                                                      | Default    |
+| `user_id`   | Recipient.                                                                   | Server     |
+| `kind`      | `daily_review`. `lesson_ready` is allowed by the check but nothing sends it. | Server     |
+| `sent_on`   | The day it counts for.                                                       | Server     |
+| `resend_id` | The provider's message id, after sending.                                    | Server     |
 
 - `unique (user_id, kind, sent_on)`: the cron inserts this row **before** sending; a conflict means another run
   already claimed it, so a rerun or a crash never sends twice ([rules/error-handling.md](rules/error-handling.md)).
@@ -259,21 +276,62 @@ One row per email sent (the daily review email, planned).
 How hard a learner wants the questions for one repo. One row per `(user_id, repo)`; `repo` matches `sessions.repo`
 exactly. A repo with no row, and every session with no repo, gets `simple`.
 
-| Column           | Stores                                                                         | Written by              |
-| ---------------- | ------------------------------------------------------------------------------ | ----------------------- |
-| `user_id`        | The learner.                                                                   | Learner on insert (RLS) |
-| `repo`           | The repo name, as the CLI uploaded it on `sessions.repo`. Never blank.         | Learner on insert       |
-| `question_level` | `simple`, `hard` or `complex`. Default `simple`.                               | Learner (column grant)  |
-| `onboarded_at`   | When the learner last chose a level (or "Not now"); null shows the setup card. | Learner (column grant)  |
+| Column           | Stores                                                                          | Written by              |
+| ---------------- | ------------------------------------------------------------------------------- | ----------------------- |
+| `id`             | Row id.                                                                         | Default                 |
+| `user_id`        | The learner.                                                                    | Learner on insert (RLS) |
+| `repo`           | The repo name, as the CLI uploaded it on `sessions.repo`. Never blank.          | Learner on insert       |
+| `question_level` | `simple`, `hard` or `complex`. Default `simple`.                                | Learner (column grant)  |
+| `onboarded_at`   | When the learner last chose a level (or "Not now"); null shows the setup card.  | Learner (column grant)  |
+| `report_shown`   | Whether the public report lists this repo. Default false: private until ticked. | Learner (column grant)  |
+| `created_at`     | Insert time.                                                                    | Default                 |
 
 - **Policies:** select and update own rows; insert only with `user_id = auth.uid()` **and** a session of theirs in
   that repo, so the table can't fill with made-up repos.
-- **Grants:** insert `(user_id, repo, question_level, onboarded_at)`, update `(question_level, onboarded_at)` only, so
+- **Grants:** insert `(user_id, repo, question_level, onboarded_at, report_shown)`, update `(question_level,
+  onboarded_at, report_shown)` only, so
   a row can't be moved to another learner or repo. Because of that, the app updates then inserts instead of a
   PostgREST upsert (which would write `user_id` and `repo` on conflict).
 - **`learner_repos()`:** the caller's distinct non-blank `sessions.repo`, A to Z. Runs as the caller (RLS applies),
   executable by `authenticated` only. The dashboard and /settings list projects from it without reading every session.
+- **`learner_ownership()`:** one row per `sessions.repo` (null: sent without one) with `explained` (visible cards
+  answered 2 at least once), `owned` (`reviews.mastered`) and `total` (visible cards). Runs as the caller (RLS applies,
+  and `not hidden` matches the cards policy), executable by `authenticated` only, so a learner counts only their own
+  cards. The dashboard meter reads it instead of every card, review and answer.
 - **Read by the pipeline** with the service role, to pick the extraction prompt's question level.
+
+### `defenses`
+
+"Defend it": a timed defense of one card the learner has answered 2 at least once. 180 s for the first answer, then
+one AI follow-up question with a fresh 120 s, then a 0, 1 or 2. A finished defense is labelled "defended (timed,
+follow-up)", never "verified". A defense never writes `answers` or `reviews`, so it doesn't move the review schedule.
+
+| Column                 | Stores                                                                          | Written by |
+| ---------------------- | ------------------------------------------------------------------------------- | ---------- |
+| `id`                   | Row id; the `[defenseId]` of the routes.                                        | Default    |
+| `user_id`              | The learner. Cascades on user delete.                                           | Server     |
+| `card_id`              | The card defended. With `user_id`, a composite foreign key to `decision_cards`. | Server     |
+| `status`               | `answering`, `follow_up`, `finished` or `expired`. Default `answering`.         | Server     |
+| `started_at`           | When the 180 s clock started, from the server clock.                            | Server     |
+| `answer`               | The first answer.                                                               | Server     |
+| `answered_at`          | When the first answer arrived.                                                  | Server     |
+| `follow_up_question`   | The model's follow-up question.                                                 | Server     |
+| `follow_up_started_at` | When the question was stored, which starts the 120 s clock.                     | Server     |
+| `follow_up_answer`     | The answer to the follow-up.                                                    | Server     |
+| `finished_at`          | When it was graded.                                                             | Server     |
+| `score`                | 0, 1 or 2 for the whole defense; null until `finished`.                         | Server     |
+
+- **Policies:** `read own defenses` (select where `user_id = auth.uid()`). No insert, update or delete policy, and
+  those privileges are revoked from `anon` and `authenticated`, so only the service role writes. No answer key lives
+  here (`model_answer` stays on `decision_cards`), so a learner can read their whole row.
+- **Checks:** `status` is one of the four values; `score` is 0, 1 or 2; a `follow_up` or `finished` row has its answer
+  and question; a row is `finished` exactly when it has `score`, `follow_up_answer` and `finished_at`.
+- **One unfinished defense per learner:** the partial unique index `defenses_one_unfinished_idx` on `(user_id)` where
+  `status in ('answering', 'follow_up')`. A defense past its deadline plus 5 s is marked `expired` by a late answer
+  or by the next `start`, so an abandoned tab never locks a learner out.
+- **Clocks:** every timestamp is written by the route from the server clock, never the browser; the routes refuse an
+  answer later than its deadline plus 5 s ([`lib/defend/defend.ts`](../apps/web/src/lib/defend/defend.ts)).
+- **Routes:** see [Defend it](CODEBASE.md#defend-it).
 
 ### `tracker_members` and `tracker_tasks`
 

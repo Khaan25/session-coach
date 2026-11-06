@@ -20,6 +20,7 @@ const emptyVariants = cva(
     variants: {
       variant: {
         framed: "frame relative bg-page",
+        illustrated: "clarity-empty frame relative bg-page",
         plain: "",
       },
       size: {

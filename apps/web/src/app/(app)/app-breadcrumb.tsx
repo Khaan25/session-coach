@@ -1,17 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-import { navMain } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import { navMain } from "@/components/nav-items";
 
 export function AppBreadcrumb() {
   const pathname = usePathname();
@@ -24,21 +14,5 @@ export function AppBreadcrumb() {
       : pathname.startsWith("/cli/")
         ? "Connect the CLI"
         : undefined);
-  return (
-    <Breadcrumb>
-      <BreadcrumbList>
-        <BreadcrumbItem className="hidden md:inline-flex">
-          <BreadcrumbLink render={<Link href="/dashboard" />}>Session Coach</BreadcrumbLink>
-        </BreadcrumbItem>
-        {title && (
-          <>
-            <BreadcrumbSeparator className="hidden md:block" />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{title}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </>
-        )}
-      </BreadcrumbList>
-    </Breadcrumb>
-  );
+  return <p className="app-page-name">{title ?? "Workspace"}</p>;
 }

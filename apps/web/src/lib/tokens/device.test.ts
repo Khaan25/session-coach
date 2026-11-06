@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import { MAX_POLL_INTERVAL_SECONDS } from "@session-coach/shared/limits";
+
 import {
   codeState,
   clientNameSchema,
   devicePollSchema,
   formatUserCode,
   isSameOrigin,
-  MAX_POLL_INTERVAL_SECONDS,
   newDeviceCode,
   newUserCode,
   normalizeUserCode,

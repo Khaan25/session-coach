@@ -17,7 +17,7 @@ export function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card variant="learning">
       <CardHeader>
         {/* skullet-own: static text stays real in the settings skeleton; only the control is drawn as a bar. */}
         <CardTitle skullet-own="">

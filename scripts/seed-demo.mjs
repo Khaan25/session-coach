@@ -50,7 +50,7 @@ const SESSIONS = [
     key: "review-schedule",
     repo: "session-coach",
     branch: "zia/review-schedule",
-    title: "Add the day 1/3/7 review schedule",
+    title: "Add the 1/3/7-day review schedule",
     daysAgo: 20,
     duration: 54,
     events: 488,
@@ -70,7 +70,7 @@ const SESSIONS = [
       {
         source: "inferred",
         decision: "Restart a card at day 1 on any score below 2",
-        why: "Likely so a half-remembered decision is asked again soon instead of drifting to the day 7 gap.",
+        why: "Likely so a half-remembered decision is asked again soon instead of drifting to the 7-day gap.",
         evidence: [
           ev(
             31,
@@ -648,8 +648,8 @@ function learnerAnswer(card, score) {
 }
 
 /**
- * Builds every demo row for one learner. Answers replay the card's score history on the day
- * 1/3/7 schedule (score 2 moves up a step, below 2 restarts at day 1, passing day 7 masters it).
+ * Builds every demo row for one learner. Answers replay the card's score history on the
+ * 1/3/7-day gaps (score 2 moves up a step, below 2 restarts at step 1, passing the last review masters it).
  * Reviews happen on their due date while it is before today; a due date left in the past is
  * moved to today, so the queue shows it as due rather than overdue.
  */

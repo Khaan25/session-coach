@@ -20,7 +20,7 @@ import { controlHeight, mergeClass } from "@/lib/ui/utils";
 // Motion is the dropdown menu's (grow from the trigger, fade, zoom, slide), except when the popup is laid over the
 // trigger (alignItemWithTrigger): it then appears in place, since sliding from a side it did not open on reads wrong.
 const listPopupClass = cn(
-  "relative isolate z-(--z-overlay) flex max-h-(--available-height) max-w-[min(var(--popover),var(--available-width))] min-w-(--anchor-width) flex-col overflow-hidden p-1 [&_[role=listbox]]:scroll-fade-y",
+  "control-menu relative isolate z-(--z-overlay) flex max-h-(--available-height) max-w-[min(var(--popover),var(--available-width))] min-w-(--anchor-width) flex-col overflow-hidden p-1 [&_[role=listbox]]:scroll-fade-y",
   overlaySurface,
   popupMotionClass,
   "data-[align-trigger=true]:animate-none",
@@ -29,12 +29,12 @@ const listPopupClass = cn(
 // The row is menu-item, the one every list popup shares. A listbox adds the chosen wash (it stays under the hover
 // wash) and a trailing check, so it reserves 32px at the end, and it keeps the keyboard ring on the row.
 const listItemClass = cn(
-  "menu-item w-full pe-8 [&_svg:not([class*='size-'])]:size-4",
+  "control-menu-item menu-item w-full pe-8 [&_svg:not([class*='size-'])]:size-4",
   "focus-visible:focus-ring-inset data-selected:bg-accent-wash data-selected:data-highlighted:bg-accent-wash forced-colors:data-selected:data-highlighted:bg-[Highlight]!",
 );
 
 const fieldTriggerClass = cn(
-  "group/select-trigger flex w-fit min-w-40 items-center justify-between gap-2 rounded-soft bg-page px-3 text-start type-label whitespace-nowrap control-edge select-none",
+  "control-select-trigger group/select-trigger flex w-fit min-w-40 items-center justify-between gap-2 rounded-soft bg-page px-3 text-start type-label whitespace-nowrap control-edge select-none",
   "text-text-1 transition-[background-color,box-shadow,outline-color]",
   "hover:not-data-disabled:not-aria-invalid:[--frame-color:var(--line-control-hover)] data-popup-open:not-aria-invalid:[--frame-color:var(--line-control-hover)]",
   "aria-invalid:[--frame-color:var(--fail-line)]",
@@ -80,16 +80,27 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 function SelectTrigger({
   className,
   size = "default",
+  variant = "default",
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
   size?: "sm" | "default" | "lg";
+  variant?: "default" | "project" | "scope";
 }) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
+      data-cuelume-open=""
       data-size={size}
-      className={mergeClass([fieldTriggerClass, triggerSize[size]], className)}
+      className={mergeClass(
+        [
+          fieldTriggerClass,
+          triggerSize[size],
+          variant === "project" && "project-choice-trigger w-full min-w-0 max-w-72 sm:w-60",
+          variant === "scope" && "project-scope-trigger",
+        ],
+        className,
+      )}
       {...props}
     >
       {children}
@@ -156,6 +167,7 @@ function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Prop
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      data-cuelume-select=""
       className={mergeClass(listItemClass, className)}
       {...props}
     >

@@ -1,5 +1,6 @@
 "use client";
 
+import { projectScope, type ProjectScope } from "@/lib/projects/scope";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { SessionRow } from "@/components/app/session-row";
 import { ItemGroup } from "@/components/ui/item";
@@ -17,20 +18,61 @@ export function SessionList({
   now,
   prepend,
   limit,
+  repo,
+  scope,
+  empty,
+  variant = "rows",
 }: {
+  variant?: "rows" | "cards";
   sessions: SessionListItem[];
   userId: string;
   now: string;
   prepend: boolean;
   limit: number;
+  /** The project the list is filtered to: only its new sessions join. */
+  repo?: string;
+  scope?: ProjectScope;
+  /** Shown while the list has no row; the plain "No sessions yet" by default. */
+  empty?: React.ReactNode;
 }) {
-  const { rows, elapsedMs } = useLiveSessions(userId, sessions, { prepend, limit });
-  if (rows.length === 0) return <NoSessionsEmpty variant="plain" />;
-  const clock = new Date(Date.parse(now) + (elapsedMs ?? 0));
+  const { rows, elapsedMs } = useLiveSessions(userId, sessions, {
+    prepend,
+    limit,
+    scope: scope ?? (repo ? projectScope(repo) : "all"),
+  });
   return (
-    <ItemGroup>
+    <SessionRows
+      rows={rows}
+      now={new Date(Date.parse(now) + (elapsedMs ?? 0))}
+      empty={empty}
+      variant={variant}
+    />
+  );
+}
+
+/** The rows as they are, with no live updates: what SessionList draws, for the skeleton and the canvas. */
+export function SessionRows({
+  rows,
+  now,
+  empty = <NoSessionsEmpty variant="plain" />,
+  variant = "rows",
+}: {
+  variant?: "rows" | "cards";
+  rows: SessionListItem[];
+  now: Date;
+  empty?: React.ReactNode;
+}) {
+  if (rows.length === 0) return empty;
+  return (
+    <ItemGroup variant={variant === "cards" ? "tiles" : "list"}>
       {rows.map((session) => (
-        <SessionRow key={session.id} session={session} cardCount={session.cardCount} now={clock} />
+        <SessionRow
+          key={session.id}
+          session={session}
+          cardCount={session.cardCount}
+          now={now}
+          variant={variant === "cards" ? "card" : "row"}
+        />
       ))}
     </ItemGroup>
   );

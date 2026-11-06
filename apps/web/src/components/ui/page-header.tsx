@@ -242,13 +242,18 @@ function PageHeaderActions({ className, children, ...props }: React.ComponentPro
 }
 
 /** A row of stats under the title, as a description list. */
-function PageHeaderStats({ className, ...props }: React.ComponentProps<"dl">) {
+function PageHeaderStats({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"dl"> & { variant?: "default" | "session" }) {
   // One frame, rules inside: the cells sit 1px apart on a row-rule ground, inside one frame line.
   return (
     <dl
       data-slot="page-header-stats"
       className={cn(
         "frame grid w-full grid-cols-2 gap-px bg-line-row @xl:flex @xl:w-fit [&>:last-child:nth-child(odd)]:col-span-2",
+        variant === "session" && "session-header-stats",
         className,
       )}
       {...props}

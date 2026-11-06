@@ -1,11 +1,12 @@
 /**
  * POST /api/review/answer { cardId, answer } or { cardId, dontKnow: true }: grades the learner's explanation of one
- * card, or records an honest skip, and moves it along the day 1/3/7 schedule (plan, Phase 6 step 2). Returns
+ * card, or records an honest skip, and moves it along the review schedule (day 1, 4, 11) (plan, Phase 6 step 2). Returns
  * { score, missing, why, modelAnswer, evidence, nextDue, step, level, dropped }: the why and the answer key reach the
  * browser only here, after the learner has tried.
  */
 import { NextResponse } from "next/server";
 
+import { requireUser, serverError, UNIQUE_VIOLATION } from "@/lib/api/http";
 import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
 import { callModel, ModelCallError, ModelConfigError } from "@/lib/model/call-model";
 import {
@@ -26,7 +27,6 @@ import {
 } from "@/lib/review/today";
 import { localDate } from "@/lib/sessions/rows";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 
 type GradedCard = {
   user_id: string;
@@ -63,6 +63,10 @@ type GradedCard = {
  *   (`Retry-After`); 502 the model failed; 503 grading not configured; 500 else.
  */
 export async function POST(request: Request) {
+  const signedIn = await requireUser();
+  if (signedIn instanceof NextResponse) return signedIn;
+  const { user } = signedIn;
+
   const body: unknown = await request.json().catch(() => null);
   const parsed = answerRequestSchema.safeParse(body);
   if (!parsed.success) {
@@ -72,13 +76,6 @@ export async function POST(request: Request) {
   const { cardId } = parsed.data;
   const dontKnow = parsed.data.dontKnow === true;
   const answer = parsed.data.answer ?? DONT_KNOW_ANSWER;
-
-  const supabase = await createClient();
-  // getUser(), not getClaims(): asks the auth server, so a deleted or banned user's live JWT is refused.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   try {
     const admin = createAdminClient();
@@ -101,11 +98,7 @@ export async function POST(request: Request) {
           mastered: boolean;
           last_score: number | null;
         }>(),
-      admin
-        .from("profiles")
-        .select("timezone")
-        .eq("id", user.id)
-        .maybeSingle<{ timezone: string }>(),
+      admin.from("profiles").select("timezone").eq("id", user.id).maybeSingle(),
       admin
         .from("answers")
         .select("created_at")
@@ -177,7 +170,7 @@ export async function POST(request: Request) {
           .eq("updated_at", previous.updated_at)
           .select("card_id")
       : await admin.from("reviews").insert(schedule).select("card_id");
-    if (moved.error?.code === "23505" || (!moved.error && moved.data.length === 0)) {
+    if (moved.error?.code === UNIQUE_VIOLATION || (!moved.error && moved.data.length === 0)) {
       return NextResponse.json(
         { error: "This card was just answered. Reload to see its next review." },
         { status: 409 },
@@ -240,8 +233,7 @@ export async function POST(request: Request) {
         { status: 502 },
       );
     }
-    console.error("[api/review/answer] failed", error);
-    return NextResponse.json({ error: "Something went wrong. Try again." }, { status: 500 });
+    return serverError("[api/review/answer]", error, "Something went wrong. Try again.");
   }
 }
 

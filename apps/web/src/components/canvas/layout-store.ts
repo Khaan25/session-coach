@@ -8,7 +8,8 @@ export type SavedLayout = { camera: Camera | null; positions: Record<string, Poi
 const KEY = "session-coach:ideas-canvas";
 // 2: items became full 1440x900 pages, so positions saved for the small previews would overlap.
 // 3: the report row grew from two pages to five; old saves put the new ones on top of the old.
-const VERSION = 3;
+// 4: the old preview rows went and the rows reflowed, so saved positions land on the wrong items.
+const VERSION = 4;
 // Low enough that "Fit everything" fits the widest row (about 18,000px) on a laptop screen.
 export const MIN_ZOOM = 0.05;
 export const MAX_ZOOM = 3;

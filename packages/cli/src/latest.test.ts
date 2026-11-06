@@ -86,6 +86,14 @@ describe("findLatestLog", () => {
     });
   });
 
+  it("skips logs written after runningSince (the session running now)", async () => {
+    await log(dir, "done.jsonl", body(cwd), 1000);
+    await log(dir, "running.jsonl", body(cwd), 3000);
+    const found = await findLatestLog(projects, cwd, 2000 * 1000);
+    assert.equal("name" in found && found.name, "done.jsonl");
+    assert.ok("error" in (await findLatestLog(projects, cwd, 500 * 1000)));
+  });
+
   it("does not look at another project's folder", async () => {
     await log(join(projects, projectDirName("/other")), "x.jsonl", body("/other"), 9999);
     const result = await findLatestLog(projects, "/work/empty_project");

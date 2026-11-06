@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { QuestionLevel } from "@session-coach/shared/project";
 
+import { useAction } from "@/components/app/dry-run";
 import { toast } from "@/components/ui/toast";
 
 import { setProjectLevel } from "@/app/(app)/settings/actions";
@@ -12,6 +13,7 @@ import { LevelPicker } from "./level-picker";
 
 /** One repo's level in /settings. Saves on change and goes back to the saved level if the save fails. */
 export function ProjectLevelField({ repo, level }: { repo: string; level: QuestionLevel }) {
+  const save = useAction(setProjectLevel);
   const [value, setValue] = useState(level);
   const [pending, setPending] = useState(false);
   return (
@@ -25,7 +27,7 @@ export function ProjectLevelField({ repo, level }: { repo: string; level: Questi
         setPending(true);
         toast
           .promise(
-            setProjectLevel({ repo, question_level: next }).then(({ error }) => {
+            save({ repo, question_level: next }).then(({ error }) => {
               if (error) throw new Error(error);
             }),
             {

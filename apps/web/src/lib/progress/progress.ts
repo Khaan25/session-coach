@@ -1,3 +1,4 @@
+import { projectMatches, projectScope, type ProjectScope } from "../projects/scope.ts";
 import type { Score } from "../../components/app/score-badge.tsx";
 import { sessionName } from "../sessions/name.ts";
 import { localDate } from "../sessions/rows.ts";
@@ -5,16 +6,16 @@ import { localDate } from "../sessions/rows.ts";
 // Pure progress maths for /progress (plan, Phase 7), so node --test runs it. Definitions from ARCHITECTURE.md:
 // "decisions you can still explain" = mastered cards + cards scored 2 in the last 7 days, each card counted once.
 
-/** Where a card sits in the review schedule: never reviewed, next due on day 1, 3 or 7, or mastered. */
-export type ReviewStep = "new" | "day-1" | "day-3" | "day-7" | "mastered";
+/** Where a card sits in the review schedule: never reviewed, next due on day 1, 4 or 11, or mastered. */
+export type ReviewStep = "new" | "day-1" | "day-4" | "day-11" | "mastered";
 
 /** What the progress page calls each step. Its key order is the schedule's order, which `REVIEW_STEPS` relies on. */
 export const stepLabels: Record<ReviewStep, string> = {
   new: "New",
   "day-1": "Day 1",
-  "day-3": "Day 3",
-  "day-7": "Day 7",
-  mastered: "Mastered",
+  "day-4": "Day 4",
+  "day-11": "Day 11",
+  mastered: "Owned",
 };
 
 /** The steps in schedule order; index n is `reviews.step` n, so `REVIEW_STEPS[step]` maps a row to its step. */
@@ -29,20 +30,33 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export type ProgressInput = {
   /** The learner's visible cards (RLS drops hidden ones). Reviews and answers of other cards are ignored. */
   cards: { id: string; session_id: string }[];
-  /** `reviews` rows: `step` 0 = not reviewed since the first try, 1-3 = next due on day 1/3/7. */
+  /** `reviews` rows: `step` 0 = not reviewed since the first try, 1-3 = next due on day 1/4/11. */
   reviews: { card_id: string; step: number; mastered: boolean }[];
   /** `answers` rows from at least the last CHART_DAYS days. */
   answers: { card_id: string; score: Score; created_at: string }[];
   /** Ready sessions that have cards, for the per-session list. */
-  sessions: { id: string; title: string | null; repo: string | null; branch: string | null }[];
+  sessions: {
+    id: string;
+    title: string | null;
+    repo: string | null;
+    branch: string | null;
+    status?: string;
+  }[];
   /** The learner's IANA time zone, so a day is their day. */
   timeZone: string;
   /** The current time, passed in so tests can pin it and the page never reads the clock in render. */
   now: Date;
+  /** Distinct cards ever answered correctly, read separately from the 30-day activity window. */
+  explainedCardIds?: string[];
+  defendedCardIds?: string[];
 };
 
 /** Everything /progress shows. */
-export type Progress = {
+export type ProgressSummary = {
+  /** Distinct visible decisions with a finished defense scored 2. */
+  defended: number;
+  /** Unique visible decisions explained at least once, including owned decisions. */
+  explained: number;
   /** The headline: mastered cards plus cards scored 2 in the last 7 days, each counted once. */
   canStillExplain: number;
   /** Visible cards, the headline's denominator. */
@@ -50,7 +64,7 @@ export type Progress = {
   /** How many cards sit at each step. */
   steps: Record<ReviewStep, number>;
   /** One entry per day, oldest first, ending today: "Oct 29". */
-  answersPerDay: { day: string; answers: number }[];
+  answersPerDay: { date: string; day: string; answers: number }[];
   /** Answers by score over the same days. */
   scoreMix: Record<Score, number>;
   /** Mastered and total visible cards per ready session; sessions with no visible cards are left out. */
@@ -90,20 +104,27 @@ const dayLabel = new Intl.DateTimeFormat("en-US", {
  * @param input - The learner's cards, reviews, recent answers, ready sessions, time zone and the current time.
  * @returns The page's numbers; see `Progress`.
  */
-export function computeProgress({
+function summarizeProgress({
   cards,
   reviews,
   answers,
   sessions,
   timeZone,
   now,
-}: ProgressInput): Progress {
+  explainedCardIds = [],
+  defendedCardIds = [],
+}: ProgressInput): ProgressSummary {
   const visible = new Set(cards.map(({ id }) => id));
   const reviewOf = new Map(
     reviews.filter((r) => visible.has(r.card_id)).map((r) => [r.card_id, r]),
   );
   const ownAnswers = answers.filter((a) => visible.has(a.card_id));
 
+  const explained = new Set(explainedCardIds.filter((id) => visible.has(id)));
+  for (const answer of ownAnswers)
+    if (answer.score === 2 && Date.parse(answer.created_at) <= now.getTime())
+      explained.add(answer.card_id);
+  for (const [id, review] of reviewOf) if (review.mastered) explained.add(id);
   const weekAgo = now.getTime() - 7 * DAY_MS;
   const explainable = new Set<string>();
   for (const [id, review] of reviewOf) if (review.mastered) explainable.add(id);
@@ -115,8 +136,8 @@ export function computeProgress({
   const steps: Record<ReviewStep, number> = {
     new: 0,
     "day-1": 0,
-    "day-3": 0,
-    "day-7": 0,
+    "day-4": 0,
+    "day-11": 0,
     mastered: 0,
   };
   for (const { id } of cards) steps[stepOf(reviewOf.get(id))] += 1;
@@ -133,6 +154,7 @@ export function computeProgress({
   }
 
   const bySession = sessions
+    .filter((session) => !session.status || session.status === "ready")
     .map(({ id, title, repo, branch }) => {
       const own = cards.filter((c) => c.session_id === id);
       return {
@@ -145,14 +167,45 @@ export function computeProgress({
     .filter(({ total }) => total > 0);
 
   return {
+    defended: new Set(defendedCardIds.filter((id) => visible.has(id))).size,
+    explained: explained.size,
     canStillExplain: explainable.size,
     totalCards: cards.length,
     steps,
     answersPerDay: days.map((day) => ({
+      date: day,
       day: dayLabel.format(new Date(`${day}T00:00:00Z`)),
       answers: perDay.get(day) ?? 0,
     })),
     scoreMix,
     bySession,
   };
+}
+
+/** One repository's actual learning record, calculated with the same rules as the combined view. */
+export type ProjectProgress = ProgressSummary & {
+  scope: ProjectScope;
+  repo: string | null;
+  sessionCount: number;
+};
+export type Progress = ProgressSummary & { byProject: ProjectProgress[] };
+
+function scopedInput(input: ProgressInput, scope: ProjectScope): ProgressInput {
+  if (scope === "all") return input;
+  const sessions = input.sessions.filter((session) => projectMatches(session.repo, scope));
+  const ids = new Set(sessions.map((session) => session.id));
+  return { ...input, sessions, cards: input.cards.filter((card) => ids.has(card.session_id)) };
+}
+
+/** Project summaries and the selected scope share one visible-card set; no other project's answers count. */
+export function computeProgress(input: ProgressInput, scope: ProjectScope = "all"): Progress {
+  const repos = new Map<ProjectScope, string | null>();
+  for (const session of input.sessions) repos.set(projectScope(session.repo), session.repo || null);
+  const byProject = [...repos]
+    .map(([key, repo]) => {
+      const own = scopedInput(input, key);
+      return { ...summarizeProgress(own), scope: key, repo, sessionCount: own.sessions.length };
+    })
+    .sort((a, b) => (a.repo ?? "~").localeCompare(b.repo ?? "~"));
+  return { ...summarizeProgress(scopedInput(input, scope)), byProject };
 }

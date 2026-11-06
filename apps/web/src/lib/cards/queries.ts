@@ -15,6 +15,9 @@ import {
   type SessionCard,
 } from "./columns";
 
+/** The summary plus when its current run started, so the page can tell a stuck run (`isStuck`) from a live one. */
+export type SessionWithRun = SessionSummary & { processing_started_at: string | null };
+
 /**
  * One of the learner's sessions and, once it is ready, its visible cards in order. Learner reads through RLS: hidden
  * cards and other learners' rows never come back, and the user_id filter decides ownership in code too.
@@ -31,16 +34,16 @@ import {
 export async function getSessionWithCards(
   userId: string,
   sessionId: string,
-): Promise<{ session: SessionSummary; cards: SessionCard[] } | null> {
+): Promise<{ session: SessionWithRun; cards: SessionCard[] } | null> {
   // A malformed id would be a Postgres cast error; it is simply not found.
   if (!z.uuid().safeParse(sessionId).success) return null;
   const supabase = await createClient();
   const { data: session, error } = await supabase
     .from("sessions")
-    .select(SESSION_COLUMNS)
+    .select(`${SESSION_COLUMNS}, processing_started_at`)
     .eq("id", sessionId)
     .eq("user_id", userId)
-    .maybeSingle<SessionSummary>();
+    .maybeSingle<SessionWithRun>();
   if (error) throw new Error(`getSessionWithCards: ${error.message}`);
   if (!session) return null;
   if (session.status !== "ready") return { session, cards: [] };

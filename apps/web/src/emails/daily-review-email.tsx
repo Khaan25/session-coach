@@ -1,19 +1,5 @@
 // oxlint-disable shadcn/no-inline-styles, shadcn/no-raw-colors -- email clients only read inline styles and hex colours.
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Hr,
-  Html,
-  Img,
-  Link,
-  Preview,
-  render,
-  Section,
-  Text,
-} from "react-email";
+import { Button, Link, render, Section, Text } from "react-email";
 
 import {
   type DailyReviewCopy,
@@ -23,7 +9,8 @@ import {
 } from "@/lib/email/daily-review";
 import { listUnsubscribeHeaders } from "@/lib/email/unsubscribe";
 
-import { color, font } from "./brand";
+import { EmailShell } from "./auth-layout";
+import { color } from "./brand";
 
 // The daily review reminder in the app's look: icy paper, navy-graphite ink, Geist, the watercolour card stack.
 
@@ -41,142 +28,95 @@ const tagColor: Record<ListedCard["tag"], { background: string; foreground: stri
  */
 export function DailyReviewEmail({ copy, siteUrl }: { copy: DailyReviewCopy; siteUrl: string }) {
   return (
-    <Html lang="en">
-      <Head>
-        <meta name="color-scheme" content="light" />
-        <meta name="supported-color-schemes" content="light" />
-      </Head>
-      <Preview>{copy.preview}</Preview>
-      <Body style={{ margin: 0, backgroundColor: color.canvas, fontFamily: font }}>
-        <Container style={{ maxWidth: 520, margin: "0 auto", padding: "40px 16px" }}>
-          <Text style={{ margin: "0 0 16px", fontSize: 14, lineHeight: "20px", color: color.ink }}>
-            Session Coach
-          </Text>
-          <Section
+    <EmailShell
+      preview={copy.preview}
+      image={`${siteUrl}/email/cards.png`}
+      heading={copy.heading}
+      footer={
+        <>
+          {copy.footer}{" "}
+          <Link href={copy.settingsUrl} style={{ color: color.text3, textDecoration: "underline" }}>
+            {copy.footerLink}
+          </Link>
+          {copy.unsubscribeUrl ? (
+            <>
+              {" or "}
+              <Link
+                href={copy.unsubscribeUrl}
+                style={{ color: color.text3, textDecoration: "underline" }}
+              >
+                unsubscribe
+              </Link>
+            </>
+          ) : null}
+          .
+        </>
+      }
+    >
+      <Text style={{ margin: "0 0 20px", fontSize: 15, lineHeight: "22px", color: color.text2 }}>
+        {copy.summary}
+      </Text>
+      <Section
+        style={{
+          margin: "0 0 20px",
+          backgroundColor: color.well,
+          borderRadius: 8,
+          padding: "4px 16px",
+        }}
+      >
+        {copy.cards.map((card, i) => (
+          <Text
+            key={`${i}-${card.title}`}
             style={{
-              backgroundColor: color.paper,
-              border: `1px solid ${color.line}`,
-              borderRadius: 12,
-              padding: "32px 32px 28px",
+              margin: 0,
+              padding: "12px 0",
+              borderTop: i === 0 ? "none" : `1px solid ${color.line}`,
+              fontSize: 15,
+              lineHeight: "22px",
+              color: color.ink,
             }}
           >
-            <Img
-              src={`${siteUrl}/email/cards.png`}
-              width={96}
-              height={80}
-              alt=""
-              style={{ display: "block", margin: "0 0 20px" }}
-            />
-            <Heading
-              as="h1"
-              style={{
-                margin: "0 0 12px",
-                fontSize: 28,
-                lineHeight: "34px",
-                fontWeight: 400,
-                letterSpacing: "-0.01em",
-                color: color.ink,
-              }}
-            >
-              {copy.heading}
-            </Heading>
-            <Text
-              style={{ margin: "0 0 20px", fontSize: 15, lineHeight: "22px", color: color.text2 }}
-            >
-              {copy.summary}
-            </Text>
-            <Section
-              style={{
-                margin: "0 0 20px",
-                backgroundColor: color.well,
-                borderRadius: 8,
-                padding: "4px 16px",
-              }}
-            >
-              {copy.cards.map((card, i) => (
-                <Text
-                  key={`${i}-${card.title}`}
-                  style={{
-                    margin: 0,
-                    padding: "12px 0",
-                    borderTop: i === 0 ? "none" : `1px solid ${color.line}`,
-                    fontSize: 15,
-                    lineHeight: "22px",
-                    color: color.ink,
-                  }}
-                >
-                  <Pill {...tagColor[card.tag]}>{card.tag}</Pill> {card.title}
-                </Text>
-              ))}
-              {copy.more && (
-                <Text
-                  style={{
-                    margin: 0,
-                    padding: "12px 0",
-                    borderTop: `1px solid ${color.line}`,
-                    fontSize: 14,
-                    lineHeight: "20px",
-                    color: color.text3,
-                  }}
-                >
-                  {copy.more}
-                </Text>
-              )}
-            </Section>
-            <Text
-              style={{ margin: "0 0 8px", fontSize: 15, lineHeight: "22px", color: color.text2 }}
-            >
-              {copy.body}
-            </Text>
-            <Text
-              style={{ margin: "0 0 24px", fontSize: 14, lineHeight: "20px", color: color.text3 }}
-            >
-              {copy.progress}
-            </Text>
-            <Button
-              href={copy.reviewUrl}
-              style={{
-                display: "inline-block",
-                backgroundColor: color.ink,
-                color: color.paper,
-                borderRadius: 8,
-                padding: "12px 20px",
-                fontSize: 15,
-                lineHeight: "20px",
-                fontWeight: 500,
-                textDecoration: "none",
-              }}
-            >
-              {copy.cta}
-            </Button>
-          </Section>
-          <Hr
-            style={{ border: "none", borderTop: `1px solid ${color.line}`, margin: "28px 0 16px" }}
-          />
-          <Text style={{ margin: 0, fontSize: 12, lineHeight: "18px", color: color.text3 }}>
-            {copy.footer}{" "}
-            <Link
-              href={copy.settingsUrl}
-              style={{ color: color.text3, textDecoration: "underline" }}
-            >
-              {copy.footerLink}
-            </Link>
-            {copy.unsubscribeUrl ? (
-              <>
-                {" or "}
-                <Link
-                  href={copy.unsubscribeUrl}
-                  style={{ color: color.text3, textDecoration: "underline" }}
-                >
-                  unsubscribe
-                </Link>
-              </>
-            ) : null}
-            .
+            <Pill {...tagColor[card.tag]}>{card.tag}</Pill> {card.title}
           </Text>
-        </Container>
-      </Body>
-    </Html>
+        ))}
+        {copy.more && (
+          <Text
+            style={{
+              margin: 0,
+              padding: "12px 0",
+              borderTop: `1px solid ${color.line}`,
+              fontSize: 14,
+              lineHeight: "20px",
+              color: color.text3,
+            }}
+          >
+            {copy.more}
+          </Text>
+        )}
+      </Section>
+      <Text style={{ margin: "0 0 8px", fontSize: 15, lineHeight: "22px", color: color.text2 }}>
+        {copy.body}
+      </Text>
+      <Text style={{ margin: "0 0 24px", fontSize: 14, lineHeight: "20px", color: color.text3 }}>
+        {copy.progress}
+      </Text>
+      <Button
+        href={copy.reviewUrl}
+        style={{
+          display: "inline-block",
+          backgroundColor: color.ink,
+          color: color.paper,
+          borderRadius: 8,
+          padding: "12px 20px",
+          fontSize: 15,
+          lineHeight: "20px",
+          fontWeight: 500,
+          textDecoration: "none",
+        }}
+      >
+        {copy.cta}
+      </Button>
+    </EmailShell>
   );
 }
 

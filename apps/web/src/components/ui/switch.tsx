@@ -29,6 +29,8 @@ function Switch({
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
+      // cuelume skips only `:disabled`, which this span root never matches, so drop the cue when the switch cannot change.
+      data-cuelume-toggle={props.disabled || readOnly || pending ? undefined : ""}
       data-size={size}
       data-pending={pending || undefined}
       aria-busy={pending || undefined}
@@ -145,7 +147,7 @@ function Switch({
            * side never showed it because its `translate` is constant either
            * way, so there was nothing to fall out of step with.
            */
-          "transition-[translate,scale,border-radius] duration-150 ease-out-quint",
+          "transition-[translate,scale,border-radius] duration-(--dur-150) ease-out-quint",
           // Squash is decoration, so it goes; the travel still needs to
           // read as movement between two positions, so it stays.
           "motion-reduce:transition-[translate] motion-reduce:[--sx:1]! motion-reduce:[--sy:1]!",

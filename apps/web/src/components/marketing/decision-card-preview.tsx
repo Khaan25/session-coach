@@ -17,12 +17,15 @@ import {
 const cards = sample.cards.filter((visible) => !visible.hidden);
 const card = cards[0];
 const { session } = sample;
-const reviewDays = [1, 3, 7];
+const reviewDays = [1, 4, 11];
 
 export function DecisionCardPreview() {
   return (
     <div className="relative mx-auto w-full max-w-md text-start">
-      <div aria-hidden className="absolute inset-0 translate-x-3 translate-y-4 rotate-3">
+      <div
+        aria-hidden
+        className="absolute inset-0 translate-x-1 translate-y-3 rotate-2 sm:translate-x-3 sm:translate-y-4 sm:rotate-3"
+      >
         <Card className="h-full" />
       </div>
       <div aria-hidden className="absolute inset-0 -translate-x-2 translate-y-2 -rotate-2">

@@ -1,6 +1,6 @@
 # Session Coach
 
-pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (Decision + Session zod schemas), `packages/cli` (empty stub; hook and worker planned), `supabase/migrations`.
+pnpm monorepo: `apps/web` (Next.js 16 App Router), `packages/shared` (decision, session, profile and project zod schemas, the upload contract and redaction), `packages/cli` (the `session-coach` npm CLI: `login` by device code, `push`, `sync`), `supabase/migrations`.
 New here? [docs/CODEBASE.md](docs/CODEBASE.md) explains how the code works and why; [docs/DATA_MODEL.md](docs/DATA_MODEL.md) explains every table and policy.
 
 ## Commands
@@ -16,6 +16,7 @@ New here? [docs/CODEBASE.md](docs/CODEBASE.md) explains how the code works and w
 - Next.js 16 differs from training data. Read `apps/web/AGENTS.md` and `apps/web/node_modules/next/dist/docs/` before writing Next.js code.
 - UI uses shadcn/ui components (Base UI primitives, not Radix) in `apps/web/src/components/ui`. Don't restyle them with `className`; add a variant in the component file instead. `@shadcn/lint` (an oxlint JS plugin, configured in `apps/web/.oxlintrc.json`) enforces this, so read its error, it says what to use.
 - Theme tokens only: no raw colors (`bg-pink-500`), no arbitrary values (`p-[13px]`) outside `src/components/ui/`, no inline styles.
+- `motion` is for the marketing pages only. UI components animate with `tw-animate-css` and the duration tokens (`duration-(--dur-*)`), never a raw `duration-<n>`.
 - No barrel files. Import from the file that defines the symbol. `packages/shared` exposes one entry per file in its `exports`.
 - Model names live in env vars, read through `callModel(task, input)`. Never hard-code a model or provider.
 - `packages/shared` and `supabase/migrations` are shared contracts: change them only after the team agrees, then in one place.

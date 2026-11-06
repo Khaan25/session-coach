@@ -12,7 +12,11 @@ import type { Kind } from "@/lib/ui/kind";
 // selected takes the kind's wash. The row gives up its meta first as it narrows (a container query on the row),
 // and the name truncates last.
 
-function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
+function ItemGroup({
+  className,
+  variant = "list",
+  ...props
+}: React.ComponentProps<"div"> & { variant?: "list" | "tiles" }) {
   return (
     <div
       /*
@@ -22,14 +26,16 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
       // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="list"
       data-slot="item-group"
+      data-variant={variant}
       className={cn(
         "group/item-group frame relative flex w-full flex-col overflow-hidden bg-page",
+        variant === "tiles" && "session-tile-grid",
         // In a card, the list is the design system's panel inset: a white panel 4px inside the grey card, its
         // corners nested in the card's (10px less the 4px gap).
         "has-[>[data-variant=outline]]:gap-2 has-[>[data-variant=outline]]:overflow-visible has-[>[data-variant=outline]]:bg-transparent has-[>[data-variant=outline]]:before:hidden",
         "in-data-[slot=card]:mx-1 in-data-[slot=card]:mb-1 in-data-[slot=card]:w-auto in-data-[slot=card]:[--frame-radius:calc(var(--radius-frame)-4px)]",
         // With no card header above it, the inset needs its top 4px too, or the panel touches the card's edge.
-        "in-data-[slot=card]:first:mt-1",
+        "group-data-[variant=open]/card:mx-0 group-data-[variant=open]/card:mb-0 group-data-[variant=open]/card:rounded-none group-data-[variant=open]/card:before:hidden in-data-[slot=card]:first:mt-1",
         className,
       )}
       {...props}
@@ -52,7 +58,7 @@ function ItemSeparator({ className, ...props }: React.ComponentProps<typeof Sepa
 const itemVariants = cva(
   [
     "group/item @container/item relative flex w-full min-w-0 flex-wrap items-center text-start text-text-1 outline-none",
-    "transition-colors duration-100 focus-visible:focus-ring-inset [a]:transition-colors",
+    "transition-colors duration-(--dur-100) focus-visible:focus-ring-inset [a]:transition-colors",
     // In a group or a card: a row split from the next by a row rule; the frame clips the corners.
     "in-data-[slot=card]:rounded-none in-data-[slot=card]:rule-row in-data-[slot=item-group]:rounded-none in-data-[slot=item-group]:rule-row",
     // Hover never greys a selected row: the wash stays.
@@ -66,16 +72,24 @@ const itemVariants = cva(
     variants: {
       variant: {
         default: "rounded-soft bg-transparent",
+        paper: "session-paper-icon",
+        "session-card": "session-visual-card",
         // In a group, outline rows stand apart as framed rows (the group drops its own frame), so no edge doubles.
         outline:
           "frame in-data-[slot=item-group]:rounded-soft! in-data-[slot=item-group]:shadow-none!",
         // The grey well: quieter rows that read as a set, inside a group too.
         muted: "rounded-soft bg-well",
+        spotlight:
+          "frame min-h-56 flex-col items-start! justify-center gap-4 rounded-frame bg-brand-wash px-7! py-7! [&_[data-slot=item-content]]:flex-none [&_[data-slot=item-media]]:hidden [&_[data-slot=item-title]]:type-heading",
       },
       // --row (40px) for one line, --row-lg (56px) with a description, --row-sm (32px) and 28px for dense lists.
       size: {
         default:
-          "min-h-(--row) gap-x-3 gap-y-1 px-4 py-2 has-data-[slot=item-description]:min-h-(--row-lg)",
+          "min-h-(--row) gap-x-3 gap-y-1 px-5 py-4 has-data-[slot=item-description]:min-h-(--row-lg)",
+        lesson:
+          "min-h-28 gap-x-5 gap-y-4 px-0 py-7 [&_[data-slot=item-title]>a]:line-clamp-none [&_[data-slot=item-title]>a]:whitespace-normal",
+        session:
+          "min-h-24 gap-x-4 gap-y-3 px-5 py-6 max-sm:grid max-sm:grid-cols-[2rem_minmax(0,1fr)_1rem] max-sm:gap-x-3 max-sm:[&_[data-slot=item-title]]:w-full max-sm:[&_[data-slot=item-title]>a]:line-clamp-2 max-sm:[&_[data-slot=item-title]>a]:whitespace-normal max-sm:[&>[data-slot=item-content]]:col-span-2 max-sm:[&>[data-slot=item-content]]:col-start-2 max-sm:[&>[data-slot=item-content]]:row-start-1 max-sm:[&>[data-slot=item-media]]:col-start-1 max-sm:[&>[data-slot=item-media]]:row-start-1 max-sm:[&>[data-slot=item-meta]]:hidden max-sm:[&>[data-slot=status]]:col-start-2 max-sm:[&>[data-slot=status]]:row-start-2 max-sm:[&>svg]:col-start-3 max-sm:[&>svg]:row-start-2",
         sm: "min-h-(--row-sm) gap-x-3 gap-y-1 px-4 py-1.5",
         xs: "min-h-(--control-sm) gap-x-3 px-4 py-1 in-data-[slot=dropdown-menu-content]:p-0",
       },
@@ -126,6 +140,8 @@ const itemMediaVariants = cva(
     variants: {
       variant: {
         default: "rounded-soft bg-transparent",
+        paper: "session-paper-icon",
+        session: "session-work-icon",
         icon: "size-8 text-text-2 group-data-[size=xs]/item:h-6 [&_svg:not([class*='size-'])]:size-4",
         image:
           "size-10 overflow-hidden rounded-soft group-data-[size=sm]/item:size-8 group-data-[size=xs]/item:size-6 [&_img]:size-full [&_img]:object-cover",
@@ -165,12 +181,20 @@ function ItemContent({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 /** The name, then an optional ID. Under 384px of content width the ID goes; the name truncates last. */
-function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
+function ItemTitle({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"div"> & { variant?: "default" | "wrap" }) {
   return (
     <div
       data-slot="item-title"
+      data-variant={variant}
       className={cn(
-        "flex w-fit max-w-full min-w-0 items-baseline gap-2 overflow-hidden type-label underline-offset-4 [&>*:first-child]:min-w-0 [&>*:first-child]:truncate @max-sm/item:[&>*:not(:first-child):not([data-slot=badge])]:hidden",
+        "flex w-fit max-w-full min-w-0 items-baseline gap-2 overflow-hidden type-label underline-offset-4 [&>*:first-child]:min-w-0 @max-sm/item:[&>*:not(:first-child):not([data-slot=badge])]:hidden",
+        variant === "wrap"
+          ? "w-full [&>*:first-child]:whitespace-normal"
+          : "[&>*:first-child]:truncate",
         className,
       )}
       {...props}

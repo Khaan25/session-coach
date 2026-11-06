@@ -17,7 +17,13 @@ function Collapsible({ className, ...props }: CollapsiblePrimitive.Root.Props) {
 }
 
 function CollapsibleTrigger({ ...props }: CollapsiblePrimitive.Trigger.Props) {
-  return <CollapsiblePrimitive.Trigger data-slot="collapsible-trigger" {...props} />;
+  return (
+    <CollapsiblePrimitive.Trigger
+      data-slot="collapsible-trigger"
+      data-cuelume-toggle=""
+      {...props}
+    />
+  );
 }
 
 type CollapsibleRowProps = CollapsiblePrimitive.Trigger.Props & {
@@ -43,6 +49,7 @@ function CollapsibleRow({
   return (
     <CollapsiblePrimitive.Trigger
       data-slot="collapsible-trigger"
+      data-cuelume-toggle=""
       data-size={size}
       className={cn(
         "group/collapsible-trigger inline-flex max-w-full items-center gap-3 self-start rounded-soft px-2 text-start text-text-1",
@@ -59,7 +66,7 @@ function CollapsibleRow({
         <CaretRightIcon
           aria-hidden
           data-slot="collapsible-caret"
-          className="size-3 shrink-0 text-text-3 transition-transform duration-200 ease-out-quint group-data-panel-open/collapsible-trigger:rotate-90 motion-reduce:transition-none rtl:-scale-x-100 rtl:group-data-panel-open/collapsible-trigger:-rotate-90"
+          className="size-3 shrink-0 text-text-3 transition-transform duration-(--dur-200) ease-out-quint group-data-panel-open/collapsible-trigger:rotate-90 motion-reduce:transition-none rtl:-scale-x-100 rtl:group-data-panel-open/collapsible-trigger:-rotate-90"
         />
       )}
       {children}
@@ -84,7 +91,7 @@ function CollapsibleContent({ className, ...props }: CollapsiblePrimitive.Panel.
     <CollapsiblePrimitive.Panel
       data-slot="collapsible-content"
       className={cn(
-        "h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out-quint data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none",
+        "h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-(--dur-200) ease-out-quint data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none",
         className,
       )}
       {...props}

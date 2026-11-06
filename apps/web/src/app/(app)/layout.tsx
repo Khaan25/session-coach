@@ -1,15 +1,13 @@
+import { DetectTimezone } from "@/components/settings/detect-timezone";
 import { Suspense } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
-import { Separator } from "@/components/ui/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { LearnerShell } from "@/components/app/learner-shell";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { initialsOf } from "@/lib/auth/initials";
 import { dueTodayCount } from "@/lib/review/queries";
 import { recentSessions } from "@/lib/sessions/queries";
 import { getSettingsProfile } from "@/lib/settings/profile";
-
-import { AppBreadcrumb } from "./app-breadcrumb";
 
 function logAndReturn<T>(read: string, fallback: T) {
   return (error: unknown): T => {
@@ -31,36 +29,32 @@ async function SignedInSidebar() {
   const email = profile?.email ?? user.email;
   const name = profile?.display_name || email || "Learner";
   return (
-    <AppSidebar
-      sessions={sessions}
-      dueCount={dueCount}
-      userId={user.id}
-      user={{
-        name,
-        detail: email ?? "",
-        initials: initialsOf(profile?.display_name, email),
-      }}
-    />
+    <>
+      {profile?.timezone === "UTC" && <DetectTimezone />}
+      <AppSidebar
+        sessions={sessions}
+        dueCount={dueCount}
+        userId={user.id}
+        user={{
+          name,
+          detail: email ?? "",
+          initials: initialsOf(profile?.display_name, email),
+        }}
+      />
+    </>
   );
 }
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
-    <SidebarProvider>
-      <Suspense fallback={<AppSidebar sessions={[]} dueCount={0} userId={null} user={null} />}>
-        <SignedInSidebar />
-      </Suspense>
-      <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-(--topbar) shrink-0 items-center gap-2 bg-page px-(--gutter-sm) sm:px-(--gutter)">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-vertical:h-4 data-vertical:self-auto"
-          />
-          <AppBreadcrumb />
-        </header>
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <LearnerShell
+      sidebar={
+        <Suspense fallback={<AppSidebar sessions={[]} dueCount={0} userId={null} user={null} />}>
+          <SignedInSidebar />
+        </Suspense>
+      }
+    >
+      {children}
+    </LearnerShell>
   );
 }

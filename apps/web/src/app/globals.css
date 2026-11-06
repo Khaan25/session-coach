@@ -8,10 +8,24 @@
 @import "../styles/tokens.css";
 @import "../styles/base.css";
 @import "../styles/utilities.css";
+@import "../styles/redesign.css";
+@import "../styles/scenes.css";
+@import "../styles/workspace.css";
+@import "../styles/supporting.css";
+@import "../styles/flow-palette.css";
+@import "../styles/cinema.css";
+@import "../styles/project-experience.css";
+@import "../styles/interaction-polish.css";
+@import "../styles/clarity.css";
+@import "../styles/dashboard-polish.css";
+@import "../styles/engineering-workspace.css";
+@import "../styles/learning.css";
+@import "../styles/coach-visuals.css";
+@import "../styles/serveros.css";
 
-/* Marketing headlines only (font-display); the UI is Geist, set in tokens.css. */
+/* Marketing and app headlines share the sans family for one consistent typographic voice. */
 :root {
-  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-display: var(--font-sans);
 }
 
 /* skullet hides skeleton text with a transparent fill on its loading root, and the fill inherits, so it reaches
@@ -36,9 +50,7 @@
    on the same selector as the design system's derived tokens so overlays ([data-surface]) keep it. */
 :root,
 :root [data-surface] {
-  --key-secondary-edge:
-    0 1px 1px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.55)),
-    0 2px 5px -2px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.75));
+  --key-secondary-edge: var(--elev-none);
 }
 
 /* The shadcn names the design system's mapping leaves out, plus the app's own roles.
@@ -161,3 +173,7 @@
   [data-slot="sheet-content"]:is([data-starting-style], [data-ending-style]) {
   translate: none;
 }
+
+@import "../styles/editions.css";
+
+@import "../styles/diffuse.css";

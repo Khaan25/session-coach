@@ -9,21 +9,21 @@ test("ready with 0 cards says no decisions were found", () => {
 
 test("ready with cards keeps the ready word", () => {
   for (const count of [1, 5]) {
-    assert.equal(sessionLabel("ready", count), "Ready");
+    assert.equal(sessionLabel("ready", count), "Ready to explore");
     assert.equal(sessionLabel("ready", count, { ready: "Cards ready" }), "Cards ready");
   }
 });
 
 test("ready with an unknown count is not called empty", () => {
-  assert.equal(sessionLabel("ready"), "Ready");
+  assert.equal(sessionLabel("ready"), "Ready to explore");
   assert.equal(sessionLabel("ready", undefined, { ready: "Cards ready" }), "Cards ready");
 });
 
 test("processing, pending and failed never change, whatever the count", () => {
   for (const count of [undefined, 0, 3]) {
-    assert.equal(sessionLabel("processing", count), "Making cards");
+    assert.equal(sessionLabel("processing", count), "Preparing decisions");
     assert.equal(sessionLabel("pending", count), "Queued");
-    assert.equal(sessionLabel("failed", count), "Failed");
+    assert.equal(sessionLabel("failed", count), "Needs attention");
   }
 });
 

@@ -71,8 +71,7 @@ export function SessionFailedState({ error, ...props }: PresetProps & { error: s
     <ErrorState
       {...props}
       title="Couldn't make cards from this session"
-      // TODO(zia): the next step for a learner when the pipeline stored no error (a re-upload returns 409).
-      message={error?.trim() || "Something went wrong while reading this session."}
+      message={error?.trim() || "Something went wrong while reading this session. Try again."}
     />
   );
 }

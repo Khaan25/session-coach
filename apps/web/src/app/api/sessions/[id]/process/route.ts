@@ -3,18 +3,20 @@
  *   202 `{ id }`: the session moved to `processing`; cards follow, and the dashboard updates through Realtime.
  *   409 `{ id, status }`: already processing, ready or failed; nothing to do.
  *   422: the log isn't in Storage yet; start again at POST /api/sessions.
- *   400 bad id, 401 missing or unknown token, 404 not this learner's session, 413 log over 50 MB, 429 over 20 runs an
- *   hour (`Retry-After` header, in seconds), 500 anything else.
+ *   401 missing or unknown token (checked first), 400 bad id, 404 not this learner's session, 413 log over 50 MB,
+ *   429 over 20 runs an hour (`Retry-After` header, in seconds), 500 anything else, including a Storage failure.
  * Auth: `Authorization: Bearer sc_…`.
  */
+import { MAX_UPLOAD_BYTES } from "@session-coach/shared/limits";
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { requireCliUser, serverError } from "@/lib/api/http";
 import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
 import { processSession } from "@/lib/pipeline/process";
-import { bearerToken, MAX_UPLOAD_BYTES, SESSIONS_BUCKET } from "@/lib/sessions/upload";
+import { isMissingObject } from "@/lib/sessions/missing-object";
+import { SESSIONS_BUCKET } from "@/lib/sessions/upload";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { userForToken } from "@/lib/tokens/verify";
 
 const idSchema = z.uuid();
 
@@ -34,28 +36,20 @@ export const maxDuration = 300;
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const invokedAt = Date.now();
-  const token = bearerToken(request.headers.get("authorization"));
-  if (!token) return NextResponse.json({ error: "Missing CLI token" }, { status: 401 });
-
-  const id = idSchema.safeParse((await context.params).id);
-  if (!id.success) {
-    return NextResponse.json({ error: "id must be a session id", field: "id" }, { status: 400 });
-  }
-
   try {
-    const userId = await userForToken(token);
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unknown CLI token. Run session-coach login again." },
-        { status: 401 },
-      );
+    const userId = await requireCliUser(request);
+    if (userId instanceof NextResponse) return userId;
+
+    const id = idSchema.safeParse((await context.params).id);
+    if (!id.success) {
+      return NextResponse.json({ error: "id must be a session id", field: "id" }, { status: 400 });
     }
     const admin = createAdminClient();
     const { data: session, error: readError } = await admin
       .from("sessions")
       .select("user_id, status, raw_path")
       .eq("id", id.data)
-      .maybeSingle<{ user_id: string; status: string; raw_path: string }>();
+      .maybeSingle();
     if (readError) throw new Error(readError.message);
     if (!session || session.user_id !== userId) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -64,7 +58,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ id: id.data, status: session.status }, { status: 409 });
     }
 
-    const { data: file } = await admin.storage.from(SESSIONS_BUCKET).info(session.raw_path);
+    const { data: file, error: infoError } = await admin.storage
+      .from(SESSIONS_BUCKET)
+      .info(session.raw_path);
+    // Only a missing object is "not uploaded yet"; Storage failing is a 500, so the CLI doesn't re-upload for nothing.
+    if (infoError && !isMissingObject(infoError)) throw new Error(infoError.message);
     if (!file) {
       return NextResponse.json(
         { error: "The log isn't uploaded yet. Start the upload again." },
@@ -72,10 +70,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       );
     }
     if ((file.size ?? 0) > MAX_UPLOAD_BYTES) {
-      await admin
+      const { error: failError } = await admin
         .from("sessions")
         .update({ status: "failed", error: "This session's log is over 50 MB, too big to read." })
         .eq("id", id.data);
+      if (failError) throw new Error(failError.message);
       return NextResponse.json({ error: "The log is over 50 MB." }, { status: 413 });
     }
 
@@ -102,7 +101,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     after(() => processSession(id.data, startedAt, invokedAt));
     return NextResponse.json({ id: id.data }, { status: 202 });
   } catch (err) {
-    console.error("[api/sessions/process] failed", err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: "Processing couldn't start. Try again." }, { status: 500 });
+    return serverError("[api/sessions/process]", err, "Processing couldn't start. Try again.");
   }
 }

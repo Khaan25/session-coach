@@ -15,10 +15,11 @@ test("fake extraction on a real parsed log gives cards that survive the evidence
   const { events } = parseSession(fixture);
   const model = async (task: "extract", input: { data: Record<string, unknown> }) =>
     fakeModel(task, input.data);
-  const drafts = await extractCards(events, model);
+  const { cards: drafts, title } = await extractCards(events, model);
+  assert.match(title ?? "", /^FAKE: /);
   assert.ok(drafts.length > 0 && drafts.length <= 3);
   assert.equal(checkEvidence(drafts, events).length, drafts.length);
-  assert.deepEqual(await extractCards(events, model), drafts);
+  assert.deepEqual((await extractCards(events, model)).cards, drafts);
 });
 
 test("fake extraction skips short and non-conversation events, and returns no cards when none qualify", () => {
@@ -26,10 +27,39 @@ test("fake extraction skips short and non-conversation events, and returns no ca
     { id: "E1", kind: "prompt", text: "too short" },
     { id: "E2", kind: "bash", text: "pnpm test --filter web --run now" },
   ];
-  assert.deepEqual(fakeModel("extract", { events }), { decisions: [] });
-  assert.deepEqual(fakeModel("extract", {}), { decisions: [] });
+  assert.deepEqual(fakeModel("extract", { events }), {
+    title: "FAKE: too short",
+    decisions: [],
+  });
+  assert.deepEqual(fakeModel("extract", {}), {
+    title: "FAKE: a session with no prompt",
+    decisions: [],
+  });
 });
 
 test("the fake model still refuses an unknown task", () => {
   assert.throws(() => fakeModel("summarize", {}), /no "summarize"/);
+});
+
+test("fake follow-up rides the grade task and fits { question }", () => {
+  const out = fakeModel("grade", { mode: "follow_up", question: "Why X?", answer: "because" });
+  assert.deepEqual(Object.keys(out as object), ["question"]);
+  assert.match((out as { question: string }).question, /^FAKE: .*Why X\?/);
+});
+
+test("fake defense grade reads the follow-up answer too", () => {
+  const model_answer = "cache the result because lookups are slow";
+  assert.deepEqual(
+    fakeModel("grade", {
+      mode: "defend_grade",
+      model_answer,
+      answer: "unrelated",
+      follow_up_answer: model_answer,
+    }),
+    { score: 2, missing: "" },
+  );
+  assert.equal(
+    (fakeModel("grade", { model_answer, answer: "unrelated" }) as { score: number }).score,
+    0,
+  );
 });

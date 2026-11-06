@@ -1,0 +1,17 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+
+const query = "(prefers-reduced-motion: reduce)";
+function subscribe(listener: () => void) {
+  const media = window.matchMedia(query);
+  media.addEventListener("change", listener);
+  return () => media.removeEventListener("change", listener);
+}
+const snapshot = () => window.matchMedia(query).matches;
+// The server and first hydration render agree; motion starts only after the browser preference is known.
+const serverSnapshot = () => true;
+
+export function useMotionPreference() {
+  return useSyncExternalStore(subscribe, snapshot, serverSnapshot);
+}

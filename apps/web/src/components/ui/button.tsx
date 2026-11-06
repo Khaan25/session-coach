@@ -15,7 +15,7 @@ const tapScale =
 
 const buttonVariants = cva(
   [
-    "group/button relative inline-flex max-w-full shrink-0 items-center justify-center gap-2 rounded-soft whitespace-nowrap outline-none select-none",
+    "control-button group/button relative inline-flex max-w-full shrink-0 items-center justify-center gap-2 rounded-soft whitespace-nowrap outline-none select-none",
     "type-label transition-[color,background-color,border-color,box-shadow,scale] [-webkit-tap-highlight-color:transparent]",
     "disabled:pointer-events-none data-disabled:cursor-not-allowed data-disabled:text-text-disabled",
     "aria-invalid:[--frame-color:var(--fail-line)]",
@@ -26,22 +26,28 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        quiet: "learning-quiet-button",
+        activity: "practice-activity-cell",
+        tour: "studio-tour-tab",
+        flow: "flow-button",
+        scene: "rounded-soft bg-(--hue-3-mark) text-(--text-on-field) hover:bg-(--hue-1-mark)",
         // key-*: a lit body, a lip and a base, a hover light and a sheen (utilities.css).
-        default:
-          "key key-primary text-text-inverse data-disabled:text-text-inverse data-disabled:opacity-(--dim-opacity) data-disabled:shadow-none",
+        default: "flow-button control-primary data-disabled:opacity-(--dim-opacity)",
         // No outline variant: the design system has one quiet key, and outline drew the same as secondary.
         secondary:
-          "key text-text-1 key-secondary [--frame-color:var(--line-control-hover)] hover:not-data-disabled:[--frame-color:var(--ink)] aria-expanded:[--frame-color:var(--ink)] data-disabled:[--frame-color:var(--text-disabled)]",
+          "control-secondary text-text-1 [--frame-color:var(--line-control-hover)] hover:not-data-disabled:[--frame-color:var(--ink)] aria-expanded:[--frame-color:var(--ink)] data-disabled:[--frame-color:var(--text-disabled)]",
         ghost:
-          "touch-target bg-ghost text-text-1 hover:not-data-disabled:bg-ghost-hover active:not-data-disabled:bg-pressed aria-expanded:bg-ghost-hover",
+          "control-ghost touch-target bg-ghost text-text-1 hover:not-data-disabled:bg-ghost-hover active:not-data-disabled:bg-pressed aria-expanded:bg-ghost-hover",
         destructive:
           "key text-fail-text key-secondary [--frame-color:var(--fail-line)] hover:not-data-disabled:[--frame-color:var(--fail-text)] data-disabled:[--frame-color:var(--text-disabled)]",
-        link: "h-auto! min-h-6 gap-1 bg-transparent px-0! text-foreground decoration-1 underline-offset-4 hover:not-data-disabled:underline forced-colors:border-0 forced-colors:underline",
+        link: "h-auto! min-h-6 gap-1 bg-transparent px-0! text-text-1 decoration-1 underline-offset-4 hover:not-data-disabled:underline forced-colors:border-0 forced-colors:underline",
       },
       size: {
-        default: `${controlHeight.default} px-4 has-data-[icon=inline-end]:pe-3 has-data-[icon=inline-start]:ps-3`,
+        scene: "min-h-16 gap-5 px-7 type-label-sm tracking-widest",
+        activity: "size-(--activity-cell) min-h-0! rounded-(--activity-radius) p-0!",
+        default: `${controlHeight.default} min-h-10 px-4 has-data-[icon=inline-end]:pe-3 has-data-[icon=inline-start]:ps-3`,
         xs: `${controlHeight.xs} gap-1 px-2 type-label-sm has-data-[icon=inline-end]:pe-1.5 has-data-[icon=inline-start]:ps-1.5 [&_svg:not([class*='size-'])]:size-3.5`,
-        sm: `${controlHeight.sm} gap-1.5 px-3 has-data-[icon=inline-end]:pe-2 has-data-[icon=inline-start]:ps-2`,
+        sm: `${controlHeight.sm} min-h-9 gap-1.5 px-3 has-data-[icon=inline-end]:pe-2 has-data-[icon=inline-start]:ps-2`,
         lg: `${controlHeight.lg} px-5 type-button has-data-[icon=inline-end]:pe-4 has-data-[icon=inline-start]:ps-4`,
         icon: "size-(--control) px-0",
         "icon-xs": "size-(--control-xs) px-0 [&_svg:not([class*='size-'])]:size-3.5",
@@ -71,10 +77,14 @@ function Button({
   "data-static": isStatic = false,
   ...props
 }: ButtonProps) {
+  // A trigger or close that renders this button brings its own cue; cuelume reads tap first, so tap steps aside.
+  const cued = Object.keys(props).some((key) => key.startsWith("data-cuelume-"));
   return (
     <ButtonPrimitive
       data-slot="button"
+      data-cuelume-tap={cued ? undefined : ""}
       data-variant={variant}
+      data-size={size}
       data-static={isStatic || undefined}
       className={cn(buttonVariants({ variant, size }), tapScale, className)}
       {...props}

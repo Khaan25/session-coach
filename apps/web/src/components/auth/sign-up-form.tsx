@@ -63,8 +63,11 @@ export function SignUpForm() {
                   spellCheck={false}
                   defaultValue={email}
                   aria-invalid={errors.email ? true : undefined}
-                  aria-describedby={errors.email ? `${id}-email-error` : undefined}
+                  aria-describedby={`${id}-email-hint${errors.email ? ` ${id}-email-error` : ""}`}
                 />
+                <FieldDescription id={`${id}-email-hint`}>
+                  We send one link to confirm it.
+                </FieldDescription>
                 <FieldError id={`${id}-email-error`}>{errors.email}</FieldError>
               </Field>
               <Field data-invalid={errors.password ? true : undefined}>

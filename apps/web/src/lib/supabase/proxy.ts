@@ -7,8 +7,10 @@ import { supabaseEnv } from "@/lib/supabase/env";
 // Signed-out visitors to these go to /login?next=… . A prefix match on whole path segments.
 const PROTECTED = [
   "/dashboard",
+  "/sessions",
   "/s",
   "/review",
+  "/defend",
   "/progress",
   "/settings",
   "/setup",

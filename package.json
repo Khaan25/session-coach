@@ -15,6 +15,7 @@
     "test:e2e": "pnpm --filter web test:e2e",
     "db:local": "node scripts/use-local-db.mjs",
     "db:live": "node scripts/use-local-db.mjs --off",
+    "db:types": "supabase gen types typescript --local --schema public > apps/web/src/lib/supabase/database.types.ts && oxfmt apps/web/src/lib/supabase/database.types.ts",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "check:secrets": "node scripts/check-secrets.mjs --all",
@@ -22,7 +23,9 @@
     "seed:demo": "node --env-file=apps/web/.env.local scripts/seed-demo.mjs --dry-run",
     "seed:demo:live": "node --env-file=apps/web/.env.local scripts/seed-demo.mjs",
     "seed:demo:local": "node --env-file=apps/web/.env.development.local scripts/seed-demo.mjs --local",
-    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
+    "dev:design": "node scripts/design-preview.mjs",
+    "share:design": "node scripts/share-design-preview.mjs"
   },
   "devDependencies": {
     "oxfmt": "^0.75.0"

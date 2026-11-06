@@ -47,8 +47,8 @@ test("steps: no review is new, mastered wins, step 1-3 is day 1/3/7", () => {
   assert.deepEqual(computeProgress(base).steps, {
     new: 1,
     "day-1": 1,
-    "day-3": 1,
-    "day-7": 1,
+    "day-4": 1,
+    "day-11": 1,
     mastered: 1,
   });
 });
@@ -56,8 +56,8 @@ test("steps: no review is new, mastered wins, step 1-3 is day 1/3/7", () => {
 test("answers per day: 30 days ending today, and the score mix over them", () => {
   const p = computeProgress(base);
   assert.equal(p.answersPerDay.length, 30);
-  assert.deepEqual(p.answersPerDay.at(-1), { day: "Oct 29", answers: 1 });
-  assert.deepEqual(p.answersPerDay[0], { day: "Sep 30", answers: 0 });
+  assert.deepEqual(p.answersPerDay.at(-1), { date: "2026-10-29", day: "Oct 29", answers: 1 });
+  assert.deepEqual(p.answersPerDay[0], { date: "2026-09-30", day: "Sep 30", answers: 0 });
   assert.equal(p.answersPerDay.find(({ day }) => day === "Oct 28")?.answers, 1);
   assert.deepEqual(p.scoreMix, { 0: 0, 1: 1, 2: 3 });
 });
@@ -70,7 +70,7 @@ test("days are the learner's days", () => {
     timeZone: "America/Los_Angeles",
     now: new Date("2026-10-29T02:00:00Z"),
   });
-  assert.deepEqual(p.answersPerDay.at(-1), { day: "Oct 28", answers: 1 });
+  assert.deepEqual(p.answersPerDay.at(-1), { date: "2026-10-28", day: "Oct 28", answers: 1 });
 });
 
 test("by session: mastered of total, sessions without cards dropped, title fallback", () => {
@@ -86,4 +86,63 @@ test("no data: zeros everywhere", () => {
   assert.equal(p.totalCards, 0);
   assert.ok(p.answersPerDay.every(({ answers }) => answers === 0));
   assert.deepEqual(p.bySession, []);
+});
+
+test("project progress isolates cards, answers, ownership and time-series activity", () => {
+  const progress = computeProgress(base, "repo:coach");
+  assert.equal(progress.totalCards, 2);
+  assert.equal(progress.steps.mastered, 0);
+  assert.equal(progress.explained, 1);
+  assert.equal(progress.canStillExplain, 0);
+  assert.equal(progress.bySession.length, 1);
+  assert.deepEqual(progress.scoreMix, { 0: 0, 1: 0, 2: 1 });
+  assert.equal(
+    progress.byProject.find((project) => project.scope === "unassigned")?.steps.mastered,
+    1,
+  );
+});
+test("explained is lifetime recall, owned is mastery, and hidden decisions never inflate either", () => {
+  const progress = computeProgress(
+    { ...base, explainedCardIds: ["e", "e", "hidden", "missing"] },
+    "repo:coach",
+  );
+  assert.equal(progress.explained, 2);
+  assert.equal(progress.steps.mastered, 0);
+  assert.equal(progress.totalCards, 2);
+});
+test("unknown projects stay empty instead of showing another project's numbers", () => {
+  const progress = computeProgress(base, "repo:missing");
+  assert.equal(progress.totalCards, 0);
+  assert.equal(progress.explained, 0);
+  assert.equal(progress.canStillExplain, 0);
+  assert(progress.answersPerDay.every((day) => day.answers === 0));
+  assert.equal(progress.byProject.length, 2);
+});
+
+test("defended counts distinct visible decisions, stays project-scoped, and does not advance ownership", () => {
+  const input = { ...base, defendedCardIds: ["a", "a", "d", "hidden", "unknown"] };
+  const all = computeProgress(input);
+  assert.equal(all.defended, 2);
+  assert.deepEqual(all.steps, computeProgress(base).steps);
+  const scoped = computeProgress(input, "repo:coach");
+  assert.equal(scoped.defended, 1);
+  assert.equal(scoped.steps.mastered, 0);
+  assert.equal(scoped.byProject.find((p) => p.scope === "unassigned")?.defended, 1);
+  assert.equal(computeProgress(input, "repo:missing").defended, 0);
+});
+
+test("calendar dates stay consecutive across a year boundary in the learner's timezone", () => {
+  const p = computeProgress({
+    ...base,
+    timeZone: "Asia/Kathmandu",
+    now: new Date("2027-01-05T20:00:00Z"),
+  });
+  assert.equal(p.answersPerDay[0]?.date, "2026-12-08");
+  assert.equal(p.answersPerDay.at(-1)?.date, "2027-01-06");
+  assert.equal(new Set(p.answersPerDay.map((d) => d.date)).size, 30);
+  assert(
+    p.answersPerDay.every(
+      (d, i, days) => i === 0 || Date.parse(d.date) - Date.parse(days[i - 1]!.date) === 86400000,
+    ),
+  );
 });

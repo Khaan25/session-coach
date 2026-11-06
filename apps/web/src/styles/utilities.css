@@ -333,6 +333,11 @@
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
+/* An input's text on touch: 16px, the size under which iOS Safari zooms the page on focus. Apply it as
+   pointer-coarse:type-input-touch, so the variant sorts it after the field's own type role. */
+@utility type-input-touch {
+  @apply text-base;
+}
 @utility type-code-display {
   font: var(--type-code-display);
   font-feature-settings: var(--features-data);

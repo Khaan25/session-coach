@@ -2,20 +2,20 @@
 
 ![Session Coach: Explain the code your agent wrote.](apps/web/src/app/opengraph-image.png)
 
-Turns each Claude Code session into up to 5 evidence-backed decision cards, then tests you on the why on day 1, 3 and 7 until you can explain the code your agent wrote.
+Turns each Claude Code session into up to 5 evidence-backed decision cards, then tests you on the why on day 1, 4 and 11 until you can explain the code your agent wrote.
 
 Built by Kasam Thapa Magar and Zia Ur Rehman Khan for the 8x Playmakers trial (cohort C2, Coding theme), 28 Oct – 6 Nov 2026. Live at [coach.ziaa.me](https://coach.ziaa.me).
 
 ## How it works
 
-The full flow. The `SessionEnd` hook (step 1) isn't built yet, so for now you upload with `session-coach push --latest`: see [Status](#status).
+The full flow. Run `session-coach init` once per project to turn on the hooks in step 1.
 
-1. A Claude Code session ends. The `SessionEnd` hook starts a detached worker and exits, so Claude Code never waits.
-2. The worker redacts secrets, gzips the log and uploads it in three calls: register the session, `PUT` the log straight to Storage, start processing. `session-coach push --latest` does the same by hand.
+1. A Claude Code session ends. The `SessionEnd` hook runs `session-coach sync`, which starts a detached copy of itself and exits, so Claude Code never waits. A `SessionStart` hook catches any session the end missed.
+2. The detached `sync` redacts secrets, gzips the log and uploads it in three calls: register the session, `PUT` the log straight to Storage, start processing. `session-coach push --latest` does the same by hand.
 3. The server filters the log, numbers the events (E1, E2, …) and one model call extracts up to 5 decisions (none when the session made no real choices).
 4. Plain code checks every quote exists in the cited event. Cards with no grounded quote (from a prompt, a reply or `DECISIONS.md`) are dropped.
 5. The learner explains each decision in their own words. A model grades it 0 / 1 / 2.
-6. The question returns on day 1, 3 and 7. A daily email brings the learner back.
+6. The question returns on day 1, 4 and 11. A daily email brings the learner back.
 
 More detail in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -40,8 +40,8 @@ The dashboard updates through Supabase Realtime, so a status change shows withou
 ```mermaid
 flowchart LR
     new([New card]) --> d1[Day 1]
-    d1 -- "scored 2" --> d3[Day 3]
-    d3 -- "scored 2" --> d7[Day 7]
+    d1 -- "scored 2" --> d3[Day 4]
+    d3 -- "scored 2" --> d7[Day 11]
     d7 -- "scored 2" --> m([Mastered])
     d1 -- "0 or 1" --> d1
     d3 -- "0 or 1" --> d1
@@ -69,25 +69,25 @@ Demo data from `pnpm seed:demo:local`; the graded answer is a real Groq call.
 
 ## Status
 
-| Part                                                                            | State   |
-| ------------------------------------------------------------------------------- | ------- |
-| Web app: auth, dashboard, session pages, review and grading, progress, settings | live    |
-| Upload API (`POST /api/sessions`, `POST /api/sessions/[id]/process`)            | live    |
-| CLI: `login`, `push <file>`, `push --latest`, redaction on your machine         | live    |
-| Card making: parse, extract (Groq), evidence check                              | live    |
-| Daily reminder email                                                            | live    |
-| `SessionEnd` hook and background worker (upload with no command)                | planned |
+| Part                                                                            | State |
+| ------------------------------------------------------------------------------- | ----- |
+| Web app: auth, dashboard, session pages, review and grading, progress, settings | live  |
+| Upload API (`POST /api/sessions`, `POST /api/sessions/[id]/process`)            | live  |
+| CLI: `login`, `init`, `push <file>`, `push --latest`, redaction on your machine | live  |
+| Card making: parse, extract (Groq), evidence check                              | live  |
+| Daily reminder email                                                            | live  |
+| `SessionEnd` and `SessionStart` hooks via `init` (upload with no command)       | live  |
 
 ## Repo layout
 
-| Path                  | What                                                              | Owner                          |
-| --------------------- | ----------------------------------------------------------------- | ------------------------------ |
-| `apps/web`            | Next.js app: pages, API routes, pipeline                          | both                           |
-| `packages/cli`        | the `session-coach` CLI: `login`, `push`; hook and worker planned | Kasam                          |
-| `packages/shared`     | Decision and Session types + zod schemas, sample fixture          | shared, change after agreement |
-| `supabase/migrations` | every schema change as a migration file                           | shared, change after agreement |
-| `docs/`               | architecture, decisions, rules, plans, Play Stats API             | both                           |
-| `.claude/`            | agent hooks, settings; `.claude-logs/` holds session transcripts  | both                           |
+| Path                  | What                                                             | Owner                          |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------ |
+| `apps/web`            | Next.js app: pages, API routes, pipeline                         | both                           |
+| `packages/cli`        | the `session-coach` CLI: `login`, `init`, `push`, `sync`         | Kasam                          |
+| `packages/shared`     | Decision and Session types + zod schemas, sample fixture         | shared, change after agreement |
+| `supabase/migrations` | every schema change as a migration file                          | shared, change after agreement |
+| `docs/`               | architecture, decisions, rules, plans, Play Stats API            | both                           |
+| `.claude/`            | agent hooks, settings; `.claude-logs/` holds session transcripts | both                           |
 
 ## Run it locally
 

@@ -92,6 +92,21 @@ describe("parseHookInput", () => {
     assert.deepEqual([...input.currentIds], ["t2"]);
   });
 
+  it("names the ended session only for SessionEnd", () => {
+    const start = parseHookInput(
+      JSON.stringify({ hook_event_name: "SessionStart", session_id: "s1" }),
+    );
+    assert.equal(start.ended, null);
+    const end = parseHookInput(
+      JSON.stringify({
+        hook_event_name: "SessionEnd",
+        session_id: "s1",
+        transcript_path: "/p/t1.jsonl",
+      }),
+    );
+    assert.equal(end.ended, "t1");
+  });
+
   it("ignores missing, malformed and mistyped input", () => {
     for (const text of [null, "", "not json", "null", "[]", '{"session_id":5,"cwd":{}}']) {
       const input = parseHookInput(text);
@@ -226,6 +241,37 @@ describe("runSync", () => {
     assert.deepEqual(server.registered(), ["a"]);
   });
 
+  it("from SessionEnd, uploads only the session that ended, even inside the quiet window", async () => {
+    await log("ended", MINUTE);
+    await log("older", HOUR);
+    const server = fakeServer();
+    const stdin = JSON.stringify({
+      hook_event_name: "SessionEnd",
+      cwd: CWD,
+      session_id: "ended",
+      transcript_path: join(dir, "ended.jsonl"),
+    });
+    await sync(server, { stdin });
+    assert.deepEqual(server.registered(), ["ended"]);
+    assert.deepEqual(await done(), ["ended"]);
+    // Already sent: the next start doesn't send it again.
+    const again = fakeServer();
+    await sync(again, { stdin });
+    assert.deepEqual(again.calls, []);
+  });
+
+  it("from SessionEnd, never uploads a log recorded in another folder", async () => {
+    await log("ended", MINUTE, "/work/other");
+    const server = fakeServer();
+    const stdin = JSON.stringify({
+      hook_event_name: "SessionEnd",
+      cwd: CWD,
+      transcript_path: join(dir, "ended.jsonl"),
+    });
+    await sync(server, { stdin });
+    assert.deepEqual(server.calls, []);
+  });
+
   it("skips logs older than 7 days", async () => {
     await log("old", SYNC_MAX_AGE_MS + MINUTE);
     await log("edge", SYNC_MAX_AGE_MS - MINUTE);
@@ -234,7 +280,7 @@ describe("runSync", () => {
     assert.deepEqual(server.registered(), ["edge"]);
   });
 
-  it("leaves a log modified in the last 10 minutes for a later start", async () => {
+  it("leaves a log modified in the last 5 minutes for a later start", async () => {
     await log("busy", SYNC_QUIET_MS - MINUTE);
     await log("idle", SYNC_QUIET_MS + MINUTE);
     const server = fakeServer();

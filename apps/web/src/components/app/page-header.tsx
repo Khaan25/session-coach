@@ -24,13 +24,15 @@ export function AppPageHeader({
 }) {
   return (
     <PageHeader>
-      <PageHeaderRow>
-        <PageHeaderContent>
-          <PageHeaderTitle>{title}</PageHeaderTitle>
-          {description && <PageHeaderDescription>{description}</PageHeaderDescription>}
-        </PageHeaderContent>
-        {actions && <PageHeaderActions>{actions}</PageHeaderActions>}
-      </PageHeaderRow>
+      <div className="app-page-heading">
+        <PageHeaderRow>
+          <PageHeaderContent>
+            <PageHeaderTitle>{title}</PageHeaderTitle>
+            {description && <PageHeaderDescription>{description}</PageHeaderDescription>}
+          </PageHeaderContent>
+          {actions && <PageHeaderActions>{actions}</PageHeaderActions>}
+        </PageHeaderRow>
+      </div>
       {children}
     </PageHeader>
   );

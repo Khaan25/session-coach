@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { SkulletProvider } from "skullet/react";
 
+import { PreviewNav } from "@/components/design-system/preview-nav";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { themeScript } from "@/components/theme/theme-script";
 import { Toaster } from "@/components/ui/toast";
@@ -9,6 +11,9 @@ import { siteUrl } from "@/lib/site";
 import { PortalProvider } from "@/lib/ui/portal";
 
 import "./globals.css";
+import "../styles/serveros.css";
+import "../styles/editions.css";
+import "../styles/diffuse.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,7 +25,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Display face for marketing headlines only (`font-display`); the UI stays on Geist.
 const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
   subsets: ["latin"],
@@ -39,7 +43,7 @@ const skeletonTheme = {
 } as const;
 
 const description =
-  "Each Claude Code session becomes 3 to 5 decision cards. Explain them back in your own words on day 1, 3 and 7 until you know why your agent wrote what it wrote.";
+  "Own the code your agent writes. Each Claude Code session becomes up to 5 decision cards, filed by project: explain each one in your own words on day 1, 4 and 11 until it's yours, and defend it whenever you like.";
 
 // metadataBase makes the opengraph-image and canonical paths absolute; pages override title and description.
 export const metadata: Metadata = {
@@ -62,6 +66,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // The theme script adds the theme class before paint, so <html> differs from the server render.
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full`}
     >
@@ -73,7 +78,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <SkulletProvider theme={skeletonTheme}>
             <PortalProvider>
               {/* At the root so a toast survives navigation between groups (account deletion lands on /). */}
-              <Toaster>{children}</Toaster>
+              <Toaster>
+                {children}
+                {process.env.NODE_ENV === "development" && process.env.DESIGN_PREVIEW === "1" && (
+                  <Suspense fallback={null}>
+                    <PreviewNav
+                      port={Number(process.env.DESIGN_PREVIEW_PORT ?? 54329)}
+                      shared={Boolean(process.env.DESIGN_SHARE_ORIGIN)}
+                    />
+                  </Suspense>
+                )}
+              </Toaster>
             </PortalProvider>
           </SkulletProvider>
         </ThemeProvider>

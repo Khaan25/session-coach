@@ -10,23 +10,49 @@ import * as React from "react";
 function Card({
   className,
   size = "default",
+  variant = "default",
   ...props
-}: React.ComponentProps<"div"> & { size?: "default" | "sm" | "lg" }) {
+}: React.ComponentProps<"div"> & {
+  size?: "default" | "sm" | "lg";
+  variant?:
+    | "panel"
+    | "default"
+    | "open"
+    | "workspace"
+    | "reading"
+    | "question"
+    | "auth"
+    | "learning"
+    | "paper"
+    | "inset"
+    | "story";
+}) {
   return (
     <div
       data-slot="card"
       data-size={size}
+      data-variant={variant}
       className={cn(
         "group/card frame relative flex flex-col overflow-hidden bg-page type-body text-text-1",
         // The hover edge recolours the frame's own line (drawn above the content), so a child's
         // background cannot cover it; same 150ms ease-out as the zip's shadow version.
-        "before:transition-[border-color] before:duration-150 before:ease-out hover:[--frame-color:var(--line-control-hover)] [a]:hover:bg-hover",
+        "before:transition-[border-color] before:duration-(--dur-150) before:ease-out hover:[--frame-color:var(--line-control-hover)] [a]:hover:bg-hover",
         // A card holding a list becomes a panel: grey, header on the grey, the list inset in white. A plain `none`, not
         // `shadow-none`: that is five transparent shadows, which skullet 0.0.3 reads as a surface and draws the header as one block.
         "has-[>[data-slot=item-group]]:bg-(--surface-frame) has-[>[data-slot=item-group]]:*:data-[slot=card-header]:[box-shadow:none]",
-        "[--card-spacing:var(--space-4)] data-[size=lg]:[--card-spacing:var(--space-6)] data-[size=sm]:[--card-spacing:var(--space-3)]",
+        "[--card-spacing:var(--space-5)] data-[size=lg]:[--card-spacing:var(--space-6)] data-[size=sm]:[--card-spacing:var(--space-3)] sm:[--card-spacing:var(--space-8)] sm:data-[size=lg]:[--card-spacing:var(--space-10)]",
         "*:[img:first-child]:rounded-t-frame *:[img:last-child]:rounded-b-frame",
         "forced-colors:outline forced-colors:outline-1",
+        variant === "open" &&
+          "bg-transparent! before:hidden! has-[>[data-slot=item-group]]:bg-transparent!",
+        ["workspace", "reading", "question"].includes(variant) && "workspace-card",
+        variant === "reading" && "workspace-reading-card",
+        variant === "question" && "workspace-question-card",
+        variant === "learning" && "learning-surface",
+        variant === "paper" && "learning-surface coach-paper-surface",
+        variant === "inset" && "learning-surface coach-inset-surface",
+        variant === "story" && "story-surface",
+        variant === "auth" && "bg-transparent! before:hidden!",
         className,
       )}
       {...props}
@@ -41,10 +67,10 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
       className={cn(
         // The shared 40px header over a row rule. With a description it grows to two lines on a grid, the action
         // spanning both; with none it is one line, the action at the end.
-        "group/card-header @container/card-header frame-head rule-row *:data-[slot=card-action]:ms-auto",
+        "group/card-header @container/card-header frame-head rule-row py-6 group-data-[variant=open]/card:px-0! group-data-[variant=open]/card:pt-0! group-data-[variant=open]/card:pb-7! *:data-[slot=card-action]:ms-auto",
         // frame-head pads 16px inline; a sized card pads by its own spacing.
         "px-(--card-spacing)! group-data-[size=lg]/card:min-h-(--row-lg) group-data-[size=lg]/card:py-4 group-data-[size=sm]/card:min-h-(--row-sm) group-data-[size=sm]/card:py-2",
-        "has-data-[slot=card-description]:grid has-data-[slot=card-description]:auto-rows-min has-data-[slot=card-description]:grid-rows-[auto_auto] has-data-[slot=card-description]:content-center has-data-[slot=card-description]:gap-y-0.5 has-data-[slot=card-description]:py-2.5 has-data-[slot=card-action]:has-data-[slot=card-description]:grid-cols-[1fr_auto]",
+        "has-data-[slot=card-description]:grid has-data-[slot=card-description]:auto-rows-min has-data-[slot=card-description]:grid-rows-[auto_auto] has-data-[slot=card-description]:content-center has-data-[slot=card-description]:gap-y-0.5 has-data-[slot=card-description]:py-5 has-data-[slot=card-action]:has-data-[slot=card-description]:grid-cols-[1fr_auto]",
         className,
       )}
       {...props}
@@ -57,7 +83,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "min-w-0 type-label text-balance text-text-1 group-data-[size=lg]/card:type-heading-xs",
+        "min-w-0 type-heading-xs text-balance text-text-1 group-data-[size=lg]/card:type-heading-sm",
         className,
       )}
       {...props}
@@ -92,7 +118,10 @@ function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-content"
-      className={cn("flex flex-col gap-3 p-(--card-spacing) type-body", className)}
+      className={cn(
+        "flex flex-col gap-5 p-(--card-spacing) type-body group-data-[variant=auth]/card:px-0! group-data-[variant=auth]/card:py-0!",
+        className,
+      )}
       {...props}
     />
   );
@@ -111,4 +140,17 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-export { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle };
+function CardInset({ className, ...props }: React.ComponentProps<"div">) {
+  return <div data-slot="card-inset" className={cn("card-product-inset", className)} {...props} />;
+}
+
+export {
+  CardInset,
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+};

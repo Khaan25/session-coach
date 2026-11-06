@@ -1,15 +1,15 @@
-// The day 1/3/7 review schedule (ARCHITECTURE.md, "Review loop"). Pure, so node --test runs it.
+// The review schedule (gaps of 1, 3, then 7 days: reviews on day 1, 4 and 11) (ARCHITECTURE.md, "Review loop"). Pure, so node --test runs it.
 
 /** An explain-back score, as written to `answers.score`: wrong, partly, got it. */
 export type Score = 0 | 1 | 2;
 
-/** `reviews.step`: 0 never reviewed, then the day 1, 3 and 7 reviews. */
+/** `reviews.step`: 0 never reviewed, then the day 1, 4 and 11 reviews. */
 export type Step = 0 | 1 | 2 | 3;
 
 /** What `reviews` holds after an answer. `due_on` is null once mastered (the table's check). */
 export type ReviewState = { step: Step; due_on: string | null; mastered: boolean };
 
-/** Days until the next review, by the step just passed: 0 to day 1, 1 to day 3, 2 to day 7. */
+/** Days until the next review, by the step just passed: 0 to day 1, 1 to day 4, 2 to day 11. */
 const GAP_DAYS = [1, 3, 7] as const;
 
 /**
@@ -46,7 +46,7 @@ export function addDays(date: string, days: number): string {
  * @param today - The learner's local date (YYYY-MM-DD), so "tomorrow" is their tomorrow.
  * @param skipped - An honest "I don't know yet" (scored 0): it costs nothing, so the card keeps its step (at least 1)
  *   and comes back tomorrow, where a wrong answer would drop it a step.
- * @returns The new step and due date; passing day 7 (step 3) masters the card.
+ * @returns The new step and due date; passing the day-11 review (step 3) masters the card.
  */
 export function nextReview(step: Step, score: Score, today: string, skipped = false): ReviewState {
   if (score < 2)

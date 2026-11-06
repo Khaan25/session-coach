@@ -13,6 +13,8 @@ function Checkbox({ className, onClick, ...props }: CheckboxPrimitive.Root.Props
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
+      // cuelume skips only `:disabled`, which this span root never matches, so drop the cue when the box cannot change.
+      data-cuelume-toggle={props.disabled || props.readOnly ? undefined : ""}
       onClick={(event) => {
         onClick?.(event);
         event.stopPropagation();
@@ -39,7 +41,7 @@ function Checkbox({ className, onClick, ...props }: CheckboxPrimitive.Root.Props
       <CheckboxPrimitive.Indicator
         data-slot="checkbox-indicator"
         keepMounted
-        className="grid place-content-center text-current transition-[opacity,filter,scale] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none data-unchecked:scale-25 data-unchecked:opacity-0 data-unchecked:blur-[4px] [&>svg]:size-3"
+        className="grid place-content-center text-current transition-[opacity,filter,scale] duration-(--dur-200) ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none data-unchecked:scale-25 data-unchecked:opacity-0 data-unchecked:blur-[4px] [&>svg]:size-3"
         render={(indicatorProps, state) => (
           <span {...indicatorProps}>
             {state.indeterminate ? <MinusIcon weight="bold" /> : <CheckIcon weight="bold" />}

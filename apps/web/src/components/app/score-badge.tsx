@@ -6,8 +6,8 @@ export type Score = 0 | 1 | 2;
 // 2 moves the card to its next review day; 1 or 0 moves it one step down (never below step 1), due tomorrow.
 const scoreOf: Record<Score, { variant: "success" | "warning" | "default"; label: string }> = {
   2: { variant: "success", label: "Explained" },
-  1: { variant: "warning", label: "Partly" },
-  0: { variant: "default", label: "Missed" },
+  1: { variant: "warning", label: "Partly explained" },
+  0: { variant: "default", label: "Not explained yet" },
 };
 
 /** The score as a word on its wash: success for 2, warning for 1, the neutral tint for 0. Never colour alone. */

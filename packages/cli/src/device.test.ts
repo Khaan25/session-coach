@@ -170,3 +170,21 @@ describe("openerFor", () => {
     assert.equal(openerFor("not a url", "linux"), null);
   });
 });
+
+describe("pollForToken interval cap", () => {
+  it("never waits longer than the server's 60 s ceiling", async () => {
+    const slow: [number, unknown] = [400, { error: "slow_down" }];
+    const f = fakeFetch([slow, slow, slow, [200, { token: "sc_x", email: null }]]);
+    const clock = fakeClock();
+    const result = await pollForToken(
+      URL_BASE,
+      { ...START, interval: 50 },
+      {
+        fetchImpl: f.impl,
+        ...clock,
+      },
+    );
+    assert.equal(result.kind, "success");
+    assert.deepEqual(clock.sleeps, [50_000, 55_000, 60_000, 60_000]);
+  });
+});

@@ -88,7 +88,7 @@ function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
     <ToastPrimitive.Content
       data-slot="toast-content"
       className={cn(
-        "flex h-full items-start gap-3 overflow-hidden py-3 ps-4 pe-2 transition-opacity duration-250 ease-out-quint data-behind:opacity-0 data-expanded:opacity-100",
+        "flex h-full items-start gap-3 overflow-hidden py-3 ps-4 pe-2 transition-opacity duration-(--dur-250) ease-out-quint data-behind:opacity-0 data-expanded:opacity-100",
         className,
       )}
       {...props}
@@ -213,7 +213,7 @@ function AnchoredToast({ className, ...props }: ToastPrimitive.Root.Props) {
       data-surface="inverse"
       className={cn(
         tooltipPopupClass,
-        "pointer-events-auto z-[calc(1000-var(--toast-index))] w-max origin-(--transform-origin) duration-150 ease-out-quint outline-none select-none data-ending-style:animate-out data-ending-style:duration-100 data-ending-style:fade-out-0 data-ending-style:zoom-out-95 data-starting-style:animate-in data-starting-style:fade-in-0 data-starting-style:zoom-in-95",
+        "pointer-events-auto z-[calc(1000-var(--toast-index))] w-max origin-(--transform-origin) duration-(--dur-150) ease-out-quint outline-none select-none data-ending-style:animate-out data-ending-style:duration-(--dur-100) data-ending-style:fade-out-0 data-ending-style:zoom-out-95 data-starting-style:animate-in data-starting-style:fade-in-0 data-starting-style:zoom-in-95",
         className,
       )}
       {...props}
@@ -287,8 +287,12 @@ function ToastList() {
 function AnchoredToastList() {
   const { toasts } = ToastPrimitive.useToastManager();
 
-  return toasts.map((toastItem) => (
-    <ToastPositioner key={toastItem.id} toast={toastItem} {...toastItem.positionerProps}>
+  return toasts.map((toastItem) => <AnchoredToastRow key={toastItem.id} toast={toastItem} />);
+}
+
+function AnchoredToastRow({ toast: toastItem }: { toast: ToastPrimitive.Root.Props["toast"] }) {
+  return (
+    <ToastPositioner toast={toastItem} {...toastItem.positionerProps}>
       <AnchoredToast toast={toastItem}>
         <ToastContent className="items-center gap-2 p-0">
           <ToastIcon type={toastItem.type} />
@@ -296,7 +300,7 @@ function AnchoredToastList() {
         </ToastContent>
       </AnchoredToast>
     </ToastPositioner>
-  ));
+  );
 }
 
 type ToasterProps = Omit<ToastPrimitive.Provider.Props, "toastManager"> & {

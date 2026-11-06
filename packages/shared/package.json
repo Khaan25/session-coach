@@ -8,10 +8,13 @@
     "./fixtures/session.sample.json": "./fixtures/session.sample.json",
     "./profile": "./src/profile.ts",
     "./project": "./src/project.ts",
-    "./redact": "./src/redact.ts"
+    "./limits": "./src/limits.ts",
+    "./redact": "./src/redact.ts",
+    "./upload": "./src/upload.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
     "test": "node --test --experimental-strip-types src/*.test.ts"
   },
   "dependencies": {
@@ -19,6 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^22",
+    "oxlint": "^1.90.0",
     "typescript": "^5"
   }
 }

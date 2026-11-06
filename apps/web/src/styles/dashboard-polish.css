@@ -1,0 +1,479 @@
+/* Dashboard: one next action, readable learning states, then the work behind them. */
+.app-dashboard {
+  gap: 30px;
+}
+.app-dashboard .app-page-heading [data-slot="page-header-description"] {
+  max-width: 540px;
+  font-size: 14px;
+}
+.project-toolbar {
+  position: relative;
+  gap: 14px;
+  padding-bottom: 20px;
+  min-width: 0;
+}
+.project-picker-label {
+  width: auto;
+  gap: 9px;
+}
+.project-picker-label > svg {
+  width: 19px;
+  height: 19px;
+}
+.project-scope-note {
+  max-width: 290px;
+  font-size: 12px;
+}
+.project-switch-status {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 14px;
+  opacity: 0;
+  pointer-events: none;
+  color: var(--text-2);
+  font: 400 12px/1.6 var(--font-sans);
+}
+.project-toolbar[data-pending] .project-scope-note {
+  visibility: hidden;
+}
+.project-toolbar[data-pending] .project-switch-status {
+  opacity: 1;
+}
+.app-dashboard .dashboard-next-step {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 36px;
+  padding: 32px 36px;
+}
+.app-dashboard .dashboard-next-step h2 {
+  max-width: 490px;
+  margin: 12px 0;
+  font-size: clamp(30px, 2.8vw, 40px);
+  line-height: 1.14;
+  text-wrap: balance;
+}
+.app-dashboard .dashboard-next-step > div > p:not(.project-eyebrow) {
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.app-dashboard .dashboard-next-step > div > a {
+  margin-top: 20px;
+}
+.app-dashboard .dashboard-review-allowance {
+  font-size: 11px;
+  max-width: none;
+  margin-top: 12px;
+}
+.app-dashboard .dashboard-guidance .guidance-illustration {
+  max-width: 280px;
+  margin: -12px auto -6px;
+}
+.app-dashboard .dashboard-first-decision {
+  margin: 0;
+  padding-top: 14px;
+}
+.app-dashboard .dashboard-first-decision > span {
+  font-size: 10px;
+}
+.app-dashboard .dashboard-first-decision p {
+  max-width: none;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.dashboard-understanding {
+  display: block;
+  padding-bottom: 30px;
+}
+.dashboard-progress-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin: 0 0 22px;
+}
+.dashboard-progress-heading h2 {
+  font: 500 18px/1.4 var(--font-sans);
+  letter-spacing: -0.02em;
+}
+.dashboard-progress-heading > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  font: 500 12px/1.5 var(--font-sans);
+}
+.dashboard-progress-heading > a svg {
+  width: 18px;
+  height: 18px;
+}
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  gap: 28px;
+}
+.dashboard-metrics > div + div {
+  border-inline-start: 1px solid var(--line-row);
+  padding-inline-start: 28px;
+}
+.dashboard-metrics dt {
+  font: 450 12px/1.6 var(--font-sans);
+  color: var(--text-2);
+}
+.dashboard-metrics dd {
+  margin: 8px 0 0;
+}
+.dashboard-metrics dd > strong {
+  display: block;
+  font: 500 36px/1.15 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+}
+.dashboard-metrics dd > strong > span {
+  color: var(--text-2);
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+.dashboard-metrics dd p {
+  display: block;
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font: 400 11px/1.65 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+.project-ownership-list {
+  padding-top: 2px;
+}
+.project-ownership-list .project-section-heading {
+  margin-bottom: 20px;
+}
+.project-ownership-row {
+  position: relative;
+  grid-template-columns: 44px minmax(130px, 1fr) minmax(220px, 1.15fr) 24px;
+  padding: 24px 10px;
+  border-radius: 4px;
+}
+.project-row-identity > a::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  border-radius: 4px;
+}
+.project-row-identity > a:focus-visible {
+  outline: none;
+}
+.project-ownership-row:focus-within {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 3px;
+}
+.project-ownership-row:hover {
+  background: var(--hue-3-wash);
+}
+.project-row-identity > a:hover {
+  text-decoration: none;
+}
+.project-row-learning > span {
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.project-row-learning > span > span {
+  color: var(--text-2);
+  font-size: 11px;
+}
+.project-row-learning > svg {
+  display: block;
+  max-width: none;
+  margin-top: 10px;
+  height: 6px;
+}
+.project-row-meter-revisiting {
+  stroke: var(--hue-3-mark);
+  stroke-width: 5;
+}
+.project-stage-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+  font: 400 10px/1.6 var(--font-sans);
+  color: var(--text-2);
+}
+.project-stage-key > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.project-stage-key > span::before {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--project-chart-ink);
+  content: "";
+}
+.project-stage-key > [data-stage="revisiting"]::before {
+  background: var(--hue-3-mark);
+}
+.project-stage-key > [data-stage="starting"]::before {
+  background: var(--line-control);
+}
+.project-ownership-row .project-row-open {
+  width: 24px;
+  font-size: 0;
+  gap: 0;
+  color: var(--text-2);
+}
+.project-ownership-row .project-row-open svg {
+  width: 20px;
+  height: 20px;
+}
+.session-decision-count {
+  font-family: var(--font-sans);
+}
+.navigation-pending {
+  position: absolute;
+  inset-inline: 12px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--project-chart-ink);
+  opacity: 0;
+  pointer-events: none;
+}
+.navigation-pending[data-pending] {
+  opacity: 0.65;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .project-ownership-row,
+  .project-switch-status {
+    transition:
+      background-color var(--control-duration) var(--control-ease),
+      opacity var(--control-duration) ease;
+  }
+  .project-row-open svg,
+  .dashboard-progress-heading > a svg {
+    transition: transform var(--control-duration) var(--control-ease);
+  }
+  .project-ownership-row:hover .project-row-open svg,
+  .dashboard-progress-heading > a:hover svg {
+    transform: translateX(2px);
+  }
+  .app-dashboard .dashboard-next-step {
+    animation: dashboard-arrive 220ms var(--control-ease) both;
+  }
+  .navigation-pending[data-pending] {
+    animation: dashboard-navigation 1s ease-in-out infinite;
+    animation-delay: 150ms;
+  }
+  @keyframes dashboard-arrive {
+    from {
+      opacity: 0.4;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes dashboard-navigation {
+    50% {
+      opacity: 0.25;
+    }
+  }
+}
+@media (max-width: 1100px) {
+  .project-scope-note {
+    display: none;
+  }
+  .project-ownership-row {
+    grid-template-columns: 38px minmax(100px, 0.8fr) minmax(190px, 1.2fr) 20px;
+    gap: 16px;
+  }
+  .app-dashboard .dashboard-next-step {
+    gap: 24px;
+    padding: 28px;
+  }
+}
+@media (max-width: 767px) {
+  .app-dashboard {
+    gap: 26px;
+  }
+  .app-dashboard .dashboard-next-step {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding: 24px;
+  }
+  .app-dashboard .dashboard-next-step h2 {
+    max-width: 400px;
+    font-size: 32px;
+  }
+  .app-dashboard .dashboard-next-step > div > p:not(.project-eyebrow) {
+    max-width: 520px;
+    font-size: 13px;
+  }
+  .app-dashboard .dashboard-guidance {
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+  }
+  .app-dashboard .dashboard-guidance .guidance-illustration {
+    width: 100%;
+    margin: 0;
+  }
+  .app-dashboard .dashboard-first-decision {
+    border-top: none;
+    border-inline-start: 1px solid color-mix(in srgb, var(--flow-ink) 20%, transparent);
+    padding: 0 0 0 16px;
+  }
+  .app-dashboard .dashboard-first-decision p {
+    font-size: 12px;
+  }
+  .app-dashboard .dashboard-guidance > p {
+    text-align: start;
+  }
+  .dashboard-metrics {
+    gap: 16px;
+  }
+  .dashboard-metrics > div + div {
+    padding-inline-start: 16px;
+  }
+  .dashboard-metrics dt {
+    font-size: 11px;
+  }
+  .dashboard-metrics dd > strong {
+    font-size: 30px;
+  }
+  .dashboard-metrics dd > strong > span {
+    font-size: 15px;
+  }
+  .dashboard-metrics dd p {
+    font-size: 10px;
+  }
+  .project-ownership-row {
+    grid-template-columns: 36px minmax(0, 1fr) 24px;
+    gap: 14px;
+    padding: 22px 4px;
+  }
+  .project-row-learning {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .project-ownership-row .project-row-open {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+}
+@media (max-width: 540px) {
+  .app-dashboard {
+    padding-top: 24px;
+  }
+  .app-dashboard .app-page-heading h1 {
+    font-size: 30px;
+  }
+  .app-dashboard .app-page-heading [data-slot="page-header-description"] {
+    font-size: 13px;
+    margin-top: 6px;
+  }
+  .project-toolbar {
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding-bottom: 18px;
+  }
+  .project-picker-label {
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+  .project-picker-label > svg {
+    display: none;
+  }
+  .project-switch-status {
+    top: auto;
+    bottom: 0;
+    font-size: 10px;
+  }
+  .app-dashboard .dashboard-next-step {
+    padding: 22px 20px;
+    gap: 18px;
+  }
+  .app-dashboard .dashboard-next-step h2 {
+    font-size: 30px;
+    max-width: 290px;
+  }
+  .app-dashboard .dashboard-review-allowance {
+    font-size: 10px;
+  }
+  .app-dashboard .dashboard-guidance {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .app-dashboard .dashboard-first-decision {
+    padding-inline-start: 12px;
+  }
+  .app-dashboard .dashboard-first-decision > span {
+    font-size: 9px;
+  }
+  .dashboard-progress-heading {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .dashboard-progress-heading h2 {
+    font-size: 17px;
+  }
+  .dashboard-progress-heading > a {
+    gap: 6px;
+    font-size: 11px;
+  }
+  .dashboard-metrics {
+    gap: 12px;
+  }
+  .dashboard-metrics > div + div {
+    padding-inline-start: 12px;
+  }
+  .dashboard-metrics dt {
+    font-size: 11px;
+    line-height: 1.5;
+    min-height: 33px;
+  }
+  .dashboard-metrics dd > strong {
+    font-size: 29px;
+  }
+  .dashboard-metrics dd p {
+    font-size: 10px;
+  }
+  .project-stage-key {
+    gap: 5px 10px;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(.app-container) .design-preview-dock {
+    top: 8px;
+    right: 12px;
+    bottom: auto;
+  }
+  body:has(.app-container) .preview-dock-toggle {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+  body:has(.app-container) .preview-dock-toggle > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  body:has(.app-container) .preview-dock-toggle > svg:last-child,
+  body:has(.app-container) .preview-dock-toggle > small {
+    display: none;
+  }
+  body:has(.app-container) .preview-dock-menu {
+    top: 54px;
+    bottom: auto;
+    max-height: min(75dvh, 600px);
+  }
+}

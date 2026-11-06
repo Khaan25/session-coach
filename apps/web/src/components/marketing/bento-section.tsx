@@ -35,9 +35,9 @@ const week = [
 ];
 
 const reviews: { initial: string; decision: string; when: string; score: Score }[] = [
-  { initial: "E", decision: "ESM imports with .js", when: "Day 3 · Today, 09:12", score: 2 },
+  { initial: "E", decision: "ESM imports with .js", when: "Day 4 · Today, 09:12", score: 2 },
   { initial: "S", decision: "Skip unknown line types", when: "Day 1 · Yesterday, 21:40", score: 1 },
-  { initial: "N", decision: "Number after filtering", when: "Day 7 · Mon, 18:05", score: 0 },
+  { initial: "N", decision: "Number after filtering", when: "Day 11 · Mon, 18:05", score: 0 },
 ];
 
 function SessionCard() {
@@ -176,8 +176,8 @@ export function BentoSection() {
           Everything after the session ends.
         </h2>
         <p className="type-body-lg text-pretty text-text-2">
-          Install once. Each Claude Code session becomes cards, checked against its log, due again
-          on day 1, 3 and 7.
+          Set up once. Each session you send becomes cards, checked against its log, due again on
+          day 1, 4 and 11.
         </p>
       </div>
       <MotionProvider>

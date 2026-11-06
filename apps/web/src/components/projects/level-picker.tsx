@@ -42,7 +42,7 @@ export function LevelPicker({
           </SegmentedControlItem>
         ))}
       </SegmentedControl>
-      <FieldDescription id={`${id}-example`}>For example: {example}</FieldDescription>
+      <FieldDescription id={`${id}-example`}>Example at this level: {example}</FieldDescription>
     </Field>
   );
 }

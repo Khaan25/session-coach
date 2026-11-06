@@ -23,7 +23,7 @@ export function SiteNavMenu({ links }: { links: readonly { href: string; label: 
         <ListIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-40">
-        {links.map((link) => (
+        {[...links, { href: "/login", label: "Sign in" }].map((link) => (
           <DropdownMenuLinkItem key={link.href} render={<Link href={link.href} />}>
             {link.label}
           </DropdownMenuLinkItem>

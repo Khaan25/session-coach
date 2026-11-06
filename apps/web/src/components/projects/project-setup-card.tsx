@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useAction } from "@/components/app/dry-run";
 import { toast } from "@/components/ui/toast";
 
 import { setProjectLevel } from "@/app/(app)/settings/actions";
@@ -24,6 +25,7 @@ import { LevelPicker } from "./level-picker";
  * Both mark the project onboarded, so the card goes away; the level can still change in /settings.
  */
 export function ProjectSetupCard({ repo }: { repo: string }) {
+  const saveLevel = useAction(setProjectLevel);
   const [level, setLevel] = useState<QuestionLevel>("simple");
   const [pending, setPending] = useState(false);
 
@@ -31,7 +33,7 @@ export function ProjectSetupCard({ repo }: { repo: string }) {
     setPending(true);
     toast
       .promise(
-        setProjectLevel({ repo, question_level }).then(({ error }) => {
+        saveLevel({ repo, question_level }).then(({ error }) => {
           if (error) throw new Error(error);
         }),
         {
@@ -45,7 +47,7 @@ export function ProjectSetupCard({ repo }: { repo: string }) {
   };
 
   return (
-    <Card>
+    <Card variant="learning">
       <CardHeader>
         <CardTitle>
           <h2>Set up {repo}: how hard should questions be?</h2>

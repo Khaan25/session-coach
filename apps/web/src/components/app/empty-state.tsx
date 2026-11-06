@@ -75,7 +75,7 @@ export function NoSessionsEmpty({ variant }: PresetProps) {
       icon={TerminalWindowIcon}
       sprite="pencil"
       title="No sessions yet"
-      description="Your sessions appear here once the CLI is set up. Each session becomes 3 to 5 decision cards, and you explain them back on day 1, 3 and 7."
+      description="Your sessions appear here once the CLI is set up. Each session becomes up to 5 decision cards, and you explain each one back on day 1, day 4 and day 11."
       action={
         <Link href="/setup" className={buttonVariants()}>
           Set up the CLI
@@ -90,7 +90,7 @@ const cardlessCopy = {
   "no-sessions": {
     title: "No cards yet",
     description:
-      "Cards come from your Claude Code sessions. Set up the CLI, and each session that ends becomes 3 to 5 cards to explain back.",
+      "Cards come from your Claude Code sessions. Set up the CLI, and each session you send becomes up to 5 cards to explain back.",
     action: { href: "/setup", label: "Set up the CLI", variant: "default" },
   },
   processing: {

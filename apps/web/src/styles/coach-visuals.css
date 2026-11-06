@@ -1,0 +1,1889 @@
+/* Shared learner surfaces, with illustration reserved for first-run and empty states. */
+:root:has([data-learning]) {
+  --coach-panel: #edf0e8;
+  --coach-card: #fdfdf8;
+  --coach-raised: #fffffa;
+  --coach-field: #f3f4ed;
+  --coach-edge: #d8ded3;
+  --coach-stage: #dfe6da;
+  --coach-art-ground: #f0ede3;
+  --coach-shadow: 0 12px 36px -28px #272d295c, 0 2px 4px -3px #272d2926;
+  --coach-paper-shadow: 0 20px 60px -42px #272d2959, 0 4px 10px -8px #272d2930;
+  --coach-radius: 16px;
+  --coach-small-radius: 12px;
+  --coach-display: 500 44px/1.12 var(--font-sans);
+  --coach-end-display: 500 38px/1.18 var(--font-sans);
+  --coach-scene: 280px;
+  --coach-hero: 440px;
+  --coach-small: 128px;
+  --coach-mini: 112px;
+  --coach-project-glyph: 80px;
+  --coach-flow-symbol: 48px;
+  --coach-sheet: 776px;
+  --coach-sheet-gutter: 40px;
+  --coach-sheet-lift: 8px;
+  --coach-tile-min: 220px;
+  --coach-hero-min: 330px;
+}
+:root[data-theme="dark"]:has([data-learning]),
+:root.dark:not([data-theme="light"]):has([data-learning]) {
+  --coach-panel: #1b352b;
+  --coach-card: #1a3028;
+  --coach-raised: #243e32;
+  --coach-field: #172e25;
+  --coach-edge: #3b5143;
+  --coach-stage: #365440;
+  --coach-art-ground: #0b5c4d;
+  --coach-shadow: 0 12px 36px -28px #0000008c, 0 2px 4px -3px #00000066;
+  --coach-paper-shadow: 0 20px 60px -42px #000000a6, 0 4px 10px -8px #00000066;
+}
+.coach-companion {
+  display: block;
+  flex-shrink: 0;
+  width: var(--coach-scene);
+  max-width: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+.coach-companion > img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.coach-companion[data-size="hero"] {
+  width: var(--coach-hero);
+}
+.coach-companion[data-size="small"] {
+  width: var(--coach-small);
+}
+.coach-companion[data-size="mini"] {
+  width: var(--coach-mini);
+}
+.coach-companion[data-pose="defend"] {
+  max-height: var(--coach-scene);
+}
+.coach-companion[data-pose="defend"] > img {
+  height: var(--coach-scene);
+  object-fit: contain;
+}
+[data-learning] .coach-today {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  align-items: center;
+  gap: var(--space-6);
+  max-width: none;
+  min-height: 0;
+  padding: var(--space-10);
+  background: var(--coach-panel);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-radius);
+  box-shadow: var(--coach-shadow);
+  overflow: hidden;
+  position: relative;
+}
+.coach-today-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6);
+  position: relative;
+  z-index: 1;
+}
+[data-learning] .coach-today h1 {
+  font: var(--coach-display);
+  letter-spacing: -0.045em;
+  max-width: var(--learn-reading);
+}
+[data-learning] .coach-kicker {
+  font: var(--learn-meta);
+  max-width: none;
+}
+.coach-today-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-learning] .learning-projects {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.learning-projects > h2 {
+  grid-column: 1/-1;
+  margin-bottom: var(--space-2);
+}
+[data-learning] .learning-project-row {
+  display: grid;
+  grid-template-columns: var(--space-6) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--coach-card);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-small-radius);
+  box-shadow: var(--coach-shadow);
+  transition:
+    transform var(--dur-200) ease-out,
+    background-color var(--dur-150);
+}
+[data-learning] .learning-project-row:hover {
+  opacity: 1;
+  transform: translateY(calc(-1 * var(--space-1) / 2));
+  background: var(--coach-panel);
+}
+.coach-project-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+[data-learning] .learning-project-summary {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+}
+.learning-project-summary > h3 {
+  overflow-wrap: anywhere;
+}
+[data-learning] .learning-project-summary > span {
+  grid-column: 1;
+}
+[data-learning] .learning-project-summary > svg {
+  grid-column: 2;
+  grid-row: 1/3;
+}
+.coach-project-glyph {
+  width: var(--coach-project-glyph);
+  height: auto;
+  overflow: visible;
+}
+.coach-glyph-back {
+  fill: var(--coach-stage);
+  stroke: var(--coach-edge);
+  stroke-width: 1;
+}
+.coach-glyph-front {
+  fill: var(--coach-card);
+  stroke: var(--learn-muted);
+  stroke-opacity: 0.4;
+  stroke-width: 1;
+}
+.coach-glyph-fold {
+  fill: var(--coach-panel);
+  stroke: var(--coach-edge);
+  stroke-width: 1;
+}
+.coach-glyph-rule {
+  fill: none;
+  stroke: var(--learn-muted);
+  stroke-opacity: 0.5;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.coach-glyph-progress-track {
+  fill: none;
+  stroke: var(--learn-line);
+  stroke-width: 3;
+}
+.coach-glyph-progress {
+  fill: none;
+  stroke: var(--learn-accent);
+  stroke-width: 3;
+}
+[data-learning] .learning-session-list {
+  gap: var(--space-6);
+}
+[data-learning] .learning-session-list [data-slot="item"] {
+  padding-block: var(--space-6);
+}
+[data-learning] .learning-review {
+  gap: var(--space-5);
+}
+.coach-review-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  font: var(--learn-meta);
+  color: var(--learn-muted);
+  margin-bottom: var(--space-5);
+  min-height: 0;
+}
+[data-learning] .learning-review-intro {
+  margin: 0 0 var(--space-6);
+}
+[data-learning] .coach-review-sheet .learning-writing {
+  min-height: var(--space-48);
+}
+.coach-outcome-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-5) !important;
+}
+.coach-outcome-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.learning-review:has([data-review-result]) .coach-review-label {
+  display: none;
+}
+[data-learning] .learning-end {
+  align-items: center;
+  text-align: center;
+  padding: var(--space-10);
+  border-radius: var(--coach-radius);
+  border: 1px solid var(--coach-edge);
+  background: var(--coach-card);
+  box-shadow: var(--coach-paper-shadow);
+}
+[data-learning] .learning-end h1 {
+  font: var(--coach-end-display);
+  letter-spacing: -0.04em;
+}
+[data-learning] .learning-end > .coach-companion {
+  margin-bottom: var(--space-2);
+}
+.coach-defense-introduction {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: var(--space-5);
+}
+.coach-defense-introduction > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.coach-defense-introduction > .coach-companion {
+  width: var(--coach-small);
+}
+.coach-defense-stages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.coach-defense-stages > li {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--coach-panel);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-small-radius);
+}
+.coach-defense-stages > li > span {
+  display: flex;
+  width: var(--space-6);
+  height: var(--space-6);
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--learn-muted);
+}
+.coach-defense-stages svg {
+  width: 100%;
+  height: 100%;
+}
+[data-learning] .coach-defense-stages h2 {
+  font: var(--learn-subtitle);
+  margin-bottom: var(--space-2);
+  letter-spacing: 0;
+}
+[data-learning] .coach-defense-stages p {
+  font: var(--learn-meta);
+}
+[data-learning] .learning-defense-ready {
+  padding: var(--coach-sheet-gutter);
+  border: 1px solid var(--coach-edge);
+  background: var(--coach-card);
+  border-radius: var(--coach-radius);
+  box-shadow: var(--coach-paper-shadow);
+}
+[data-learning] .learning-defense.learning-feedback {
+  padding: var(--coach-sheet-gutter);
+  border: 1px solid var(--coach-edge);
+  background: var(--coach-card);
+  border-radius: var(--coach-radius);
+  box-shadow: var(--coach-paper-shadow);
+}
+.learning-defense.learning-feedback > .coach-companion {
+  align-self: center;
+  width: var(--coach-scene);
+}
+[data-learning] .learning-ownership-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: var(--space-6);
+  max-width: none;
+  background: var(--coach-panel);
+  padding: var(--space-8);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-radius);
+}
+.learning-ownership-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+[data-learning] .learning-project-progress {
+  padding: var(--space-8);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-small-radius);
+  background: var(--coach-card);
+  box-shadow: var(--coach-shadow);
+}
+[data-learning] .learning-project-progress-list {
+  gap: var(--space-6);
+}
+[data-learning] .learning-ladder {
+  gap: var(--space-4);
+}
+[data-learning] .learning-ladder-node {
+  width: var(--space-5);
+  height: var(--space-5);
+  background: var(--coach-panel);
+  border-color: var(--coach-edge);
+}
+[data-learning] .learning-ladder li:not(:last-child)::after {
+  top: var(--space-2);
+  left: var(--space-5);
+}
+[data-learning] .learning-ladder li:last-child .learning-ladder-node {
+  background: var(--learn-accent);
+  border-color: var(--learn-accent);
+}
+.coach-page-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  max-width: none;
+}
+.coach-page-intro > .app-page-heading {
+  min-width: 0;
+}
+.coach-page-intro > .coach-companion {
+  width: var(--coach-small);
+}
+.coach-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5);
+  max-width: var(--learn-reading);
+  padding-block: var(--space-4);
+}
+.coach-flow li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: relative;
+}
+.coach-flow li > span {
+  width: var(--coach-flow-symbol);
+  height: var(--coach-flow-symbol);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--coach-edge);
+  background: var(--coach-card);
+  border-radius: var(--space-3);
+}
+.coach-flow li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: var(--space-6);
+  left: calc(var(--coach-flow-symbol) + var(--space-2));
+  right: var(--space-2);
+  height: 1px;
+  background: var(--learn-line);
+}
+.coach-flow svg {
+  width: var(--space-5);
+  height: var(--space-5);
+  color: var(--learn-muted);
+}
+[data-learning] .coach-flow p {
+  font: var(--learn-meta);
+}
+[data-learning] .learning-decision {
+  padding: var(--space-7);
+  background: var(--coach-card);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-small-radius);
+  box-shadow: var(--coach-shadow);
+}
+[data-learning] .workspace-decision-label {
+  padding-inline: var(--space-2);
+}
+[data-learning] .workspace-decisions {
+  gap: var(--space-7);
+}
+.coach-auth-intro {
+  display: flex;
+  justify-content: center;
+  margin-bottom: calc(-1 * var(--space-3));
+}
+.coach-auth-intro > .coach-companion {
+  width: var(--coach-small);
+}
+[data-learning] .learning-session-state {
+  align-items: flex-start;
+  padding: var(--space-8);
+  border-radius: var(--coach-radius);
+  border: 1px solid var(--coach-edge);
+  background: var(--coach-card);
+}
+[data-learning] .learning-session-state > .coach-companion {
+  width: var(--coach-small);
+}
+[data-learning] .coach-inset-surface {
+  padding: var(--space-8);
+  background: var(--coach-card);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-small-radius);
+  box-shadow: var(--coach-shadow);
+}
+[data-learning] .coach-paper-surface {
+  padding: var(--coach-sheet-gutter);
+  background: var(--coach-card);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-radius);
+  box-shadow: var(--coach-paper-shadow);
+}
+.learning-focus-shell[data-learning] .app-container {
+  max-width: calc(var(--coach-sheet) + var(--learn-gutter)*2);
+  padding-top: var(--space-7);
+}
+.coach-queue-companion {
+  float: right;
+  align-self: flex-end;
+}
+[data-learning] .learning-queue {
+  position: relative;
+  padding: var(--space-8);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-radius);
+  background: var(--coach-card);
+}
+.coach-queue-companion > .coach-companion {
+  width: var(--coach-small);
+}
+[data-learning] .learning-queue > .coach-queue-companion {
+  position: absolute;
+  right: var(--space-8);
+  top: var(--space-8);
+}
+[data-learning] .learning-queue > h2 {
+  max-width: none;
+}
+[data-learning] .learning-review h1,
+[data-learning] .learning-defense h1 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1050px) and (min-width: 701px) {
+  [data-learning] .learning-projects {
+    grid-template-columns: 1fr;
+  }
+  [data-learning] .coach-today {
+    padding: var(--space-8);
+    gap: var(--space-4);
+  }
+  :root:has([data-learning]) {
+    --coach-display: 500 38px/1.16 var(--font-sans);
+  }
+}
+@media (max-width: 700px) {
+  :root:has([data-learning]) {
+    --coach-sheet-gutter: 24px;
+    --coach-radius: 16px;
+    --coach-small-radius: 12px;
+    --coach-hero: 240px;
+    --coach-scene: 180px;
+    --coach-small: 96px;
+    --coach-mini: 96px;
+    --coach-project-glyph: 64px;
+    --coach-display: 500 32px/1.18 var(--font-sans);
+    --coach-end-display: 500 32px/1.18 var(--font-sans);
+  }
+  [data-learning] .coach-today {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+    padding: var(--space-6);
+    min-height: 0;
+  }
+  .coach-today-copy {
+    gap: var(--space-5);
+  }
+  [data-learning] .coach-kicker {
+    max-width: none;
+  }
+  .coach-today-art {
+    grid-row: 1;
+    justify-content: flex-end;
+    max-height: var(--coach-small);
+    margin-top: calc(-1 * var(--space-2));
+    margin-bottom: calc(-1 * var(--space-2));
+  }
+  .coach-today-art > .coach-companion {
+    width: var(--coach-scene);
+  }
+  .coach-today-copy > a {
+    width: 100%;
+  }
+  [data-learning] .learning-projects {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  [data-learning] .learning-project-row {
+    padding: var(--space-5);
+    gap: var(--space-4);
+  }
+  .coach-project-details {
+    gap: var(--space-4);
+  }
+  .coach-review-label {
+    min-height: 0;
+    margin-bottom: var(--space-4);
+  }
+  .learning-focus-shell[data-learning] .app-container {
+    padding-inline: var(--space-4);
+  }
+  .coach-outcome-header {
+    gap: var(--space-3) !important;
+  }
+  .coach-outcome-header > .coach-companion {
+    width: var(--coach-mini);
+  }
+  [data-learning] .learning-end {
+    padding: var(--space-7) var(--space-6);
+  }
+  .coach-defense-introduction {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  .coach-defense-introduction > .coach-companion {
+    width: var(--coach-mini);
+  }
+  .coach-defense-introduction > .coach-companion > img {
+    height: var(--coach-small);
+  }
+  .coach-defense-stages {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  .coach-defense-stages > li {
+    padding: var(--space-5);
+  }
+  [data-learning] .learning-ownership-summary {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+    padding: var(--space-6);
+  }
+  .learning-ownership-summary > .coach-companion {
+    grid-row: 1;
+    justify-self: end;
+    width: var(--coach-small);
+    margin-bottom: calc(-1 * var(--space-4));
+  }
+  [data-learning] .learning-project-progress {
+    padding: var(--space-6) var(--space-5);
+  }
+  [data-learning] .learning-ladder {
+    gap: var(--space-2);
+  }
+  [data-learning] .learning-ladder li {
+    font: var(--learn-meta);
+  }
+  .coach-page-intro {
+    gap: var(--space-3);
+    align-items: flex-start;
+  }
+  .coach-page-intro > .coach-companion {
+    width: var(--coach-mini);
+  }
+  .coach-flow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6);
+  }
+  .coach-flow li:nth-child(2)::after {
+    display: none;
+  }
+  [data-learning] .learning-decision {
+    padding: var(--space-6);
+  }
+  [data-learning] .coach-inset-surface {
+    padding: var(--space-6);
+  }
+  [data-learning] .learning-queue {
+    padding: var(--space-6);
+  }
+  [data-learning] .learning-queue > .coach-queue-companion {
+    position: static;
+    align-self: flex-end;
+    height: var(--space-16);
+  }
+  [data-learning] .learning-queue > h2 {
+    max-width: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-learning] .learning-project-row:hover {
+    transform: none;
+  }
+}
+
+[data-learning] .learning-defense-ready {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.coach-page-intro > [data-slot="page-header"] {
+  min-width: 0;
+  flex: 1;
+}
+
+.coach-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+[data-learning] .coach-question h2 {
+  font: var(--learn-question);
+  letter-spacing: -0.015em;
+  color: var(--learn-muted);
+}
+[data-learning] .coach-paper-surface .learning-review-intro {
+  margin-bottom: 0;
+}
+.coach-writing-field,
+.coach-form-footer {
+  min-width: 0;
+}
+
+.coach-focus-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.coach-focus-brand > svg {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+@media (max-width: 700px) {
+  body:has([data-learning]):has(.design-preview-dock) .learning-focus-header {
+    padding-right: var(--space-20);
+  }
+  body:has([data-learning]):has(.design-preview-dock) .coach-focus-brand > span {
+    display: none;
+  }
+  body:has([data-learning]):has(.design-preview-dock) .app-topbar {
+    padding-right: var(--space-20);
+  }
+  body:has([data-learning]) .design-preview-dock {
+    top: var(--space-5);
+    right: var(--space-4);
+    bottom: auto;
+  }
+  body:has([data-learning]) .preview-dock-menu {
+    top: calc(var(--control-lg) + var(--space-2));
+    bottom: auto;
+  }
+}
+/* Emerald surfaces and an illustrated inventory of the learner's real review stages. */
+:root:has([data-learning]) {
+  --ownership-paper: #fff9e8;
+  --ownership-paper-back: #e0e7ca;
+  --ownership-fold: #ecebd5;
+  --ownership-ink: #124a41;
+  --ownership-rule: #a0ad91;
+  --ownership-band: #034f46;
+  --ownership-band-ink: #ffffeb;
+  --ownership-seal: #146b57;
+  --ownership-shadow: #143e3524;
+  --ownership-art: 128px;
+  --ownership-number: 500 34px/1 var(--font-sans);
+  --ownership-number-long: 500 20px/1 var(--font-sans);
+  --ownership-counter-top: 42%;
+  --project-control-width: 250px;
+  --control-skin-radius: 12px;
+  --session-symbol: 40px;
+  --session-symbol-radius: 8px;
+  --quote-symbol: 28px;
+}
+:root[data-theme="dark"]:has([data-learning]),
+:root.dark:not([data-theme="light"]):has([data-learning]) {
+  --ownership-shadow: #001e2966;
+}
+[data-learning] [data-slot="sidebar-inner"] {
+  background: var(--learn-navigation);
+}
+[data-learning] .app-topbar {
+  background: var(--learn-paper);
+}
+[data-learning] [data-slot="sidebar-menu-button"][aria-current="page"] {
+  background: var(--learn-wash);
+  color: var(--learn-ink);
+  box-shadow: inset 3px 0 0 var(--learn-accent);
+}
+[data-learning] .control-secondary,
+[data-learning] .control-input,
+[data-learning] [data-slot="input-group"] {
+  background: var(--coach-field);
+  color: var(--learn-ink);
+}
+[data-learning] .control-secondary:hover {
+  background: var(--learn-wash);
+}
+[data-learning] .control-primary,
+[data-learning] .flow-button {
+  border-radius: var(--control-skin-radius);
+}
+[data-learning] .control-primary:hover,
+[data-learning] .flow-button:hover {
+  filter: none;
+  background: color-mix(in srgb, var(--learn-accent) 92%, var(--learn-ink));
+}
+:root:has([data-learning]) .control-menu {
+  background: var(--coach-raised);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--coach-small-radius);
+  box-shadow: var(--coach-paper-shadow);
+}
+:root:has([data-learning]) .control-menu-item {
+  border-radius: var(--space-2);
+}
+:root:has([data-learning]) .control-menu-item[data-highlighted],
+:root:has([data-learning]) .control-menu-item[data-selected] {
+  background: var(--learn-wash);
+  color: var(--learn-ink);
+}
+[data-learning] .project-toolbar {
+  gap: var(--space-4);
+  align-items: center;
+}
+[data-learning] .project-picker-label {
+  color: var(--learn-muted);
+}
+[data-learning] .project-toolbar .project-choice-trigger {
+  width: var(--project-control-width);
+  max-width: 100%;
+  min-height: var(--control-lg);
+  background: var(--coach-card);
+  color: var(--learn-ink);
+  border: 1px solid var(--line-control);
+  border-radius: var(--control-skin-radius);
+  box-shadow: var(--coach-shadow);
+  gap: var(--space-3);
+}
+[data-learning] .project-choice-trigger::after {
+  display: none;
+}
+[data-learning] .project-choice-trigger > svg {
+  width: var(--space-5);
+  height: var(--space-5);
+  color: var(--learn-muted);
+  flex-shrink: 0;
+}
+[data-learning] .project-toolbar .project-choice-trigger:hover {
+  background: var(--coach-panel);
+  border-color: var(--learn-muted);
+}
+[data-learning] .learning-ownership-summary {
+  padding-block: var(--space-6);
+}
+[data-learning] .learning-ownership-summary > .coach-companion {
+  width: var(--coach-scene);
+  max-height: var(--coach-scene);
+}
+[data-learning] .learning-project-progress {
+  gap: var(--space-4);
+}
+[data-learning] .learning-project-progress > h2 {
+  max-width: var(--learn-reading);
+}
+[data-learning] .learning-project-progress > a {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  min-height: var(--control-sm);
+  padding-inline: var(--space-3);
+  margin-left: calc(-1 * var(--space-3));
+  border-radius: var(--space-2);
+  transition: background-color var(--dur-150);
+  color: var(--learn-ink);
+}
+[data-learning] .learning-project-progress > a:hover {
+  background: var(--learn-wash);
+}
+[data-learning] [data-slot="item"][data-size="session"] {
+  padding: var(--space-5) var(--space-3);
+  border: 0;
+  border-radius: var(--control-skin-radius);
+  gap: var(--space-4);
+  transition: background-color var(--dur-150);
+}
+[data-learning] [data-slot="item"][data-size="session"]:hover {
+  background: var(--coach-panel);
+}
+[data-learning] [data-slot="item"][data-size="session"] .session-paper-icon {
+  display: flex;
+  position: relative;
+  align-self: center;
+  width: var(--session-symbol);
+  height: var(--session-symbol);
+  background: var(--ownership-paper);
+  color: var(--ownership-band);
+  border: 1px solid var(--ownership-rule);
+  border-radius: var(--session-symbol-radius);
+  box-shadow: var(--coach-shadow);
+}
+.session-paper-icon > svg {
+  width: var(--space-5);
+  height: var(--space-5);
+}
+[data-learning] .learning-proof {
+  display: grid;
+  grid-template-columns: var(--quote-symbol) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: var(--space-3);
+  padding: var(--space-2) 0;
+  margin: 0;
+  border: 0;
+}
+.evidence-quote-mark {
+  width: var(--quote-symbol);
+  height: var(--quote-symbol);
+  color: var(--learn-accent);
+  grid-row: 1/3;
+}
+[data-learning] .learning-proof > blockquote {
+  grid-column: 2;
+  color: var(--learn-ink);
+}
+[data-learning] .learning-proof > figcaption {
+  grid-column: 2;
+  margin: 0;
+}
+[data-learning] .learning-footnote {
+  color: var(--learn-muted);
+}
+@media (max-width: 700px) {
+  :root:has([data-learning]) {
+    --ownership-art: 76px;
+    --ownership-number: 500 22px/1 var(--font-sans);
+    --ownership-number-long: 500 17px/1 var(--font-sans);
+  }
+  [data-learning] .project-toolbar {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+  [data-learning] .project-toolbar .project-choice-trigger {
+    width: 100%;
+  }
+  [data-learning] [data-slot="item"][data-size="session"] {
+    gap: var(--space-3);
+    padding-inline: 0;
+  }
+  [data-learning] [data-slot="item"][data-size="session"] [data-slot="item-content"] {
+    min-width: 0;
+    flex-basis: calc(100% - var(--session-symbol) - var(--space-3));
+  }
+  [data-learning] [data-slot="item"][data-size="session"] [data-slot="status"] {
+    margin-left: calc(var(--session-symbol) + var(--space-3));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .decision-stage-art {
+    transition: none;
+  }
+}
+
+@media (max-width: 700px) {
+  [data-learning] [data-slot="item"][data-size="session"] {
+    display: grid;
+    grid-template-columns: var(--session-symbol) minmax(0, 1fr) var(--space-4);
+    column-gap: var(--space-3);
+    row-gap: var(--space-2);
+  }
+  [data-learning] [data-slot="item"][data-size="session"] > [data-slot="item-media"] {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  [data-learning] [data-slot="item"][data-size="session"] > [data-slot="item-content"] {
+    grid-column: 2/-1;
+    grid-row: 1;
+  }
+  [data-learning] [data-slot="item"][data-size="session"] > [data-slot="status"] {
+    grid-column: 2;
+    grid-row: 2;
+    margin-left: 0;
+  }
+  [data-learning] [data-slot="item"][data-size="session"] > svg {
+    grid-column: 3;
+    grid-row: 2;
+  }
+}
+
+/* Daily work is carried by content and real project data. */
+:root:has([data-learning]) {
+  --ownership-stage-new: #bac6b5;
+  --ownership-stage-day-1: #93a78c;
+  --ownership-stage-day-4: #6d8b6a;
+  --ownership-stage-day-11: #4b7156;
+  --ownership-stage-mastered: var(--learn-accent);
+  --ownership-band-height: 16px;
+  --ownership-dot: 8px;
+  --ownership-count: 500 32px/1.2 var(--font-sans);
+  --ownership-count-compact: 500 24px/1.3 var(--font-sans);
+}
+:root[data-theme="dark"]:has([data-learning]),
+:root.dark:not([data-theme="light"]):has([data-learning]) {
+  --ownership-stage-new: #4e6252;
+  --ownership-stage-day-1: #6e8369;
+  --ownership-stage-day-4: #8d9f80;
+  --ownership-stage-day-11: #a9bc98;
+}
+[data-learning] .coach-today {
+  gap: var(--space-10);
+}
+[data-learning] .coach-today[data-has-review="false"] {
+  grid-template-columns: 1fr;
+}
+.coach-next-decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-left: var(--space-8);
+  border-left: 1px solid var(--coach-edge);
+  min-width: 0;
+}
+.coach-next-decision blockquote {
+  font: var(--learn-question);
+  color: var(--learn-ink);
+  text-wrap: pretty;
+  margin: 0;
+}
+.learning-project-name {
+  font: var(--type-code-sm);
+  color: var(--learn-muted);
+  overflow-wrap: anywhere;
+}
+.learning-project-symbol {
+  width: var(--space-6);
+  height: var(--space-6);
+  color: var(--learn-muted);
+  align-self: start;
+  margin-top: var(--space-1);
+}
+[data-learning] .learning-project-row {
+  box-shadow: none;
+}
+[data-learning] .learning-project-row:hover {
+  transform: none;
+}
+[data-learning] .learning-project-summary h3 {
+  font-family: var(--font-mono);
+  font-size: inherit;
+}
+[data-learning] .learning-project-summary > span {
+  line-height: 1.6;
+}
+[data-learning] .learning-project-bar {
+  height: var(--space-2);
+  border-radius: var(--space-1);
+  overflow: hidden;
+}
+[data-learning] .learning-ownership-summary {
+  background: transparent;
+  border: 0;
+  padding: 0 0 var(--space-2);
+}
+[data-learning] .learning-ownership-summary h1 {
+  max-width: var(--learn-reading);
+}
+[data-learning] .learning-project-progress {
+  gap: var(--space-4);
+  box-shadow: none;
+  container-type: inline-size;
+}
+.ownership-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-block: var(--space-5);
+}
+[data-learning] .ownership-path-label {
+  font: var(--learn-meta);
+}
+.ownership-distribution-bar {
+  width: 100%;
+  height: var(--ownership-band-height);
+  border-radius: var(--space-1);
+  overflow: hidden;
+}
+.ownership-bar-track {
+  fill: var(--learn-line);
+}
+.ownership-distribution-bar rect[data-stage] {
+  stroke: var(--coach-card);
+  stroke-width: 3;
+}
+.ownership-distribution-bar [data-stage="new"] {
+  fill: var(--ownership-stage-new);
+}
+.ownership-distribution-bar [data-stage="day-1"] {
+  fill: var(--ownership-stage-day-1);
+}
+.ownership-distribution-bar [data-stage="day-4"] {
+  fill: var(--ownership-stage-day-4);
+}
+.ownership-distribution-bar [data-stage="day-11"] {
+  fill: var(--ownership-stage-day-11);
+}
+.ownership-distribution-bar [data-stage="mastered"] {
+  fill: var(--ownership-stage-mastered);
+}
+.ownership-stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ownership-stages > li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.ownership-stage-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ownership-stage-dot {
+  width: var(--ownership-dot);
+  height: var(--ownership-dot);
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--ownership-stage-new);
+}
+[data-review-stage="day-1"] .ownership-stage-dot {
+  background: var(--ownership-stage-day-1);
+}
+[data-review-stage="day-4"] .ownership-stage-dot {
+  background: var(--ownership-stage-day-4);
+}
+[data-review-stage="day-11"] .ownership-stage-dot {
+  background: var(--ownership-stage-day-11);
+}
+[data-review-stage="mastered"] .ownership-stage-dot {
+  background: var(--ownership-stage-mastered);
+}
+[data-learning] .ownership-stage-heading h3 {
+  font: var(--learn-meta);
+  color: var(--learn-muted);
+}
+[data-learning] .ownership-stages strong {
+  font: var(--ownership-count);
+  color: var(--learn-ink);
+  font-variant-numeric: tabular-nums;
+}
+[data-learning] .ownership-stages > li > p {
+  font: var(--learn-meta);
+}
+[data-learning] .ownership-stages > li[data-has-decisions="false"] strong {
+  color: var(--learn-muted);
+}
+[data-learning] [data-slot="item"][data-size="session"] [data-slot="item-media"].session-work-icon {
+  display: flex;
+  align-self: center;
+  width: var(--session-symbol);
+  height: var(--session-symbol);
+  background: var(--learn-wash);
+  color: var(--learn-muted);
+  border-radius: var(--session-symbol-radius);
+}
+.session-work-icon > svg {
+  width: var(--space-5);
+  height: var(--space-5);
+}
+[data-learning] .learning-end {
+  align-items: flex-start;
+  text-align: left;
+  padding: var(--coach-sheet-gutter);
+}
+[data-learning] .coach-outcome-header {
+  grid-template-columns: 1fr;
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--learn-line);
+}
+@container (max-width:560px) {
+  .ownership-stages {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  .ownership-stages > li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-1) var(--space-4);
+    align-items: center;
+  }
+  [data-learning] .ownership-stages > li > strong {
+    grid-column: 2;
+    grid-row: 1;
+    font: var(--ownership-count-compact);
+  }
+  .ownership-stages > li > p {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  [data-learning] .coach-today {
+    grid-template-columns: 1fr;
+    gap: var(--space-7);
+  }
+  .coach-next-decision {
+    padding: var(--space-6) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--coach-edge);
+  }
+  .coach-next-decision blockquote {
+    font: var(--learn-title);
+  }
+  [data-learning] .learning-ownership-summary {
+    padding: 0;
+  }
+  [data-learning] .learning-project-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .learning-project-symbol {
+    display: none;
+  }
+  [data-learning] .learning-project-progress {
+    padding: var(--space-6);
+  }
+}
+
+/* Retained illustration-library styles for future onboarding use. */
+.decision-stage-shadow {
+  fill: var(--ownership-shadow);
+}
+.decision-stage-back,
+.decision-stage-middle {
+  fill: var(--ownership-paper-back);
+  stroke: var(--ownership-rule);
+  stroke-width: 1;
+}
+.decision-stage-middle {
+  fill: var(--ownership-fold);
+}
+.decision-stage-paper {
+  fill: var(--ownership-paper);
+  stroke: var(--ownership-rule);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.decision-stage-fold {
+  fill: var(--ownership-fold);
+  stroke: var(--ownership-rule);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.decision-stage-hairline {
+  fill: none;
+  stroke: var(--ownership-rule);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.decision-stage-return {
+  fill: none;
+  stroke: var(--ownership-band);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.decision-stage-tab,
+.decision-stage-band {
+  fill: var(--ownership-band);
+}
+.decision-stage-tab-second {
+  fill: var(--ownership-rule);
+}
+.decision-stage-seal {
+  fill: var(--ownership-seal);
+  stroke: var(--ownership-paper);
+  stroke-width: 1;
+}
+.decision-stage-check {
+  fill: none;
+  stroke: var(--ownership-band-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Developer-inspired visual language: restrained color, original vector art and real data. */
+:root:has([data-learning]) {
+  --visual-blue: #476d99;
+  --visual-blue-wash: #e4ecf5;
+  --visual-violet: #79619b;
+  --visual-violet-wash: #ede8f4;
+  --visual-amber: #89652e;
+  --visual-amber-wash: #f3ead8;
+  --visual-green-wash: #e1ebdc;
+  --visual-ink: #233c38;
+  --visual-guide-shell: #d5d1e6;
+  --visual-guide-side: #a69ebf;
+  --visual-screen: #193c34;
+  --visual-signal: #d5ebbe;
+  --visual-scene: 280px;
+  --visual-scene-small: 160px;
+  --visual-guide: 120px;
+  --visual-guide-mini: 84px;
+  --visual-guide-large: 160px;
+  --visual-mark: 40px;
+  --visual-mark-small: 28px;
+  --visual-ring: 128px;
+  --visual-project-ring: 48px;
+  --visual-activity-cell: 22px;
+  --ownership-stage-new: var(--visual-blue);
+  --ownership-stage-day-1: #6e91ac;
+  --ownership-stage-day-4: var(--visual-violet);
+  --ownership-stage-day-11: #b59962;
+  --ownership-stage-mastered: var(--learn-accent);
+  --activity-0: var(--learn-wash);
+  --activity-1: #bed1ba;
+  --activity-2: #7eaa8c;
+  --activity-3: var(--learn-accent);
+}
+:root[data-theme="dark"]:has([data-learning]),
+:root.dark:not([data-theme="light"]):has([data-learning]) {
+  --visual-blue: #a7c3e4;
+  --visual-blue-wash: #263e4a;
+  --visual-violet: #c5b7e3;
+  --visual-violet-wash: #38394b;
+  --visual-amber: #dfc18b;
+  --visual-amber-wash: #403e2f;
+  --visual-green-wash: #304b36;
+  --visual-ink: #e9f0e4;
+  --visual-guide-shell: #9d96b9;
+  --visual-guide-side: #625c7c;
+  --visual-screen: #102c25;
+  --visual-signal: #d7edbc;
+  --ownership-stage-new: var(--visual-blue);
+  --ownership-stage-day-1: #85a9b7;
+  --ownership-stage-day-4: var(--visual-violet);
+  --ownership-stage-day-11: var(--visual-amber);
+  --activity-0: var(--coach-panel);
+  --activity-1: #3d624a;
+  --activity-2: #7da486;
+}
+.learning-mark {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--visual-mark);
+  height: var(--visual-mark);
+  color: var(--learn-muted);
+  background: var(--learn-wash);
+  border-radius: var(--space-3);
+}
+.learning-mark > svg {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+.learning-mark[data-size="small"] {
+  width: var(--visual-mark-small);
+  height: var(--visual-mark-small);
+  border-radius: var(--space-2);
+}
+.learning-mark[data-size="small"] > svg {
+  width: var(--space-5);
+  height: var(--space-5);
+}
+.learning-mark[data-tone="blue"] {
+  color: var(--visual-blue);
+  background: var(--visual-blue-wash);
+}
+.learning-mark[data-tone="violet"] {
+  color: var(--visual-violet);
+  background: var(--visual-violet-wash);
+}
+.learning-mark[data-tone="amber"] {
+  color: var(--visual-amber);
+  background: var(--visual-amber-wash);
+}
+.learning-mark[data-tone="green"] {
+  color: var(--learn-accent);
+  background: var(--visual-green-wash);
+}
+.learning-section-caption {
+  display: inline-flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+.engineering-guide {
+  width: var(--visual-guide);
+  max-width: 100%;
+  display: block;
+  pointer-events: none;
+}
+.engineering-guide > svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.engineering-guide[data-size="mini"] {
+  width: var(--visual-guide-mini);
+}
+.engineering-guide[data-size="small"] {
+  width: var(--visual-guide);
+}
+.engineering-guide[data-size="scene"],
+.engineering-guide[data-size="hero"] {
+  width: var(--visual-guide-large);
+}
+.engineering-guide[data-pose="defend"] {
+  max-height: none;
+}
+.eng-shadow {
+  fill: color-mix(in srgb, var(--learn-ink) 10%, transparent);
+}
+.eng-guide-back {
+  fill: var(--visual-guide-side);
+}
+.eng-guide-side {
+  fill: var(--visual-violet);
+}
+.eng-guide-shell {
+  fill: var(--visual-guide-shell);
+  stroke: color-mix(in srgb, var(--visual-violet) 55%, var(--coach-raised));
+  stroke-width: 1;
+}
+.eng-guide-screen {
+  fill: var(--visual-screen);
+}
+.eng-guide-bracket {
+  stroke: var(--visual-signal);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.6;
+}
+.eng-guide-signal {
+  stroke: var(--visual-signal);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.eng-guide-detail {
+  stroke: var(--visual-violet);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.eng-guide-arm {
+  stroke: var(--visual-guide-side);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.eng-guide-status {
+  fill: var(--visual-signal);
+  stroke: var(--visual-screen);
+  stroke-width: 1.5;
+}
+.eng-guide-shield {
+  fill: var(--visual-green-wash);
+  stroke: var(--learn-accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.eng-guide-orbit {
+  stroke: var(--visual-violet);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+  opacity: 0.65;
+}
+.engineering-scene {
+  display: block;
+  width: var(--visual-scene);
+  max-width: 100%;
+  pointer-events: none;
+}
+.engineering-scene > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.eng-scene-ground {
+  fill: color-mix(in srgb, var(--visual-violet) 8%, transparent);
+}
+.eng-orbit {
+  stroke: var(--coach-edge);
+  stroke-width: 1;
+  stroke-dasharray: 3 6;
+}
+.eng-window-back {
+  fill: var(--visual-blue-wash);
+}
+.eng-window-side {
+  fill: color-mix(in srgb, var(--visual-blue) 30%, var(--coach-card));
+}
+.eng-window {
+  fill: var(--coach-raised);
+  stroke: color-mix(in srgb, var(--visual-blue) 45%, var(--coach-card));
+  stroke-width: 1;
+}
+.eng-window-rule {
+  stroke: var(--coach-edge);
+  stroke-width: 1;
+}
+.eng-blue-fill {
+  fill: var(--visual-blue);
+}
+.eng-violet-fill {
+  fill: var(--visual-violet);
+}
+.eng-amber-fill {
+  fill: var(--visual-amber);
+}
+.eng-code-violet {
+  stroke: var(--visual-violet);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.eng-code-blue {
+  stroke: var(--visual-blue);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.eng-code-muted {
+  stroke: var(--learn-line);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.eng-connector {
+  stroke: var(--visual-violet);
+  stroke-opacity: 0.6;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.eng-junction {
+  fill: var(--coach-card);
+  stroke: var(--visual-violet);
+  stroke-width: 1.5;
+}
+.eng-note-blue {
+  fill: var(--visual-blue-wash);
+  stroke: color-mix(in srgb, var(--visual-blue) 45%, var(--coach-card));
+  stroke-width: 1;
+}
+.eng-note-violet {
+  fill: var(--visual-violet-wash);
+  stroke: color-mix(in srgb, var(--visual-violet) 45%, var(--coach-card));
+  stroke-width: 1;
+}
+.eng-note-green {
+  fill: var(--visual-green-wash);
+  stroke: color-mix(in srgb, var(--learn-accent) 45%, var(--coach-card));
+  stroke-width: 1;
+}
+.eng-blue-stroke {
+  stroke: var(--visual-blue);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.eng-violet-stroke {
+  stroke: var(--visual-violet);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.eng-green-stroke {
+  stroke: var(--learn-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-learning] .coach-today {
+  background: var(--coach-panel);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+}
+[data-learning] .coach-today[data-has-review="false"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.coach-next-decision > .engineering-scene {
+  align-self: center;
+  margin-bottom: var(--space-1);
+}
+.engineering-today-guide {
+  padding-inline: var(--space-4);
+}
+[data-learning] .learning-project-row {
+  grid-template-columns: var(--visual-project-ring) minmax(0, 1fr);
+  gap: var(--space-5);
+}
+.ownership-ring {
+  display: block;
+  width: var(--visual-ring);
+  height: auto;
+  flex-shrink: 0;
+  overflow: visible;
+}
+.ownership-ring[data-size="project"] {
+  width: var(--visual-project-ring);
+}
+.ownership-ring-track {
+  fill: none;
+  stroke: var(--learn-line);
+  stroke-width: 6;
+}
+.ownership-ring-fill {
+  fill: none;
+  stroke: var(--learn-accent);
+  stroke-width: 6;
+  stroke-linecap: butt;
+}
+.ownership-ring-number {
+  fill: var(--learn-ink);
+  font: var(--learn-value);
+  letter-spacing: -0.04em;
+}
+.ownership-ring-caption {
+  fill: var(--learn-muted);
+  font: var(--learn-meta);
+}
+.ownership-ring-code {
+  color: var(--visual-blue);
+  width: 100%;
+  height: 100%;
+}
+[data-learning] .learning-ownership-summary {
+  grid-template-columns: minmax(0, 1fr) var(--visual-ring);
+  align-items: center;
+  gap: var(--space-8);
+}
+[data-learning] .learning-project-progress {
+  background: var(--coach-card);
+  border-top: 2px solid color-mix(in srgb, var(--visual-blue) 50%, var(--coach-edge));
+}
+.ownership-distribution-bar {
+  height: var(--space-3);
+}
+[data-learning] .ownership-stage-heading {
+  gap: var(--space-2);
+}
+[data-learning] .ownership-stages > li {
+  gap: var(--space-3);
+}
+[data-learning] .ownership-stages > li[data-has-decisions="false"] .learning-mark {
+  background: var(--learn-wash);
+  color: var(--learn-muted);
+}
+[data-learning] .coach-outcome-header {
+  grid-template-columns: minmax(0, 1fr) var(--visual-guide-mini);
+  align-items: center;
+}
+[data-learning] .learning-feedback > section > h2.learning-section-caption {
+  margin-bottom: var(--space-3);
+}
+[data-learning] .learning-end {
+  position: relative;
+  gap: var(--space-5);
+}
+[data-learning] .learning-end > .engineering-guide {
+  margin-bottom: var(--space-2);
+}
+.coach-defense-introduction {
+  grid-template-columns: minmax(0, 1fr) var(--visual-scene-small);
+}
+.coach-defense-introduction > .engineering-scene {
+  width: var(--visual-scene-small);
+}
+.coach-defense-stages > li > .learning-mark {
+  width: var(--visual-mark);
+  height: var(--visual-mark);
+}
+.coach-defense-stages .learning-mark > svg {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+.coach-page-intro > .engineering-scene {
+  width: var(--visual-scene-small);
+  flex-shrink: 0;
+}
+[data-learning] .learning-session-state > .engineering-guide {
+  width: var(--visual-guide);
+}
+[data-learning] .learning-proof {
+  border-radius: var(--space-2);
+}
+.evidence-quote-mark {
+  color: var(--visual-amber);
+}
+[data-learning] [data-slot="item"][data-size="session"] [data-slot="item-media"].session-work-icon {
+  background: var(--visual-blue-wash);
+  color: var(--visual-blue);
+}
+[data-learning]
+  [data-slot="item"][data-size="session"][data-session-state="failed"]
+  [data-slot="item-media"].session-work-icon {
+  background: var(--visual-amber-wash);
+  color: var(--visual-amber);
+}
+[data-learning]
+  [data-slot="item"][data-size="session"][data-session-state="pending"]
+  [data-slot="item-media"].session-work-icon {
+  background: var(--learn-wash);
+  color: var(--learn-muted);
+}
+[data-learning]
+  [data-slot="item"][data-size="session"][data-session-state="processing"]
+  [data-slot="item-media"].session-work-icon {
+  background: var(--visual-violet-wash);
+  color: var(--visual-violet);
+}
+.practice-activity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.practice-activity figcaption {
+  color: var(--learn-ink);
+  font: var(--learn-body);
+}
+.practice-activity-days {
+  display: grid;
+  grid-template-columns: repeat(30, minmax(0, 1fr));
+  gap: var(--space-1);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.practice-activity-days > li > span:first-child {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: var(--space-1);
+  background: var(--activity-0);
+  border: 1px solid var(--coach-edge);
+}
+.practice-activity-days > li[data-level="1"] > span:first-child,
+.practice-activity-key i[data-level="1"] {
+  background: var(--activity-1);
+}
+.practice-activity-days > li[data-level="2"] > span:first-child,
+.practice-activity-key i[data-level="2"] {
+  background: var(--activity-2);
+}
+.practice-activity-days > li[data-level="3"] > span:first-child,
+.practice-activity-key i[data-level="3"] {
+  background: var(--activity-3);
+}
+.practice-activity-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font: var(--learn-meta);
+  color: var(--learn-muted);
+}
+.practice-activity-key > span:nth-child(2) {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+.practice-activity-key i {
+  display: block;
+  width: var(--space-3);
+  height: var(--space-3);
+  background: var(--activity-0);
+  border: 1px solid var(--coach-edge);
+  border-radius: var(--space-1);
+}
+@media (max-width: 1050px) and (min-width: 701px) {
+  [data-learning] .coach-today {
+    gap: var(--space-6);
+  }
+  .coach-next-decision {
+    padding-left: var(--space-5);
+  }
+}
+@container (max-width:560px) {
+  .ownership-stage-heading {
+    grid-column: 1;
+  }
+  [data-learning] .ownership-stages > li {
+    gap: var(--space-1) var(--space-4);
+  }
+  .practice-activity-days {
+    grid-template-columns: repeat(15, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  :root:has([data-learning]) {
+    --visual-ring: 88px;
+    --visual-project-ring: 40px;
+    --visual-guide-large: 128px;
+    --visual-scene: 200px;
+  }
+  [data-learning] .coach-today,
+  [data-learning] .coach-today[data-has-review="false"] {
+    grid-template-columns: 1fr;
+  }
+  [data-learning] .coach-next-decision {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--space-20);
+    gap: var(--space-2) var(--space-3);
+  }
+  .coach-next-decision > .engineering-scene {
+    grid-column: 2;
+    grid-row: 1/3;
+    width: 100%;
+    margin: 0;
+  }
+  .coach-next-decision > p,
+  .coach-next-decision > .learning-project-name {
+    grid-column: 1;
+  }
+  .coach-next-decision > blockquote {
+    grid-column: 1/-1;
+  }
+  .engineering-today-guide {
+    position: absolute;
+    right: var(--space-5);
+    top: var(--space-5);
+    opacity: 0.3;
+  }
+  [data-learning] .learning-project-row {
+    grid-template-columns: var(--visual-project-ring) minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-5);
+  }
+  [data-learning] .learning-project-summary > span {
+    font: var(--learn-meta);
+  }
+  [data-learning] .learning-ownership-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+    position: relative;
+    padding-right: 0;
+  }
+  .learning-ownership-summary > .ownership-ring {
+    width: var(--space-16);
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+  .learning-ownership-summary .coach-kicker {
+    min-height: var(--space-12);
+    display: flex;
+    align-items: center;
+    padding-right: var(--space-20);
+  }
+  .learning-ownership-summary > .ownership-ring text {
+    display: none;
+  }
+  .coach-defense-introduction {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .coach-defense-introduction > .engineering-scene {
+    width: var(--visual-scene-small);
+    order: -1;
+  }
+  .coach-page-intro > .engineering-scene {
+    width: var(--space-20);
+  }
+  .practice-activity-key {
+    flex-wrap: wrap;
+  }
+  .practice-activity-key > span:nth-child(2) {
+    order: 3;
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .practice-activity-days {
+    grid-template-columns: repeat(15, minmax(0, 1fr));
+  }
+}
+
+.ownership-ring[data-project-tone="violet"] .ownership-ring-code {
+  color: var(--visual-violet);
+}
+.ownership-ring[data-project-tone="amber"] .ownership-ring-code {
+  color: var(--visual-amber);
+}
+[data-learning]
+  .workspace-navigation
+  [data-slot="sidebar-menu-button"][href^="/review"]
+  > svg:first-child {
+  color: var(--visual-blue);
+}
+[data-learning]
+  .workspace-navigation
+  [data-slot="sidebar-menu-button"][href^="/defend"]
+  > svg:first-child {
+  color: var(--visual-violet);
+}
+[data-learning]
+  .workspace-navigation
+  [data-slot="sidebar-menu-button"][href^="/progress"]
+  > svg:first-child {
+  color: var(--learn-accent);
+}
+[data-learning]
+  .workspace-navigation
+  [data-slot="sidebar-menu-button"][href^="/sessions"]
+  > svg:first-child {
+  color: var(--visual-blue);
+}
+.engineering-scene > svg,
+.engineering-guide > svg {
+  animation: engineering-arrive var(--dur-300) ease-out both;
+}
+[data-learning] .control-primary {
+  transition:
+    transform var(--dur-150) ease-out,
+    background-color var(--dur-150);
+}
+[data-learning] .control-primary:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translateY(1px);
+}
+@keyframes engineering-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-1));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .engineering-scene > svg,
+  .engineering-guide > svg {
+    animation: none;
+  }
+  [data-learning] .control-primary:active:not(:disabled):not([aria-disabled="true"]) {
+    transform: none;
+  }
+}
+
+.learning-defense.learning-feedback > .engineering-guide {
+  width: var(--visual-guide);
+  align-self: flex-start;
+}
+
+/* Real project names and code identifiers can be long, especially on a phone. */
+[data-learning]:not(.marketing-shell) :is(h1, h2, h3, blockquote) {
+  overflow-wrap: anywhere;
+}

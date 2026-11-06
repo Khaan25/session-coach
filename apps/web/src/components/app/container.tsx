@@ -5,10 +5,7 @@ export function Container({ className, ...props }: React.ComponentProps<"div">) 
   return (
     <div
       data-slot="container"
-      className={cn(
-        "mx-auto flex w-full max-w-(--container) flex-col gap-6 px-(--gutter-sm) py-6 sm:px-(--gutter)",
-        className,
-      )}
+      className={cn("app-container mx-auto flex w-full max-w-(--container) flex-col", className)}
       {...props}
     />
   );

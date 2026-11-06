@@ -309,3 +309,59 @@ test("tracker_tasks: members read, add and edit only the granted columns; others
     await admin.from("tracker_members").delete().eq("user_id", member.id);
   }
 });
+
+test("learner_ownership: counts only the caller's visible cards, an explained card once, and anon can't call it", async () => {
+  const [me, other] = learners;
+  // Two answers scored 2 on the visible card and one on the hidden card, and the visible card mastered.
+  const answers = await admin.from("answers").insert([
+    { card_id: me.cardId, user_id: me.id, review_step: 1, answer: "a", score: 2 },
+    { card_id: me.cardId, user_id: me.id, review_step: 2, answer: "a", score: 2 },
+    { card_id: me.hiddenCardId, user_id: me.id, review_step: 0, answer: "a", score: 2 },
+  ]);
+  assert.ifError(answers.error);
+  const mastered = await admin
+    .from("reviews")
+    .update({ mastered: true, due_on: null })
+    .eq("card_id", me.cardId);
+  assert.ifError(mastered.error);
+
+  const mine = await me.client.rpc("learner_ownership");
+  assert.ifError(mine.error);
+  assert.deepEqual(mine.data, [{ repo: null, explained: 1, owned: 1, total: 1 }]);
+  // The other learner's counts don't move: their one visible card, answered 1 only. A blank repo counts as none.
+  const blank = await admin.from("sessions").update({ repo: "" }).eq("id", other.sessionId);
+  assert.ifError(blank.error);
+  const theirs = await other.client.rpc("learner_ownership");
+  assert.ifError(theirs.error);
+  assert.deepEqual(theirs.data, [{ repo: null, explained: 0, owned: 0, total: 1 }]);
+
+  const anon = await createClient(stack.url, stack.anonKey, options).rpc("learner_ownership");
+  assert.ok(anon.error, "anon called learner_ownership");
+});
+
+test("report: a learner reads only their own slug, switches only their own report and can't pick a slug", async () => {
+  for (const [me, other] of pairs()) {
+    const own = await me.client.from("profiles").select("report_on, report_slug").eq("id", me.id);
+    assert.ifError(own.error);
+    assert.equal(own.data.length, 1);
+    assert.match(own.data[0]?.report_slug ?? "", /^[0-9a-f]{32}$/);
+    assert.equal(own.data[0]?.report_on, false, "report is off by default");
+
+    const theirs = await me.client.from("profiles").select("report_slug").eq("id", other.id);
+    assert.ifError(theirs.error);
+    assert.equal(theirs.data.length, 0, "read another learner's report_slug");
+
+    const on = await me.client.from("profiles").update({ report_on: true }).eq("id", me.id);
+    assert.ifError(on.error);
+    const slug = await me.client
+      .from("profiles")
+      .update({ report_slug: "0".repeat(32) })
+      .eq("id", me.id);
+    assert.ok(slug.error, "learner wrote report_slug");
+
+    await me.client.from("profiles").update({ report_on: true }).eq("id", other.id);
+    const after = await admin.from("profiles").select("report_on").eq("id", other.id).single();
+    assert.equal(after.data?.report_on, false, "switched on another learner's report");
+    await admin.from("profiles").update({ report_on: false }).eq("id", me.id);
+  }
+});

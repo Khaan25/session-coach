@@ -31,7 +31,7 @@ export function ThemeToggle() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={<Button variant="secondary" size="icon" />}
-        aria-label={`Theme: ${theme}`}
+        aria-label="Change color theme"
       >
         <span className="relative size-4">
           <SunIcon

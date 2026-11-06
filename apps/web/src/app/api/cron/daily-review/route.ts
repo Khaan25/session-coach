@@ -7,6 +7,7 @@
  */
 import { NextResponse } from "next/server";
 
+import { UNIQUE_VIOLATION } from "@/lib/api/http";
 import { composeDailyReview } from "@/emails/daily-review-email";
 import {
   type AnswerRow,
@@ -26,8 +27,9 @@ import { siteUrl } from "@/lib/site";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
-/** Postgres unique_violation: this learner's `email_log` row for today exists, so they were emailed already. */
-const UNIQUE_VIOLATION = "23505";
+/** Set on purpose rather than left to the platform default: the run is serial, one learner at a time. */
+export const maxDuration = 300;
+
 const KIND = "daily_review";
 const DEFAULT_FROM = "Session Coach <noreply@coach.ziaa.me>";
 /** Learner ids per `in (...)` filter. */

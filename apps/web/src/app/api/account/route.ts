@@ -6,10 +6,10 @@
  */
 import { NextResponse } from "next/server";
 
+import { requireUser } from "@/lib/api/http";
 import { accountStoragePaths, SESSIONS_BUCKET } from "@/lib/settings/account-storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
-import { createClient } from "@/lib/supabase/server";
 
 /** Storage list and remove both take at most this many objects per call. */
 const BATCH = 1000;
@@ -21,12 +21,9 @@ const BATCH = 1000;
  * @returns 200 `{ deleted: true }`, 401 signed out, 500 when a step failed (the account is still there).
  */
 export async function DELETE() {
-  const supabase = await createClient();
-  // getUser(), not getClaims(): asks the auth server, so a deleted or banned user's live JWT is refused.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  const signedIn = await requireUser();
+  if (signedIn instanceof NextResponse) return signedIn;
+  const { supabase, user } = signedIn;
 
   try {
     const admin = createAdminClient();
