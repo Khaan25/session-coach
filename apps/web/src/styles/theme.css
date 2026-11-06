@@ -119,6 +119,24 @@
   animation: none;
 }
 
+/* A route fade or a card slide moves only by its own keyframes. The group would otherwise morph from the old page's size to the new one and
+   stretch the old snapshot with it, which reads as the page scaling down or up when two pages differ in height. So the
+   group snaps to the new size and both snapshots draw at their own size, pinned to the top. */
+::view-transition-group(.route-fade),
+::view-transition-group(.slide-forward),
+::view-transition-group(.slide-back) {
+  animation: none;
+}
+::view-transition-old(.route-fade),
+::view-transition-new(.route-fade),
+::view-transition-old(.slide-forward),
+::view-transition-new(.slide-forward),
+::view-transition-old(.slide-back),
+::view-transition-new(.slide-back) {
+  height: auto;
+  object-fit: none;
+  object-position: top;
+}
 ::view-transition-old(.route-fade) {
   animation: vt-fade-out var(--dur-fast) var(--ease-step) both;
 }
