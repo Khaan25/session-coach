@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { SessionStatus } from "@session-coach/shared/session";
 import { CaretRightIcon, FolderSimpleIcon } from "@phosphor-icons/react";
 
+import { OPEN_SESSION, SessionMorph } from "@/components/sessions/session-morph";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -66,34 +67,40 @@ export function NavSessions({
                   ? statusBadge.pending.props
                   : statusBadge[session.status].props,
               };
+              const href = `/s/${session.id}`;
+              const button = (
+                <SidebarMenuButton
+                  size="lg"
+                  isActive={pathname === href}
+                  render={<Link href={href} transitionTypes={[OPEN_SESSION]} />}
+                  // Native tooltip: the full title (it truncates) and what the second line means.
+                  title={[name, session.repo && `Repository: ${session.repo}`, badge.label]
+                    .filter(Boolean)
+                    .join("\n")}
+                >
+                  <div className="grid min-w-0 flex-1 gap-0.5">
+                    <span className="truncate">{name}</span>
+                    <span className="flex min-w-0 items-center gap-1.5 type-label-sm text-text-2">
+                      {session.repo && (
+                        <>
+                          <FolderSimpleIcon aria-hidden className="shrink-0" />
+                          <span className="sr-only">Repository:</span>
+                          <span className="truncate">{session.repo}</span>
+                        </>
+                      )}
+                      <span className="sr-only">Status:</span>
+                      <Badge size="sm" {...badge.props}>
+                        {badge.label}
+                      </Badge>
+                    </span>
+                  </div>
+                </SidebarMenuButton>
+              );
+              // One copy of a name per page: the dashboard list and the session's own title already hold it.
+              const morph = pathname !== "/dashboard" && pathname !== href;
               return (
                 <SidebarMenuItem key={session.id}>
-                  <SidebarMenuButton
-                    size="lg"
-                    isActive={pathname === `/s/${session.id}`}
-                    render={<Link href={`/s/${session.id}`} />}
-                    // Native tooltip: the full title (it truncates) and what the second line means.
-                    title={[name, session.repo && `Repository: ${session.repo}`, badge.label]
-                      .filter(Boolean)
-                      .join("\n")}
-                  >
-                    <div className="grid min-w-0 flex-1 gap-0.5">
-                      <span className="truncate">{name}</span>
-                      <span className="flex min-w-0 items-center gap-1.5 type-label-sm text-text-2">
-                        {session.repo && (
-                          <>
-                            <FolderSimpleIcon aria-hidden className="shrink-0" />
-                            <span className="sr-only">Repository:</span>
-                            <span className="truncate">{session.repo}</span>
-                          </>
-                        )}
-                        <span className="sr-only">Status:</span>
-                        <Badge size="sm" {...badge.props}>
-                          {badge.label}
-                        </Badge>
-                      </span>
-                    </div>
-                  </SidebarMenuButton>
+                  {morph ? <SessionMorph id={session.id}>{button}</SessionMorph> : button}
                 </SidebarMenuItem>
               );
             })}

@@ -4,15 +4,8 @@ import Link from "next/link";
 import { EmptyState } from "@/components/app/empty-state";
 import { AppPageHeader } from "@/components/app/page-header";
 import { ProjectTabs, type ProjectTab } from "@/components/app/project-tabs";
-import {
-  ANSWER_FIRST,
-  CardAnatomy,
-  ReviewLadder,
-  STEP_LABELS,
-} from "@/components/dashboard/card-anatomy";
-import { WhatsThis } from "@/components/dashboard/whats-this";
+import { ReviewLadder } from "@/components/dashboard/review-ladder";
 import { OwnershipMeter } from "@/components/progress/ownership-meter";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -36,18 +29,12 @@ import type { EmptyQueue, QueueCard } from "@/lib/review/queries";
 import { dueInWords, type Step } from "@/lib/review/schedule";
 import { DAILY_CAP } from "@/lib/review/today";
 
-// The dashboard as option B draws it (canvas: "Dashboard"), shared by /dashboard and /canvas so the two can't drift.
-// Takes everything as props: the page reads the learner's rows, the canvas passes synthetic ones.
+// The dashboard, shared by /dashboard and /canvas so the two can't drift. Its one job: what should I do next? One
+// column: today's cards first, then ownership, then sessions. Takes everything as props: the page reads the learner's
+// rows, the canvas passes synthetic ones.
 
-/**
- * The rail's card when the learner has none due: synthetic, marked as a sample, and only a decision and a question,
- * never the shared fixture or an answer key.
- */
-export const SAMPLE_ANATOMY = {
-  decision: "Rate limit the upload route per token, not per IP",
-  question: "Why is the limit keyed on the token rather than the IP?",
-  step: 2,
-} as const;
+const ANSWER_FIRST =
+  "You explain each card before you see its why; recalling it is what makes it stick.";
 
 const OWNERSHIP =
   "Explained means you got it right once. Owned means you still could on day 11, without looking.";
@@ -67,8 +54,8 @@ export type DashboardViewProps = {
   empty: EmptyQueue | null;
   /** Null when the read failed: the block is left out. */
   ownership: Ownership | null;
-  /** The next card's decision and question for the rail; null shows the sample card. */
-  anatomy: { decision: string; question: string; step: Step } | null;
+  /** shortcut: unused since the card rail was cut; /canvas still passes it. Drop it once the canvas stops. */
+  anatomy?: { decision: string; question: string; step: Step } | null;
   /** The session rows (live on the page); on a first visit, the "Send your first session" block. */
   sessions: React.ReactNode;
   /** Newer and Older, when there are more pages. */
@@ -84,14 +71,11 @@ export function DashboardView({
   due,
   empty,
   ownership,
-  anatomy,
   sessions,
   pager,
 }: DashboardViewProps) {
-  const grid = (
-    <DashboardGrid
-      rail={anatomy ? <CardAnatomy card={anatomy} /> : <CardAnatomy card={SAMPLE_ANATOMY} sample />}
-    >
+  const blocks = (
+    <div className="flex min-w-0 flex-col gap-6">
       {firstVisit ? (
         // The first step leads, and the list stays live under it, so the first session shows up without a reload.
         <>
@@ -99,7 +83,6 @@ export function DashboardView({
           <DueCard
             title="Due today"
             description={`Cards to explain land here, at most ${DAILY_CAP} a day. ${ANSWER_FIRST}`}
-            footer={false}
           >
             <CardContent>
               <ReviewLadder />
@@ -116,19 +99,16 @@ export function DashboardView({
               <CardTitle>
                 <h2>Sessions</h2>
               </CardTitle>
+              <CardDescription>
+                Each one the CLI sends keeps up to 5 decisions backed by a quote from the log.
+              </CardDescription>
             </CardHeader>
             {sessions}
             {pager && <CardFooter>{pager}</CardFooter>}
-            <CardFooter>
-              <WhatsThis label="Where do sessions come from?">
-                The CLI sends a finished Claude Code session. The server keeps up to 5 decisions it
-                can back with a quote from the log, and drops the rest.
-              </WhatsThis>
-            </CardFooter>
           </Card>
         </>
       )}
-    </DashboardGrid>
+    </div>
   );
   return (
     <>
@@ -137,16 +117,16 @@ export function DashboardView({
         description={
           firstVisit
             ? "Nothing here yet. Each block below says what will land in it."
-            : "Your agent’s decisions, project by project. Open any “What’s this?” to learn the part next to it."
+            : "What to explain next, and how your agent’s decisions are sticking."
         }
       />
       {before}
       {tabs ? (
         <ProjectTabs tabs={tabs} repo={repo}>
-          {grid}
+          {blocks}
         </ProjectTabs>
       ) : (
-        grid
+        blocks
       )}
     </>
   );
@@ -168,16 +148,6 @@ export function FirstSessionEmpty() {
   );
 }
 
-/** The blocks in a two-thirds main column, one card taken apart in the rail beside them. */
-function DashboardGrid({ rail, children }: { rail: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="grid items-start gap-6 lg:grid-cols-3">
-      <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">{children}</div>
-      {rail}
-    </div>
-  );
-}
-
 /** Today's cards (the `todayQueue` rule, at most 5 a day), or why there are none. Never a card's why. */
 function DueBlock({
   queue,
@@ -190,7 +160,9 @@ function DueBlock({
       <DueCard
         title={`${due.length} ${due.length === 1 ? "card is" : "cards are"} due today`}
         description={
-          repo && due.length === 0 ? `None of today's ${queue.length} are from ${repo}.` : undefined
+          repo && due.length === 0
+            ? `None of today's ${queue.length} are from ${repo}.`
+            : ANSWER_FIRST
         }
         cards={due}
         start
@@ -226,12 +198,12 @@ function DueBlock({
   );
 }
 
+/** The page's hero: the large card size, today's count as its title and the one primary action. */
 function DueCard({
   title,
   description,
   cards = [],
   start,
-  footer = true,
   children,
 }: {
   title: string;
@@ -239,12 +211,10 @@ function DueCard({
   cards?: QueueCard[];
   /** Offers "Start review": there are cards left today. */
   start?: boolean;
-  /** The "Why can't I see the answers?" footer. */
-  footer?: boolean;
   children?: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card size="lg">
       <CardHeader>
         <CardTitle>
           <h2>{title}</h2>
@@ -270,17 +240,11 @@ function DueCard({
                 </ItemTitle>
                 <ItemDescription>{card.question}</ItemDescription>
               </ItemContent>
-              <Badge variant="outline">{STEP_LABELS[card.step]}</Badge>
             </Item>
           ))}
         </ItemGroup>
       )}
       {children}
-      {footer && (
-        <CardFooter>
-          <WhatsThis label="Why can’t I see the answers?">{ANSWER_FIRST}</WhatsThis>
-        </CardFooter>
-      )}
     </Card>
   );
 }
@@ -293,11 +257,7 @@ function OwnershipBlock({ ownership }: { ownership: Ownership }) {
       <OwnershipMeter
         ownership={ownership}
         title={`Explained ${explained} · owned ${owned} of ${total}`}
-        footer={
-          <WhatsThis label="Explained or owned?">
-            {OWNERSHIP} Owned stays at 0 until your first card passes its day 11 review.
-          </WhatsThis>
-        }
+        footer={<p className="type-body-sm text-text-2">{OWNERSHIP}</p>}
       />
     );
   return (

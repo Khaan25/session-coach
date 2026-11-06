@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 import { Skeleton } from "skullet/react";
 
 /**
@@ -17,9 +17,13 @@ export function MeasuredSuspense({
   skeleton: React.ReactNode;
   children: React.ReactNode;
 }) {
+  // The skeleton fades out and the content fades in on the route recipe (theme.css); "none" keeps both still in
+  // unrelated transitions.
   return (
     <Suspense fallback={<MeasuredSkeleton label={label}>{skeleton}</MeasuredSkeleton>}>
-      {children}
+      <ViewTransition enter="route-fade" default="none">
+        {children}
+      </ViewTransition>
     </Suspense>
   );
 }
@@ -33,8 +37,10 @@ export function MeasuredSkeleton({
   children: React.ReactNode;
 }) {
   return (
-    <Skeleton loading label={label}>
-      {children}
-    </Skeleton>
+    <ViewTransition exit="route-fade" default="none">
+      <Skeleton loading label={label}>
+        {children}
+      </Skeleton>
+    </ViewTransition>
   );
 }
