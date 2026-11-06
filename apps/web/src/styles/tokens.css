@@ -39,10 +39,10 @@
 
 :root {
   /* == Ink and paper == */
-  --ink-c: 18% 0 0; /* the ink channel: cold navy graphite, 18.0:1 on --surface-page and 15.9:1 on --surface-card; every text and line is this at an alpha | all ink tokens */
-  --paper-c: 100% 0 0; /* the paper channel: an icy white | all paper tokens */
-  --grey-c: 96.5% 0 0; /* the grey field channel, cool like the ink | surface-card */
-  --canvas-c: 98.8% 0 0; /* the canvas channel: the cool fog behind cards and frames | surface-canvas */
+  --ink-c: 18% 0 0; /* the ink channel: neutral graphite, about 17:1 on --surface-page and 15:1 on --surface-card; every text and line is this at an alpha | all ink tokens */
+  --paper-c: 100% 0 0; /* the paper channel: plain white | all paper tokens */
+  --grey-c: 96.5% 0 0; /* the grey field channel, neutral like the ink | surface-card */
+  --canvas-c: 98.8% 0 0; /* the canvas channel: the faint grey behind cards and frames | surface-canvas */
   --text-on-field-c: 18% 0 0; /* the fixed dark channel: text on hue and every shadow; never flips | text-on-field, elev-overlay */
   --shadow-alpha: 0.2; /* overlay shadow strength; the dark theme raises it | elev-overlay */
   --brand-c: 44% 0.16 263; /* the one brand blue, #1c4bb0; white on it is 7.6:1 and it never flips | primary button, brand mark */
@@ -666,7 +666,7 @@
   --button-secondary-hover: color-mix(in oklch, oklch(var(--grey-c)), oklch(var(--ink-c)) 7%);
 }
 
-/* Dark theme. Ink and paper swap channels: deep navy paper on a darker canvas, near-white ink. Marks and fields keep their
+/* Dark theme. Ink and paper swap channels: graphite paper on a darker canvas, near-white ink. Marks and fields keep their
    values, so text on them stays --text-on-field; washes become deep tints of the same hue and lines take
    the marks, which clear 3:1 on the dark page and the dark card. [data-surface="ink"] is the same swap
    for one always-dark section, and [data-surface="paper"] swaps back inside it.

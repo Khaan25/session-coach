@@ -33,7 +33,7 @@ export function Hero() {
       <div className="flex max-w-4xl flex-col items-center gap-6">
         <h1 id="hero-title" className="type-display text-balance text-text-1 sm:type-display-xl">
           Own the code your agent writes.{" "}
-          <span className="block text-text-2">Explain each decision until it&rsquo;s yours.</span>
+          <span className="block text-text-2">Explain it until it&rsquo;s yours.</span>
         </h1>
         <p className="max-w-160 type-body-lg text-pretty text-text-2">
           Each Claude Code session becomes up to 5 decision cards, filed by project. Answer each in
@@ -56,7 +56,7 @@ export function Hero() {
           </p>
         </div>
       </div>
-      <Reveal className="w-full">
+      <div className="w-full">
         {/* The real dashboard, shot by e2e/screens.spec.ts at 1440x900, in a plain browser frame. */}
         <figure className="frame bg-page">
           <div aria-hidden className="flex gap-1.5 px-4 py-3 rule-row-frame">
@@ -81,7 +81,7 @@ export function Hero() {
             className="hidden h-auto w-full dark:block"
           />
         </figure>
-      </Reveal>
+      </div>
     </section>
   );
 }
@@ -158,7 +158,11 @@ const trust = [
 
 export function TrustSection() {
   return (
-    <section aria-labelledby="trust-title" data-surface="ink" className="bg-page py-16 sm:py-24">
+    <section
+      aria-labelledby="trust-title"
+      data-surface="inverse"
+      className="bg-page py-16 sm:py-24"
+    >
       <Reveal className={section}>
         <SectionHeading
           id="trust-title"

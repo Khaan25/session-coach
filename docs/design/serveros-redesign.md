@@ -46,8 +46,8 @@ Job: answer this one question.
 Job: what did this session decide?
 
 - Keep: title, repo and branch, status, the decision card list, and the failed, processing and empty states.
-- Cut: the Started stat. Duration and Cards stay; the start time moves to a tooltip on the duration.
-- Motion: a session row in the sidebar or on the dashboard morphs into this page's title with a named `<ViewTransition>`.
+- Cut: the Started stat. Duration and Cards stay; the start time moves into the duration's detail line ("min · started 2 hours ago").
+- Motion: the route crossfade only. A row-to-title morph was built and removed in review: the title loads inside Suspense, so the shared pair rarely formed, and toggling the name remounted the sidebar link and dropped focus.
 
 ## /progress
 

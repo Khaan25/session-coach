@@ -54,8 +54,6 @@ export type DashboardViewProps = {
   empty: EmptyQueue | null;
   /** Null when the read failed: the block is left out. */
   ownership: Ownership | null;
-  /** shortcut: unused since the card rail was cut; /canvas still passes it. Drop it once the canvas stops. */
-  anatomy?: { decision: string; question: string; step: Step } | null;
   /** The session rows (live on the page); on a first visit, the "Send your first session" block. */
   sessions: React.ReactNode;
   /** Newer and Older, when there are more pages. */

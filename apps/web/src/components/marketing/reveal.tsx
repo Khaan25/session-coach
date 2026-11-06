@@ -7,6 +7,7 @@ import { MotionConfig, motion } from "motion/react";
 // --ease-out-expo (motion takes numbers, so the token values are repeated here). Reduced motion shows the block as it
 // is: the motion-reduce classes override the inline start styles, so nothing waits on a scroll that never animates.
 // Without JavaScript the start styles would stay, so styles/theme.css shows every [data-reveal] under scripting: none.
+// shortcut: these copy --enter-blur (8px), --enter-rise (12px), --dur-reveal (0.7s) and --ease-out-expo; retune both together.
 const hidden = { opacity: 0, filter: "blur(8px)", y: 12 };
 const shown = { opacity: 1, filter: "blur(0px)", y: 0 };
 

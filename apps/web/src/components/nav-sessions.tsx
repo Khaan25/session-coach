@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import type { SessionStatus } from "@session-coach/shared/session";
 import { CaretRightIcon, FolderSimpleIcon } from "@phosphor-icons/react";
 
-import { OPEN_SESSION, SessionMorph } from "@/components/sessions/session-morph";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -72,7 +71,7 @@ export function NavSessions({
                 <SidebarMenuButton
                   size="lg"
                   isActive={pathname === href}
-                  render={<Link href={href} transitionTypes={[OPEN_SESSION]} />}
+                  render={<Link href={href} />}
                   // Native tooltip: the full title (it truncates) and what the second line means.
                   title={[name, session.repo && `Repository: ${session.repo}`, badge.label]
                     .filter(Boolean)
@@ -96,13 +95,7 @@ export function NavSessions({
                   </div>
                 </SidebarMenuButton>
               );
-              // One copy of a name per page: the dashboard list and the session's own title already hold it.
-              const morph = pathname !== "/dashboard" && pathname !== href;
-              return (
-                <SidebarMenuItem key={session.id}>
-                  {morph ? <SessionMorph id={session.id}>{button}</SessionMorph> : button}
-                </SidebarMenuItem>
-              );
+              return <SidebarMenuItem key={session.id}>{button}</SidebarMenuItem>;
             })}
           </SidebarMenu>
         </SidebarGroupContent>

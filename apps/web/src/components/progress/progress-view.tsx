@@ -67,7 +67,7 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
     : ownership.overall;
   const body = (
     <>
-      <section aria-label={repo ? `Your cards in ${repo}` : "All your cards"}>
+      <section>
         <p className="type-stat-xl text-text-1">
           {`${counts.total} cards · ${counts.explained} explained · ${counts.owned} owned`}
         </p>

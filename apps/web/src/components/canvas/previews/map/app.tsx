@@ -76,7 +76,6 @@ export function MapDashboardLoading() {
             due={SAMPLE_QUEUE}
             empty={null}
             ownership={SAMPLE_OWNERSHIP}
-            anatomy={null}
             sessions={<SessionRows rows={SAMPLE_SESSIONS} now={SAMPLE_NOW} />}
           />
         </MeasuredSkeleton>

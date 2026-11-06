@@ -52,9 +52,6 @@ export function DashboardHomeOptionB({
           due={due}
           empty={empty ? EMPTY_DUE[empty] : null}
           ownership={SAMPLE_OWNERSHIP}
-          anatomy={
-            next ? { decision: next.decision, question: next.question, step: next.step } : null
-          }
           sessions={
             <SessionRows
               rows={SAMPLE_SESSIONS.filter((session) => !repo || session.repo === repo)}
@@ -79,7 +76,6 @@ export function DashboardHomeOptionBEmpty() {
           due={[]}
           empty={null}
           ownership={{ overall: { explained: 0, owned: 0, total: 0 }, repos: [] }}
-          anatomy={null}
           sessions={<FirstSessionEmpty />}
         />
       </Container>

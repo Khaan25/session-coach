@@ -144,10 +144,10 @@
   animation-timing-function: var(--ease-drawer);
 }
 
+/* No blur here: a filter on a viewport-sized snapshot is costly on phones, and routes change often. */
 @keyframes vt-fade-in {
   from {
     opacity: 0;
-    filter: blur(var(--enter-blur));
     translate: 0 var(--enter-rise);
   }
 }
@@ -179,6 +179,17 @@
     opacity: 0;
     translate: var(--route-slide) 0;
   }
+}
+
+/* The marketing nav settling into its floating pill (components/marketing/site-nav-pill.tsx): only the properties
+   that change, never `all`. */
+@utility transition-nav {
+  transition-property: max-width, height, margin-top, padding, background-color, border-color;
+}
+
+/* The marketing nav is sticky, so a focused element or an #anchor must stop below it (WCAG 2.4.11). */
+:root:has([data-site-nav]) {
+  scroll-padding-top: calc(var(--topbar) + var(--space-10));
 }
 
 /* Marketing reveals (components/marketing/reveal.tsx) start hidden in inline styles that only JavaScript lifts. With
