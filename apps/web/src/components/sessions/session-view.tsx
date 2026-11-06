@@ -56,6 +56,12 @@ export function SessionView({
           {branch && <Code>{branch}</Code>}
           {meta && <span className="data">{meta}</span>}
         </div>
+        {!stuck && status === "ready" && cards.length > 0 && (
+          <p className="mt-2 type-body text-pretty text-text-2">
+            Each card is one decision your agent made. Explain why in your own words; the reason and
+            its quote open after you answer.
+          </p>
+        )}
       </header>
 
       {stuck ? (
@@ -88,21 +94,15 @@ export function SessionView({
           }
         />
       ) : (
-        <div className="flex flex-col gap-4">
-          <p className="type-body text-text-2">
-            Each card is one decision your agent made. Explain why in your own words; the reason and
-            its quote open after you answer.
-          </p>
-          {/* More room between decisions than inside one, so each heading groups with its own card. */}
-          <div className="flex flex-col gap-8">
-            {cards.map((card) =>
-              card.locked ? (
-                <LockedDecisionCard key={card.id} card={card} />
-              ) : (
-                <DecisionCard key={card.id} card={card} />
-              ),
-            )}
-          </div>
+        // More room between decisions than inside one, so each heading groups with its own card.
+        <div className="flex flex-col gap-8">
+          {cards.map((card) =>
+            card.locked ? (
+              <LockedDecisionCard key={card.id} card={card} />
+            ) : (
+              <DecisionCard key={card.id} card={card} />
+            ),
+          )}
         </div>
       )}
     </Container>

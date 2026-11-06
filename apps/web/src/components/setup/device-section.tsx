@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SectionHeader } from "@/components/setup/section-header";
 import { Card } from "@/components/ui/card";
-import { CodeBlock } from "@/components/ui/code-block";
+import { Code, CodeBlock } from "@/components/ui/code-block";
 import { useDryRun } from "@/components/app/dry-run";
 import { toast } from "@/components/ui/toast";
 import {
@@ -70,7 +70,12 @@ export function DeviceSection({ initialTokens }: { initialTokens: DeviceListRow[
             <span className="type-body-sm text-text-3 tabular-nums">{tokens.length}</span>
           )
         }
-        description="Each computer you run session-coach login on shows up here. Revoke one to sign it out."
+        description={
+          <>
+            Each computer you run <Code>session-coach login</Code> on shows up here. Revoke one to
+            sign it out.
+          </>
+        }
         action={
           <CreateTokenDialog
             onCreate={(row) => {
@@ -113,7 +118,12 @@ export function DeviceSection({ initialTokens }: { initialTokens: DeviceListRow[
           <EmptyState
             variant="plain"
             title="No computer connected yet"
-            description="Copy the setup prompt into your agent, or run npx session-coach login yourself."
+            description={
+              <>
+                Copy the setup prompt into your agent, or run <Code>npx session-coach login</Code>{" "}
+                yourself.
+              </>
+            }
           />
         )}
       </Card>

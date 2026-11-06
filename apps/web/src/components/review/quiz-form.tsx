@@ -18,7 +18,7 @@ import { Code } from "@/components/ui/code-block";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import { Stat, StatDescription, StatGroup, StatLabel, StatValue } from "@/components/ui/stat";
+import { Stat, StatDescription, StatLabel, StatValue } from "@/components/ui/stat";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
@@ -108,7 +108,7 @@ export function QuizForm({
     setPending("answer");
     toast
       .promise(send(cardId, { answer: trimmed }), {
-        loading: "Scoring your answer",
+        loading: "Scoring your answer…",
         success: (result) => {
           setGrade(result);
           return {
@@ -217,8 +217,8 @@ export function QuizResult({
           )}
         </CardHeader>
         <CardContent>
-          {/* plain: the card is the frame, so the stats draw only the rule between them. */}
-          <StatGroup variant="plain">
+          {/* A plain row, not a StatGroup: its cells are inset, which pulled the stats off the list's left edge. */}
+          <div className="flex flex-wrap gap-x-12 gap-y-4">
             {!skipped && (
               <Stat>
                 <StatLabel>Score</StatLabel>
@@ -239,7 +239,7 @@ export function QuizResult({
               </StatValue>
               {!grade.nextDue && <StatDescription>You&rsquo;ve mastered this card</StatDescription>}
             </Stat>
-          </StatGroup>
+          </div>
           <DataList variant="divided" orientation="vertical">
             {!skipped && (
               <DataListItem>
@@ -386,7 +386,7 @@ export function QuizAnswer({
             {/* Row-reverse keeps the primary first for focus and stacking, and last (rightmost) on a wide screen. */}
             <div className="flex flex-col gap-3 sm:flex-row-reverse">
               <Button type="submit" disabled={pending !== null}>
-                {pending === "answer" ? "Scoring" : "Submit answer"}
+                {pending === "answer" ? "Scoring…" : "Submit answer"}
               </Button>
               <Button
                 type="button"
@@ -394,7 +394,7 @@ export function QuizAnswer({
                 disabled={pending !== null}
                 onClick={onSkip}
               >
-                {pending === "skip" ? "Showing the why" : "I don’t know yet"}
+                {pending === "skip" ? "Showing the why…" : "I don’t know yet"}
               </Button>
             </div>
           </div>

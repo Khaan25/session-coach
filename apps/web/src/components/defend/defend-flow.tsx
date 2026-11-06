@@ -300,7 +300,7 @@ export function DefendStart({
       <div className="flex flex-col gap-2">
         <div>
           <Button onClick={onStart} disabled={pending}>
-            {pending ? "Picking a decision" : `Start: pick one of ${defendable}`}
+            {pending ? "Picking a decision…" : `Start: pick one of ${defendable}`}
           </Button>
         </div>
         {error && <FieldError>{error}</FieldError>}
@@ -451,9 +451,9 @@ export function DefendTimed({
         <Button type="submit" disabled={pending || expired}>
           {pending ? (
             followUp ? (
-              "Grading"
+              "Grading…"
             ) : (
-              "Writing the follow-up"
+              "Writing the follow-up…"
             )
           ) : (
             <>

@@ -13,9 +13,17 @@ import { AppPageHeader } from "@/components/app/page-header";
 import { ProjectTabs } from "@/components/app/project-tabs";
 import { AnswersChart } from "@/components/progress/answers-chart";
 import { OwnershipMeter } from "@/components/progress/ownership-meter";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Item, ItemActions, ItemContent, ItemLink, ItemTitle } from "@/components/ui/item";
-import { Stat, StatDescription, StatLabel, StatValue } from "@/components/ui/stat";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemLink,
+  ItemMedia,
+  ItemTitle,
+} from "@/components/ui/item";
 import type { Ownership } from "@/lib/progress/ownership";
 import {
   REVIEW_STEPS,
@@ -24,13 +32,13 @@ import {
   type ReviewStep,
 } from "@/lib/progress/progress";
 
-// /progress answers "am I making these decisions mine?": the summary line as the hero with today's task under it, the
-// cards per review step, the one chart, then By project and By session. Shared by the page, its skeleton and /canvas;
-// everything comes in as props.
+// /progress answers "am I making these decisions mine?": the summary line as the hero with today's task under it, then
+// two pairs of framed lists side by side from lg: cards per review step beside the one chart, By project beside By
+// session. Shared by the page, its skeleton and /canvas; everything comes in as props.
 
 const DESCRIPTION = "How many of your decisions you can explain, and how many you own.";
 
-/** Each step's icon and what it means, short enough for a 2-column phone grid. Reviews are on day 1, 4 and 11. */
+/** Each step's icon and what it means, one short line under its name. Reviews are on day 1, 4 and 11. */
 const stepMeta: Record<ReviewStep, { icon: Icon; means: string }> = {
   new: { icon: CardsIcon, means: "Not answered yet" },
   "day-1": { icon: CalendarBlankIcon, means: "Answered once, or missed" },
@@ -87,78 +95,89 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
         <TodayBanner dueToday={dueToday} dueOnDay11={dueOnDay11} allProjects={repo !== null} />
       </section>
 
-      <section className="flex flex-col gap-4">
-        <SectionTitle count={progress.totalCards}>Cards by step</SectionTitle>
-        {/* Equal cards, one per step: two across on a phone, three on a tablet, all five from lg. */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {REVIEW_STEPS.map((step) => {
-            const { icon: StepIcon, means } = stepMeta[step];
-            return (
-              <Stat key={step} variant="framed">
-                <div className="flex items-center justify-between gap-2 text-text-3">
-                  <StatLabel>{stepLabels[step]}</StatLabel>
-                  <StepIcon aria-hidden />
-                </div>
-                <StatValue>{progress.steps[step]}</StatValue>
-                <StatDescription>{means}</StatDescription>
-              </Stat>
-            );
-          })}
-        </div>
-      </section>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle skullet-own="">
+              <h2>
+                Cards by step <Count n={progress.totalCards} />
+              </h2>
+            </CardTitle>
+          </CardHeader>
+          <ul aria-label="Cards by step">
+            {REVIEW_STEPS.map((step) => {
+              const { icon: StepIcon, means } = stepMeta[step];
+              return (
+                <Item key={step} render={<li />}>
+                  <ItemMedia variant="icon">
+                    <StepIcon aria-hidden />
+                  </ItemMedia>
+                  <ItemContent>
+                    <ItemTitle>{stepLabels[step]}</ItemTitle>
+                    <ItemDescription>{means}</ItemDescription>
+                  </ItemContent>
+                  <ItemActions>
+                    <span className="data type-heading-sm text-text-1">{progress.steps[step]}</span>
+                  </ItemActions>
+                </Item>
+              );
+            })}
+          </ul>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle skullet-own="">
-            <h2>Answers per day</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AnswersChart data={progress.answersPerDay} />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle skullet-own="">
+              <h2>Answers per day</h2>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AnswersChart data={progress.answersPerDay} />
+          </CardContent>
+        </Card>
+      </div>
 
-      {ownership.repos.length > 0 && (
-        <OwnershipMeter
-          ownership={ownership}
-          title={
-            <>
-              By project <Count n={ownership.repos.length} />
-            </>
-          }
-          path="/progress"
-        />
-      )}
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        {ownership.repos.length > 0 && (
+          <OwnershipMeter
+            ownership={ownership}
+            title={
+              <>
+                By project <Count n={ownership.repos.length} />
+              </>
+            }
+            path="/progress"
+          />
+        )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle skullet-own="">
-            <h2>
-              By session <Count n={progress.bySession.length} />
-            </h2>
-          </CardTitle>
-        </CardHeader>
-        {/* A plain list, not an ItemGroup: rows straight in the card share its frame and rules, no inset panel. */}
-        <ul aria-label="Cards by session">
-          {progress.bySession.map(({ id, title, mastered, total }) => (
-            <Item key={id} render={<li />}>
-              <ItemContent>
-                <ItemTitle>
-                  <ItemLink render={<Link href={`/s/${id}`} />}>{title}</ItemLink>
-                </ItemTitle>
-              </ItemContent>
-              <ItemContent>
-                <span className="type-body-sm text-text-2">
-                  {mastered} of {total} cards owned
-                </span>
-              </ItemContent>
-              <ItemActions>
-                <ArrowRightIcon aria-hidden className="text-text-3 rtl:-scale-x-100" />
-              </ItemActions>
-            </Item>
-          ))}
-        </ul>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle skullet-own="">
+              <h2>
+                By session <Count n={progress.bySession.length} />
+              </h2>
+            </CardTitle>
+          </CardHeader>
+          {/* A plain list, not an ItemGroup: rows straight in the card share its frame and rules, no inset panel. */}
+          <ul aria-label="Cards by session">
+            {progress.bySession.map(({ id, title, mastered, total }) => (
+              <Item key={id} render={<li />}>
+                <ItemContent>
+                  <ItemTitle>
+                    <ItemLink render={<Link href={`/s/${id}`} />}>{title}</ItemLink>
+                  </ItemTitle>
+                </ItemContent>
+                <ItemActions>
+                  <span className="data type-body-sm whitespace-nowrap text-text-2">
+                    {mastered} of {total} cards owned
+                  </span>
+                  <ArrowRightIcon aria-hidden className="text-text-3 rtl:-scale-x-100" />
+                </ItemActions>
+              </Item>
+            ))}
+          </ul>
+        </Card>
+      </div>
     </>
   );
   return (
@@ -195,15 +214,6 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
 /** A section's count, muted, after its title on the same line. */
 const Count = ({ n }: { n: number }) => <span className="data text-text-3">{n}</span>;
 
-/** A section's h2 outside a card: the title, then its count. */
-function SectionTitle({ count, children }: { count: number; children: React.ReactNode }) {
-  return (
-    <h2 className="type-heading-xs text-text-1">
-      {children} <Count n={count} />
-    </h2>
-  );
-}
-
 /** The one task for today: the review queue's count, and what one of its cards is a pass away from. */
 function TodayBanner({
   dueToday,
@@ -221,7 +231,7 @@ function TodayBanner({
           <h2 className="flex items-center gap-2">
             <CalendarCheckIcon aria-hidden />
             {dueToday > 0 ? (
-              <Link href="/review">
+              <Link href="/review" className={buttonVariants({ variant: "link" })}>
                 {dueToday} {dueToday === 1 ? "card is" : "cards are"} due today
               </Link>
             ) : (
