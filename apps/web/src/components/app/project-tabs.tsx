@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useOptimistic, useTransition } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { useOptimisticNavigation } from "@/hooks/use-optimistic-navigation";
 
 /** One project tab: a repo (null for every project) and the page's URL filtered to it. */
 export type ProjectTab = { repo: string | null; href: string };
@@ -23,7 +24,10 @@ export function ProjectTabs({
   repo: string | null;
   children: React.ReactNode;
 }) {
-  const { current, pending, navigate } = useOptimisticNavigation(repo);
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  // Back to `repo` when the navigation lands, or if it fails.
+  const [current, setCurrent] = useOptimistic(repo);
   return (
     <>
       <nav aria-label="Projects" className="flex flex-wrap gap-2">
@@ -36,7 +40,14 @@ export function ProjectTabs({
               variant: name === current ? "secondary" : "ghost",
               size: "sm",
             })}
-            onNavigate={navigate(name, href)}
+            onNavigate={(event) => {
+              // The router's own push, inside this transition, so `pending` lasts until the new page renders.
+              event.preventDefault();
+              startTransition(() => {
+                setCurrent(name);
+                router.push(href);
+              });
+            }}
           >
             {name ?? "All projects"}
           </Link>
