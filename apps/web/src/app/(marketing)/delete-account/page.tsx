@@ -2,7 +2,7 @@ import { EnvelopeSimpleIcon } from "@phosphor-icons/react/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { MarketingPageHeader } from "@/components/marketing/marketing-page-header";
+import { MarketingPage } from "@/components/marketing/marketing-page-header";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supportEmail } from "@/lib/site";
 
@@ -13,13 +13,11 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <div className="mx-auto flex w-full max-w-(--container) flex-col gap-16 px-(--gutter-sm) py-16 sm:px-(--gutter) sm:py-20">
-      <MarketingPageHeader title="Delete your account">
-        Deleting your account removes your profile, sessions, session logs, decision cards, answers
-        and CLI tokens for good.
-      </MarketingPageHeader>
-
-      <section aria-labelledby="signed-in-title" className="flex max-w-xl flex-col gap-6">
+    <MarketingPage
+      title="Delete your account"
+      lead="Deleting your account removes your profile, sessions, session logs, decision cards, answers and CLI tokens for good."
+    >
+      <section aria-labelledby="signed-in-title" className="flex flex-col gap-6">
         <Card>
           <CardHeader>
             <CardTitle>
@@ -56,6 +54,6 @@ export default function Page() {
           </CardHeader>
         </Card>
       </section>
-    </div>
+    </MarketingPage>
   );
 }

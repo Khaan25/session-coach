@@ -2,6 +2,7 @@ import { TerminalWindowIcon } from "@phosphor-icons/react/ssr";
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { MarketingPage } from "@/components/marketing/marketing-page-header";
 import { buttonVariants } from "@/components/ui/button";
 
 // No billing code here: the plan says free during the trial, one plan. Every claim must match the code
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
   description: "Session Coach is free during the trial. One plan with everything in it.",
 };
 
-// The three things people ask before they sign up, answered in a row under the price.
+// The three things people ask before they sign up, answered in a list under the price.
 const questions = [
   {
     q: "Do I need a card?",
@@ -30,26 +31,22 @@ const questions = [
 
 export default function Page() {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-10 px-(--gutter-sm) py-16 text-center sm:px-(--gutter) sm:py-20">
-      <div className="flex flex-col items-center gap-4">
-        <h1 className="font-display text-7xl leading-none text-text-1 sm:text-8xl">Free</h1>
-        <p className="type-body-lg text-pretty text-text-2">
-          One plan with everything in it, during the trial.
-        </p>
-      </div>
+    <MarketingPage title="Free" lead="One plan with everything in it, during the trial.">
       {/* The CLI has shipped, so the plan's call to action is setup. */}
-      <Link href="/setup" className={buttonVariants({ size: "lg" })}>
-        <TerminalWindowIcon weight="duotone" data-icon="inline-start" aria-hidden />
-        Set it up
-      </Link>
-      <dl className="grid w-full gap-6 text-start sm:grid-cols-3">
+      <div>
+        <Link href="/setup" className={buttonVariants({ size: "lg" })}>
+          <TerminalWindowIcon weight="duotone" data-icon="inline-start" aria-hidden />
+          Set it up
+        </Link>
+      </div>
+      <dl className="flex flex-col divide-y divide-line-row">
         {questions.map(({ q, a }) => (
-          <div key={q} className="flex flex-col gap-2">
+          <div key={q} className="flex flex-col gap-1 py-4">
             <dt className="type-label text-text-1">{q}</dt>
-            <dd className="type-body-sm text-text-2">{a}</dd>
+            <dd className="type-body text-text-2">{a}</dd>
           </div>
         ))}
       </dl>
-    </div>
+    </MarketingPage>
   );
 }
