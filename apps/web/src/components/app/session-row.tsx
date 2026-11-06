@@ -24,7 +24,7 @@ type SessionRowProps = {
 };
 
 /**
- * One session in the dashboard list, for an ItemGroup: title (or repo and branch), repo, when, card count and the
+ * One session in the dashboard list, for a role="list" div of rows: title (or repo and branch), repo, when, card count and the
  * status word. A ready row links to its cards; a failed row shows the pipeline's learner-readable error.
  */
 export function SessionRow({ session, cardCount, now }: SessionRowProps) {
@@ -32,7 +32,7 @@ export function SessionRow({ session, cardCount, now }: SessionRowProps) {
   const name = sessionName({ title, repo, branch });
   const when = formatRelativeTime(created_at, now);
   return (
-    // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role, not an li.
+    // Its list (an ItemGroup, or the dashboard card's rows) is a div with role="list", so the row takes the matching role, not an li.
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <Item role="listitem" data-status={status === "failed" ? "fail" : undefined}>
       <ItemContent>

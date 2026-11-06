@@ -16,8 +16,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CodeBlock } from "@/components/ui/code-block";
+import { SectionHeader } from "@/components/setup/section-header";
+import { Card } from "@/components/ui/card";
+import { Code, CodeBlock } from "@/components/ui/code-block";
 import { useDryRun } from "@/components/app/dry-run";
 import { toast } from "@/components/ui/toast";
 import {
@@ -61,60 +62,72 @@ async function errorOf(response: Response | null) {
 export function DeviceSection({ initialTokens }: { initialTokens: DeviceListRow[] }) {
   const [tokens, setTokens] = useState(initialTokens);
   return (
-    <Card>
-      <CardHeader>
-        {/* skullet-own: static text stays real in the skeleton; only the tokens are drawn as bars. */}
-        <CardTitle skullet-own="">
-          <h2>Connected devices</h2>
-        </CardTitle>
-        <CardDescription skullet-own="">
-          Each computer you run session-coach login on shows up here. Revoke one to sign it out.
-        </CardDescription>
-        <CardAction>
+    <section className="flex flex-col gap-3">
+      <SectionHeader
+        title="Connected devices"
+        meta={
+          tokens.length > 0 && (
+            <span className="type-body-sm text-text-3 tabular-nums">{tokens.length}</span>
+          )
+        }
+        description={
+          <>
+            Each computer you run <Code>session-coach login</Code> on shows up here. Revoke one to
+            sign it out.
+          </>
+        }
+        action={
           <CreateTokenDialog
             onCreate={(row) => {
               setTokens((rows) => [row, ...rows]);
               toast.add({ type: "success", title: "Token created", description: row.label });
             }}
           />
-        </CardAction>
-      </CardHeader>
-      {tokens.length > 0 ? (
-        <ItemGroup>
-          {tokens.map((token) => (
-            // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
-            <Item key={token.id} role="listitem">
-              <ItemMedia variant="icon">
-                <LaptopIcon aria-hidden="true" />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{token.label}</ItemTitle>
-                <ItemDescription>
-                  <span className="flex flex-wrap gap-x-3">
-                    <span>Created {token.created}</span>
-                    <span>{token.lastUsed ? `Last used ${token.lastUsed}` : "Never used"}</span>
-                  </span>
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <RevokeTokenDialog
-                  id={token.id}
-                  label={token.label}
-                  onRevoke={() => setTokens((rows) => rows.filter(({ id }) => id !== token.id))}
-                />
-              </ItemActions>
-            </Item>
-          ))}
-        </ItemGroup>
-      ) : (
-        <EmptyState
-          variant="plain"
-          title="No computer connected yet"
-          description="Copy the setup prompt into your agent, or run npx session-coach login yourself."
-        />
-      )}
-    </Card>
+        }
+      />
+      <Card>
+        {tokens.length > 0 ? (
+          <ItemGroup>
+            {tokens.map((token) => (
+              // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
+              // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
+              <Item key={token.id} role="listitem">
+                <ItemMedia variant="icon">
+                  <LaptopIcon aria-hidden="true" />
+                </ItemMedia>
+                <ItemContent>
+                  <ItemTitle>{token.label}</ItemTitle>
+                  <ItemDescription>
+                    <span className="flex flex-wrap gap-x-3">
+                      <span>Created {token.created}</span>
+                      <span>{token.lastUsed ? `Last used ${token.lastUsed}` : "Never used"}</span>
+                    </span>
+                  </ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <RevokeTokenDialog
+                    id={token.id}
+                    label={token.label}
+                    onRevoke={() => setTokens((rows) => rows.filter(({ id }) => id !== token.id))}
+                  />
+                </ItemActions>
+              </Item>
+            ))}
+          </ItemGroup>
+        ) : (
+          <EmptyState
+            variant="plain"
+            title="No computer connected yet"
+            description={
+              <>
+                Copy the setup prompt into your agent, or run <Code>npx session-coach login</Code>{" "}
+                yourself.
+              </>
+            }
+          />
+        )}
+      </Card>
+    </section>
   );
 }
 
@@ -165,7 +178,7 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: DeviceListRow) => voi
         }
       }}
     >
-      <DialogTrigger render={<Button variant="secondary" size="sm" />}>
+      <DialogTrigger render={<Button variant="ghost" size="sm" />}>
         Use a token instead
       </DialogTrigger>
       <DialogContent>

@@ -10,6 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
+import { Stat, StatDescription, StatLabel, StatValue } from "@/components/ui/stat";
 import { Textarea } from "@/components/ui/textarea";
 import { clockOffset, formatClock, secondsLeft } from "@/lib/defend/clock";
 import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
@@ -30,12 +31,9 @@ export const PASTE_OFF = "Paste is off in Defend it. Type it in your own words."
 const PASTE_NOTE_MS = 4000;
 /** Shown once, before the clock starts; while it runs each control carries one line instead. */
 const RULES = [
-  {
-    title: "One decision you've explained",
-    body: "A card you scored 2 on in a review, picked at random.",
-  },
-  { title: "3 minutes, then 2 more", body: "One answer, then one follow-up the AI asks from it." },
-  { title: "Your own words", body: "Paste is off. At 0:00 what you typed is sent." },
+  "One card you scored 2 on, picked at random.",
+  "3 minutes to answer, then 2 for one AI follow-up.",
+  "Your own words: paste is off, and at 0:00 what you typed is sent.",
 ];
 
 /** The card being defended: learner-readable columns only, never the why or the answer key. */
@@ -267,9 +265,9 @@ export function DefendFlow({ defendable }: { defendable: number }) {
   );
 }
 
-/** The one focused column every step sits in. */
+/** The column every step sits in: the app container width, like every other page. */
 export function DefendColumn({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 py-6">{children}</div>;
+  return <div className="flex flex-col gap-8">{children}</div>;
 }
 
 /** Before the clock: what this is, the three rules, and Start. */
@@ -294,21 +292,15 @@ export function DefendStart({
           against the clock.
         </p>
       </div>
-      <ol className="flex flex-col gap-4">
-        {RULES.map((rule, i) => (
-          <li key={rule.title} className="flex gap-3">
-            <span className="type-label text-text-2 tabular-nums">{i + 1}</span>
-            <span className="flex flex-col gap-1">
-              <span className="type-label">{rule.title}</span>
-              <span className="type-body-sm text-text-2">{rule.body}</span>
-            </span>
-          </li>
+      <ul className="flex flex-col gap-1 type-body-sm text-text-2">
+        {RULES.map((rule) => (
+          <li key={rule}>{rule}</li>
         ))}
-      </ol>
+      </ul>
       <div className="flex flex-col gap-2">
         <div>
           <Button onClick={onStart} disabled={pending}>
-            {pending ? "Picking a decision" : `Start: pick one of ${defendable}`}
+            {pending ? "Picking a decision…" : `Start: pick one of ${defendable}`}
           </Button>
         </div>
         {error && <FieldError>{error}</FieldError>}
@@ -459,9 +451,9 @@ export function DefendTimed({
         <Button type="submit" disabled={pending || expired}>
           {pending ? (
             followUp ? (
-              "Grading"
+              "Grading…"
             ) : (
-              "Writing the follow-up"
+              "Writing the follow-up…"
             )
           ) : (
             <>
@@ -508,7 +500,6 @@ export function DefendResult({
   return (
     <>
       <div className="flex flex-col gap-2">
-        {result && <ScoreBadge score={result.score} />}
         <h1 ref={headingRef} tabIndex={-1} className="type-heading">
           {!result ? "Time's up" : defended ? "Defended" : "Not defended this time"}
         </h1>
@@ -526,7 +517,16 @@ export function DefendResult({
         </p>
       </div>
       {result && (
-        <DataList>
+        <Stat>
+          <StatLabel>Score</StatLabel>
+          <StatValue>{result.score} of 2</StatValue>
+          <StatDescription>
+            <ScoreBadge score={result.score} />
+          </StatDescription>
+        </Stat>
+      )}
+      {result && (
+        <DataList variant="divided" orientation="vertical">
           <DataListItem>
             <DataListLabel>What was missing</DataListLabel>
             <DataListValue>{result.missing || "Nothing"}</DataListValue>

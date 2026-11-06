@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 function GoogleButton({ dryRun }: { dryRun: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type={dryRun ? "button" : "submit"} variant="secondary" size="lg" disabled={pending}>
+    <Button type={dryRun ? "button" : "submit"} variant="secondary" disabled={pending}>
       <GoogleIcon />
       Continue with Google
     </Button>

@@ -2,13 +2,11 @@ import { Container } from "@/components/app/container";
 import { EmptyState } from "@/components/app/empty-state";
 import { SessionFailedState } from "@/components/app/error-state";
 import { ProcessingState } from "@/components/app/processing-state";
-import { AppPageHeader } from "@/components/app/page-header";
 import { StatusBadge } from "@/components/app/status-badge";
 import { DecisionCard, LockedDecisionCard } from "@/components/cards/decision-card";
 import { RefreshOnSettle } from "@/components/cards/refresh-on-settle";
 import { RetrySessionButton } from "@/components/sessions/retry-session-button";
 import { Code } from "@/components/ui/code-block";
-import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
 import type { SessionCard } from "@/lib/cards/columns";
 import type { SessionSummary } from "@/lib/sessions/rows";
 import { formatRelativeTime } from "@/lib/relative-time";
@@ -34,29 +32,37 @@ export function SessionView({
 }) {
   const { title, repo, branch, started_at, duration_min, status, error } = session;
   const started = started_at ? formatRelativeTime(started_at, now) : null;
+  const meta = [
+    duration_min !== null && `${duration_min} min`,
+    started && `started ${started}`,
+    status === "ready" &&
+      cards.length > 0 &&
+      `${cards.length} ${cards.length === 1 ? "card" : "cards"}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <Container>
-      <AppPageHeader
-        title={title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session"}
-        description={
-          <span className="flex flex-wrap items-center gap-2">
-            {repo && <Code>{repo}</Code>}
-            {branch && <Code>{branch}</Code>}
-            <StatusBadge status={status} />
-          </span>
-        }
-      >
-        <PageHeaderStats>
-          <PageHeaderStat
-            label="Duration"
-            value={duration_min ?? "None"}
-            detail={duration_min === null ? undefined : "min"}
-          />
-          <PageHeaderStat label="Started" value={started ?? "None"} />
-          {status === "ready" && <PageHeaderStat label="Cards" value={cards.length} />}
-        </PageHeaderStats>
-      </AppPageHeader>
+      {/* A small title over one line of facts, instead of a stat strip: a missing duration no longer fills a large
+          "None" cell, and the decisions below read as the page. */}
+      <header className="flex flex-col gap-1">
+        <h1 className="type-heading text-pretty break-words">
+          {title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session"}
+        </h1>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 type-body text-text-2">
+          <StatusBadge status={status} cardCount={cards.length} />
+          {repo && <Code>{repo}</Code>}
+          {branch && <Code>{branch}</Code>}
+          {meta && <span className="data">{meta}</span>}
+        </div>
+        {!stuck && status === "ready" && cards.length > 0 && (
+          <p className="mt-2 type-body text-pretty text-text-2">
+            Each card is one decision your agent made. Explain why in your own words; the reason and
+            its quote open after you answer.
+          </p>
+        )}
+      </header>
 
       {stuck ? (
         <SessionFailedState
@@ -88,11 +94,8 @@ export function SessionView({
           }
         />
       ) : (
-        <div className="flex flex-col gap-6">
-          <p className="type-body text-text-2">
-            Each card is one decision your agent made. Explain why in your own words; the reason and
-            its quote open after you answer.
-          </p>
+        // More room between decisions than inside one, so each heading groups with its own card.
+        <div className="flex flex-col gap-8">
           {cards.map((card) =>
             card.locked ? (
               <LockedDecisionCard key={card.id} card={card} />

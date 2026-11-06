@@ -4,10 +4,8 @@ import Image from "next/image";
 // Real pixel sizes of the WebP files in public/art/sprites (the day and night copies share one size).
 const SPRITES = {
   pencil: [192, 167],
-  letter: [192, 137],
   plant: [135, 192],
   tea: [192, 187],
-  cards: [192, 160],
 } as const;
 
 export type SpriteName = keyof typeof SPRITES;

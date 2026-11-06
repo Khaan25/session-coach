@@ -12,9 +12,12 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuLinkItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTheme, type Theme } from "@/components/theme/theme-provider";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -22,8 +25,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+const THEMES: { value: Theme; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "System" },
+];
+
 export function NavUser({ user }: { user: { name: string; detail: string; initials: string } }) {
   const { isMobile } = useSidebar();
+  const { theme, setTheme } = useTheme();
   const who = (
     <>
       <Avatar aria-hidden>
@@ -66,7 +76,23 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
               Settings
             </DropdownMenuLinkItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem render={<button type="submit" form="sidebar-sign-out" />}>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Theme</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={theme}
+                onValueChange={(value) => setTheme(value as Theme)}
+              >
+                {THEMES.map((option) => (
+                  <DropdownMenuRadioItem key={option.value} value={option.value}>
+                    {option.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              render={<button type="submit" form="sidebar-sign-out" className="w-full" />}
+            >
               <SignOutIcon />
               Sign out
             </DropdownMenuItem>

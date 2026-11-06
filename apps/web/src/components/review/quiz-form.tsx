@@ -17,8 +17,8 @@ import {
 import { Code } from "@/components/ui/code-block";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
-import { Item, ItemContent, ItemDescription, ItemGroup } from "@/components/ui/item";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Stat, StatDescription, StatLabel, StatValue } from "@/components/ui/stat";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
@@ -108,7 +108,7 @@ export function QuizForm({
     setPending("answer");
     toast
       .promise(send(cardId, { answer: trimmed }), {
-        loading: "Scoring your answer",
+        loading: "Scoring your answer…",
         success: (result) => {
           setGrade(result);
           return {
@@ -196,97 +196,118 @@ export function QuizResult({
   headingRef?: React.Ref<HTMLHeadingElement>;
 }) {
   return (
-    <Card size="lg">
-      <CardHeader>
-        <CardTitle>
-          <h2 ref={headingRef} tabIndex={-1}>
-            {skipped ? "Here's the why" : "Your result"}
-          </h2>
-        </CardTitle>
-        {skipped ? (
-          <CardDescription>
-            Not knowing yet is fine. This card comes back tomorrow at the same level.
-          </CardDescription>
-        ) : (
-          grade.dropped && (
-            <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
-          )
-        )}
-      </CardHeader>
-      <CardContent>
-        <DataList>
-          {!skipped && (
-            <>
-              <DataListItem>
-                <DataListLabel>Score</DataListLabel>
-                <DataListValue>
+    // motion-safe: the reduced-motion reset only reaches [data-slot] parts, and this wrapper has none.
+    <div className="motion-safe:animate-enter">
+      {/* Top-down: the score, what was missing, the why and the model answer, the evidence, then the next step. */}
+      <Card size="lg">
+        <CardHeader>
+          <CardTitle>
+            <h2 ref={headingRef} tabIndex={-1}>
+              {skipped ? "Here's the why" : "Your result"}
+            </h2>
+          </CardTitle>
+          {skipped ? (
+            <CardDescription>
+              Not knowing yet is fine. This card comes back tomorrow at the same level.
+            </CardDescription>
+          ) : (
+            grade.dropped && (
+              <CardDescription>This card dropped a level. It comes back tomorrow.</CardDescription>
+            )
+          )}
+        </CardHeader>
+        <CardContent>
+          {/* A plain row, not a StatGroup: its cells are inset, which pulled the stats off the list's left edge. */}
+          <div className="flex flex-wrap gap-x-12 gap-y-4">
+            {!skipped && (
+              <Stat>
+                <StatLabel>Score</StatLabel>
+                <StatValue>{grade.score} of 2</StatValue>
+                <StatDescription>
                   <ScoreBadge score={grade.score} />
-                </DataListValue>
-              </DataListItem>
-              <DataListItem>
-                <DataListLabel>Your answer</DataListLabel>
-                <DataListValue>{answer.trim()}</DataListValue>
-              </DataListItem>
+                </StatDescription>
+              </Stat>
+            )}
+            <Stat>
+              <StatLabel>Next review</StatLabel>
+              <StatValue>
+                {grade.nextDue ? (
+                  <time dateTime={grade.nextDue}>{formatDue(grade.nextDue)}</time>
+                ) : (
+                  "None"
+                )}
+              </StatValue>
+              {!grade.nextDue && <StatDescription>You&rsquo;ve mastered this card</StatDescription>}
+            </Stat>
+          </div>
+          <DataList variant="divided" orientation="vertical">
+            {!skipped && (
               <DataListItem>
                 <DataListLabel>What was missing</DataListLabel>
                 <DataListValue>{grade.missing || "Nothing"}</DataListValue>
               </DataListItem>
-            </>
-          )}
-          <DataListItem>
-            <DataListLabel>Why</DataListLabel>
-            <DataListValue>{grade.why}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Model answer</DataListLabel>
-            <DataListValue>{grade.modelAnswer}</DataListValue>
-          </DataListItem>
-          <DataListItem>
-            <DataListLabel>Next review</DataListLabel>
-            <DataListValue>
-              {grade.nextDue ? (
-                <time dateTime={grade.nextDue}>{formatDue(grade.nextDue)}</time>
-              ) : (
-                "None: you've mastered this card"
+            )}
+            <DataListItem>
+              <DataListLabel>Why</DataListLabel>
+              <DataListValue>{grade.why}</DataListValue>
+            </DataListItem>
+            <DataListItem>
+              <DataListLabel>Model answer</DataListLabel>
+              <DataListValue>{grade.modelAnswer}</DataListValue>
+            </DataListItem>
+            {!skipped && (
+              <DataListItem>
+                <DataListLabel>Your answer</DataListLabel>
+                <DataListValue>{answer.trim()}</DataListValue>
+              </DataListItem>
+            )}
+            {grade.evidence.length > 0 && (
+              <DataListItem>
+                <DataListLabel>Evidence</DataListLabel>
+                <DataListValue>
+                  <ul aria-label="Evidence" className="flex w-full flex-col gap-3">
+                    {grade.evidence.map((item) => (
+                      <li key={`${item.event_index}-${item.quote}`} className="flex flex-col gap-1">
+                        <blockquote>&ldquo;{item.quote}&rdquo;</blockquote>
+                        <span className="flex flex-wrap items-center gap-2 type-body-sm text-text-2">
+                          <span>Event E{item.event_index}</span>
+                          {item.file && (
+                            <Code>
+                              {item.lines
+                                ? `${item.file}:${item.lines[0]}-${item.lines[1]}`
+                                : item.file}
+                            </Code>
+                          )}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </DataListValue>
+              </DataListItem>
+            )}
+          </DataList>
+        </CardContent>
+        <CardFooter>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-end">
+            {/* Row-reverse keeps the primary first for focus and stacking, and last (rightmost) on a wide screen. */}
+            <div className="flex flex-col gap-3 sm:flex-row-reverse">
+              {nextHref && (
+                <Link href={nextHref} transitionTypes={["forward"]} className={buttonVariants()}>
+                  Next card
+                </Link>
               )}
-            </DataListValue>
-          </DataListItem>
-        </DataList>
-      </CardContent>
-      <ItemGroup aria-label="Evidence">
-        {grade.evidence.map((item) => (
-          // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-          // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
-          <Item key={`${item.event_index}-${item.quote}`} role="listitem">
-            <ItemContent>
-              <blockquote className="type-body text-text-1">&ldquo;{item.quote}&rdquo;</blockquote>
-              <ItemDescription>
-                <span className="flex flex-wrap items-center gap-2">
-                  <span>Event E{item.event_index}</span>
-                  {item.file && (
-                    <Code>
-                      {item.lines ? `${item.file}:${item.lines[0]}-${item.lines[1]}` : item.file}
-                    </Code>
-                  )}
-                </span>
-              </ItemDescription>
-            </ItemContent>
-          </Item>
-        ))}
-      </ItemGroup>
-      <CardFooter>
-        <div className="flex flex-wrap gap-3">
-          {nextHref && (
-            <Link href={nextHref} className={buttonVariants()}>
-              Next card
-            </Link>
-          )}
-          <Link href="/review" className={buttonVariants({ variant: "secondary" })}>
-            Back to the queue
-          </Link>
-        </div>
-      </CardFooter>
-    </Card>
+              <Link
+                href="/review"
+                transitionTypes={["back"]}
+                className={buttonVariants({ variant: nextHref ? "secondary" : "default" })}
+              >
+                Back to the queue
+              </Link>
+            </div>
+          </div>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }
 
@@ -315,35 +336,42 @@ export function QuizAnswer({
   return (
     <form onSubmit={onSubmit} noValidate>
       <Card size="lg">
-        <CardHeader>
-          <CardTitle>
-            <h2>{question}</h2>
-          </CardTitle>
-        </CardHeader>
         <CardContent>
-          <Field data-invalid={error ? true : undefined}>
-            <FieldLabel htmlFor={`${id}-answer`}>Your explanation</FieldLabel>
-            <Textarea
-              id={`${id}-answer`}
-              rows={5}
-              maxLength={MAX_ANSWER}
-              // Read-only while scoring, so the answer shown with the result is the one that was scored.
-              readOnly={pending !== null}
-              value={answer}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
-              onChange={(event) => onAnswerChange?.(event.target.value)}
-              onPaste={onBlockedPaste}
-              onDrop={onBlockedPaste}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
-                }
-              }}
-            />
-            <FieldDescription id={`${id}-hint`}>
-              Type it in your own words. Paste is off here. Submit with{" "}
+          <div className="flex flex-col gap-5">
+            <h2 className="type-heading-sm text-balance">{question}</h2>
+            <Field data-invalid={error ? true : undefined}>
+              <FieldLabel htmlFor={`${id}-answer`}>Your explanation</FieldLabel>
+              <Textarea
+                id={`${id}-answer`}
+                rows={5}
+                maxLength={MAX_ANSWER}
+                // Read-only while scoring, so the answer shown with the result is the one that was scored.
+                readOnly={pending !== null}
+                value={answer}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
+                aria-keyshortcuts="Meta+Enter Control+Enter"
+                onChange={(event) => onAnswerChange?.(event.target.value)}
+                onPaste={onBlockedPaste}
+                onDrop={onBlockedPaste}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
+              />
+              <FieldDescription id={`${id}-hint`}>
+                Type it in your own words. Paste is off here.
+              </FieldDescription>
+              <FieldError id={`${id}-error`}>{error}</FieldError>
+            </Field>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* Phones have no Enter shortcut to show, so the hint is for wider screens only. */}
+            <p className="hidden type-body-sm text-text-3 sm:block">
               <KbdGroup>
                 <Kbd>Cmd</Kbd>
                 <Kbd>Enter</Kbd>
@@ -352,20 +380,23 @@ export function QuizAnswer({
               <KbdGroup>
                 <Kbd>Ctrl</Kbd>
                 <Kbd>Enter</Kbd>
-              </KbdGroup>
-              .
-            </FieldDescription>
-            <FieldError id={`${id}-error`}>{error}</FieldError>
-          </Field>
-        </CardContent>
-        <CardFooter>
-          <div className="flex flex-wrap gap-3">
-            <Button type="submit" disabled={pending !== null}>
-              {pending === "answer" ? "Scoring" : "Submit answer"}
-            </Button>
-            <Button type="button" variant="secondary" disabled={pending !== null} onClick={onSkip}>
-              {pending === "skip" ? "Showing the why" : "I don’t know yet"}
-            </Button>
+              </KbdGroup>{" "}
+              to submit
+            </p>
+            {/* Row-reverse keeps the primary first for focus and stacking, and last (rightmost) on a wide screen. */}
+            <div className="flex flex-col gap-3 sm:flex-row-reverse">
+              <Button type="submit" disabled={pending !== null}>
+                {pending === "answer" ? "Scoring…" : "Submit answer"}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={pending !== null}
+                onClick={onSkip}
+              >
+                {pending === "skip" ? "Showing the why…" : "I don’t know yet"}
+              </Button>
+            </div>
           </div>
         </CardFooter>
       </Card>

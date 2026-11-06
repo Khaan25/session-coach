@@ -1,22 +1,25 @@
+import { SlidersHorizontalIcon } from "@phosphor-icons/react/ssr";
+
 import { EmptyState } from "@/components/app/empty-state";
 import { ErrorState } from "@/components/app/error-state";
 import { ProjectLevelField } from "@/components/projects/project-level-field";
-import { ChecklistStep } from "@/components/settings/checklist-step";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { FieldGroup } from "@/components/ui/field";
 import type { ProjectListItem } from "@/lib/projects/queries";
 
 /**
- * Step 4 of the settings checklist: how hard the questions are for each repo the learner has sessions in. Check this
+ * The question level section of /settings: how hard the questions are for each repo the learner has sessions in. Check this
  * while a repo has no level chosen yet (the dashboard's setup card); no badge when there is nothing to judge.
  *
  * @param projects - The learner's projects, or null when they couldn't be read.
  */
 export function ProjectsCard({ projects }: { projects: ProjectListItem[] | null }) {
   return (
-    <ChecklistStep
-      n={4}
+    <SettingsSection
+      id="question-level"
+      icon={<SlidersHorizontalIcon />}
       title="Question level per project"
-      changes="Applies to sessions processed after the change. Cards you already have keep their questions."
+      description="Applies to sessions processed after the change. Cards you already have keep their questions."
       done={projects?.length ? projects.every((project) => project.onboarded) : undefined}
     >
       {projects === null ? (
@@ -42,6 +45,6 @@ export function ProjectsCard({ projects }: { projects: ProjectListItem[] | null 
           ))}
         </FieldGroup>
       )}
-    </ChecklistStep>
+    </SettingsSection>
   );
 }

@@ -1,4 +1,4 @@
-// Smoke: sign in with email and password, see the dashboard, open a seeded card from /review, answer it, see a score.
+// Smoke: sign in with email and password, land on Today, open a seeded card from /review, answer it, see a score.
 // Creates its own throwaway learner and card on the LOCAL stack and deletes the learner at the end (rows cascade).
 
 import { randomUUID } from "node:crypto";
@@ -58,7 +58,8 @@ test("sign in, review a card, get a score", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/);
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+  // Today's hero: the next card and its one button.
+  await expect(page.getByRole("link", { name: "Explain it" })).toBeVisible();
 
   await page.goto("/review");
   await page.getByRole("link", { name: "Start review" }).click();

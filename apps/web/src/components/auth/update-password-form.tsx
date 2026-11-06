@@ -56,7 +56,7 @@ export function UpdatePasswordForm() {
               </FieldDescription>
               <FieldError id={`${id}-password-error`}>{error}</FieldError>
             </Field>
-            <Button type="submit" size="lg" disabled={pending}>
+            <Button type="submit" disabled={pending}>
               Save password
             </Button>
           </FieldGroup>

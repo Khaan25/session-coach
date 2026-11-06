@@ -1,13 +1,14 @@
-import { Suspense } from "react";
+import type { Metadata } from "next";
+import { Suspense, ViewTransition } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { DetectTimezone } from "@/components/settings/detect-timezone";
+import { SkipLink } from "@/components/skip-link";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { initialsOf } from "@/lib/auth/initials";
 import { dueTodayCount } from "@/lib/review/queries";
-import { recentSessions } from "@/lib/sessions/queries";
 import { getSettingsProfile } from "@/lib/settings/profile";
 
 import { AppBreadcrumb } from "./app-breadcrumb";
@@ -22,10 +23,9 @@ function logAndReturn<T>(read: string, fallback: T) {
 // Reads the signed-in learner, so it renders inside Suspense (cacheComponents); the fallback is the same sidebar empty.
 async function SignedInSidebar() {
   const user = await getCurrentUser();
-  if (!user) return <AppSidebar sessions={[]} dueCount={0} userId={null} user={null} />;
+  if (!user) return <AppSidebar dueCount={0} user={null} />;
   // Each read falls back on its own, so one failure leaves the shell and the page standing.
-  const [sessions, profile, dueCount] = await Promise.all([
-    recentSessions(user.id).catch(logAndReturn("recentSessions", [])),
+  const [profile, dueCount] = await Promise.all([
     getSettingsProfile().catch(logAndReturn("getSettingsProfile", null)),
     dueTodayCount(user.id).catch(logAndReturn("dueTodayCount", 0)),
   ]);
@@ -35,9 +35,7 @@ async function SignedInSidebar() {
     <>
       {profile?.timezone === "UTC" && <DetectTimezone />}
       <AppSidebar
-        sessions={sessions}
         dueCount={dueCount}
-        userId={user.id}
         user={{
           name,
           detail: email ?? "",
@@ -48,13 +46,22 @@ async function SignedInSidebar() {
   );
 }
 
+// App pages set a bare title ("Dashboard"); the brand follows it in the tab, like the marketing pages.
+export const metadata: Metadata = {
+  title: { template: "%s | Session Coach", default: "Session Coach" },
+};
+
+// Review cards slide on their own (components/review/card-transition.tsx), so the shell holds still for those types.
+const shellFade = { forward: "none", back: "none", default: "route-fade" };
+
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <SidebarProvider>
-      <Suspense fallback={<AppSidebar sessions={[]} dueCount={0} userId={null} user={null} />}>
+      <SkipLink />
+      <Suspense fallback={<AppSidebar dueCount={0} user={null} />}>
         <SignedInSidebar />
       </Suspense>
-      <SidebarInset>
+      <SidebarInset id="main">
         <header className="sticky top-0 z-10 flex h-(--topbar) shrink-0 items-center gap-2 bg-page px-(--gutter-sm) sm:px-(--gutter)">
           <SidebarTrigger className="-ml-1" />
           <Separator
@@ -63,7 +70,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           />
           <AppBreadcrumb />
         </header>
-        {children}
+        {/* Only the page content crossfades on a route change; the sidebar and topbar hold still. */}
+        <ViewTransition default={shellFade}>{children}</ViewTransition>
       </SidebarInset>
     </SidebarProvider>
   );

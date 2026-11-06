@@ -1,20 +1,25 @@
+import { ShareNetworkIcon, SignOutIcon, WarningIcon } from "@phosphor-icons/react/ssr";
+import Link from "next/link";
+
 import { AppPageHeader } from "@/components/app/page-header";
-import { ChecklistStep } from "@/components/settings/checklist-step";
 import { DeleteAccountDialog } from "@/components/settings/delete-account-dialog";
 import { DevicesStep } from "@/components/settings/devices-step";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { ProjectsCard } from "@/components/settings/projects-card";
 import { ReportCard } from "@/components/settings/report-card";
-import { SettingsCard } from "@/components/settings/settings-card";
+import { SettingsRow } from "@/components/settings/settings-card";
+import { SettingsNav } from "@/components/settings/settings-nav";
+import { SettingsSection } from "@/components/settings/settings-section";
 import { SignOutEverywhereForm } from "@/components/settings/sign-out-everywhere";
+import { buttonVariants } from "@/components/ui/button";
 import type { DeviceListRow } from "@/components/setup/device-section";
-import { Separator } from "@/components/ui/separator";
 import type { ProjectListItem } from "@/lib/projects/queries";
 import type { ReportSettings } from "@/lib/report/queries";
 
-// /settings as option A draws it (canvas: "Settings · A · Guided checklist"): numbered steps, each with what it
-// changes, then the account actions apart. Shared by the page, its skeleton and /canvas, which wraps it in
-// DryRunContext so no control saves.
+// /settings: the settings nav on the left (a select on a phone) and one card per section on the right, in the nav's
+// order, the delete card last. One page with anchors, not a route per section: the sections are short, so they read
+// best together, and search on the page still finds every field. Shared by the page, its skeleton and /canvas, which
+// wraps it in DryRunContext so no control saves.
 
 export type SettingsProfile = {
   display_name: string | null;
@@ -27,7 +32,18 @@ export function SettingsHeader() {
   return (
     <AppPageHeader
       title="Settings"
-      description="Five things to check once. Each says what it changes in your reviews."
+      description="Your profile, computers, projects and account."
+      // Off the sidebar since Today (DECISIONS, 2026-11-06): the CLI setup and the people on your projects.
+      actions={
+        <>
+          <Link href="/setup" className={buttonVariants({ variant: "secondary" })}>
+            Setup
+          </Link>
+          <Link href="/members" className={buttonVariants({ variant: "secondary" })}>
+            Members
+          </Link>
+        </>
+      }
     />
   );
 }
@@ -41,47 +57,57 @@ export function SettingsView({
 }: {
   profile: SettingsProfile;
   timezones: string[];
-  /** Null when the read failed: the step shows the error. */
+  /** Null when the read failed: the section shows the error. */
   projects: ProjectListItem[] | null;
   devices: DeviceListRow[] | null;
   report: ReportSettings | null;
 }) {
-  // One block with the page's own gap: skullet wraps the skeleton in an element, so a fragment's parts would lose it.
-  // ProfileForm is steps 1 to 3 in its own form and list, so this list carries on from 4.
+  // One block: skullet wraps the skeleton in an element, so a fragment's parts would lose the layout.
   return (
-    <div className="flex flex-col gap-8">
-      <ProfileForm profile={profile} timezones={timezones} />
-      <ol start={4} className="flex flex-col gap-8">
-        <ProjectsCard projects={projects} />
+    <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+      <div className="md:sticky md:top-(--topbar) md:w-64 md:shrink-0">
+        <SettingsNav />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-6">
+        <ProfileForm profile={profile} timezones={timezones} />
         <DevicesStep devices={devices} />
-        {/* Shipped after the options were picked (#77), so option A has no step for it. */}
-        <ChecklistStep
-          n={6}
+        <ProjectsCard projects={projects} />
+        <SettingsSection
+          id="report"
+          icon={<ShareNetworkIcon />}
           title="Share your report"
-          changes="Nothing in the review loop. It makes the decisions you own in the repos you tick readable at a public link, with their quotes; the why and your answers stay private."
+          description="Nothing in the review loop. A public page of the decisions you own in the repos you tick, for a CV, a PR or a code review: each with one quote and the date you owned it. Never the why, the answer key, your answers or the session log."
         >
           <ReportCard report={report} />
-        </ChecklistStep>
-      </ol>
-      <Separator />
-      {/* Apart from the checklist on purpose: nothing destructive sits mid-list, and delete ends the page. */}
-      <section aria-labelledby="settings-account" className="flex flex-col gap-6">
-        <h2 id="settings-account" skullet-own="" className="type-heading-sm text-text-1">
-          Account
-        </h2>
-        <SettingsCard
+        </SettingsSection>
+        <SettingsSection
+          id="sign-out"
+          icon={<SignOutIcon />}
           title="Sign out everywhere"
-          description="Signs you out on every browser and device, including this one."
+          description="For a lost laptop or a shared computer."
         >
-          <SignOutEverywhereForm />
-        </SettingsCard>
-        <SettingsCard
-          title="Delete account"
-          description="Deletes your sessions, cards, answers and tokens. It can't be undone."
+          <SettingsRow
+            title="Every browser and device"
+            description="Including this one. You sign in again on each."
+          >
+            <SignOutEverywhereForm />
+          </SettingsRow>
+        </SettingsSection>
+        {/* Last on purpose: nothing destructive sits mid-page. */}
+        <SettingsSection
+          id="delete"
+          icon={<WarningIcon />}
+          title={<span className="text-fail-text">Delete your account</span>}
+          description="Deleting can't be undone."
         >
-          <DeleteAccountDialog email={profile.email ?? ""} />
-        </SettingsCard>
-      </section>
+          <SettingsRow
+            title="Delete account and data"
+            description="Deletes your sessions, cards, answers and tokens."
+          >
+            <DeleteAccountDialog email={profile.email ?? ""} />
+          </SettingsRow>
+        </SettingsSection>
+      </div>
     </div>
   );
 }

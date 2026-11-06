@@ -1,6 +1,7 @@
 /* The design system's tokens. The one file to retune.
 
-   Palette: Frost. Cold navy ink on icy paper, cards on a cool fog canvas, and five cold kind tints. A kind shows as a word, never a fill.
+   Palette: Plain (2026-11-06, after serveros.com). Neutral graphite ink on white paper, hairline edges, one brand blue for the
+   primary action, and five cold kind tints. A kind shows as a word, never a fill.
 
    Rules
    - Hue names a kind of thing. Ink carries all text. Hue never colors text.
@@ -33,17 +34,18 @@
    as they are. Derived tokens are declared again on [data-surface] so an inverse section
    recomputes them from its own ink and paper channels. */
 
-/* Fonts. Geist and Geist Mono come from next/font (app/layout.tsx), which sets --font-geist-sans and
+/* Fonts. Mona Sans and Geist Mono come from next/font (app/layout.tsx), which sets --font-mona-sans and
    --font-geist-mono on <html>. */
 
 :root {
   /* == Ink and paper == */
-  --ink-c: 20% 0.024 262; /* the ink channel: cold navy graphite, 18.0:1 on --surface-page and 15.9:1 on --surface-card; every text and line is this at an alpha | all ink tokens */
-  --paper-c: 99.7% 0.001 250; /* the paper channel: an icy white | all paper tokens */
-  --grey-c: 95.6% 0.004 255; /* the grey field channel, cool like the ink | surface-card */
-  --canvas-c: 99.1% 0.002 250; /* the canvas channel: the cool fog behind cards and frames | surface-canvas */
-  --text-on-field-c: 20% 0.024 262; /* the fixed dark channel: text on hue and every shadow; never flips | text-on-field, elev-overlay */
+  --ink-c: 18% 0 0; /* the ink channel: neutral graphite, about 17:1 on --surface-page and 15:1 on --surface-card; every text and line is this at an alpha | all ink tokens */
+  --paper-c: 100% 0 0; /* the paper channel: plain white | all paper tokens */
+  --grey-c: 96.5% 0 0; /* the grey field channel, neutral like the ink | surface-card */
+  --canvas-c: 98.8% 0 0; /* the canvas channel: the faint grey behind cards and frames | surface-canvas */
+  --text-on-field-c: 18% 0 0; /* the fixed dark channel: text on hue and every shadow; never flips | text-on-field, elev-overlay */
   --shadow-alpha: 0.2; /* overlay shadow strength; the dark theme raises it | elev-overlay */
+  --brand-c: 44% 0.16 263; /* the one brand blue, #1c4bb0; white on it is 7.6:1 and it never flips | primary button, brand mark */
 
   /* == Category hues == */
   --hue-1-mark: oklch(
@@ -165,33 +167,33 @@
 
   /* == Type families == */
   --font-sans:
-    var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; /* all UI and prose | every text role */
+    var(--font-mona-sans), ui-sans-serif, system-ui, sans-serif; /* all UI and prose | every text role */
   --font-mono:
     var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace; /* ordinals, codes, IDs, code blocks */
 
   /* == Type weights == */
-  --weight-body: 340; /* Regular | running text */
-  --weight-medium: 400; /* Medium | labels, buttons, headings, display */
-  --weight-strong: 500; /* Semibold | emphasis inside prose, code keywords */
+  --weight-body: 400; /* Regular | running text */
+  --weight-medium: 500; /* Medium | labels, buttons, headings, display */
+  --weight-strong: 600; /* Semibold | emphasis inside prose, code keywords */
   --width-normal: normal; /* each face's own width; a "wdth" value here would stretch the sans | every role */
   --features-data:
     "tnum", "zero", "ss04"; /* tabular figures, slashed zero, serif I; every duration, count and value | tables, labels, stats, data roles */
   --features-id: "ss04"; /* serif I tells I, l and 1 apart | identifiers in sans */
 
   /* == Type roles == */
-  --type-display-xl: 400 80px/80px var(--font-sans); /* marketing hero, line-height 1.0 | hero */
-  --type-display-lg: 400 60px/66px var(--font-sans); /* section heads, line-height 1.1 | marketing sections */
-  --type-display: 400 40px/44px var(--font-sans); /* mobile hero, page titles with stats | app page title, docs H1 */
-  --type-heading-lg: 400 32px/36px var(--font-sans); /* page titles | docs H1 on mobile, settings title */
-  --type-heading: 400 24px/28px var(--font-sans); /* panel and section titles | docs H2, dialog title */
-  --type-heading-sm: 400 20px/24px var(--font-sans); /* subsection titles | docs H3, card title */
-  --type-heading-xs: 400 16px/20px var(--font-sans); /* in-thread headings | response ## */
-  --type-body-lg: 340 16px/22px var(--font-sans); /* marketing and docs prose, line-height 1.4 | docs lede */
-  --type-body: 340 14px/20px var(--font-sans); /* app prose | descriptions, table text */
-  --type-body-sm: 380 13px/18px var(--font-sans); /* dense meta, a step heavier than body so meta on text-3 still reads | captions, helper text */
-  --type-button: 400 16px/20px var(--font-sans); /* default and large button label | button */
-  --type-label: 400 14px/16px var(--font-sans); /* controls and table cells | input, menu item, tab */
-  --type-label-sm: 400 12px/16px var(--font-sans); /* small tags, column heads | badge, table head */
+  --type-display-xl: 500 64px/68px var(--font-sans); /* marketing hero, line-height 1.06 | hero */
+  --type-display-lg: 500 44px/48px var(--font-sans); /* section heads, line-height 1.09 | marketing sections */
+  --type-display: 500 36px/40px var(--font-sans); /* mobile hero, page titles with stats | app page title, docs H1 */
+  --type-heading-lg: 500 28px/32px var(--font-sans); /* page titles | docs H1 on mobile, settings title */
+  --type-heading: 500 22px/28px var(--font-sans); /* panel and section titles | docs H2, dialog title */
+  --type-heading-sm: 500 18px/24px var(--font-sans); /* subsection titles | docs H3, card title */
+  --type-heading-xs: 500 16px/20px var(--font-sans); /* in-thread headings | response ## */
+  --type-body-lg: 400 17px/26px var(--font-sans); /* marketing and docs prose, line-height 1.5 | docs lede */
+  --type-body: 400 14px/20px var(--font-sans); /* app prose | descriptions, table text */
+  --type-body-sm: 400 13px/18px var(--font-sans); /* dense meta, a step heavier than body so meta on text-3 still reads | captions, helper text */
+  --type-button: 500 14px/18px var(--font-sans); /* default and large button label | button */
+  --type-label: 500 13px/16px var(--font-sans); /* controls and table cells | input, menu item, tab */
+  --type-label-sm: 500 12px/16px var(--font-sans); /* small tags, column heads | badge, table head */
   --type-code: 400 13px/20px var(--font-mono); /* code blocks | code block, log line */
   --type-code-sm: 400 12px/16px var(--font-mono); /* IDs, ordinals, paths in tables | inline code, kbd */
   --type-tag: var(
@@ -199,12 +201,12 @@
   ); /* ids, methods, status codes and paths in a row or a code tag; the metrics of code-sm under its own name so the two cannot drift | row id, code tag, key tail */
   --type-code-display: 400 32px/36px var(--font-mono); /* a code a person reads aloud or types on another device | CLI device code, recovery code */
   --type-code-touch: 400 16px/22px var(--font-mono); /* code typed into a field on touch; 16px so iOS WebKit does not zoom on focus (trap/touch-input-zoom) | terminal input, code inputs below 640px */
-  --type-stat-xl: 400 48px/52px var(--font-sans); /* marketing stat numerals, tabular figures, plain sans | stat size xl */
-  --type-stat-lg: 400 40px/44px var(--font-sans); /* hero stat in the app, tabular figures | stat size lg */
-  --type-stat: 400 32px/36px var(--font-sans); /* app stat numerals, tabular figures | stat, metric */
+  --type-stat-xl: 500 48px/52px var(--font-sans); /* marketing stat numerals, tabular figures, plain sans | stat size xl */
+  --type-stat-lg: 500 40px/44px var(--font-sans); /* hero stat in the app, tabular figures | stat size lg */
+  --type-stat: 500 32px/36px var(--font-sans); /* app stat numerals, tabular figures | stat, metric */
   --type-state-word: 400 14px/16px var(--font-sans); /* status words, the label role in sentence case | status word */
-  --tracking-display: -0.025em; /* display sizes | display-xl, display-lg, display */
-  --tracking-heading: -0.015em; /* heading sizes | heading-lg, heading, heading-sm */
+  --tracking-display: -0.04em; /* display sizes | display-xl, display-lg, display */
+  --tracking-heading: -0.02em; /* heading sizes | heading-lg, heading, heading-sm */
   --tracking-body: -0.01em; /* 16px text: body-lg and button | body-lg, button */
   --tracking-text: 0em; /* 14px and below, where negative tracking closes the counters | body, body-sm, label, label-sm */
 
@@ -294,6 +296,24 @@
   --dur-250: 250ms; /* a toast moving in its stack | toast */
   --dur-300: 300ms; /* a progress bar or a nested drawer's content fading | progress, drawer */
   --dur-450: 450ms; /* a drawer and its overlay sliding, on the drawer curve | drawer */
+  --dur-route: 220ms; /* a route's content crossfading in on navigation | view-transition */
+  --dur-enter: 240ms; /* a block appearing in the app: result card, revealed content | animate-enter */
+  --dur-reveal: 700ms; /* a marketing section blurring in on scroll or load; marketing only | marketing reveal */
+  --enter-blur: 8px; /* how blurred an entering block starts | animate-enter, view-transition, marketing reveal */
+  --enter-rise: 12px; /* how far an entering block rises | animate-enter, view-transition, marketing reveal */
+  --route-slide: 24px; /* how far a card slides on a directional route change | view-transition */
+  --ease-out-expo: cubic-bezier(
+    0.16,
+    1,
+    0.3,
+    1
+  ); /* entrances: fast start, long settle | animate-enter, view-transition */
+  --ease-drawer: cubic-bezier(
+    0.32,
+    0.72,
+    0,
+    1
+  ); /* things that travel: nav pill, slides | site nav, view-transition */
   --ease-spin: linear; /* the pending ring turns smoothly | animate-spin */
   --thumb-lift: 0%; /* how much ink the selected segment takes beyond paper; the dark theme raises it | surface-thumb */
   --thumb-ring-alpha: 0; /* the ink alpha of the selected segment's 1px ring; the dark theme raises it | elev-thumb */
@@ -404,11 +424,14 @@
     oklch(var(--ink-c)) var(--thumb-lift)
   ); /* the selected segment: paper on the grey track in light, paper mixed with ink in dark so it reads lighter than the track | segmented control */
   --focus-halo: 0 0 0 3px oklch(var(--ink-c) / 0.08); /* a field with the cursor: a soft ink halo around its ink edge, eased in | input, select, combobox, date picker, OTP, code editor, composer */
-  --elev-control: 0 1px 2px -1px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.6)); /* the lift under a paper control, so a button or field sits on the page instead of being drawn on it | secondary button, input, select, chip */
+  --elev-control: 0 0 0 0 transparent; /* controls sit flat on the page, edged by their hairline only (serveros, 2026-11-06) | secondary button, input, select, chip */
   --elev-none: 0 0 0 0 transparent; /* no lift, for a control that sits flat: disabled and read-only fields | field, select, checkbox, radio, switch, otp */
   --elev-thumb:
     0 0 0 1px oklch(var(--ink-c) / var(--thumb-ring-alpha)),
     0 1px 2px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.5)); /* the selected segment lifted off its grey track; in dark a 1px ring joins the shadow | segmented control */
+  --elev-card:
+    inset 0 1px 0 oklch(var(--paper-c) / 0.06),
+    0 24px 48px -24px oklch(var(--text-on-field-c) / var(--shadow-alpha)); /* a standalone card lifted off the page: a light top lip and one long soft drop, no ring of its own | auth card, CLI approve */
   --elev-overlay:
     0 0 0 1px var(--line-frame),
     0 12px 24px -12px oklch(var(--text-on-field-c) / var(--shadow-alpha)); /* the overlay's edge plus one short shadow | menu, popover, select, dialog, sheet */
@@ -429,44 +452,47 @@
   ); /* text on the accent field: ink by default, dark on a hue in both themes | field section, banner */
 
   /* == Button == */
-  --button-primary: var(--ink); /* dark on light, light on dark | primary button */
-  /* The key: a button as a lit object, one light from the top, layered on one element. body is the fill, lit-to-shade;
-     body-hover fades in over it (::before) as the light turns up; edge stacks the top lip, the bottom base, a hairline
-     inner rim, the outer ring and two short drops; edge-press sinks it; sheen (::after) is the soft dome on the top half
-     and a 1px glint along the top edge. */
-  --key-primary-body: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--ink) 84%, white),
-    color-mix(in oklch, var(--ink) 94%, black)
-  ); /* ink lit from the top | primary button */
-  --key-primary-body-hover: linear-gradient(
-    180deg,
-    color-mix(in oklch, var(--ink) 76%, white),
-    color-mix(in oklch, var(--ink) 90%, white)
-  ); /* the light turned up | primary hover */
+  --brand: oklch(
+    var(--brand-c)
+  ); /* the brand blue, the same in both themes | primary button, brand mark, focus of the hero */
+  --text-on-brand: oklch(
+    1 0 0
+  ); /* white on the brand blue, fixed in both themes | primary button */
+  --button-primary: var(--brand); /* the one blue action in a view | primary button */
+  /* The primary key, after Clerk's buttons (2026-11-06): the brand fill, a soft top sheen, a 1px light lip inside the top
+     edge, two short drops and a hairline ring. Hover lifts the fill a step toward white; press sinks it. */
+  --key-primary-body: var(--brand); /* brand fill | primary button */
+  --key-primary-body-hover: color-mix(
+    in oklch,
+    var(--brand) 90%,
+    white
+  ); /* the fill a step lighter | primary hover */
   --key-primary-edge:
-    inset 0 2px 0 -1px oklch(1 0 0 / 0.2), inset 0 -2px 0 -1px oklch(0 0 0 / 0.3),
-    inset 0 0 0 1px color-mix(in oklch, var(--ink) 88%, black),
-    0 1px 1px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 1.1)),
-    0 2px 5px -2px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 1.5)); /* ring drawn inside (the same box as a secondary or a field), the lip and base just inside it, two drops | primary button */
+    inset 0 1px 0.5px oklch(1 0 0 / 0.16), 0 2px 2px -1px oklch(0 0 0 / 0.16),
+    0 4px 4px -2px oklch(0 0 0 / 0.24), 0 0 0 1px oklch(0 0 0 / 0.12); /* lip, two drops, ring | primary button */
   --key-primary-edge-press:
-    inset 0 0 0 1px color-mix(in oklch, var(--ink) 88%, black), inset 0 1px 2px oklch(0 0 0 / 0.42); /* pushed in: the lift becomes an inner shadow | primary active */
-  --key-primary-sheen:
-    linear-gradient(90deg, transparent 14%, oklch(1 0 0 / 0.42) 50%, transparent 86%) top / 100% 1px
-      no-repeat,
-    linear-gradient(180deg, oklch(1 0 0 / 0.1), oklch(1 0 0 / 0) 55%); /* glint line and top dome | primary button */
+    0 0 0 1px oklch(0 0 0 / 0.12), inset 0 1px 2px oklch(0 0 0 / 0.3); /* pushed in | primary active */
+  --key-primary-sheen: linear-gradient(
+    180deg,
+    oklch(1 0 0 / 0.2),
+    oklch(1 0 0 / 0) 100%
+  ); /* light from the top | primary button */
   --key-secondary-body: var(
     --paper
   ); /* flat paper, the same surface as a field, so a secondary button and an input beside it read as one family | secondary button */
   --key-secondary-body-hover: oklch(
     var(--ink-c) / 0.03
   ); /* a faint wash fading in over the paper on hover | secondary button */
-  --key-secondary-edge: var(
-    --elev-control
-  ); /* the same one-pixel lift as a field; the key-secondary utility adds the ring from --frame-color | secondary button */
+  --key-secondary-edge:
+    inset 0 1px 0 oklch(1 0 0 / 0.04), 0 2px 2px -1px oklch(0 0 0 / 0.06),
+    0 4px 4px -2px oklch(0 0 0 / 0.04); /* a raised paper key: the utility adds the ring from --frame-color | secondary button */
   --key-secondary-edge-press: inset 0 1px 2px oklch(var(--ink-c) / 0.12); /* pushed in; the utility adds the ring | secondary active */
-  --key-secondary-sheen: none; /* no sheen: secondary stays as quiet as a field | secondary button */
-  --button-primary-hover: oklch(var(--ink-c) / 0.86); /* primary hover | primary button */
+  --key-secondary-sheen: linear-gradient(
+    180deg,
+    oklch(0 0 0 / 0) 30%,
+    oklch(0 0 0 / 0.04) 100%
+  ); /* a faint shade toward the base | secondary button */
+  --button-primary-hover: var(--key-primary-body-hover); /* primary hover | primary button */
   --button-secondary: oklch(var(--grey-c)); /* the grey field button | secondary button */
   --button-secondary-hover: color-mix(
     in oklch,
@@ -653,7 +679,7 @@
   --button-secondary-hover: color-mix(in oklch, oklch(var(--grey-c)), oklch(var(--ink-c)) 7%);
 }
 
-/* Dark theme. Ink and paper swap channels: deep navy paper on a darker canvas, near-white ink. Marks and fields keep their
+/* Dark theme. Ink and paper swap channels: graphite paper on a darker canvas, near-white ink. Marks and fields keep their
    values, so text on them stays --text-on-field; washes become deep tints of the same hue and lines take
    the marks, which clear 3:1 on the dark page and the dark card. [data-surface="ink"] is the same swap
    for one always-dark section, and [data-surface="paper"] swaps back inside it.
@@ -679,10 +705,10 @@
 :root[data-theme="dark"] [data-surface="paper"] [data-surface="inverse"],
 :root [data-surface="ink"] [data-surface="paper"] [data-surface="inverse"] {
   color-scheme: dark;
-  --ink-c: 96.5% 0.006 250;
-  --paper-c: 18.5% 0.016 262;
-  --grey-c: 23.5% 0.018 262;
-  --canvas-c: 15% 0.014 262;
+  --ink-c: 96% 0 0;
+  --paper-c: 16% 0 0;
+  --grey-c: 21% 0 0;
+  --canvas-c: 13% 0 0;
   --hue-1-wash: oklch(31% 0.06 195);
   --hue-2-wash: oklch(31% 0.05 320);
   --hue-3-wash: oklch(31% 0.08 250);
@@ -729,10 +755,10 @@
 :root[data-theme="dark"] [data-surface="inverse"],
 :root [data-surface="ink"] [data-surface="inverse"] {
   color-scheme: light;
-  --ink-c: 20% 0.024 262;
-  --paper-c: 99.7% 0.001 250;
-  --grey-c: 95.6% 0.004 255;
-  --canvas-c: 99.1% 0.002 250;
+  --ink-c: 18% 0 0;
+  --paper-c: 100% 0 0;
+  --grey-c: 96.5% 0 0;
+  --canvas-c: 98.8% 0 0;
   --hue-1-wash: oklch(96.5% 0.04 195);
   --hue-2-wash: oklch(96% 0.03 320);
   --hue-3-wash: oklch(94.5% 0.02 250);
@@ -784,6 +810,12 @@
     --dur-450: 0ms;
     --dur-spin: 2400ms; /* a pending ring still turns, so loading stays visible, at a third of the speed */
     --sheet-shift: 0px;
+    --dur-route: 0ms;
+    --dur-enter: 0ms;
+    --dur-reveal: 0ms;
+    --enter-blur: 0px;
+    --enter-rise: 0px;
+    --route-slide: 0px;
   }
 }
 /* A wrapper that sets data-force-reduced-motion (styles.css) gets the same values. */
@@ -799,4 +831,10 @@
   --dur-450: 0ms;
   --dur-spin: 2400ms;
   --sheet-shift: 0px;
+  --dur-route: 0ms;
+  --dur-enter: 0ms;
+  --dur-reveal: 0ms;
+  --enter-blur: 0px;
+  --enter-rise: 0px;
+  --route-slide: 0px;
 }

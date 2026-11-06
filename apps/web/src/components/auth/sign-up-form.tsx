@@ -85,7 +85,7 @@ export function SignUpForm() {
                 </FieldDescription>
                 <FieldError id={`${id}-password-error`}>{errors.password}</FieldError>
               </Field>
-              <Button type="submit" size="lg" disabled={pending}>
+              <Button type="submit" disabled={pending}>
                 Create account
               </Button>
             </FieldGroup>

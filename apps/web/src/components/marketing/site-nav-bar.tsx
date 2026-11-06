@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BrandLink } from "@/components/auth/auth-parts";
 
 import { SiteNavMenu } from "./site-nav-menu";
+import { SiteNavPill } from "./site-nav-pill";
 
 const links = [
   { href: "/how-it-works", label: "How it works" },
@@ -16,29 +17,24 @@ const links = [
  */
 export function SiteNavBar({ account }: { account: React.ReactNode }) {
   return (
-    <header className="animate-in duration-500 ease-out-quint fade-in motion-reduce:animate-none">
-      <nav
-        aria-label="Main"
-        className="mx-auto flex h-18 w-full max-w-(--container) items-center justify-between gap-6 px-(--gutter-sm) sm:h-20 sm:px-(--gutter)"
-      >
-        <BrandLink />
-        <ul className="hidden items-center gap-8 md:flex">
-          {links.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className="type-label text-text-2 transition-colors duration-(--dur-fast) hover:text-text-1"
-              >
-                {link.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <div className="flex items-center gap-2">
-          <SiteNavMenu links={links} />
-          {account}
-        </div>
-      </nav>
-    </header>
+    <SiteNavPill>
+      <BrandLink />
+      <ul className="hidden items-center gap-8 md:flex">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="type-label text-text-2 transition-colors duration-(--dur-fast) hover:text-text-1"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <div className="flex items-center gap-2">
+        <SiteNavMenu links={links} />
+        {account}
+      </div>
+    </SiteNavPill>
   );
 }

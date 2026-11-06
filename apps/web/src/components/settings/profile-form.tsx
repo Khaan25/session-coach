@@ -1,11 +1,19 @@
 "use client";
 
+import { UserIcon } from "@phosphor-icons/react";
 import { useId, useState } from "react";
 
 import { useAction } from "@/components/app/dry-run";
 import { Button } from "@/components/ui/button";
-import { ChecklistStep } from "@/components/settings/checklist-step";
-import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { SettingsSection } from "@/components/settings/settings-section";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldSeparator,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Combobox,
@@ -28,7 +36,7 @@ type Profile = {
 };
 
 /**
- * Steps 1 to 3 of the settings checklist: display name and email (read-only, synced from sign-in), time zone and email
+ * The Profile section of /settings, one frame: display name and email (read-only, synced from sign-in), time zone and email
  * reminders. Saves the three columns a learner may write through the `updateProfile` Server Action, with one button.
  */
 export function ProfileForm({ profile, timezones }: { profile: Profile; timezones: string[] }) {
@@ -61,70 +69,74 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
           .finally(() => setPending(false));
       }}
     >
-      <ol className="flex flex-col gap-8">
-        <ChecklistStep
-          n={1}
-          title="Your name"
-          changes="Shown in your account menu."
-          done={Boolean(profile.display_name)}
-        >
-          <Field>
-            <FieldLabel htmlFor={`${id}-name`}>Display name</FieldLabel>
-            <Input
-              id={`${id}-name`}
-              name="display_name"
-              defaultValue={profile.display_name ?? ""}
-              maxLength={100}
-              autoComplete="name"
-              aria-describedby={`${id}-email-hint`}
-            />
-            {/* TODO(zia): say how to change the email. */}
-            <FieldDescription id={`${id}-email-hint`}>
-              {profile.email
-                ? `Email: ${profile.email}, from how you sign in.`
-                : "No email on file."}
-            </FieldDescription>
-          </Field>
-        </ChecklistStep>
-        <ChecklistStep
-          n={2}
-          title="Time zone"
-          changes="Your day starts at midnight here, so it decides which day a card is due."
-          // UTC is the column's default, so it may never have been chosen.
-          done={profile.timezone !== "UTC"}
-        >
-          <Field>
-            <FieldLabel htmlFor={`${id}-timezone`}>Time zone</FieldLabel>
-            <Combobox
-              items={timezones}
-              value={timezone}
-              onValueChange={(value: string | null) => value && setTimezone(value)}
-            >
-              <ComboboxInput id={`${id}-timezone`} placeholder="Find a time zone" />
-              <ComboboxContent>
-                <ComboboxEmpty>No time zones match.</ComboboxEmpty>
-                <ComboboxList>
-                  {(zone: string) => (
-                    <ComboboxItem key={zone} value={zone}>
-                      {zone}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          </Field>
-        </ChecklistStep>
-        <ChecklistStep
-          n={3}
-          title="Daily reminder"
-          changes="Cards come back on day 1, 4 and 11. The email tells you when one is due."
-          done
-        >
+      {/* One section and one frame: the three fields are one row in profiles, saved by one Server Action, so the Save in
+          the frame's footer covers exactly what is above it. */}
+      <SettingsSection
+        id="profile"
+        icon={<UserIcon />}
+        title="Profile"
+        description="Your name, the time zone that decides which day a card is due, and the daily reminder."
+        footer={
+          <Button type="submit" disabled={pending}>
+            Save profile
+          </Button>
+        }
+      >
+        <FieldGroup>
+          {/* Two columns from md: name and time zone side by side, the reminder under them. */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Field>
+              <FieldLabel htmlFor={`${id}-name`}>Display name</FieldLabel>
+              <Input
+                id={`${id}-name`}
+                name="display_name"
+                defaultValue={profile.display_name ?? ""}
+                maxLength={100}
+                autoComplete="name"
+                aria-describedby={`${id}-email-hint`}
+              />
+              {/* TODO(zia): say how to change the email. */}
+              <FieldDescription id={`${id}-email-hint`}>
+                {profile.email
+                  ? `Shown in your account menu. Email: ${profile.email}, from how you sign in.`
+                  : "Shown in your account menu. No email on file."}
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`${id}-timezone`}>Time zone</FieldLabel>
+              <Combobox
+                items={timezones}
+                value={timezone}
+                onValueChange={(value: string | null) => value && setTimezone(value)}
+              >
+                <ComboboxInput
+                  id={`${id}-timezone`}
+                  placeholder="Find a time zone"
+                  aria-describedby={`${id}-timezone-hint`}
+                />
+                <ComboboxContent>
+                  <ComboboxEmpty>No time zones match.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(zone: string) => (
+                      <ComboboxItem key={zone} value={zone}>
+                        {zone}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
+              <FieldDescription id={`${id}-timezone-hint`}>
+                Your day starts at midnight here, so it decides which day a card is due.
+              </FieldDescription>
+            </Field>
+          </div>
+          <FieldSeparator />
           <Field orientation="horizontal">
             <FieldContent>
               <FieldLabel htmlFor={`${id}-notify`}>Email reminders</FieldLabel>
               <FieldDescription id={`${id}-notify-hint`}>
-                An email on days when cards are due. Nothing on days with none.
+                Cards come back on day 1, 4 and 11. An email on days when cards are due; nothing on
+                days with none.
               </FieldDescription>
             </FieldContent>
             <Switch
@@ -134,15 +146,8 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
               onCheckedChange={setNotify}
             />
           </Field>
-        </ChecklistStep>
-      </ol>
-      {/* One save for steps 1 to 3: they are one row in profiles, saved by one Server Action. */}
-      <div className="mt-4 flex flex-wrap items-center gap-3 md:ms-auto md:w-2/3">
-        <Button type="submit" disabled={pending}>
-          Save profile
-        </Button>
-        <p className="type-body-sm text-text-2">Saves steps 1 to 3.</p>
-      </div>
+        </FieldGroup>
+      </SettingsSection>
     </form>
   );
 }

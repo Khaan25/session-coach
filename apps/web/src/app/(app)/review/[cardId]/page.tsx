@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
+import { CardTransition } from "@/components/review/card-transition";
 import { SAMPLE_QUIZ_CARD } from "@/components/review/review-sample";
 import { QuizView } from "@/components/review/review-views";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -17,15 +18,20 @@ export const instant = false;
 
 export default function QuizPage({ params }: PageProps<"/review/[cardId]">) {
   return (
-    <Container>
-      {/* Skullet measures the real quiz, drawn from a sample card, so nothing moves when the card lands. */}
-      <MeasuredSuspense
-        label="Loading the card"
-        skeleton={<QuizView card={SAMPLE_QUIZ_CARD} nextHref={null} />}
-      >
-        <Quiz params={params} />
-      </MeasuredSuspense>
-    </Container>
+    <CardTransition>
+      <Container>
+        {/* One task on screen, at the container width every app page shares. */}
+        <div className="flex flex-col gap-6">
+          {/* Skullet measures the real quiz, drawn from a sample card, so nothing moves when the card lands. */}
+          <MeasuredSuspense
+            label="Loading the card"
+            skeleton={<QuizView card={SAMPLE_QUIZ_CARD} nextHref={null} />}
+          >
+            <Quiz params={params} />
+          </MeasuredSuspense>
+        </div>
+      </Container>
+    </CardTransition>
   );
 }
 

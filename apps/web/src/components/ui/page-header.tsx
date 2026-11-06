@@ -200,7 +200,8 @@ function PageHeaderTitle({ className, children, ...props }: React.ComponentProps
     <h1
       data-slot="page-header-title"
       className={cn(
-        "type-heading-lg text-pretty break-words @3xl:type-display group-data-[size=sm]/page-header:@3xl:type-heading-lg",
+        // An app page title is small and tight, like a dashboard greeting (after ServerOS, 2026-11-06); the page's blocks carry the weight.
+        "type-heading text-pretty break-words",
         // A kind badge after the name centres on the heading's line instead of sitting on its baseline.
         "has-data-[slot=badge]:flex has-data-[slot=badge]:flex-wrap has-data-[slot=badge]:items-center has-data-[slot=badge]:gap-x-3",
         className,

@@ -15,6 +15,7 @@ const PROTECTED = [
   "/setup",
   "/tracker",
   "/cli",
+  "/members",
 ];
 // Signed-in visitors to these go on to where they were headed.
 const SIGNED_OUT_ONLY = ["/login", "/sign-up"];

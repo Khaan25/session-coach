@@ -24,6 +24,7 @@ import type { Kind } from "@/lib/ui/kind";
 const statVariants = cva("group/stat flex min-w-0 flex-col", {
   variants: {
     size: {
+      sm: "gap-1",
       default: "gap-2",
       lg: "gap-3",
       xl: "gap-4",
@@ -125,7 +126,7 @@ function StatValue({ className, children, ...props }: React.ComponentProps<"div"
     <div
       data-slot="stat-value"
       className={cn(
-        "flex min-w-0 flex-wrap items-baseline gap-x-1 type-stat data text-text-1 group-data-[size=lg]/stat:type-stat-lg group-data-[size=xl]/stat:type-stat-xl",
+        "flex min-w-0 flex-wrap items-baseline gap-x-1 type-stat data text-text-1 group-data-[size=lg]/stat:type-stat-lg group-data-[size=sm]/stat:type-heading group-data-[size=xl]/stat:type-stat-xl",
         className,
       )}
       {...props}

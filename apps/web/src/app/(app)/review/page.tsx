@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { AllCaughtUpEmpty, DoneForTodayEmpty, NoCardsYetEmpty } from "@/components/app/empty-state";
 import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
+import { CardTransition } from "@/components/review/card-transition";
 import { SAMPLE_REVIEW_QUEUE } from "@/components/review/review-sample";
 import { QueueList, ReviewHeader } from "@/components/review/review-views";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -15,17 +16,22 @@ export const metadata: Metadata = { title: "Review" };
 
 export default function ReviewPage() {
   return (
-    <Container>
-      <ReviewHeader />
-      {/* Skullet measures the real queue, drawn from sample cards, so each row keeps its shape when the data lands. The
-          queue length isn't known until then, so the list can still grow or shrink. */}
-      <MeasuredSuspense
-        label="Loading your review queue"
-        skeleton={<QueueList queue={SAMPLE_REVIEW_QUEUE} />}
-      >
-        <Queue />
-      </MeasuredSuspense>
-    </Container>
+    <CardTransition>
+      <Container>
+        {/* The container width every app page shares, so moving along the queue keeps its place. */}
+        <div className="flex flex-col gap-6">
+          <ReviewHeader />
+          {/* Skullet measures the real queue, drawn from sample cards, so each row keeps its shape when the data lands.
+            The queue length isn't known until then, so the list can still grow or shrink. */}
+          <MeasuredSuspense
+            label="Loading your review queue"
+            skeleton={<QueueList queue={SAMPLE_REVIEW_QUEUE} />}
+          >
+            <Queue />
+          </MeasuredSuspense>
+        </div>
+      </Container>
+    </CardTransition>
   );
 }
 

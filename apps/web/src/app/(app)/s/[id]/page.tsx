@@ -2,15 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
-import {
-  SAMPLE_SESSION,
-  SAMPLE_SESSION_CARDS,
-  SAMPLE_SESSION_NOW,
-} from "@/components/sessions/session-sample";
 import { SessionView } from "@/components/sessions/session-view";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getSessionWithCards } from "@/lib/cards/queries";
 import { isStuck } from "@/lib/sessions/stuck";
+
+import { SessionSampleView } from "./session-sample-view";
 
 export const metadata: Metadata = { title: "Session" };
 
@@ -24,16 +21,7 @@ export default function SessionPage({ params }: PageProps<"/s/[id]">) {
   // Skullet measures the real page, drawn from a sample session, so the header and each card keep their shape when the
   // data lands. The card count isn't known until then, so the list can still grow or shrink.
   return (
-    <MeasuredSuspense
-      label="Loading the session"
-      skeleton={
-        <SessionView
-          session={SAMPLE_SESSION}
-          cards={SAMPLE_SESSION_CARDS}
-          now={SAMPLE_SESSION_NOW}
-        />
-      }
-    >
+    <MeasuredSuspense label="Loading the session" skeleton={<SessionSampleView />}>
       <SessionDetail params={params} />
     </MeasuredSuspense>
   );

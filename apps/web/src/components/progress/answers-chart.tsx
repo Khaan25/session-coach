@@ -28,7 +28,8 @@ export function AnswersChart({ data }: { data: { day: string; answers: number }[
         </BarChart>
       </ChartContainer>
       <figcaption className="type-body-sm text-text-2">
-        {total} answers in the last {data.length} days, from {data[0]?.day} to {data.at(-1)?.day}.
+        {total} {total === 1 ? "answer" : "answers"} in the last {data.length} days, from{" "}
+        {data[0]?.day} to {data.at(-1)?.day}.
       </figcaption>
       {/* The chart is hidden from screen readers, so its daily values are listed for them here. */}
       <ul className="sr-only">

@@ -38,13 +38,13 @@ export function ResendConfirmation({ email }: { email: string }) {
   }, [left]);
 
   return (
-    <form action={action} className="flex flex-col items-start gap-2">
+    <form action={action} className="flex flex-col items-center gap-2">
       <input type="hidden" name="email" value={email} />
       <Button type="submit" variant="secondary" disabled={pending || left > 0}>
         {left > 0 ? `Resend in ${left} s` : "Resend the email"}
       </Button>
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-      <p role="status" className="type-body-sm text-text-2">
+      <p role="status" className="text-center type-body-sm text-text-2">
         {state.message}
       </p>
     </form>

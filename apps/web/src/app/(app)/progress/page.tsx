@@ -12,7 +12,7 @@ import {
 } from "@/components/progress/progress-view";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import type { Progress as ProgressData } from "@/lib/progress/progress";
-import { getCardPath, getOwnership, getProgress } from "@/lib/progress/queries";
+import { getOwnership, getProgress } from "@/lib/progress/queries";
 import { listProjects } from "@/lib/projects/queries";
 import { reviewQueue } from "@/lib/review/queries";
 import { cardlessReason } from "@/lib/sessions/queries";
@@ -24,7 +24,7 @@ const scores: Score[] = [2, 1, 0];
 
 export default function ProgressPage({ searchParams }: PageProps<"/progress">) {
   // Skullet measures the real page, drawn from sample progress, so each card keeps its shape when the data lands. The
-  // session count, the project tabs and the card's path aren't known until then, so those can still grow or shrink.
+  // session count and the project tabs aren't known until then, so those can still grow or shrink.
   return (
     <MeasuredSuspense
       label="Loading your progress"
@@ -65,12 +65,11 @@ const answeredCount = (progress: ProgressData) =>
 /** Reads the clock outside render (cacheComponents and the compiler's purity rule), then the learner's rows. */
 async function load(userId: string, repo: string | null): Promise<ProgressPageData> {
   const now = new Date();
-  const [progress, ownership, queue, path, projects] = await Promise.all([
+  const [progress, ownership, queue, projects] = await Promise.all([
     getProgress(userId, now, repo),
     getOwnership(),
     // The queue rather than its count: the banner says how many of today's cards are on their day 11 review.
     reviewQueue(userId, now),
-    getCardPath(userId, now, repo),
     // Only the tabs need it, so a failed read hides them instead of failing the page.
     listProjects(userId).catch((error: unknown) => {
       console.error("[progress] listProjects", error);
@@ -82,7 +81,6 @@ async function load(userId: string, repo: string | null): Promise<ProgressPageDa
     ownership,
     dueToday: queue.length,
     dueOnDay11: queue.filter((card) => card.step === 3).length,
-    path,
     repo,
     repos: projects?.map((project) => project.repo) ?? null,
   };

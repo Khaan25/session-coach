@@ -77,6 +77,8 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
+  // Defend it is off the sidebar: /progress links to it (and Today does once the day's cards are done).
+  await page.goto("/progress");
   await page.getByRole("link", { name: "Defend it" }).click();
   // One defendable card: the start button counts them.
   const startButton = page.getByRole("button", { name: "Start: pick one of 1" });

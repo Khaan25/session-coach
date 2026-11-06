@@ -10,9 +10,9 @@
 @import "../styles/utilities.css";
 @import "../styles/theme.css";
 
-/* Marketing headlines only (font-display); the UI is Geist, set in tokens.css. */
+/* Big headlines (font-display): the UI's own Mona Sans, so a headline and the page share one family. */
 :root {
-  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-display: var(--font-mona-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* skullet hides skeleton text with a transparent fill on its loading root, and the fill inherits, so it reaches

@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-// The hero's product object: card 0 of the shared sample session, built from the real components. The answer key
+// The landing page's one decision card: card 0 of the shared sample session, built from the real components. The answer key
 // (model_answer) stays off the page, as it does for learners. Two blank cards behind it make the stack a deck.
 // Hidden cards never reach a learner, so they are not counted or shown.
 const cards = sample.cards.filter((visible) => !visible.hidden);

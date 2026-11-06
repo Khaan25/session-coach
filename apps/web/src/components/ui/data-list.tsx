@@ -15,13 +15,15 @@ import { EMPTY_VALUE } from "@/lib/ui/format";
 // renders as a blank that looks like a bug.
 //
 // variant="framed" (card and frame are the old names, kept) puts the list in its own frame with the pairs split by the row
-// rule. Inside another frame use plain.
+// rule. variant="divided" keeps the row rules without the frame, for a list that sits flat in a card. Inside another
+// frame use plain.
 
 const dataListVariants = cva("group/data-list min-w-0", {
   variants: {
     variant: {
       plain: "",
       framed: "frame bg-page px-4",
+      divided: "",
       /** @deprecated Use framed. */
       card: "frame bg-page px-4",
       /** @deprecated Use framed. */
@@ -83,7 +85,7 @@ function DataListItem({ className, ...props }: React.ComponentProps<"div">) {
         // The item's own gap would replace the list's 16px column gap in the subgrid, so it repeats it: the longest label never touches its value.
         "group-data-[orientation=horizontal]/data-list:@md/data-list:grid group-data-[orientation=horizontal]/data-list:@md/data-list:grid-cols-subgrid group-data-[orientation=horizontal]/data-list:@md/data-list:items-baseline group-data-[orientation=horizontal]/data-list:@md/data-list:gap-x-4",
         "group-data-[size=sm]/data-list:min-h-(--row-sm) group-data-[size=sm]/data-list:py-1.5",
-        "group-data-[variant=framed]/data-list:[&+&]:rule-top",
+        "group-data-[variant=divided]/data-list:[&+&]:rule-top group-data-[variant=framed]/data-list:[&+&]:rule-top",
         className,
       )}
       {...props}

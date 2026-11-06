@@ -1,5 +1,5 @@
 /* The app's own theme on top of the design system: chart series, the secondary key's edge, success and
-   warning, and the motion, bento and toast animations. Imported by app/globals.css after utilities.css. */
+   warning, and the motion, entrance, route-transition and toast animations. Imported by app/globals.css after utilities.css. */
 
 /* The chart series colours are emitted as real variables too, because chart configs read them with var().
    Declared again on every [data-surface], so a chart on a remapped surface takes that surface's hues. */
@@ -56,21 +56,6 @@
 }
 
 /*
- * The landing bento (components/marketing/bento-*.tsx): the sprite's one-turn spin on click, and the soft
- * blur on the checks that are not in focus. Reduced motion drops the spin at the call site.
- */
-@theme {
-  --blur-row: 2px;
-  --animate-spin-y: spin-y 900ms cubic-bezier(0.45, 0, 0.55, 1);
-
-  @keyframes spin-y {
-    to {
-      transform: rotateY(360deg);
-    }
-  }
-}
-
-/*
  * A toast that updates in place has nothing to animate, so this pulse is the "again" signal. Two
  * identical keyframes: re-running an animation needs the computed `animation-name` to change, so
  * Toast alternates even and odd on its update counter. It animates `scale`, not `transform`, because
@@ -98,5 +83,171 @@
     50% {
       scale: 1.04;
     }
+  }
+}
+
+/*
+ * Entrances and route changes (docs/DECISIONS.md, 2026-11-06). A block that appears lifts a few
+ * pixels out of a light blur on the out-expo curve. Every distance and duration is a token that reduced motion zeroes
+ * (tokens.css), so under reduce these settle at once.
+ */
+@theme inline {
+  --ease-out-expo: var(--ease-out-expo);
+  --ease-drawer: var(--ease-drawer);
+}
+
+@theme {
+  --animate-enter: enter var(--dur-enter) var(--ease-out-expo) both;
+
+  @keyframes enter {
+    from {
+      opacity: 0;
+      filter: blur(var(--enter-blur));
+      translate: 0 var(--enter-rise);
+    }
+  }
+}
+
+/*
+ * React <ViewTransition> recipes. A layout wraps its content in <ViewTransition default="route-fade">, so only the
+ * content crossfades and the sidebar, nav and topbar hold still: the root snapshot does not animate. Directional
+ * changes add a transition type ("forward" or "back") with addTransitionType, and a named element shared by two
+ * routes morphs on the drawer curve.
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* A route fade or a card slide moves only by its own keyframes. The group would otherwise morph from the old page's size to the new one and
+   stretch the old snapshot with it, which reads as the page scaling down or up when two pages differ in height. So the
+   group snaps to the new size and both snapshots draw at their own size, pinned to the top. */
+::view-transition-group(.route-fade),
+::view-transition-group(.slide-forward),
+::view-transition-group(.slide-back) {
+  animation: none;
+}
+::view-transition-old(.route-fade),
+::view-transition-new(.route-fade),
+::view-transition-old(.slide-forward),
+::view-transition-new(.slide-forward),
+::view-transition-old(.slide-back),
+::view-transition-new(.slide-back) {
+  height: auto;
+  object-fit: none;
+  object-position: top;
+}
+::view-transition-old(.route-fade) {
+  animation: vt-fade-out var(--dur-fast) var(--ease-step) both;
+}
+::view-transition-new(.route-fade) {
+  animation: vt-fade-in var(--dur-route) var(--ease-out-expo) both;
+}
+
+::view-transition-old(.slide-forward) {
+  animation: vt-slide-out-left var(--dur-route) var(--ease-drawer) both;
+}
+::view-transition-new(.slide-forward) {
+  animation: vt-slide-in-right var(--dur-route) var(--ease-drawer) both;
+}
+::view-transition-old(.slide-back) {
+  animation: vt-slide-out-right var(--dur-route) var(--ease-drawer) both;
+}
+::view-transition-new(.slide-back) {
+  animation: vt-slide-in-left var(--dur-route) var(--ease-drawer) both;
+}
+
+/* Auth: the card resizes on the drawer curve while its two snapshots stretch to fill it, and the form inside swaps with
+   a short crossfade: the old one leaves fast, the new one arrives just after, with no movement to fight the resize. */
+::view-transition-group(.auth-card) {
+  animation-duration: var(--dur-route);
+  animation-timing-function: var(--ease-drawer);
+}
+::view-transition-old(.auth-card),
+::view-transition-new(.auth-card) {
+  height: 100%;
+  animation: none;
+}
+::view-transition-old(.auth-swap) {
+  animation: vt-fade-out var(--dur-fast) var(--ease-step) both;
+}
+::view-transition-new(.auth-swap) {
+  animation: vt-swap-in var(--dur-route) var(--ease-out-expo) var(--dur-press) both;
+}
+
+::view-transition-group(.morph) {
+  animation-duration: var(--dur-route);
+  animation-timing-function: var(--ease-drawer);
+}
+
+/* No blur here: a filter on a viewport-sized snapshot is costly on phones, and routes change often. */
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+    translate: 0 var(--enter-rise);
+  }
+}
+@keyframes vt-swap-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-slide-in-right {
+  from {
+    opacity: 0;
+    translate: var(--route-slide) 0;
+  }
+}
+@keyframes vt-slide-out-left {
+  to {
+    opacity: 0;
+    translate: calc(var(--route-slide) * -1) 0;
+  }
+}
+@keyframes vt-slide-in-left {
+  from {
+    opacity: 0;
+    translate: calc(var(--route-slide) * -1) 0;
+  }
+}
+@keyframes vt-slide-out-right {
+  to {
+    opacity: 0;
+    translate: var(--route-slide) 0;
+  }
+}
+
+/* The marketing nav settling into its floating pill (components/marketing/site-nav-pill.tsx): only the properties
+   that change, never `all`. */
+@utility transition-nav {
+  transition-property: max-width, height, margin-top, padding, background-color, border-color;
+}
+
+/* The marketing nav is sticky, so a focused element or an #anchor must stop below it (WCAG 2.4.11). */
+:root:has([data-site-nav]) {
+  scroll-padding-top: calc(var(--topbar) + var(--space-10));
+}
+
+/* Marketing reveals (components/marketing/reveal.tsx) start hidden in inline styles that only JavaScript lifts. With
+   scripting off, show them as they are. */
+@media (scripting: none) {
+  [data-reveal] {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+/* Reduced motion: no snapshot animates; the new page simply replaces the old. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

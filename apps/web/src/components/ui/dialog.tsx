@@ -69,7 +69,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
 
 // Base UI's `--nested-dialogs` / `data-nested-dialog-open`: a parent recedes and dims rather than being covered.
 const NESTED_STACK =
-  "translate-y-[calc(1.25rem*var(--nested-dialogs))] scale-[calc(1-0.1*var(--nested-dialogs))] transition-[translate,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-(--dur-200) data-nested-dialog-open:after:opacity-100";
+  "translate-y-[calc(1.25rem*var(--nested-dialogs,0))] scale-[calc(1-0.1*var(--nested-dialogs,0))] transition-[translate,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-(--dur-200) data-nested-dialog-open:after:opacity-100";
 
 function DialogContent({
   className,

@@ -3,26 +3,21 @@
 // Full-page frames, so each canvas preview reads as the real route at desktop size: the (app) shell, the (auth) layout
 // and the public pages, each under a slim browser bar with the URL.
 //
-// Reused as they are: the Sidebar* primitives, the nav items, BrandMark, ThemeToggle, AuthShell with AuthArt, and
-// SiteNavBar with SiteFooter. Only the (app) sidebar is rebuilt here, with the same primitives and classes, because
-// the production pieces can't run on a canvas: AppSidebar and NavUser import the sign-out Server Action, NavSessions
-// subscribes to live sessions through Supabase, NavMain and AppBreadcrumb read the pathname, and the real Sidebar
-// container is `fixed` at the viewport's height.
+// Reused as they are: the Sidebar* primitives, the nav items, BrandMark, AuthShell, and SiteNavBar with
+// SiteFooter. Only the (app) sidebar is rebuilt here, with the same primitives and classes, because the production
+// pieces can't run on a canvas: AppSidebar and NavUser import the sign-out Server Action, NavMain and AppBreadcrumb
+// read the pathname, and the real Sidebar container is `fixed` at the viewport's height.
 
-import { CaretRightIcon, CaretUpDownIcon, FolderSimpleIcon } from "@phosphor-icons/react";
-import type { SessionStatus } from "@session-coach/shared/session";
+import { CaretUpDownIcon } from "@phosphor-icons/react";
 
-import { AuthArt, type AuthScene } from "@/components/auth/auth-art";
 import { AuthShell } from "@/components/auth/auth-screens";
 import { DryRunContext } from "@/components/app/dry-run";
 import { BrandMark } from "@/components/brand-mark";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteNavAccount } from "@/components/marketing/site-nav-account";
 import { SiteNavBar } from "@/components/marketing/site-nav-bar";
-import { navMain } from "@/components/nav-items";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { navMain, navOther } from "@/components/nav-items";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge, type BadgeProps } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -31,13 +26,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
@@ -50,45 +43,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export type FrameNavItem = { title: string; url: string; icon: React.ReactNode };
+const FRAME_USER = { name: "Sam Rivera", detail: "sam@example.com", initials: "SR" };
 
-/** The real sidebar's Learn group. */
-export const LEARN_NAV: FrameNavItem[] = navMain;
-
-export type FrameSession = { id: string; title: string; repo: string; status: SessionStatus };
-
-/** The recent sessions every static frame shows. The first one is the session the session previews open. */
-export const FRAME_SESSIONS: FrameSession[] = [
-  {
-    id: "7f3a2c91",
-    title: "Add rate limiting to the upload route",
-    repo: "session-coach",
-    status: "ready",
-  },
-  { id: "b81d0e44", title: "Write transcriptParser.ts", repo: "rapporteur", status: "processing" },
-  { id: "c2e95a17", title: "Move email to Resend", repo: "session-coach", status: "failed" },
-  { id: "0d4f6b38", title: "Stream the CLI upload", repo: "session-coach", status: "ready" },
-];
-
-export const FRAME_USER = { name: "Sam Rivera", detail: "sam@example.com", initials: "SR" };
-
-// Copied from nav-sessions.tsx, which doesn't export it.
-const statusBadge: Record<SessionStatus, { label: string; props: BadgeProps }> = {
-  pending: { label: "Queued", props: { variant: "outline" } },
-  processing: { label: "Making cards", props: { variant: "default" } },
-  ready: { label: "Cards ready", props: { variant: "success" } },
-  failed: { label: "Failed", props: { status: "fail" } },
-};
-
-/** A browser window: the URL bar, an optional bar under it, then the page filling the rest. */
+/** A browser window: the URL bar, then the page filling the rest. */
 export function FrameWindow({
   path,
-  bar,
   overlay,
   children,
 }: {
   path: string;
-  bar?: React.ReactNode;
   overlay?: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -104,7 +67,6 @@ export function FrameWindow({
           coach.ziaa.me{path}
         </span>
       </div>
-      {bar}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {/* Every real control drawn in a frame saves nothing: see DryRunContext. */}
         <DryRunContext value>{children}</DryRunContext>
@@ -115,59 +77,30 @@ export function FrameWindow({
 }
 
 /**
- * The (app) layout: the inset sidebar (brand, Learn nav, recent sessions, account) and the inset page with the
- * sidebar toggle and the breadcrumb. The active nav row, the breadcrumb and the active session all follow `path`, as
- * the real NavMain, AppBreadcrumb and NavSessions do. Pass `onNavigate` and `onOpenSession` to make the rows clickable.
+ * The (app) layout: the inset sidebar (brand, Learn nav, account) and the inset page with the sidebar toggle and the
+ * breadcrumb. The active nav row and the breadcrumb follow `path`, as the real NavMain and AppBreadcrumb do.
  */
 export function AppFrame({
   path,
-  crumb,
-  nav = LEARN_NAV,
-  sessions = FRAME_SESSIONS,
   dueCount = 3,
-  user = FRAME_USER,
-  onNavigate,
-  onOpenSession,
-  bar,
   overlay,
   children,
 }: {
-  /** The route shown in the URL bar, e.g. `/dashboard` or `/s/7f3a2c91`. */
+  /** The route shown in the URL bar, e.g. `/dashboard` or `/review/c2`. */
   path: string;
-  /** The breadcrumb's page, for a proposed route that isn't in the nav. */
-  crumb?: string;
-  nav?: FrameNavItem[];
-  sessions?: FrameSession[];
+  /** Cards due, on the Review row; 0 hides the badge. */
   dueCount?: number;
-  user?: typeof FRAME_USER;
-  onNavigate?: (url: string) => void;
-  onOpenSession?: (id: string) => void;
-  /** A bar between the URL bar and the app, such as the prototype's controls. */
-  bar?: React.ReactNode;
   /** Drawn over the whole window, such as an open dialog. */
   overlay?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const route = path.split("?")[0];
   const isActive = (url: string) => route === url || route.startsWith(`${url}/`);
-  const title =
-    crumb ??
-    nav.find((item) => isActive(item.url))?.title ??
-    // As AppBreadcrumb: session and CLI approve pages are not in the nav, so they get their own crumb.
-    (path.startsWith("/s/") ? "Session" : path.startsWith("/cli/") ? "Connect the CLI" : undefined);
+  const title = [...navMain, ...navOther].find((item) => isActive(item.url))?.title;
   return (
-    <FrameWindow path={path} bar={bar} overlay={overlay}>
+    <FrameWindow path={path} overlay={overlay}>
       <SidebarProvider className="min-h-0 flex-1">
-        <FrameSidebar
-          nav={nav}
-          isActive={isActive}
-          activeSession={path.startsWith("/s/") ? path.slice(3) : null}
-          sessions={sessions}
-          dueCount={dueCount}
-          user={user}
-          onNavigate={onNavigate}
-          onOpenSession={onOpenSession}
-        />
+        <FrameSidebar isActive={isActive} dueCount={dueCount} />
         <SidebarInset className="overflow-y-auto">
           <header className="sticky top-0 z-10 flex h-(--topbar) shrink-0 items-center gap-2 bg-page px-(--gutter-sm) sm:px-(--gutter)">
             <SidebarTrigger className="-ml-1" />
@@ -178,16 +111,7 @@ export function AppFrame({
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:inline-flex">
-                  <BreadcrumbLink
-                    {...(onNavigate
-                      ? {
-                          render: <button type="button" />,
-                          onClick: () => onNavigate("/dashboard"),
-                        }
-                      : { href: "/dashboard" })}
-                  >
-                    Session Coach
-                  </BreadcrumbLink>
+                  <BreadcrumbLink href="/dashboard">Session Coach</BreadcrumbLink>
                 </BreadcrumbItem>
                 {title && (
                   <>
@@ -212,24 +136,13 @@ export function AppFrame({
  * sized to the frame instead of `fixed` to the viewport. The toggle in the page header hides it, as the real one does.
  */
 function FrameSidebar({
-  nav,
   isActive,
-  activeSession,
-  sessions,
   dueCount,
-  user,
-  onNavigate,
-  onOpenSession,
 }: {
-  nav: FrameNavItem[];
   isActive: (url: string) => boolean;
-  activeSession: string | null;
-  sessions: FrameSession[];
   dueCount: number;
-  user: typeof FRAME_USER;
-  onNavigate?: (url: string) => void;
-  onOpenSession?: (id: string) => void;
 }) {
+  const user = FRAME_USER;
   const { state } = useSidebar();
   return (
     <div
@@ -246,7 +159,7 @@ function FrameSidebar({
             <SidebarHeader>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton size="lg" onClick={() => onNavigate?.("/dashboard")}>
+                  <SidebarMenuButton size="lg">
                     <BrandMark />
                     <span>Session Coach</span>
                   </SidebarMenuButton>
@@ -257,12 +170,11 @@ function FrameSidebar({
               <SidebarGroup>
                 <SidebarGroupLabel>Learn</SidebarGroupLabel>
                 <SidebarMenu>
-                  {nav.map((item) => (
+                  {navMain.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         isActive={isActive(item.url)}
                         aria-current={isActive(item.url) ? "page" : undefined}
-                        onClick={() => onNavigate?.(item.url)}
                       >
                         {item.icon}
                         <span>{item.title}</span>
@@ -276,71 +188,23 @@ function FrameSidebar({
                   ))}
                 </SidebarMenu>
               </SidebarGroup>
-              {sessions.length > 0 && (
-                <Collapsible defaultOpen render={<SidebarGroup />}>
-                  <SidebarGroupLabel render={<CollapsibleTrigger />}>
-                    Recent sessions
-                    <CaretRightIcon className="ml-auto transition-transform in-data-panel-open:rotate-90 motion-reduce:transition-none" />
-                  </SidebarGroupLabel>
-                  <CollapsibleContent>
-                    <SidebarGroupContent>
-                      <SidebarMenu>
-                        {sessions.slice(0, 5).map((session) => {
-                          const badge = statusBadge[session.status];
-                          return (
-                            <SidebarMenuItem key={session.id}>
-                              <SidebarMenuButton
-                                size="lg"
-                                isActive={activeSession === session.id}
-                                onClick={() => onOpenSession?.(session.id)}
-                                title={`${session.title}\nRepository: ${session.repo}\n${badge.label}`}
-                              >
-                                <div className="grid min-w-0 flex-1 gap-0.5">
-                                  <span className="truncate">{session.title}</span>
-                                  <span className="flex min-w-0 items-center gap-1.5 type-label-sm text-text-2">
-                                    <FolderSimpleIcon aria-hidden className="shrink-0" />
-                                    <span className="sr-only">Repository:</span>
-                                    <span className="truncate">{session.repo}</span>
-                                    <span className="sr-only">Status:</span>
-                                    <Badge size="sm" {...badge.props}>
-                                      {badge.label}
-                                    </Badge>
-                                  </span>
-                                </div>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          );
-                        })}
-                      </SidebarMenu>
-                    </SidebarGroupContent>
-                  </CollapsibleContent>
-                </Collapsible>
-              )}
             </SidebarContent>
+            {/* As the real footer: one control, the account menu, which also holds the theme. */}
             <SidebarFooter>
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        size="lg"
-                        aria-label={`Account menu for ${user.name}`}
-                        onClick={() => onNavigate?.("/settings")}
-                      >
-                        <Avatar aria-hidden>
-                          <AvatarFallback>{user.initials}</AvatarFallback>
-                        </Avatar>
-                        <div className="grid min-w-0 flex-1 text-start">
-                          <span className="truncate">{user.name}</span>
-                          <span className="truncate type-label-sm text-text-2">{user.detail}</span>
-                        </div>
-                        <CaretUpDownIcon className="ml-auto" />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
-                </div>
-                <ThemeToggle />
-              </div>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg" aria-label={`Account menu for ${user.name}`}>
+                    <Avatar aria-hidden>
+                      <AvatarFallback>{user.initials}</AvatarFallback>
+                    </Avatar>
+                    <div className="grid min-w-0 flex-1 text-start">
+                      <span className="truncate">{user.name}</span>
+                      <span className="truncate type-label-sm text-text-2">{user.detail}</span>
+                    </div>
+                    <CaretUpDownIcon className="ml-auto" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
             </SidebarFooter>
           </div>
         </div>
@@ -349,20 +213,12 @@ function FrameSidebar({
   );
 }
 
-/** The (auth) layout: the real AuthShell, with the scene's art the route would pick. */
-export function AuthFrame({
-  path,
-  scene,
-  children,
-}: {
-  path: string;
-  scene: AuthScene;
-  children: React.ReactNode;
-}) {
+/** The (auth) and (standalone) layouts: the real AuthShell, one centred card over the brand bloom. */
+export function AuthFrame({ path, children }: { path: string; children: React.ReactNode }) {
   return (
     <FrameWindow path={path}>
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <AuthShell art={<AuthArt scene={scene} />}>{children}</AuthShell>
+        <AuthShell>{children}</AuthShell>
       </div>
     </FrameWindow>
   );

@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import Link from "next/link";
 
 import { AuthNotice } from "@/components/auth/auth-notice";
@@ -14,22 +15,29 @@ const FOOTER_LINKS = [
 ] as const;
 
 /**
- * Signed-out screens, after shadcn's login-02: the form column on the left with the brand at its top, the art on the
- * right from lg up (option B's explain panel over the painting). Only the brand, never the marketing nav or the
- * account menu.
+ * Signed-out screens: one centred column with the brand at the top and the footer links at the bottom. Only the
+ * brand, never the marketing nav or the account menu.
  */
-export function AuthShell({ art, children }: { art: React.ReactNode; children: React.ReactNode }) {
+export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid min-h-full flex-1 bg-page lg:grid-cols-2">
-      <div className="flex flex-col">
-        <header className="flex h-18 items-center px-(--gutter-sm) sm:h-20 sm:px-(--gutter)">
+    <div className="relative isolate flex min-h-full flex-1 overflow-hidden bg-page">
+      {/* The bloom: a brand-blue glow centred on the top edge, fading to the page by two thirds down. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-x-1/2 -top-3/4 -z-10 h-3/2 bg-radial from-brand/10 via-brand/5 to-transparent to-60% sm:inset-x-0 dark:from-brand/30 dark:via-brand/50 dark:via-30%"
+      />
+      <div className="flex flex-1 flex-col">
+        <header className="flex h-18 items-center justify-center px-(--gutter-sm) sm:h-20 sm:px-(--gutter)">
           <BrandLink />
         </header>
-        <main className="flex flex-1 flex-col justify-center">
-          {/* The one form column every auth screen sits in. */}
-          <div className="mx-auto flex w-full max-w-md flex-col gap-8 px-(--gutter-sm) pt-16 pb-20 sm:px-(--gutter) sm:pt-24 sm:pb-30">
-            {children}
-          </div>
+        <main className="flex flex-1 flex-col justify-center px-(--gutter-sm) pt-8 pb-16 sm:px-(--gutter) sm:pt-12 sm:pb-24">
+          {/* The one card every auth screen sits in. It stays mounted across routes, so a change of screen resizes it
+              smoothly (auth-card) while the content inside crossfades (auth-swap, in the layout). */}
+          <ViewTransition update="auth-card" default="none">
+            <div className="mx-auto flex w-full max-w-100 flex-col gap-6 rounded-frame border border-hair bg-page px-6 pt-6 pb-5 shadow-card sm:px-8 sm:pt-8 sm:pb-7">
+              {children}
+            </div>
+          </ViewTransition>
         </main>
         <footer className="px-(--gutter-sm) py-8 sm:px-(--gutter)">
           <ul className="flex justify-center gap-6">
@@ -46,34 +54,17 @@ export function AuthShell({ art, children }: { art: React.ReactNode; children: R
           </ul>
         </footer>
       </div>
-      {art}
     </div>
   );
 }
 
 export function LoginHeading() {
-  return (
-    <AuthHeading
-      title={
-        <>
-          Sign <span className="italic">in</span>
-        </>
-      }
-    >
-      Your due cards are where you left them.
-    </AuthHeading>
-  );
+  return <AuthHeading title="Sign in">Your due cards are where you left them.</AuthHeading>;
 }
 
 export function SignUpHeading() {
   return (
-    <AuthHeading
-      title={
-        <>
-          Create an <span className="italic">account</span>
-        </>
-      }
-    >
+    <AuthHeading title="Create an account">
       Explain back the decisions your coding agent made, and keep what you learn.
     </AuthHeading>
   );
@@ -81,13 +72,7 @@ export function SignUpHeading() {
 
 export function CheckEmailHeading() {
   return (
-    <AuthHeading
-      title={
-        <>
-          Check your <span className="italic">email</span>
-        </>
-      }
-    >
+    <AuthHeading title="Check your email">
       If that address can sign up, we sent it a link to confirm the account. Open the link on this
       device to finish.
     </AuthHeading>
@@ -96,13 +81,7 @@ export function CheckEmailHeading() {
 
 export function ForgotPasswordHeading() {
   return (
-    <AuthHeading
-      title={
-        <>
-          Reset your <span className="italic">password</span>
-        </>
-      }
-    >
+    <AuthHeading title="Reset your password">
       Enter the address you sign in with and we&apos;ll email you a link to set a new password.
     </AuthHeading>
   );
@@ -110,13 +89,7 @@ export function ForgotPasswordHeading() {
 
 export function UpdatePasswordHeading() {
   return (
-    <AuthHeading
-      title={
-        <>
-          Set a new <span className="italic">password</span>
-        </>
-      }
-    >
+    <AuthHeading title="Set a new password">
       Choose the password you&apos;ll sign in with from now on.
     </AuthHeading>
   );
@@ -124,13 +97,7 @@ export function UpdatePasswordHeading() {
 
 export function ConfirmHeading() {
   return (
-    <AuthHeading
-      title={
-        <>
-          One more <span className="italic">step</span>
-        </>
-      }
-    >
+    <AuthHeading title="One more step">
       Press the button to finish. The link works once.
     </AuthHeading>
   );
@@ -176,15 +143,7 @@ const FALLBACK = {
 };
 
 export function AuthErrorHeading() {
-  return (
-    <AuthHeading
-      title={
-        <>
-          That didn&apos;t <span className="italic">work</span>
-        </>
-      }
-    />
-  );
+  return <AuthHeading title="That didn't work" />;
 }
 
 /** The notice for a code from the URL; an unknown or missing code gets the fallback. */
@@ -200,14 +159,11 @@ export function AuthErrorNotice({ code }: { code: string | undefined }) {
 
 export function AuthErrorActions() {
   return (
-    <div className="flex flex-wrap gap-3">
-      <Link href="/login" className={buttonVariants({ size: "lg" })}>
+    <div className="flex flex-col gap-3">
+      <Link href="/login" className={buttonVariants()}>
         Sign in
       </Link>
-      <Link
-        href="/forgot-password"
-        className={buttonVariants({ variant: "secondary", size: "lg" })}
-      >
+      <Link href="/forgot-password" className={buttonVariants({ variant: "secondary" })}>
         Reset password
       </Link>
     </div>

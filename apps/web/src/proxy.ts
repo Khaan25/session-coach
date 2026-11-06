@@ -16,8 +16,8 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Everything except Next's assets, the routes no browser session reaches (Play Stats API and crons by bearer key,
-    // CLI uploads by CLI token, unsubscribe by signed link) and files with a listed static extension. The other
+    // CLI uploads by CLI token, unsubscribe by signed link), the generated share image and icons, and files with a listed static extension. The other
     // api/cli routes stay in: /cli/approve's approve and deny read the session cookie.
-    "/((?!_next/static|_next/image|api/dashboard|api/cron|api/sessions|api/unsubscribe|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)",
+    "/((?!_next/static|_next/image|api/dashboard|api/cron|api/sessions|api/unsubscribe|favicon.ico|opengraph-image|twitter-image|icon|apple-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|webmanifest)$).*)",
   ],
 };

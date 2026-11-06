@@ -17,6 +17,8 @@ export function MeasuredSuspense({
   skeleton: React.ReactNode;
   children: React.ReactNode;
 }) {
+  // No crossfade of its own: the layout already fades the route in, and a second fade from skeleton to content
+  // added about 250 ms to every page change. The skeleton is measured from the real view, so the swap does not move.
   return (
     <Suspense fallback={<MeasuredSkeleton label={label}>{skeleton}</MeasuredSkeleton>}>
       {children}
