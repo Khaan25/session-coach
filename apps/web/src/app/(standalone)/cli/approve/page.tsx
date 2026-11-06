@@ -12,7 +12,10 @@ import { formatRelativeTime } from "@/lib/relative-time";
 import { codeState, formatUserCode, normalizeUserCode, type DeviceRow } from "@/lib/tokens/device";
 import { findDeviceCode } from "@/lib/tokens/device-codes";
 
-export const metadata: Metadata = { title: "Connect the CLI", robots: { index: false } };
+export const metadata: Metadata = {
+  title: "Connect the CLI | Session Coach",
+  robots: { index: false },
+};
 
 /**
  * /cli/approve?code=XXXX-XXXX: the browser half of `session-coach login`. Signed-out visitors are sent to /login and

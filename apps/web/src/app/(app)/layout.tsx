@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import { Suspense, ViewTransition } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { DetectTimezone } from "@/components/settings/detect-timezone";
+import { SkipLink } from "@/components/skip-link";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -48,16 +50,22 @@ async function SignedInSidebar() {
   );
 }
 
+// App pages set a bare title ("Dashboard"); the brand follows it in the tab, like the marketing pages.
+export const metadata: Metadata = {
+  title: { template: "%s | Session Coach", default: "Session Coach" },
+};
+
 // Review cards slide on their own (components/review/card-transition.tsx), so the shell holds still for those types.
 const shellFade = { forward: "none", back: "none", default: "route-fade" };
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <SidebarProvider>
+      <SkipLink />
       <Suspense fallback={<AppSidebar sessions={[]} dueCount={0} userId={null} user={null} />}>
         <SignedInSidebar />
       </Suspense>
-      <SidebarInset>
+      <SidebarInset id="main">
         <header className="sticky top-0 z-10 flex h-(--topbar) shrink-0 items-center gap-2 bg-page px-(--gutter-sm) sm:px-(--gutter)">
           <SidebarTrigger className="-ml-1" />
           <Separator
