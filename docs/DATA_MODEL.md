@@ -168,7 +168,8 @@ One uploaded Claude Code session and its processing status.
 - **Repeat uploads** (`POST /api/sessions`): `pending` gets a fresh upload URL (409); `ready` or a live `processing`
   run gets 409. `failed`, or stuck (`processing` for over 10 minutes by `processing_started_at`), is retried: its cards
   are deleted, the row goes back to `pending` with `error` cleared, and the new upload replaces the log.
-- **Stuck sessions:** the daily cron marks stuck rows `failed` with a retryable `error` (`lib/sessions/stuck.ts`).
+- **Stuck sessions:** the daily cron marks stuck rows `failed` with a retryable `error` (`lib/sessions/stuck.ts`). It
+  finds them through the partial indexes `sessions_processing_idx` and `sessions_pending_idx`.
 - Realtime publishes this table (see below).
 
 ### `decision_cards`
@@ -213,7 +214,10 @@ The 0–5 decisions extracted from a ready session, each with a question for the
   [`packages/shared/src/decision.ts`](../packages/shared/src/decision.ts) applies the same rule in code. Never write
   either column; an insert that names them fails.
 
-- **Index:** `decision_cards_user_idx (user_id) where not hidden`, matching the learner policy.
+- **Indexes:** `decision_cards_user_idx (user_id) where not hidden`, matching the learner policy;
+  `decision_cards_user_id_idx (user_id, id)` for service-role reads and the cascade, which include hidden cards;
+  `decision_cards_session_user_idx (session_id, user_id)`, the foreign key's own columns, so a join from `sessions`
+  under RLS is one probe (see [LOAD_TEST.md](LOAD_TEST.md)).
 
 ### `answers`
 
@@ -231,6 +235,9 @@ Every explanation a learner submitted and its grade. Append-only history.
 | `created_at`         | Answer time. Indexed with `user_id` for progress and Play Stats.        | Default    |
 
 - **Policy:** `read own answers`. No learner writes: **attack prevented** is a learner inserting `score = 2` rows.
+- **Indexes:** `answers_card_user_idx (card_id, user_id)`, the foreign key's columns, for per-card lookups under RLS
+  and the cascade; `answers_user_id_idx (user_id, id)` for `fetchAll` pages in id order;
+  `answers_user_created_idx (user_id, created_at desc)` for recent answers.
 
 ### `reviews`
 
@@ -251,7 +258,8 @@ One row per answered card: where it is in the review schedule (gaps of 1, 3, the
 - **Why one row per card, not a row per future review:** the step and due date are all the queue needs; future rows
   would have to be deleted every time a low score moves the card down.
 - A card has no row until its first answer. The queue finds new cards from `decision_cards` instead.
-- **Index:** `reviews_due_idx (user_id, due_on) where not mastered`, for the "due today" count.
+- **Indexes:** `reviews_due_idx (user_id, due_on) where not mastered`, for the "due today" count;
+  `reviews_user_card_idx (user_id, card_id)` for every other read by learner, mastered cards included.
 
 ### `email_log`
 

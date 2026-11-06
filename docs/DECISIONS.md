@@ -2,6 +2,20 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-06 · Index foreign keys with user_id; load-test the schema at 1000x
+
+- **Decision:** `20261106000000_scale_indexes.sql` adds seven indexes and drops `answers_card_idx`. The two that
+  matter most index each composite foreign key's own columns, `answers (card_id, user_id)` and
+  `decision_cards (session_id, user_id)`, because RLS adds `user_id = auth.uid()` to every learner query: a lookup
+  by `card_id` alone was ANDed with the learner's whole `user_id` index on every loop. Applied to live on 6 Nov.
+- **Why:** the new load test (`scripts/load-test`, results in [LOAD_TEST.md](LOAD_TEST.md)) ran the app's 29 real
+  queries at 1x to 1000x. At 1000x a learner with 55k cards hit 88 s in `learner_ownership()`, 104 s deleting their
+  account and 12 s in `getCardPath` (over the 8 s timeout). After: 203 ms, 560 ms and 148 ms.
+- **Rejected:** rewriting `learner_ownership()` (the plan, not the SQL, was wrong); `create index concurrently`
+  (migrations run in a transaction, and the tables are small today).
+- **Not done:** `fetchAll`'s `OFFSET` paging is quadratic in a learner's rows (4 to 6 s at 1000x for the heaviest
+  learner). Keyset paging or counting in SQL fixes it; it is app code, so a separate change.
+
 ## 2026-11-05 · A session with no decisions says why and what to do
 
 - **Decision:** copy only. A ready session with 0 visible cards shows "No decisions" as the short marker (sidebar, dashboard row) and, on /s/[id], the headline "No decisions to learn from this session." with a reason (mostly edits and commands, or we missed one) and a next step (ask the agent to explain why it picked an approach, and state reasons in prompts). The failed state is untouched: `status === "failed"` is its own branch, separate from `cards.length === 0`.
