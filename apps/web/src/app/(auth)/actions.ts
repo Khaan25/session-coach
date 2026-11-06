@@ -14,6 +14,7 @@ import {
   validateSignUp,
 } from "@/lib/auth/validate";
 import { SIGNUP_EMAIL_COOKIE } from "@/lib/auth/signup-email";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /** What a form shows after its action runs. Field errors sit under the field; `message` sits under the form. */
@@ -294,9 +295,35 @@ export async function signOut(): Promise<void> {
   redirect("/");
 }
 
-/** Signs out every browser and device: revokes all of the learner's refresh tokens. */
-export async function signOutEverywhere(): Promise<void> {
+/**
+ * Signs out every browser and device: revokes the learner's CLI tokens and all of their refresh tokens. CLI tokens
+ * never expire and Settings calls them devices, so a takeover isn't over until they go too. If they can't be revoked,
+ * nothing is signed out, so the learner can try again from Settings.
+ *
+ * @returns `{ error }` with a learner-readable message; on success it redirects to / instead.
+ */
+export async function signOutEverywhere(): Promise<{ error: string | null }> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You're signed out. Sign in and try again." };
+
+  // Before signOut, while the session can still delete. RLS limits it to their rows; the filter says so in code.
+  const tokens = await supabase.from("cli_tokens").delete().eq("user_id", user.id);
+  // An approved login the CLI hasn't collected yet would mint a new token after this. Learners can't touch the table.
+  const codes = await createAdminClient()
+    .from("cli_device_codes")
+    .delete()
+    .eq("approved_by", user.id)
+    .is("token_issued_at", null);
+  if (tokens.error || codes.error) {
+    console.error("auth/signOutEverywhere revoke", tokens.error ?? codes.error);
+    return {
+      error: "Your devices couldn't be disconnected, so nothing was signed out. Try again.",
+    };
+  }
+
   const { error } = await supabase.auth.signOut({ scope: "global" });
   if (error) console.error("auth/signOutEverywhere", error);
   redirect("/");
