@@ -2,7 +2,7 @@ import { EnvelopeSimpleIcon } from "@phosphor-icons/react/ssr";
 import type { Metadata } from "next";
 
 import { Faq } from "@/components/marketing/faq";
-import { MarketingPageHeader } from "@/components/marketing/marketing-page-header";
+import { MarketingPage } from "@/components/marketing/marketing-page-header";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supportEmail } from "@/lib/site";
 
@@ -58,19 +58,18 @@ const faq = [
 
 export default function Page() {
   return (
-    <div className="mx-auto flex w-full max-w-(--container) flex-col gap-16 px-(--gutter-sm) py-16 sm:px-(--gutter) sm:py-20">
-      <MarketingPageHeader title="Support">
-        Common questions about Session Coach, and how to reach us.
-      </MarketingPageHeader>
-
+    <MarketingPage
+      title="Support"
+      lead="Common questions about Session Coach, and how to reach us."
+    >
       <section aria-labelledby="faq-title" className="flex flex-col gap-6">
-        <h2 id="faq-title" className="font-display text-4xl leading-tight text-text-1">
+        <h2 id="faq-title" className="type-heading-lg text-text-1">
           Questions
         </h2>
         <Faq entries={faq} />
       </section>
 
-      <section aria-labelledby="contact-title" className="max-w-xl">
+      <section aria-labelledby="contact-title">
         <Card>
           <CardHeader>
             <CardTitle>
@@ -92,6 +91,6 @@ export default function Page() {
           </CardHeader>
         </Card>
       </section>
-    </div>
+    </MarketingPage>
   );
 }
