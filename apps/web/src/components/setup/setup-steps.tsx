@@ -1,40 +1,44 @@
 import { CheckCircleIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
+import { SectionHeader } from "@/components/setup/section-header";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Code, CodeBlock } from "@/components/ui/code-block";
+import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
 
 // The hook packages/cli/README.md documents for `sync`, as written there: per project, pinned, async.
 /** What the page already knows: the newest connected device and how many sessions arrived. null: not known. */
 export type SetupProgress = { device: string | null; sessions: number | null };
 
 /**
- * /setup's by-hand path: sign in, turn on the hook, push, then one line on what happens next. Each step says what it does and
- * why before its command. Steps the page can see are marked done: a connected device (1) and an uploaded session (3).
- * The hook (2) lives on the learner's disk, so it is never marked.
+ * /setup's by-hand path: sign in, turn on the hook, push, then one line on what happens next. One frame of numbered
+ * rows: the current step opens with what it does and its command, the rest fold to one line and open on a click.
+ * Steps the page can see are marked done: a connected device (1) and an uploaded session (3). The hook (2) lives on
+ * the learner's disk, so it is never marked; it is current once a device is connected and no session has arrived.
  */
 export function SetupSteps({ progress }: { progress?: SetupProgress }) {
   const device = progress?.device ?? null;
   const sessions = progress?.sessions ?? 0;
+  const current = device === null ? 1 : sessions === 0 ? 2 : null;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2>Do it step by step</h2>
-        </CardTitle>
-        <CardDescription>
-          The same steps the prompt runs, by hand. Run them in your project&apos;s folder; they need
-          Node 20 or later.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ol className="flex flex-col gap-8">
+    <section className="flex flex-col gap-3">
+      <SectionHeader
+        title="Do it step by step"
+        meta={
+          <span className="type-body-sm text-text-3">
+            {current ? `Step ${current} of 3` : "Connected"}
+          </span>
+        }
+        description="The same steps the prompt runs, by hand. Run them in your project's folder; they need Node 20 or later."
+      />
+      <Card>
+        <ol className="flex flex-col divide-y divide-line-row">
           <Step
             number={1}
             title="Sign in from your terminal"
             done={device !== null}
+            open={current === 1}
             what="Connects this computer to your account, so the CLI can upload for you. It prints a code and opens your browser: check the code matches, then approve. There is no token to copy."
           >
             <CodeBlock variant="command" command="npx session-coach login" />
@@ -48,6 +52,7 @@ export function SetupSteps({ progress }: { progress?: SetupProgress }) {
           <Step
             number={2}
             title="Turn on automatic uploads for this project"
+            open={current === 2}
             what="Run init in the project's folder. It adds two hooks to the project's .claude/settings.local.json (your personal settings, kept out of git): one uploads each Claude Code session as it ends, the other catches up on any it missed when a session starts. Each project is its own choice."
           >
             <CodeBlock variant="command" command="npx session-coach init" />
@@ -67,6 +72,7 @@ export function SetupSteps({ progress }: { progress?: SetupProgress }) {
             number={3}
             title="Send your newest session"
             done={sessions > 0}
+            open={false}
             what="Uploads the last Claude Code session you ran in this folder now, so you don't wait for the next session start."
           >
             <CodeBlock variant="command" command="npx session-coach push --latest" />
@@ -81,15 +87,15 @@ export function SetupSteps({ progress }: { progress?: SetupProgress }) {
             )}
           </Step>
         </ol>
-        <p className="mt-8 type-body text-text-2">
-          Within a few minutes the session becomes up to 5 decision cards on your{" "}
-          <Link href="/dashboard" className={buttonVariants({ variant: "link" })}>
-            dashboard
-          </Link>
-          , one for each real choice your agent made.
-        </p>
-      </CardContent>
-    </Card>
+      </Card>
+      <p className="type-body-sm text-text-2">
+        Within a few minutes the session becomes up to 5 decision cards on your{" "}
+        <Link href="/dashboard" className={buttonVariants({ variant: "link" })}>
+          dashboard
+        </Link>
+        , one for each real choice your agent made.
+      </p>
+    </section>
   );
 }
 
@@ -98,6 +104,7 @@ function Step({
   title,
   what,
   done = false,
+  open,
   children,
 }: {
   number: number;
@@ -105,23 +112,38 @@ function Step({
   /** What the step does and why, read before its command. */
   what: string;
   done?: boolean;
+  /** Starts open: the step the learner is on. */
+  open: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <li className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="type-heading-sm text-text-1">
-          {number}. {title}
+    <li>
+      <Collapsible defaultOpen={open}>
+        {/* The <ol> numbers the step for screen readers; the visible number is a mark beside the title. */}
+        <h3>
+          <CollapsibleRow size="row" caret={false}>
+            <span
+              aria-hidden="true"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line-row type-label-sm text-text-2 tabular-nums"
+            >
+              {number}
+            </span>
+            <span className={done ? "text-text-3" : "text-text-1"}>{title}</span>
+            {done && (
+              <span className="ms-auto flex shrink-0 items-center gap-1 type-label-sm text-text-3">
+                <CheckCircleIcon weight="fill" aria-hidden="true" />
+                Done
+              </span>
+            )}
+          </CollapsibleRow>
         </h3>
-        {done && (
-          <Badge variant="success">
-            <CheckCircleIcon weight="fill" aria-hidden="true" />
-            Done
-          </Badge>
-        )}
-      </div>
-      <p className="type-body text-text-2">{what}</p>
-      {children}
+        <CollapsibleContent>
+          <div className="flex flex-col gap-3 px-3 pt-1 pb-4 sm:ps-12">
+            <p className="type-body-sm text-text-2">{what}</p>
+            {children}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     </li>
   );
 }
