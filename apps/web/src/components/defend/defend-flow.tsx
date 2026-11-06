@@ -1,5 +1,6 @@
 "use client";
 
+import { Sprite } from "@/components/art/sprite";
 import { ArrowRightIcon, ProhibitIcon, ShieldCheckIcon } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
@@ -286,6 +287,7 @@ export function DefendStart({
   return (
     <>
       <div className="flex flex-col gap-2">
+        <Sprite name="hourglass" className="w-12" />
         <h1 className="type-heading">Defend it</h1>
         <p className="type-body text-text-2">
           Optional practice, like an interview: explain why a decision in your code is right,

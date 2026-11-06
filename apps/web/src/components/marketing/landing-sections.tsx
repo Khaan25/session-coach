@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { Sprite } from "@/components/art/sprite";
 import { DecisionCardPreview } from "@/components/marketing/decision-card-preview";
 import { Reveal } from "@/components/marketing/reveal";
 import { Badge } from "@/components/ui/badge";
@@ -26,11 +27,18 @@ function SectionHeading({ id, title, lead }: { id: string; title: string; lead: 
 
 export function Hero() {
   return (
-    <section
-      aria-labelledby="hero-title"
-      className={`${section} items-center pt-16 pb-16 text-center sm:pt-24 sm:pb-24`}
-    >
-      <div className="flex max-w-4xl flex-col items-center gap-6">
+    <section aria-labelledby="hero-title" className="relative isolate overflow-x-clip">
+      {/* The learning loop as six watercolour objects in the white space, wide screens only: down the left, send a
+          session, the evidence, explain it; down the right, the review days, own it, defend it. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden lg:block">
+        <Sprite name="laptop" className="absolute top-20 left-1/12 w-20 -rotate-3" />
+        <Sprite name="evidence" className="absolute top-60 left-1/20 w-20 rotate-3" />
+        <Sprite name="explain" className="absolute top-100 left-1/10 w-20 -rotate-6" />
+        <Sprite name="calendar" className="absolute top-20 right-1/12 w-18 rotate-3" />
+        <Sprite name="owned" className="absolute top-60 right-1/20 w-20 -rotate-3" />
+        <Sprite name="hourglass" className="absolute top-96 right-1/10 w-14 rotate-6" />
+      </div>
+      <div className={`${section} items-center gap-6 pt-16 text-center sm:pt-24`}>
         <h1 id="hero-title" className="type-display text-balance text-text-1 sm:type-display-xl">
           Own the code your agent writes.{" "}
           <span className="block text-text-2">Explain it until it&rsquo;s yours.</span>
@@ -56,32 +64,25 @@ export function Hero() {
           </p>
         </div>
       </div>
-      <div className="w-full">
-        {/* The real dashboard, shot by e2e/screens.spec.ts at 1440x900, in a plain browser frame. */}
-        <figure className="frame bg-page">
-          <div aria-hidden className="flex gap-1.5 px-4 py-3 rule-row-frame">
-            {[0, 1, 2].map((dot) => (
-              <span key={dot} className="size-2.5 rounded-full bg-line-row" />
-            ))}
-          </div>
-          <Image
-            src="/art/dashboard.webp"
-            alt="The Session Coach dashboard: two cards due today, ownership by project and the sessions list."
-            width={1440}
-            height={900}
-            sizes="(min-width: 1120px) 1072px, 100vw"
-            preload
-            className="h-auto w-full dark:hidden"
-          />
-          <Image
-            src="/art/dashboard-night.webp"
-            alt="The Session Coach dashboard: two cards due today, ownership by project and the sessions list."
-            width={1440}
-            height={900}
-            sizes="(min-width: 1120px) 1072px, 100vw"
-            className="hidden h-auto w-full dark:block"
-          />
-        </figure>
+      {/* The team's two characters in watercolour: the learner at work in a meadow, the agent beside them with a card. */}
+      <div className="mx-auto mt-4 w-full max-w-(--container) px-(--gutter-sm) sm:px-(--gutter)">
+        <Image
+          src="/art/hero-meadow.webp"
+          alt="A developer sitting cross-legged in a meadow, working on a laptop, with a small friendly robot holding a card beside them."
+          width={1903}
+          height={465}
+          sizes="(min-width: 1120px) 1072px, 100vw"
+          preload
+          className="h-auto w-full dark:hidden"
+        />
+        <Image
+          src="/art/hero-meadow-night.webp"
+          alt="A developer sitting cross-legged in a meadow, working on a laptop, with a small friendly robot holding a card beside them."
+          width={1903}
+          height={465}
+          sizes="(min-width: 1120px) 1072px, 100vw"
+          className="hidden h-auto w-full dark:block"
+        />
       </div>
     </section>
   );
@@ -254,5 +255,32 @@ export function ClosingSection() {
         </div>
       </Reveal>
     </section>
+  );
+}
+
+/** The page's last picture: the watercolour desk by the window, the old landing's closing scene, day and night. */
+export function DeskScene() {
+  return (
+    <div
+      aria-hidden
+      className="mx-auto w-full max-w-(--container) px-(--gutter-sm) pt-8 sm:px-(--gutter)"
+    >
+      <Image
+        src="/art/footer-desk.webp"
+        alt=""
+        width={1600}
+        height={533}
+        sizes="(min-width: 1120px) 1072px, 100vw"
+        className="h-auto w-full dark:hidden"
+      />
+      <Image
+        src="/art/footer-desk-night.webp"
+        alt=""
+        width={1600}
+        height={533}
+        sizes="(min-width: 1120px) 1072px, 100vw"
+        className="hidden h-auto w-full dark:block"
+      />
+    </div>
   );
 }

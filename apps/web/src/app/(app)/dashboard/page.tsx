@@ -46,6 +46,7 @@ async function Today() {
         habit={null}
         hero={
           <TodayMessage
+            sprite="letter"
             title="Send your first session"
             description="Log in with the CLI, then send the session you just finished. It shows up here within a minute."
             action={
@@ -86,6 +87,7 @@ async function Today() {
         habit={null}
         hero={
           <TodayMessage
+            sprite="pencil"
             title="Your cards are on the way"
             description={`Each session is read for the decisions your agent made. They land here, at most ${DAILY_CAP} a day.`}
           />
@@ -103,6 +105,7 @@ async function Today() {
       habit={habit}
       hero={
         <TodayMessage
+          sprite="tea"
           title="You're done for today"
           description={
             empty?.doneToday

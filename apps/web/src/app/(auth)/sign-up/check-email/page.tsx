@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Suspense } from "react";
 
+import { Sprite } from "@/components/art/sprite";
 import { AuthSwitch } from "@/components/auth/auth-parts";
 import { CheckEmailHeading } from "@/components/auth/auth-screens";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
@@ -22,6 +23,7 @@ async function Resend() {
 export default function CheckEmailPage() {
   return (
     <>
+      <Sprite name="letter" className="mx-auto w-20" />
       <CheckEmailHeading />
       <Suspense>
         <Resend />

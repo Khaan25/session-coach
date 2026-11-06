@@ -3,6 +3,15 @@ import Image from "next/image";
 
 // Real pixel sizes of the WebP files in public/art/sprites (the day and night copies share one size).
 const SPRITES = {
+  // The learning loop, in order: send a session, the evidence, explain it, the review days, own it, defend it.
+  laptop: [192, 158],
+  evidence: [192, 128],
+  explain: [192, 127],
+  calendar: [192, 151],
+  owned: [192, 142],
+  hourglass: [192, 249],
+  cards: [192, 160],
+  letter: [192, 137],
   pencil: [192, 167],
   plant: [135, 192],
   tea: [192, 187],

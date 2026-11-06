@@ -1,5 +1,6 @@
 import {
   ClosingSection,
+  DeskScene,
   Hero,
   BentoSection,
   TrustSection,
@@ -35,6 +36,7 @@ export default function Home() {
       <BentoSection />
       <TrustSection />
       <ClosingSection />
+      <DeskScene />
     </>
   );
 }
