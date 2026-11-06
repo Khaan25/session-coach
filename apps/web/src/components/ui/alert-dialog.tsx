@@ -89,7 +89,7 @@ function AlertDialogContent({
           "overflow-y-auto overscroll-contain",
           overlayShellSurface,
           "duration-(--dur-200) ease-out-quint data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:duration-(--dur-150) data-closed:fade-out-0 data-closed:zoom-out-95",
-          "top-[calc(50%+1.25rem*var(--nested-dialogs))] scale-[calc(1-0.1*var(--nested-dialogs))] transition-[top,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-(--dur-200) data-nested-dialog-open:after:opacity-100",
+          "top-[calc(50%+1.25rem*var(--nested-dialogs,0))] scale-[calc(1-0.1*var(--nested-dialogs,0))] transition-[top,scale] after:pointer-events-none after:absolute after:inset-0 after:z-(--z-cover) after:rounded-[inherit] after:bg-overlay after:opacity-0 after:transition-opacity after:duration-(--dur-200) data-nested-dialog-open:after:opacity-100",
           className,
         )}
         {...props}
