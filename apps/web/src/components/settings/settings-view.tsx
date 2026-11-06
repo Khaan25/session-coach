@@ -5,14 +5,15 @@ import { DevicesStep } from "@/components/settings/devices-step";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { ProjectsCard } from "@/components/settings/projects-card";
 import { ReportCard } from "@/components/settings/report-card";
-import { SettingsCard } from "@/components/settings/settings-card";
+import { SettingsRow } from "@/components/settings/settings-card";
 import { SignOutEverywhereForm } from "@/components/settings/sign-out-everywhere";
 import type { DeviceListRow } from "@/components/setup/device-section";
 import { Separator } from "@/components/ui/separator";
 import type { ProjectListItem } from "@/lib/projects/queries";
 import type { ReportSettings } from "@/lib/report/queries";
 
-// /settings: plain sections, each with what it changes, then the account actions apart. Shared by the page, its skeleton and /canvas, which wraps it in
+// /settings: plain sections split by hairlines, each with what it changes on the left and its control on the right, then
+// the account actions apart. Shared by the page, its skeleton and /canvas, which wraps it in
 // DryRunContext so no control saves.
 
 export type SettingsProfile = {
@@ -46,7 +47,7 @@ export function SettingsView({
   report: ReportSettings | null;
 }) {
   // One block with the page's own gap: skullet wraps the skeleton in an element, so a fragment's parts would lose it.
-  // ProfileForm holds the first three sections in its own form.
+  // ProfileForm is the first section, in its own form.
   return (
     <div className="flex flex-col gap-8">
       <ProfileForm profile={profile} timezones={timezones} />
@@ -55,30 +56,34 @@ export function SettingsView({
         <DevicesStep devices={devices} />
         <ChecklistStep
           title="Share your report"
-          changes="Nothing in the review loop. It makes the decisions you own in the repos you tick readable at a public link, with their quotes; the why and your answers stay private."
+          changes="Nothing in the review loop. A public page of the decisions you own in the repos you tick, for a CV, a PR or a code review: each with one quote and the date you owned it. Never the why, the answer key, your answers or the session log."
         >
           <ReportCard report={report} />
         </ChecklistStep>
       </div>
-      <Separator />
       {/* Apart on purpose: nothing destructive sits mid-page, and delete ends it. */}
-      <section aria-labelledby="settings-account" className="flex flex-col gap-6">
-        <h2 id="settings-account" skullet-own="" className="type-heading-sm text-text-1">
-          Account
-        </h2>
-        <SettingsCard
-          title="Sign out everywhere"
-          description="Signs you out on every browser and device, including this one."
+      <div className="mt-8">
+        <ChecklistStep
+          title="Account"
+          changes="Sign out on every device, or delete everything. Deleting can't be undone."
         >
-          <SignOutEverywhereForm />
-        </SettingsCard>
-        <SettingsCard
-          title="Delete account"
-          description="Deletes your sessions, cards, answers and tokens. It can't be undone."
-        >
-          <DeleteAccountDialog email={profile.email ?? ""} />
-        </SettingsCard>
-      </section>
+          <div className="flex flex-col gap-4">
+            <SettingsRow
+              title="Sign out everywhere"
+              description="Signs you out on every browser and device, including this one."
+            >
+              <SignOutEverywhereForm />
+            </SettingsRow>
+            <Separator />
+            <SettingsRow
+              title="Delete account"
+              description="Deletes your sessions, cards, answers and tokens. It can't be undone."
+            >
+              <DeleteAccountDialog email={profile.email ?? ""} />
+            </SettingsRow>
+          </div>
+        </ChecklistStep>
+      </div>
     </div>
   );
 }
