@@ -1,0 +1,381 @@
+<meta charset="utf-8">
+<title>Query Load Test</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one reading column; a control row scopes the two charts and the table below it. */
+:root {
+  --bg: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10);
+  --before: #eb6834; --after: #2a78d6;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b; --good-ink: #006300;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --before: #d95926; --after: #3987e5; --good-ink: #0ca30c; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10);
+  --before: #d95926; --after: #3987e5; --good-ink: #0ca30c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 36px; }
+h1 { font-size: 30px; line-height: 1.15; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-size: 18px; margin: 0; text-wrap: balance; }
+p { margin: 0; max-width: 68ch; color: var(--ink-2); }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+header { display: grid; gap: 10px; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+section { display: grid; gap: 14px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 18px; min-width: 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.tile { display: grid; gap: 4px; }
+.tile .label { font-size: 13px; color: var(--ink-2); }
+.tile .value { font-size: 28px; font-weight: 600; }
+.tile .sub { font-size: 13px; color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; position: sticky; top: env(safe-area-inset-top, 0px);
+  background: var(--bg); padding-block: 10px; z-index: 5; border-bottom: 1px solid var(--grid); }
+.seg { display: inline-flex; border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; padding: 6px 12px; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--axis); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg button:focus-visible { outline: 2px solid var(--after); outline-offset: -2px; }
+.ctl-label { font-size: 13px; color: var(--muted); }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); align-items: center; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.line-key { width: 16px; height: 2px; display: inline-block; }
+.chart { overflow-x: auto; }
+svg text { fill: var(--ink-2); font-family: var(--sans); font-size: 11px; }
+svg .q { fill: var(--ink); font-family: var(--mono); font-size: 11.5px; }
+svg .tick { fill: var(--muted); font-variant-numeric: tabular-nums; }
+.multiples { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.mult { display: grid; gap: 6px; min-width: 0; }
+.mult h3 { margin: 0; font: 600 12.5px/1.3 var(--mono); overflow-wrap: anywhere; }
+.mult .meta { font-size: 12px; color: var(--muted); }
+#tip { position: fixed; pointer-events: none; background: var(--surface); color: var(--ink); border: 1px solid var(--ring);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; max-width: 340px;
+  z-index: 20; display: grid; gap: 4px; }
+#tip .t { font: 600 12px var(--mono); }
+#tip .r { display: flex; gap: 8px; align-items: center; }
+#tip .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+#tip .s { color: var(--muted); }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+td.num, th.num { text-align: right; }
+td .src { color: var(--muted); font-size: 11.5px; }
+td.how { white-space: normal; min-width: 260px; color: var(--ink-2); font-size: 11.5px; }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--axis); color: var(--ink); }
+.pill i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.sig { color: var(--good-ink); font-weight: 600; }
+.ns { color: var(--muted); }
+.method { display: grid; gap: 10px; }
+.method ul { margin: 0; padding-left: 18px; color: var(--ink-2); max-width: 72ch; display: grid; gap: 6px; }
+.counts td, .counts th { padding: 4px 10px; }
+@media (prefers-reduced-motion: no-preference) { .seg button { transition: background 120ms, color 120ms; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Session Coach · Postgres 17 · supabase/migrations</div>
+    <h1>Which queries break as the data grows</h1>
+    <p id="lede"></p>
+  </header>
+
+  <section>
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <div class="controls">
+    <span class="ctl-label">Scale</span>
+    <div class="seg" id="tierSeg" role="group" aria-label="Scale"></div>
+    <span class="ctl-label">Learner</span>
+    <div class="seg" id="personaSeg" role="group" aria-label="Learner">
+      <button type="button" id="p-typical" data-v="typical" aria-pressed="false">Typical (20 sessions)</button>
+      <button type="button" id="p-heavy" data-v="heavy" aria-pressed="true">Heavy (20 × scale)</button>
+    </div>
+  </div>
+
+  <section>
+    <h2 id="dumbTitle"></h2>
+    <p>Median time per request, planning plus execution, on a log scale. Paged reads add up every 1000-row page the app's <code>fetchAll</code> requests. The line runs from before the fix migration to after it.</p>
+    <div class="legend">
+      <span class="key"><span class="dot" style="background:var(--before)"></span>Before</span>
+      <span class="key"><span class="dot" style="background:var(--after)"></span>After the fix migration</span>
+      <span class="key">Right column: a change of 10% or more at false-discovery rate q &lt; 0.05</span>
+    </div>
+    <div class="panel chart" id="dumb"></div>
+  </section>
+
+  <section>
+    <h2>How each changed query grows from 1x to the largest scale</h2>
+    <p>Median and its 95% bootstrap interval at each scale, before and after. The first panel is the whole daily-review cron, projected from one measured 100-learner chunk times the number of chunks, against Vercel's 300 s function limit.</p>
+    <div class="legend">
+      <span class="key"><span class="line-key" style="background:var(--before)"></span>Before</span>
+      <span class="key"><span class="line-key" style="background:var(--after)"></span>After</span>
+    </div>
+    <div class="multiples" id="mults"></div>
+  </section>
+
+  <section>
+    <h2>Every query</h2>
+    <p>Verdicts use fixed budgets: ok under 100 ms at p95, slow under 1 s, at risk above 1 s, fails when one statement passes the 8 s <code>statement_timeout</code> Supabase gives the authenticated role. "How it reads" is the plan's table access at the selected scale.</p>
+    <div class="panel table-wrap"><table id="tbl"></table></div>
+  </section>
+
+  <section class="method">
+    <h2>Method</h2>
+    <ul id="method"></ul>
+    <div class="panel table-wrap"><table class="counts" id="counts"></table></div>
+  </section>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const D = /*__DATA__*/null;
+const TIERS = D.tiers.map((t) => t.tier);
+const TOP = TIERS.at(-1);
+const state = { tier: TOP, persona: "heavy" };
+const NS = "http://www.w3.org/2000/svg";
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, text) => {
+  const n = tag === "svg" || ["g", "line", "circle", "rect", "path", "text"].includes(tag) ? document.createElementNS(NS, tag) : document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (text != null) n.textContent = text;
+  return n;
+};
+const fmt = (ms) => ms >= 1000 ? (ms / 1000).toFixed(ms >= 10000 ? 0 : 1) + " s" : ms >= 10 ? ms.toFixed(0) + " ms" : ms >= 1 ? ms.toFixed(1) + " ms" : ms.toFixed(2) + " ms";
+const fmtN = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1) + "K" : String(n);
+const cell = (tier, q, persona, phase) => D.cells.find((c) => c.tier === tier && c.query === q && c.persona === persona && c.phase === phase);
+const cmp = (tier, q, persona) => D.comparisons.find((c) => c.tier === tier && c.query === q && c.persona === persona);
+// significant and big enough to matter: a ±10% shift on a warm cache is within run-to-run drift
+const sig = (c) => c && c.q < 0.05 && (c.speedup >= 1.1 || c.speedup <= 1 / 1.1);
+const VERDICT = { ok: "var(--good)", slow: "var(--warning)", "at risk": "var(--serious)", fails: "var(--critical)" };
+const pill = (v) => { const s = el("span", { class: "pill" }); const i = el("i"); i.style.background = VERDICT[v]; s.append(i, document.createTextNode(v)); return s; };
+
+// tooltip: values lead, labels follow; text only through textContent
+const tip = $("tip");
+function showTip(evt, title, rows, note) {
+  tip.replaceChildren(el("div", { class: "t" }, title));
+  for (const [color, value, label] of rows) {
+    const r = el("div", { class: "r" });
+    const k = el("span", { class: "line-key" }); k.style.background = color;
+    r.append(k, el("span", { class: "v" }, value), el("span", { class: "s" }, label));
+    tip.append(r);
+  }
+  if (note) tip.append(el("div", { class: "s" }, note));
+  tip.hidden = false;
+  const x = Math.min(evt.clientX + 14, innerWidth - tip.offsetWidth - 8);
+  const y = Math.min(evt.clientY + 14, innerHeight - tip.offsetHeight - 8);
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = () => (tip.hidden = true);
+
+function logScale(lo, hi, a, b) {
+  const l0 = Math.log10(lo), l1 = Math.log10(hi);
+  return (v) => a + ((Math.log10(Math.max(v, lo)) - l0) / (l1 - l0)) * (b - a);
+}
+const decades = (lo, hi) => { const out = []; for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) out.push(10 ** e); return out; };
+
+function header() {
+  const top = D.tiers.at(-1).counts;
+  $("lede").textContent = `The app's ${D.queries.length} real queries, run as the learner through RLS or as the server with the service role, against seeded data at ${TIERS.map((t) => t + "x").join(", ")}. The largest scale holds ${fmtN(top.profiles)} learners, ${fmtN(top.sessions)} sessions, ${fmtN(top.decision_cards)} cards and ${fmtN(top.answers)} answers. Each query was timed before and after the fix migration on the same data.`;
+  const at = (phase) => D.cells.filter((c) => c.tier === TOP && c.phase === phase);
+  const bad = (phase) => at(phase).filter((c) => c.verdict !== "ok").length;
+  const tiles = $("tiles");
+  const tile = (label, value, sub) => { const t = el("div", { class: "panel tile" }); t.append(el("div", { class: "label" }, label), el("div", { class: "value" }, value), el("div", { class: "sub" }, sub)); tiles.append(t); };
+  tile(`Over budget at ${TOP}x, before`, `${bad("before")} of ${at("before").length}`, "query × learner pairs slower than 100 ms at p95");
+  if (at("after").length) tile(`Over budget at ${TOP}x, after`, `${bad("after")} of ${at("after").length}`, "same pairs, after the fix migration");
+  const sigs = D.comparisons.filter((c) => c.tier === TOP && sig(c) && c.speedup > 1);
+  if (D.comparisons.length) tile(`Faster at ${TOP}x`, String(sigs.length), `query × learner pairs at least 10% faster, q < 0.05 across ${D.comparisons.length} tests`);
+  const cb = D.cron.find((c) => c.tier === TOP && c.phase === "before"), ca = D.cron.find((c) => c.tier === TOP && c.phase === "after");
+  if (cb) tile(`Daily-review cron at ${TOP}x`, ca ? `${fmt(cb.ms)} → ${fmt(ca.ms)}` : fmt(cb.ms), `projected over ${cb.chunks} chunks; Vercel stops it at 300 s`);
+}
+
+function controls() {
+  const seg = $("tierSeg");
+  for (const t of TIERS) {
+    const b = el("button", { type: "button", id: "t-" + t, "data-v": t, "aria-pressed": String(t === state.tier) }, t + "x");
+    b.onclick = () => { state.tier = t; render(); };
+    seg.append(b);
+  }
+  for (const b of $("personaSeg").children) b.onclick = () => { state.persona = b.dataset.v; render(); };
+}
+
+function dumbbell() {
+  const { tier, persona } = state;
+  $("dumbTitle").textContent = `Every query at ${tier}x, ${persona === "heavy" ? "the heavy learner" : "a typical learner"}`;
+  const rows = D.queries.map((q) => ({ q, b: cell(tier, q.name, persona, "before"), a: cell(tier, q.name, persona, "after"), c: cmp(tier, q.name, persona) }))
+    .filter((r) => r.b).sort((x, y) => y.b.median - x.b.median);
+  const all = rows.flatMap((r) => [r.b.median, r.a?.median ?? r.b.median]);
+  const lo = Math.min(0.01, ...all), hi = Math.max(10000, ...all) * 1.5;
+  const W = 1040, L = 190, R = 110, rowH = 24, T = 30, H = T + rows.length * rowH + 10;
+  const x = logScale(lo, hi, L, W - R);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img", "aria-label": $("dumbTitle").textContent });
+  for (const d of decades(lo, hi)) {
+    if (d > hi) continue;
+    svg.append(el("line", { x1: x(d), x2: x(d), y1: T - 6, y2: H - 6, stroke: "var(--grid)", "stroke-width": 1 }));
+    svg.append(el("text", { x: x(d), y: T - 12, "text-anchor": "middle", class: "tick" }, fmt(d)));
+  }
+  for (const [v, label] of [[100, "slow"], [1000, "at risk"], [8000, "timeout"]]) {
+    svg.append(el("line", { x1: x(v), x2: x(v), y1: T - 4, y2: H - 6, stroke: "var(--axis)", "stroke-width": 1 }));
+    svg.append(el("text", { x: x(v) + 4, y: H - 8, class: "tick" }, label));
+  }
+  rows.forEach((r, i) => {
+    const y = T + i * rowH + rowH / 2;
+    const g = el("g", { tabindex: 0, role: "listitem" });
+    g.append(el("rect", { x: 0, y: y - rowH / 2, width: W, height: rowH, fill: "transparent" }));
+    g.append(el("text", { x: L - 10, y: y + 4, "text-anchor": "end", class: "q" }, r.q.name));
+    const xb = x(r.b.median), xa = r.a ? x(r.a.median) : null;
+    if (xa != null) g.append(el("line", { x1: xb, x2: xa, y1: y, y2: y, stroke: "var(--axis)", "stroke-width": 2, "stroke-linecap": "round" }));
+    g.append(el("circle", { cx: xb, cy: y, r: 5, fill: "var(--before)", stroke: "var(--surface)", "stroke-width": 2 }));
+    if (xa != null) g.append(el("circle", { cx: xa, cy: y, r: 5, fill: "var(--after)", stroke: "var(--surface)", "stroke-width": 2 }));
+    if (r.c) g.append(el("text", { x: W - R + 10, y: y + 4, class: sig(r.c) ? "sig" : "ns", fill: "currentColor" },
+      sig(r.c) ? (r.c.speedup >= 1 ? `${r.c.speedup.toFixed(r.c.speedup >= 10 ? 0 : 1)}× faster` : `${(1 / r.c.speedup).toFixed(1)}× slower`) : "no change"));
+    const show = (e) => showTip(e, `${r.q.name} · ${tier}x`, [
+      ["var(--before)", fmt(r.b.median), `before, 95% CI ${fmt(r.b.ci[0])}–${fmt(r.b.ci[1])}, p95 ${fmt(r.b.p95)}, n=${r.b.n}`],
+      ...(r.a ? [["var(--after)", fmt(r.a.median), `after, 95% CI ${fmt(r.a.ci[0])}–${fmt(r.a.ci[1])}, p95 ${fmt(r.a.p95)}, n=${r.a.n}`]] : []),
+    ], `${r.q.source} · ${r.b.rows.toLocaleString()} rows in ${r.b.pages} page${r.b.pages > 1 ? "s" : ""}` + (r.c ? ` · q = ${r.c.q.toExponential(1)}` : ""));
+    g.addEventListener("pointermove", show);
+    g.addEventListener("focus", (e) => { const b = g.getBoundingClientRect(); show({ clientX: b.left + L, clientY: b.bottom }); });
+    g.addEventListener("pointerleave", hideTip); g.addEventListener("blur", hideTip);
+    svg.append(g);
+  });
+  $("dumb").replaceChildren(svg);
+}
+
+function mini(title, meta, series, limit) {
+  const box = el("div", { class: "panel mult" });
+  box.append(el("h3", {}, title), el("div", { class: "meta" }, meta));
+  const W = 260, H = 150, L = 54, R = 12, T = 10, B = 24;
+  const vals = series.flatMap((s) => s.points.flatMap((p) => [p.lo ?? p.v, p.hi ?? p.v])).concat(limit ? [limit.v] : []);
+  const lo = Math.max(0.01, Math.min(...vals) * 0.7), hi = Math.max(...vals) * 1.4;
+  const x = (t) => L + (TIERS.indexOf(t) / Math.max(1, TIERS.length - 1)) * (W - L - R);
+  const y = (v) => logScale(lo, hi, H - B, T)(v);
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", role: "img", "aria-label": title });
+  const ticks = decades(lo, hi).filter((d) => d >= lo && d <= hi);
+  // at most four labelled gridlines, so the ticks never crowd
+  const every = Math.ceil(ticks.length / 4);
+  ticks.forEach((d, i) => {
+    if ((ticks.length - 1 - i) % every) return;
+    svg.append(el("line", { x1: L, x2: W - R, y1: y(d), y2: y(d), stroke: "var(--grid)" }));
+    svg.append(el("text", { x: L - 6, y: y(d) + 3, "text-anchor": "end", class: "tick" }, fmt(d)));
+  });
+  for (const t of TIERS) svg.append(el("text", { x: x(t), y: H - 6, "text-anchor": "middle", class: "tick" }, t + "x"));
+  if (limit) {
+    svg.append(el("line", { x1: L, x2: W - R, y1: y(limit.v), y2: y(limit.v), stroke: "var(--critical)", "stroke-width": 1 }));
+    svg.append(el("text", { x: W - R, y: y(limit.v) - 4, "text-anchor": "end", class: "tick" }, limit.label));
+  }
+  for (const s of series) {
+    const pts = s.points.filter((p) => p.v != null);
+    for (const p of pts) if (p.lo != null) svg.append(el("line", { x1: x(p.t), x2: x(p.t), y1: y(p.lo), y2: y(p.hi), stroke: s.color, "stroke-width": 2, "stroke-opacity": 0.35 }));
+    svg.append(el("path", { d: pts.map((p, i) => `${i ? "L" : "M"}${x(p.t)},${y(p.v)}`).join(""), fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    for (const p of pts) svg.append(el("circle", { cx: x(p.t), cy: y(p.v), r: 4, fill: s.color, stroke: "var(--surface)", "stroke-width": 2 }));
+  }
+  // crosshair-free: each scale column is one hit target listing both series
+  for (const t of TIERS) {
+    const hit = el("rect", { x: x(t) - 20, y: T, width: 40, height: H - B - T, fill: "transparent" });
+    hit.addEventListener("pointermove", (e) => showTip(e, `${title} · ${t}x`, series.map((s) => { const p = s.points.find((q) => q.t === t); return [s.color, p?.v != null ? fmt(p.v) : "–", s.name]; })));
+    hit.addEventListener("pointerleave", hideTip);
+    svg.append(hit);
+  }
+  box.append(svg);
+  return box;
+}
+
+function multiples() {
+  const { persona } = state;
+  const box = $("mults");
+  box.replaceChildren();
+  if (D.cron.length) {
+    const pts = (phase) => TIERS.map((t) => ({ t, v: D.cron.find((c) => c.tier === t && c.phase === phase)?.ms ?? null }));
+    box.append(mini("daily-review cron (projected)", "all learners with reminders on", [
+      { name: "before", color: "var(--before)", points: pts("before") },
+      { name: "after", color: "var(--after)", points: pts("after") },
+    ], { v: D.thresholds.functionLimitMs, label: "300 s limit" }));
+  }
+  const changed = D.queries.filter((q) => sig(cmp(TOP, q.name, persona)) && cmp(TOP, q.name, persona).speedup >= 2);
+  const list = changed.length ? changed : D.queries;
+  list.sort((a, b) => (cell(TOP, b.name, persona, "before")?.median ?? 0) - (cell(TOP, a.name, persona, "before")?.median ?? 0));
+  for (const q of list) {
+    const pts = (phase) => TIERS.map((t) => { const c = cell(t, q.name, persona, phase); return c ? { t, v: c.median, lo: c.ci[0], hi: c.ci[1] } : { t, v: null }; });
+    const c = cmp(TOP, q.name, persona);
+    box.append(mini(q.name, c ? `${TOP}x: ${c.speedup.toFixed(1)}× faster (95% CI ${c.speedupCI[0].toFixed(1)}–${c.speedupCI[1].toFixed(1)}×)` : q.source, [
+      { name: "before", color: "var(--before)", points: pts("before") },
+      { name: "after", color: "var(--after)", points: pts("after") },
+    ], null));
+  }
+}
+
+function how(c) {
+  if (!c) return "";
+  const s = c.scans.filter((x) => x.rows + x.removed > 0).map((x) => `${x.node.replace(" Scan", "")}${x.index ? " " + x.index : " " + x.table}${x.removed ? ` (${fmtN(x.removed)} filtered out)` : ""}`);
+  const uniq = [...new Set(s)].slice(0, 3).join("; ");
+  return uniq + (c.triggerMs ? `${uniq ? "; " : ""}cascade triggers ${fmt(c.triggerMs)}` : "");
+}
+
+function table() {
+  const { tier, persona } = state;
+  const t = $("tbl");
+  t.replaceChildren();
+  const head = el("tr");
+  head.append(el("th", {}, "Query"), ...TIERS.map((x) => el("th", { class: "num" }, `${x}x before → after`)), el("th", { class: "num" }, `Speed-up at ${tier}x`), el("th", { class: "num" }, "q (BH)"), el("th", {}, "Verdict"), el("th", {}, `How it reads at ${tier}x (before → after)`));
+  t.appendChild(el("thead")).append(head);
+  const body = t.appendChild(el("tbody"));
+  const rows = [...D.queries].sort((a, b) => (cell(TOP, b.name, persona, "before")?.median ?? 0) - (cell(TOP, a.name, persona, "before")?.median ?? 0));
+  for (const q of rows) {
+    const tr = el("tr");
+    const name = el("td"); name.append(el("div", { class: "mono" }, q.name), el("div", { class: "src" }, `${q.source} · ${q.role}`));
+    tr.append(name);
+    for (const x of TIERS) {
+      const b = cell(x, q.name, persona, "before"), a = cell(x, q.name, persona, "after");
+      tr.append(el("td", { class: "num" }, b ? `${fmt(b.median)}${a ? " → " + fmt(a.median) : ""}` : "–"));
+    }
+    const c = cmp(tier, q.name, persona);
+    tr.append(el("td", { class: "num" }, c ? `${c.speedup.toFixed(1)}× [${c.speedupCI[0].toFixed(1)}, ${c.speedupCI[1].toFixed(1)}]` : "–"));
+    tr.append(el("td", { class: "num " + (sig(c) ? "sig" : "ns") }, c ? c.q.toExponential(1) : "–"));
+    const b = cell(tier, q.name, persona, "before"), a = cell(tier, q.name, persona, "after");
+    const v = el("td");
+    if (b) { v.append(pill(b.verdict)); if (a) v.append(document.createTextNode(" → "), pill(a.verdict)); }
+    tr.append(v);
+    tr.append(el("td", { class: "how" }, [how(b), a ? how(a) : ""].filter(Boolean).join("  →  ")));
+    body.append(tr);
+  }
+}
+
+function method() {
+  const items = [
+    "A throwaway Postgres 17 cluster per run (scripts/load-test/run.mjs), never the local stack or the live project. A small shim adds what the migrations expect from Supabase: the anon, authenticated and service_role roles, auth.users, auth.uid() as Supabase defines it, and default grants. Then every migration in supabase/migrations runs in order.",
+    "Scale k seeds 50·k typical learners with 20 sessions each (breadth: the cron, the roster and every index see more rows) and one heavy learner with 20·k sessions (depth: every per-learner page reads more rows). Inside a session the product's own limits hold: 0 to 5 cards, up to 3 answers a card, 10% hidden and 10% flagged cards, reviews only for answered cards.",
+    "Each query is the SQL PostgREST builds for a supabase-js call in apps/web: embeds as lateral joins, the result as json_agg. Learner queries run as authenticated with the learner's JWT claims, so RLS applies; server queries run as service_role. Paged reads loop over 1000-row OFFSET pages like fetchAll; writes run in a rolled-back subtransaction so every sample sees the same data.",
+    "Timing is EXPLAIN (ANALYZE, TIMING OFF): planning plus execution, server side, warm cache, no network. Two warm-up runs, then up to 50 samples per cell (at least 8, stopping after about 8 s; at least 5 for a query slow enough to take 80 s). Typical-learner samples rotate across 40 learners; heavy-learner samples repeat the one.",
+    "Medians carry 95% percentile-bootstrap intervals (2000 resamples). Before vs after is a two-sided Mann-Whitney U test on the samples, with the Benjamini-Hochberg correction across every query, learner and scale (a change counts when q < 0.05 and it is 10% or more); the speed-up is the ratio of medians with its own bootstrap interval.",
+    "Limits: one machine (Apple silicon, 4 GB shared_buffers), so absolute times are lower than on a shared Supabase instance and the ratios matter more than the milliseconds. Concurrency, network and PostgREST itself are not measured.",
+  ];
+  $("method").replaceChildren(...items.map((t) => el("li", {}, t)));
+  const t = $("counts");
+  const tables = ["profiles", "sessions", "decision_cards", "reviews", "answers", "defenses", "email_log"];
+  const head = el("tr"); head.append(el("th", {}, "Rows"), ...TIERS.map((x) => el("th", { class: "num" }, x + "x")));
+  t.appendChild(el("thead")).append(head);
+  const body = t.appendChild(el("tbody"));
+  for (const name of tables) {
+    const tr = el("tr"); tr.append(el("td", { class: "mono" }, name), ...D.tiers.map((x) => el("td", { class: "num" }, (x.counts[name] ?? 0).toLocaleString())));
+    body.append(tr);
+  }
+}
+
+function render() {
+  for (const b of $("tierSeg").children) b.setAttribute("aria-pressed", String(Number(b.dataset.v) === state.tier));
+  for (const b of $("personaSeg").children) b.setAttribute("aria-pressed", String(b.dataset.v === state.persona));
+  dumbbell(); multiples(); table();
+}
+header(); controls(); method(); render();
+</script>
