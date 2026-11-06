@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Mona_Sans } from "next/font/google";
 import { SkulletProvider } from "skullet/react";
 
@@ -35,20 +35,24 @@ const skeletonTheme = {
 const description =
   "Own the code your agent writes. Each Claude Code session becomes up to 5 decision cards, filed by project: explain each one in your own words on day 1, 4 and 11 until it's yours, and defend it whenever you like.";
 
-// metadataBase makes the opengraph-image and canonical paths absolute; pages override title and description.
+// metadataBase makes the opengraph-image and canonical paths absolute; pages override title and description. Open Graph
+// and Twitter leave title and description out so Next fills them from each page's own; "./" resolves to the page's path.
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "Session Coach",
   description,
   applicationName: "Session Coach",
-  openGraph: {
-    type: "website",
-    siteName: "Session Coach",
-    title: "Session Coach",
-    description,
-    locale: "en_US",
-  },
-  twitter: { card: "summary_large_image", title: "Session Coach", description },
+  alternates: { canonical: "./" },
+  openGraph: { type: "website", siteName: "Session Coach", locale: "en_US", url: "./" },
+  twitter: { card: "summary_large_image" },
+};
+
+// The browser chrome matches the page ground: --paper in each theme (styles/tokens.css).
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0d0d" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

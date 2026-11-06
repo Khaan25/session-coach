@@ -17,6 +17,8 @@ export default function robots(): MetadataRoute.Robots {
         "/progress",
         "/settings",
         "/setup",
+        "/tracker",
+        "/members",
         "/design-system",
       ],
     },
