@@ -89,11 +89,11 @@ describe("runInit", () => {
       assert.equal(await settingsLocalIgnored(cwd), null);
       await promisify(execFile)("git", ["init", "-q"], { cwd });
       assert.equal(await settingsLocalIgnored(cwd), false);
-      assert.match((await runInit(cwd, "0.4.0")).message, /Warning: git doesn't ignore/);
+      assert.match((await runInit(cwd, "0.4.0")).warnings.join("\n"), /git doesn't ignore/);
 
       await writeFile(join(cwd, ".gitignore"), ".claude/settings.local.json\n");
       assert.equal(await settingsLocalIgnored(cwd), true);
-      assert.doesNotMatch((await runInit(cwd, "0.4.0")).message, /Warning/);
+      assert.deepEqual((await runInit(cwd, "0.4.0")).warnings, []);
     } finally {
       process.env = saved;
       await rm(cwd, { recursive: true, force: true });
@@ -103,19 +103,27 @@ describe("runInit", () => {
 
 describe("parseInitArgs", () => {
   it("takes --url and --yes in any order", () => {
-    assert.deepEqual(parseInitArgs([]), { url: null, yes: false });
+    assert.deepEqual(parseInitArgs([]), { url: null, yes: false, open: true });
     assert.deepEqual(parseInitArgs(["--yes", "--url", "http://localhost:3000"]), {
       url: "http://localhost:3000",
       yes: true,
+      open: true,
     });
-    assert.deepEqual(parseInitArgs(["--url=https://x.test", "-y"]), {
+    assert.deepEqual(parseInitArgs(["--url=https://x.test", "-y", "--no-open"]), {
       url: "https://x.test",
       yes: true,
+      open: false,
     });
   });
 
   it("refuses unknown, repeated and empty flags", () => {
-    for (const bad of [["--token"], ["--yes", "--yes"], ["--url"], ["--url=a", "--url=b"]]) {
+    for (const bad of [
+      ["--token"],
+      ["--yes", "--yes"],
+      ["--url"],
+      ["--url=a", "--url=b"],
+      ["--no-open", "--no-open"],
+    ]) {
       assert.ok("error" in parseInitArgs(bad), bad.join(" "));
     }
   });

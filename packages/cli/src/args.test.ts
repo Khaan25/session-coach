@@ -8,19 +8,22 @@ describe("parseLoginArgs", () => {
     assert.deepEqual(parseLoginArgs(["--url", "http://localhost:3000"]), {
       url: "http://localhost:3000",
       token: false,
+      open: true,
     });
     assert.deepEqual(parseLoginArgs(["--url=http://localhost:3000"]), {
       url: "http://localhost:3000",
       token: false,
+      open: true,
     });
-    assert.deepEqual(parseLoginArgs([]), { url: null, token: false });
+    assert.deepEqual(parseLoginArgs([]), { url: null, token: false, open: true });
   });
 
   it("accepts --token once, with or without --url", () => {
-    assert.deepEqual(parseLoginArgs(["--token"]), { url: null, token: true });
+    assert.deepEqual(parseLoginArgs(["--token"]), { url: null, token: true, open: true });
     assert.deepEqual(parseLoginArgs(["--token", "--url=https://a.test"]), {
       url: "https://a.test",
       token: true,
+      open: true,
     });
     assert.deepEqual(parseLoginArgs(["--token", "--token"]), { error: "--token was given twice." });
   });

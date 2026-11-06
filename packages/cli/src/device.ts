@@ -84,7 +84,7 @@ export function interpretStart(status: number, body: unknown): DeviceStart | { e
   }
   if (status === 200)
     return { error: "The server didn't answer like Session Coach. Check the site URL." };
-  return { error: `Couldn't start the login (HTTP ${status}). Try again.` };
+  return { error: `Couldn't start the login (HTTP ${status}).` };
 }
 
 /** The page the learner approves on. Built here, not taken from the server, so only our own URL is ever opened. */
@@ -107,7 +107,7 @@ export function interpretPoll(
   if (b.error === "access_denied") return { kind: "denied" };
   // A 5xx is worth another poll; the deadline still ends it.
   if (status >= 500) return { kind: "pending" };
-  return { kind: "error", message: `Couldn't finish the login (HTTP ${status}). Try again.` };
+  return { kind: "error", message: `Couldn't finish the login (HTTP ${status}).` };
 }
 
 export type PollOptions = {

@@ -2,6 +2,12 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-06 · CLI output follows Vercel's CLI design guidelines
+
+- **Decision:** the `session-coach` CLI writes the way https://vercel.com/design/cli describes. stdout carries only the answer (help, the version, and the session ID after a push when stdout isn't a terminal); context, progress, prompts, receipts, warnings and errors go to stderr. Results lead with `✓`, warnings with `!`, errors with `✗` (or `Warning:` and `Error:` when stderr isn't a terminal), label rows put values at column 18, and a recovery is an instruction then the exact command on its own line. Usage errors exit 2. `--help`, `-h`, `help <command>`, `--version` and `--no-color` work everywhere; `NO_COLOR` and `FORCE_COLOR` are honoured. `login` and `init` take `--no-open`.
+- **Why:** an agent or script can capture the session ID with `id=$(session-coach push --latest)`, and a person sees the one command that fixes a failure instead of "try again".
+- **Not adopted:** `--json`, per-command reason codes and opening no browser without a terminal. The setup prompt runs `init` from an agent with no terminal and relies on the browser opening for the learner to approve; `--no-open` covers machines without one.
+
 ## 2026-11-06 · A warmer landing hero and a larger type scale
 
 - **Decision:** the landing hero keeps its copy and buttons, and the product screenshot under them becomes the team's own watercolour scene (the learner in the meadow and the agent robot, from Kasam's learning-first redesign branch). Small watercolour desk objects (tea, pencil, letter, plant, cards) sit in the white space either side of the copy on wide screens, and the same objects return to the learner screens (Today's states, Check your email) and the landing's closing desk scene. The app's type steps up by about 1px each (body 15, label 14, body-sm 14, label-sm 13, headings +1-2px).

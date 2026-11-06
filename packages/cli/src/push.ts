@@ -6,17 +6,29 @@ import { redact } from "@session-coach/shared/redact";
 import type { SessionStatus } from "@session-coach/shared/session";
 import type { UploadRequestInput } from "@session-coach/shared/upload";
 
+import type { Next } from "./output.ts";
+
 /** The body of step ①, typed by the server's own schema. */
 export type SessionMetadata = UploadRequestInput;
 
 export type HttpRequest = { url: string; init: RequestInit };
 
-/** What `push` does next. `exitCode` 0 is success or nothing to do. */
-export type Outcome = { message: string; exitCode: number };
+/**
+ * What `push` does next. `exitCode` 0 is success or nothing to do (`unchanged`). `id` is the session the message is
+ * about; `retry` means running the same push again is the way out; `next` is any other recovery.
+ */
+export type Outcome = {
+  message: string;
+  exitCode: number;
+  id?: string;
+  unchanged?: true;
+  retry?: true;
+  next?: Next;
+};
 
 export type CreateResult =
   | { action: "upload"; id: string; uploadUrl: string }
-  | { action: "stop"; message: string; exitCode: number };
+  | ({ action: "stop" } & Outcome);
 
 /**
  * The first parseable `timestamp` in a Claude Code log, as an ISO string with an offset.
@@ -259,7 +271,7 @@ export function prepareLog(bytes: Uint8Array): { gzipped: Buffer; text: string }
 /** When to try again after a 429: the server's `Retry-After` in whole minutes, its own wording, or "a while". */
 function rateLimited(retryAfter: number | undefined): string {
   if (retryAfter === undefined) {
-    return "Too many requests to the server in the last hour. Wait a while, then run push again.";
+    return "Too many requests to the server in the last hour. Wait a while before uploading again.";
   }
   const minutes = Math.max(1, Math.ceil(retryAfter / 60));
   return `Too many requests to the server in the last hour. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
@@ -267,9 +279,15 @@ function rateLimited(retryAfter: number | undefined): string {
 
 /** Messages shared by steps ① and ③. Never includes the token or the upload URL. */
 function commonFailure(status: number, retryAfter: number | undefined): Outcome | null {
-  if (status === 401) return { message: "Run session-coach login again.", exitCode: 1 };
-  if (status === 413) return { message: "Log over 50 MB, too big to upload.", exitCode: 1 };
-  if (status === 429) return { message: rateLimited(retryAfter), exitCode: 1 };
+  if (status === 401) {
+    return {
+      message: "The server refused your sign-in.",
+      exitCode: 1,
+      next: { text: "Sign in again", command: "session-coach login" },
+    };
+  }
+  if (status === 413) return { message: "Can't upload a log over 50 MB.", exitCode: 1 };
+  if (status === 429) return { message: rateLimited(retryAfter), exitCode: 1, retry: true };
   return null;
 }
 
@@ -304,23 +322,27 @@ export function interpretCreate(status: number, body: unknown, retryAfter?: numb
     if (status === 409) {
       return {
         action: "stop",
-        message: `This session was already uploaded and is ready or processing. Open the app to see it.\nSession id: ${id}`,
+        message:
+          "This session was already uploaded and is ready or processing. Open the app to see it.",
         exitCode: 0,
+        id,
+        unchanged: true,
       };
     }
   }
   if (status === 400) return { action: "stop", message: badRequest(body), exitCode: 1 };
   return {
     action: "stop",
-    message: `The server couldn't register the session (HTTP ${status}). Try again.`,
+    message: `The server couldn't register the session (HTTP ${status}).`,
     exitCode: 1,
+    retry: true,
   };
 }
 
 /** Step ② response: any 2xx means the log landed. */
 export function interpretPut(status: number): Outcome {
   if (status >= 200 && status < 300) return { message: "", exitCode: 0 };
-  return { message: `Upload failed (HTTP ${status}). Run push again.`, exitCode: 1 };
+  return { message: `Couldn't store the log (HTTP ${status}).`, exitCode: 1, retry: true };
 }
 
 /**
@@ -338,28 +360,25 @@ export function interpretProcess(
   retryAfter?: number,
 ): Outcome {
   if (status === 202) {
-    return { message: `Uploaded. Cards will appear in the app.\nSession id: ${id}`, exitCode: 0 };
+    return { message: "Uploaded. Cards will appear in the app.", exitCode: 0, id };
   }
   if (status === 409) {
     const state = (body as { status?: SessionStatus } | null)?.status;
     const label = typeof state === "string" ? state : "unknown";
     if (state === "failed") {
-      return {
-        message: `Processing failed. Run push again to retry.\nSession id: ${id}`,
-        exitCode: 1,
-      };
+      return { message: "Processing failed.", exitCode: 1, id, retry: true };
     }
-    return { message: `Session is already ${label}.\nSession id: ${id}`, exitCode: 0 };
+    return { message: `Session is already ${label}.`, exitCode: 0, id, unchanged: true };
   }
   if (status === 422) {
-    return { message: "Upload didn't land, run push again.", exitCode: 1 };
+    return { message: "The log didn't reach the server.", exitCode: 1, retry: true };
   }
   const common = commonFailure(status, retryAfter);
   if (common) return common;
   if (status === 404)
-    return { message: "The server doesn't know this session. Run push again.", exitCode: 1 };
+    return { message: "The server doesn't know this session.", exitCode: 1, retry: true };
   // A 503 says why processing is switched off (such as rate limits not set up), so show the server's sentence.
   const reason = (body as { error?: unknown } | null)?.error;
   if (status === 503 && typeof reason === "string") return { message: reason, exitCode: 1 };
-  return { message: `Processing couldn't start (HTTP ${status}). Try again.`, exitCode: 1 };
+  return { message: `Processing couldn't start (HTTP ${status}).`, exitCode: 1, retry: true };
 }
