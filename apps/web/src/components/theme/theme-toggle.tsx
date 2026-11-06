@@ -36,11 +36,11 @@ export function ThemeToggle() {
         <span className="relative size-4">
           <SunIcon
             aria-hidden="true"
-            className="absolute inset-0 size-4 scale-100 rotate-0 opacity-100 transition duration-200 ease-out-quint motion-reduce:transition-opacity dark:scale-0 dark:-rotate-90 dark:opacity-0"
+            className="absolute inset-0 size-4 scale-100 rotate-0 opacity-100 transition duration-(--dur-200) ease-out-quint motion-reduce:transition-opacity dark:scale-0 dark:-rotate-90 dark:opacity-0"
           />
           <MoonIcon
             aria-hidden="true"
-            className="absolute inset-0 size-4 scale-0 rotate-90 opacity-0 transition duration-200 ease-out-quint motion-reduce:transition-opacity dark:scale-100 dark:rotate-0 dark:opacity-100"
+            className="absolute inset-0 size-4 scale-0 rotate-90 opacity-0 transition duration-(--dur-200) ease-out-quint motion-reduce:transition-opacity dark:scale-100 dark:rotate-0 dark:opacity-100"
           />
         </span>
       </DropdownMenuTrigger>

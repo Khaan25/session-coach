@@ -216,7 +216,7 @@ export function QuizResult({
           )}
         </CardHeader>
         <CardContent>
-          <DataList>
+          <DataList variant="divided">
             {!skipped && (
               <>
                 <DataListItem>

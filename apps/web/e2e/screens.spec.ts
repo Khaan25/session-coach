@@ -110,8 +110,8 @@ async function shoot(page: Page, path: string) {
       ? "home"
       : path
           .slice(1)
-          .replaceAll("/", "-")
-          .replace(/[0-9a-f-]{36}/, "id");
+          .replace(/[0-9a-f-]{36}/, "id")
+          .replaceAll("/", "-");
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
     for (const scheme of SCHEMES) {

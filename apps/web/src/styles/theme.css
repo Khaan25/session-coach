@@ -1,5 +1,5 @@
 /* The app's own theme on top of the design system: chart series, the secondary key's edge, success and
-   warning, and the motion, bento and toast animations. Imported by app/globals.css after utilities.css. */
+   warning, and the motion, entrance, route-transition and toast animations. Imported by app/globals.css after utilities.css. */
 
 /* The chart series colours are emitted as real variables too, because chart configs read them with var().
    Declared again on every [data-surface], so a chart on a remapped surface takes that surface's hues. */
@@ -53,21 +53,6 @@
 @theme {
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
-}
-
-/*
- * The landing bento (components/marketing/bento-*.tsx): the sprite's one-turn spin on click, and the soft
- * blur on the checks that are not in focus. Reduced motion drops the spin at the call site.
- */
-@theme {
-  --blur-row: 2px;
-  --animate-spin-y: spin-y 900ms cubic-bezier(0.45, 0, 0.55, 1);
-
-  @keyframes spin-y {
-    to {
-      transform: rotateY(360deg);
-    }
-  }
 }
 
 /*
@@ -193,6 +178,16 @@
   to {
     opacity: 0;
     translate: var(--route-slide) 0;
+  }
+}
+
+/* Marketing reveals (components/marketing/reveal.tsx) start hidden in inline styles that only JavaScript lifts. With
+   scripting off, show them as they are. */
+@media (scripting: none) {
+  [data-reveal] {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
   }
 }
 

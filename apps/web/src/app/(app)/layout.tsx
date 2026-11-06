@@ -48,6 +48,9 @@ async function SignedInSidebar() {
   );
 }
 
+// Review cards slide on their own (components/review/card-transition.tsx), so the shell holds still for those types.
+const shellFade = { forward: "none", back: "none", default: "route-fade" };
+
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <SidebarProvider>
@@ -64,7 +67,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           <AppBreadcrumb />
         </header>
         {/* Only the page content crossfades on a route change; the sidebar and topbar hold still. */}
-        <ViewTransition default="route-fade">{children}</ViewTransition>
+        <ViewTransition default={shellFade}>{children}</ViewTransition>
       </SidebarInset>
     </SidebarProvider>
   );

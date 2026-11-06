@@ -6,6 +6,7 @@ import { MotionConfig, motion } from "motion/react";
 // A marketing block that blurs in once as it scrolls into view: --enter-blur, --enter-rise and --dur-reveal on
 // --ease-out-expo (motion takes numbers, so the token values are repeated here). Reduced motion shows the block as it
 // is: the motion-reduce classes override the inline start styles, so nothing waits on a scroll that never animates.
+// Without JavaScript the start styles would stay, so styles/theme.css shows every [data-reveal] under scripting: none.
 const hidden = { opacity: 0, filter: "blur(8px)", y: 12 };
 const shown = { opacity: 1, filter: "blur(0px)", y: 0 };
 
@@ -13,6 +14,7 @@ export function Reveal({ className, children }: { className?: string; children: 
   return (
     <MotionConfig reducedMotion="user">
       <motion.div
+        data-reveal
         initial={hidden}
         whileInView={shown}
         viewport={{ once: true, amount: 0.2 }}
