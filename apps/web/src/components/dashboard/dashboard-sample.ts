@@ -1,7 +1,6 @@
-// Synthetic dashboard rows: the page's loading skeleton draws its shape from them, and /canvas draws the dashboard
-// with them. No real learner, and never a why or an answer key: a queue card carries only its decision and question.
+// Synthetic Today rows: the page's loading skeleton draws its shape from them, and /canvas draws Today with them.
+// No real learner, and never a why or an answer key: a queue card carries only its decision and question.
 
-import type { Ownership } from "@/lib/progress/ownership";
 import type { QueueCard } from "@/lib/review/queries";
 import type { SessionListItem } from "@/lib/sessions/rows";
 
@@ -26,7 +25,7 @@ const session = (
   cardCount,
 });
 
-export const SAMPLE_SESSIONS: SessionListItem[] = [
+const SAMPLE_SESSIONS: SessionListItem[] = [
   session(0, "Add rate limiting to the upload route", "session-coach", "ready", 4),
   session(1, "Write transcriptParser.ts", "rapporteur", "processing"),
   session(2, "Move email to Resend", "session-coach", "failed"),
@@ -74,13 +73,3 @@ export const SAMPLE_QUEUE: QueueCard[] = [
     1,
   ),
 ];
-
-export const SAMPLE_OWNERSHIP: Ownership = {
-  overall: { explained: 11, owned: 0, total: 19 },
-  repos: [
-    { repo: "rapporteur", explained: 2, owned: 0, total: 5 },
-    { repo: "session-coach", explained: 9, owned: 0, total: 14 },
-  ],
-};
-
-export const SAMPLE_REPOS = ["rapporteur", "session-coach"];
