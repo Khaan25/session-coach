@@ -18,7 +18,7 @@ export function BrandLink() {
 /**
  * An auth screen's h1 and optional lead line.
  *
- * @param title - The heading; every screen italicises one word, so it takes JSX.
+ * @param title - The heading, plain text.
  * @param children - The lead line under the heading.
  */
 export function AuthHeading({
@@ -29,10 +29,8 @@ export function AuthHeading({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h1 className="font-display text-5xl leading-none tracking-tight text-text-1 sm:text-6xl">
-        {title}
-      </h1>
+    <div className="flex flex-col gap-2">
+      <h1 className="type-display text-balance text-text-1">{title}</h1>
       {children && <p className="type-body text-pretty text-text-2">{children}</p>}
     </div>
   );
