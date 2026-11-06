@@ -9,6 +9,7 @@ import {
   ItemMeta,
   ItemTitle,
 } from "@/components/ui/item";
+import { OPEN_SESSION, SessionMorph } from "@/components/sessions/session-morph";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { sessionName } from "@/lib/sessions/name";
 import { isEmptyReady } from "@/lib/sessions/status-label";
@@ -31,14 +32,16 @@ export function SessionRow({ session, cardCount, now }: SessionRowProps) {
   const { id, title, repo, branch, status, error, created_at } = session;
   const name = sessionName({ title, repo, branch });
   const when = formatRelativeTime(created_at, now);
-  return (
+  const row = (
     // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role, not an li.
     // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <Item role="listitem" data-status={status === "failed" ? "fail" : undefined}>
       <ItemContent>
         <ItemTitle>
           {status === "ready" ? (
-            <ItemLink render={<Link href={`/s/${id}`} />}>{name}</ItemLink>
+            <ItemLink render={<Link href={`/s/${id}`} transitionTypes={[OPEN_SESSION]} />}>
+              {name}
+            </ItemLink>
           ) : (
             <span>{name}</span>
           )}
@@ -69,4 +72,6 @@ export function SessionRow({ session, cardCount, now }: SessionRowProps) {
       <StatusBadge status={status} cardCount={cardCount} />
     </Item>
   );
+  // Only a ready row links to its page, so only it morphs into the page's title.
+  return status === "ready" ? <SessionMorph id={id}>{row}</SessionMorph> : row;
 }

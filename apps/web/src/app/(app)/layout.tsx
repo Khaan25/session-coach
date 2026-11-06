@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, ViewTransition } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { DetectTimezone } from "@/components/settings/detect-timezone";
@@ -63,7 +63,8 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           />
           <AppBreadcrumb />
         </header>
-        {children}
+        {/* Only the page content crossfades on a route change; the sidebar and topbar hold still. */}
+        <ViewTransition default="route-fade">{children}</ViewTransition>
       </SidebarInset>
     </SidebarProvider>
   );

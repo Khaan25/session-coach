@@ -8,7 +8,6 @@ import { navMain } from "@/components/nav-items";
 import { NavMain } from "@/components/nav-main";
 import { NavSessions } from "@/components/nav-sessions";
 import { NavUser } from "@/components/nav-user";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
 import {
   Sidebar,
   SidebarContent,
@@ -32,7 +31,7 @@ export function AppSidebar({
   dueCount: number;
   /** Turns on live status updates for the sessions; null while signed out or loading. */
   userId: string | null;
-  /** Null while signed out or loading: the footer then shows only the theme toggle. */
+  /** Null while signed out or loading: the footer is then empty. */
   user: React.ComponentProps<typeof NavUser>["user"] | null;
 }) {
   return (
@@ -55,12 +54,8 @@ export function AppSidebar({
         />
         <NavSessions sessions={sessions} userId={userId} />
       </SidebarContent>
-      <SidebarFooter>
-        <div className="flex items-center gap-2">
-          <div className="min-w-0 flex-1">{user && <NavUser user={user} />}</div>
-          <ThemeToggle />
-        </div>
-      </SidebarFooter>
+      {/* One control: the account menu, which also holds the theme. */}
+      <SidebarFooter>{user && <NavUser user={user} />}</SidebarFooter>
     </Sidebar>
   );
 }

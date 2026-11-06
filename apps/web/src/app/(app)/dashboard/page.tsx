@@ -6,17 +6,13 @@ import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { DashboardView, FirstSessionEmpty } from "@/components/dashboard/dashboard-view";
-import {
-  SAMPLE_NOW,
-  SAMPLE_OWNERSHIP,
-  SAMPLE_QUEUE,
-  SAMPLE_SESSIONS,
-} from "@/components/dashboard/dashboard-sample";
 import { ProjectSetup } from "@/components/projects/project-setup";
-import { SessionList, SessionRows } from "@/components/sessions/session-list";
+import { SessionList } from "@/components/sessions/session-list";
 import { buttonVariants } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getOwnership } from "@/lib/progress/queries";
+
+import { DashboardSampleView } from "./dashboard-sample-view";
 import { listProjects } from "@/lib/projects/queries";
 import { emptyQueue, reviewQueue } from "@/lib/review/queries";
 import { listSessions } from "@/lib/sessions/queries";
@@ -30,22 +26,7 @@ export default function DashboardPage({ searchParams }: PageProps<"/dashboard">)
     <Container>
       {/* Skullet measures the real blocks, drawn from sample data, so each keeps its shape when the data lands. The
           row counts, the filter and the page links aren't known until then, so the blocks can still grow or shrink. */}
-      <MeasuredSuspense
-        label="Loading your dashboard"
-        skeleton={
-          <DashboardView
-            firstVisit={false}
-            tabs={null}
-            repo={null}
-            queue={SAMPLE_QUEUE}
-            due={SAMPLE_QUEUE}
-            empty={null}
-            ownership={SAMPLE_OWNERSHIP}
-            anatomy={null}
-            sessions={<SessionRows rows={SAMPLE_SESSIONS} now={SAMPLE_NOW} />}
-          />
-        }
-      >
+      <MeasuredSuspense label="Loading your dashboard" skeleton={<DashboardSampleView />}>
         <Dashboard searchParams={searchParams} />
       </MeasuredSuspense>
     </Container>
@@ -73,7 +54,6 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
   if (page > 1 && sessions.length === 0) redirect(dashboardHref(repo));
   const firstVisit = !repo && page === 1 && sessions.length === 0;
   const due = repo ? queue.filter((card) => card.repo === repo) : queue;
-  const next = due[0] ?? queue[0];
   const empty = await loadEmpty(user.id, now, queue.length > 0 || firstVisit);
 
   return (
@@ -90,8 +70,6 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
       due={due}
       empty={empty}
       ownership={ownership}
-      // The queue carries the question but never the why, the evidence or the answer key.
-      anatomy={next ? { decision: next.decision, question: next.question, step: next.step } : null}
       sessions={
         <SessionList
           key={`${repo}:${page}`}

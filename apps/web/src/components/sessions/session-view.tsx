@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/app/status-badge";
 import { DecisionCard, LockedDecisionCard } from "@/components/cards/decision-card";
 import { RefreshOnSettle } from "@/components/cards/refresh-on-settle";
 import { RetrySessionButton } from "@/components/sessions/retry-session-button";
+import { SessionMorph } from "@/components/sessions/session-morph";
 import { Code } from "@/components/ui/code-block";
 import { PageHeaderStat, PageHeaderStats } from "@/components/ui/page-header";
 import type { SessionCard } from "@/lib/cards/columns";
@@ -38,7 +39,14 @@ export function SessionView({
   return (
     <Container>
       <AppPageHeader
-        title={title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session"}
+        title={
+          // The row the learner opened morphs into this title (a block, so the snapshot is one box).
+          <SessionMorph id={session.id}>
+            <span className="block">
+              {title || [repo, branch].filter(Boolean).join(" on ") || "Untitled session"}
+            </span>
+          </SessionMorph>
+        }
         description={
           <span className="flex flex-wrap items-center gap-2">
             {repo && <Code>{repo}</Code>}
@@ -48,12 +56,13 @@ export function SessionView({
         }
       >
         <PageHeaderStats>
+          {/* The start time is a tooltip on the duration, not a stat of its own. */}
           <PageHeaderStat
             label="Duration"
             value={duration_min ?? "None"}
             detail={duration_min === null ? undefined : "min"}
+            title={started ? `Started ${started}` : undefined}
           />
-          <PageHeaderStat label="Started" value={started ?? "None"} />
           {status === "ready" && <PageHeaderStat label="Cards" value={cards.length} />}
         </PageHeaderStats>
       </AppPageHeader>
