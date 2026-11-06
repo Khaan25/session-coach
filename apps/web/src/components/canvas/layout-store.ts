@@ -10,9 +10,10 @@ const KEY = "session-coach:ideas-canvas";
 // 3: the report row grew from two pages to five; old saves put the new ones on top of the old.
 // 4: the old preview rows went and the rows reflowed, so saved positions land on the wrong items.
 // 5: the canvas became the new UI flow only; a saved camera framed the old, much wider map.
-const VERSION = 5;
-// Low enough that "Fit everything" fits the widest row on a laptop screen.
-export const MIN_ZOOM = 0.05;
+// 6: the inventory rows went in under the flow; a saved camera framed the flow alone.
+const VERSION = 6;
+// Low enough that "Fit everything" fits the widest row (Review, about 30,000px) on a laptop screen.
+export const MIN_ZOOM = 0.03;
 export const MAX_ZOOM = 3;
 /** Coordinates past this are a corrupt save, not a layout. */
 const LIMIT = 100_000;

@@ -1,8 +1,9 @@
 "use client";
 
-// Everything on the canvas: the new UI flow, one row per stage, left to right in the order a learner meets it. Every
-// screen is an app route in one state, rendered from the route's real components with synthetic data
-// (previews/flow-screens.tsx), so the canvas can't drift from the app.
+// Everything on the canvas: the new UI flow, one row per stage, left to right in the order a learner meets it; then the
+// inventory, every route in every state, one row per area (previews/inventory-screens.tsx). Every screen is an app
+// route in one state, rendered from the route's real components with synthetic data, so the canvas can't drift from
+// the app.
 
 import { Canvas, type CanvasItem } from "./canvas";
 import {
@@ -25,6 +26,7 @@ import {
   TodayFirstVisitScreen,
   TodayGuideOpenScreen,
 } from "./previews/flow-screens";
+import { INVENTORY } from "./previews/inventory-screens";
 import { ServerScreensContext, type ServerScreens } from "./previews/server-screens";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
@@ -34,14 +36,25 @@ const GAP = 120;
 /** Between rows, below the tallest item; leaves room for the labels. */
 const ROW_GAP = 320;
 
-/** One full-page screen, named `<route> · <state>`; the id comes from the name, so the two never drift apart. */
-const page = (route: string, state: string, render: () => React.ReactNode): Entry => {
+/**
+ * One screen, named `<route> · <state>`; the id comes from the name, so the two never drift apart. `prefix` keeps an
+ * inventory frame's id apart from the flow frame of the same name.
+ */
+const page = (
+  route: string,
+  state: string,
+  render: () => React.ReactNode,
+  {
+    prefix = "flow",
+    size = PAGE,
+  }: { prefix?: string; size?: { width: number; height: number } } = {},
+): Entry => {
   const name = `${route} · ${state}`;
   const slug = name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  return { id: `flow-${slug}`, name, ...PAGE, render };
+  return { id: `${prefix}-${slug}`, name, ...size, render };
 };
 
 const rows: Entry[][] = [
@@ -89,6 +102,12 @@ const rows: Entry[][] = [
     page("/dashboard", "loading", () => <LoadingScreen />),
     page("/dashboard", "error", () => <ErrorScreen />),
   ],
+  // The inventory: every route in every state, one row per area.
+  ...INVENTORY.map(({ frames }) =>
+    frames.map(({ route, state, render, size }) =>
+      page(route, state, render, { prefix: "inv", size }),
+    ),
+  ),
 ];
 
 /**
