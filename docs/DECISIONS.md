@@ -2,6 +2,20 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-06 · Index foreign keys with user_id; load-test the schema at 1000x
+
+- **Decision:** `20261106000000_scale_indexes.sql` adds seven indexes and drops `answers_card_idx`. The two that
+  matter most index each composite foreign key's own columns, `answers (card_id, user_id)` and
+  `decision_cards (session_id, user_id)`, because RLS adds `user_id = auth.uid()` to every learner query: a lookup
+  by `card_id` alone was ANDed with the learner's whole `user_id` index on every loop. Applied to live on 6 Nov.
+- **Why:** the new load test (`scripts/load-test`, results in [LOAD_TEST.md](LOAD_TEST.md)) ran the app's 29 real
+  queries at 1x to 1000x. At 1000x a learner with 55k cards hit 88 s in `learner_ownership()`, 104 s deleting their
+  account and 12 s in `getCardPath` (over the 8 s timeout). After: 203 ms, 560 ms and 148 ms.
+- **Rejected:** rewriting `learner_ownership()` (the plan, not the SQL, was wrong); `create index concurrently`
+  (migrations run in a transaction, and the tables are small today).
+- **Not done:** `fetchAll`'s `OFFSET` paging is quadratic in a learner's rows (4 to 6 s at 1000x for the heaviest
+  learner). Keyset paging or counting in SQL fixes it; it is app code, so a separate change.
+
 ## 2026-11-05 · "Sign out everywhere" also revokes CLI tokens
 
 - **Decision:** `signOutEverywhere` deletes the learner's `cli_tokens` rows with their own client (RLS "delete own tokens") and, with the service role, their approved device logins the CLI hasn't collected (which would mint a new token), before `signOut({ scope: "global" })`. If either delete fails, nothing is signed out and Settings shows a toast, so the learner can retry.

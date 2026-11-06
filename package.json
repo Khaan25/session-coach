@@ -19,6 +19,7 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "check:secrets": "node scripts/check-secrets.mjs --all",
+    "db:load-test": "node scripts/load-test/run.mjs --fix supabase/migrations/20261106000000_scale_indexes.sql && node scripts/load-test/report.mjs",
     "check:commits": "node scripts/check-commit-message.mjs --range origin/main..HEAD",
     "seed:demo": "node --env-file=apps/web/.env.local scripts/seed-demo.mjs --dry-run",
     "seed:demo:live": "node --env-file=apps/web/.env.local scripts/seed-demo.mjs",
