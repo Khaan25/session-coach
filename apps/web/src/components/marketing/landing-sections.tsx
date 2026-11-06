@@ -269,3 +269,30 @@ export function ClosingSection() {
     </section>
   );
 }
+
+/** The page's last picture: the watercolour desk by the window, the old landing's closing scene, day and night. */
+export function DeskScene() {
+  return (
+    <div
+      aria-hidden
+      className="mx-auto w-full max-w-(--container) px-(--gutter-sm) pt-8 sm:px-(--gutter)"
+    >
+      <Image
+        src="/art/footer-desk.webp"
+        alt=""
+        width={1600}
+        height={533}
+        sizes="(min-width: 1120px) 1072px, 100vw"
+        className="h-auto w-full dark:hidden"
+      />
+      <Image
+        src="/art/footer-desk-night.webp"
+        alt=""
+        width={1600}
+        height={533}
+        sizes="(min-width: 1120px) 1072px, 100vw"
+        className="hidden h-auto w-full dark:block"
+      />
+    </div>
+  );
+}

@@ -3,6 +3,8 @@ import Image from "next/image";
 
 // Real pixel sizes of the WebP files in public/art/sprites (the day and night copies share one size).
 const SPRITES = {
+  cards: [192, 160],
+  letter: [192, 137],
   pencil: [192, 167],
   plant: [135, 192],
   tea: [192, 187],

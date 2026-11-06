@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Sprite, type SpriteName } from "@/components/art/sprite";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader } from "@/components/ui/card";
 import type { QueueCard } from "@/lib/review/queries";
@@ -82,18 +83,22 @@ export function NextCard({ card, left }: { card: QueueCard; left: number }) {
   );
 }
 
-/** A hero with no card: a title, one muted line and at most two actions. */
+/** A hero with no card: a watercolour object, a title, one muted line and at most two actions. */
 export function TodayMessage({
   title,
   description,
   action,
+  sprite,
 }: {
   title: string;
   description: string;
   action?: React.ReactNode;
+  /** The desk object that sets the moment: tea when done, a letter on a first visit. */
+  sprite?: SpriteName;
 }) {
   return (
     <section aria-label={title} className="flex flex-col gap-6">
+      {sprite && <Sprite name={sprite} className="w-20" />}
       <div className="flex flex-col gap-3">
         <h2 className="type-heading-lg text-balance text-text-1">{title}</h2>
         <p className="type-body text-pretty text-text-2">{description}</p>
