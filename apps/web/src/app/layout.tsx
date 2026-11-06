@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Geist_Mono, Mona_Sans } from "next/font/google";
 import { SkulletProvider } from "skullet/react";
 
 import { UiSounds } from "@/components/sound/ui-sounds";
@@ -11,22 +11,15 @@ import { PortalProvider } from "@/lib/ui/portal";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// One family for the UI and the headlines, after serveros.com (docs/DECISIONS.md, 2026-11-06).
+const monaSans = Mona_Sans({
+  variable: "--font-mona-sans",
   subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-// Display face for marketing headlines only (`font-display`); the UI stays on Geist.
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
 });
 
 // Skullet's measured skeletons in the design system's still block: the skeleton fill, the control radius and the pulse.
@@ -64,7 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full`}
+      className={`${monaSans.variable} ${geistMono.variable} h-full`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

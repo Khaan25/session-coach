@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-06 · Plain palette, Mona Sans, route view transitions, marketing scroll reveals
+
+- **Decision:** the app takes its look from serveros.com: neutral graphite ink on white paper (dark: the same, inverted), hairline edges with no lift on controls, one brand blue (`--brand`, #1c4bb0) for the primary key only, and Mona Sans for UI and headlines with Geist Mono for code. Geist Sans and Instrument Serif are gone. Route changes crossfade with a short blur and lift through React's `<ViewTransition>` and the `::view-transition` recipes in `styles/theme.css`; the root snapshot does not animate, so the sidebar and nav hold still. Marketing pages may now blur sections in on scroll with `motion`; the app and auth stay free of scroll reveals. The landing page follows egm.dev's structure: a centred hero and four short sections. Per-page jobs and cuts are in `docs/design/serveros-redesign.md`.
+- **Why:** Zia asked for a simpler, more obvious UI in the serveros style and a to-the-point landing like egm.dev. One family and one accent cut the visual noise; the cold navy tint, lit keys and serif headlines were decoration. View transitions are built into React 19.3 and Next 16 with no dependency, and they degrade to an instant swap where unsupported.
+- **Reverses:** the scroll-reveal ban recorded under the 2026-10 marketing motion entry, for marketing pages only.
+- **Rejected:** copying serveros's fonts wholesale (Instrument Sans plus Mona Sans: two sans families for no gain); `motion` for route transitions (a client wrapper around every server page, where `<ViewTransition>` needs none); merging `app/page-header`, `app/stat-row` and `app/empty-state` into `ui/` (they are compositions over the `ui/` primitives, not copies, so merging only moves code).
+
 ## 2026-11-06 · Index foreign keys with user_id; load-test the schema at 1000x
 
 - **Decision:** `20261106000000_scale_indexes.sql` adds seven indexes and drops `answers_card_idx`. The two that

@@ -128,7 +128,9 @@
   --color-popover: var(--surface-raised);
   --color-popover-foreground: var(--text-1);
   --color-primary: var(--button-primary);
-  --color-primary-foreground: var(--text-inverse);
+  --color-primary-foreground: var(--text-on-brand);
+  --color-brand: var(--brand);
+  --color-on-brand: var(--text-on-brand);
   --color-secondary: var(--button-secondary);
   --color-secondary-foreground: var(--text-1);
   --color-muted: var(--surface-card);
