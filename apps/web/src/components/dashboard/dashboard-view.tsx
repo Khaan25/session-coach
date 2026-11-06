@@ -59,6 +59,8 @@ export type DashboardViewProps = {
   sessions: React.ReactNode;
   /** Newer and Older, when there are more pages. */
   pager?: React.ReactNode;
+  /** Beside the title: the setup guide's "Get started" on a first visit. */
+  actions?: React.ReactNode;
 };
 
 export function DashboardView({
@@ -72,6 +74,7 @@ export function DashboardView({
   ownership,
   sessions,
   pager,
+  actions,
 }: DashboardViewProps) {
   const blocks = (
     <div className="flex min-w-0 flex-col gap-4">
@@ -122,13 +125,16 @@ export function DashboardView({
   return (
     <>
       {/* A small, tight title: the page is a working view, and the blocks under it carry the weight. */}
-      <header className="flex flex-col gap-1">
-        <h1 className="type-heading">Dashboard</h1>
-        <p className="type-body text-text-2">
-          {firstVisit
-            ? "Nothing here yet. Each block below says what will land in it."
-            : "What to explain next, and how your agent’s decisions are sticking."}
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="type-heading">Dashboard</h1>
+          <p className="type-body text-text-2">
+            {firstVisit
+              ? "Nothing here yet. Each block below says what will land in it."
+              : "What to explain next, and how your agent’s decisions are sticking."}
+          </p>
+        </div>
+        {actions}
       </header>
       {before}
       {tabs ? (
