@@ -1,14 +1,14 @@
+import { CaretRightIcon } from "@phosphor-icons/react/ssr";
 import Link from "next/link";
 
 import { AppPageHeader } from "@/components/app/page-header";
 import { QuizForm } from "@/components/review/quiz-form";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Item,
+  ItemActions,
   ItemContent,
-  ItemDescription,
   ItemGroup,
   ItemLink,
   ItemTitle,
@@ -30,48 +30,51 @@ export function ReviewHeader() {
   );
 }
 
-/** Today's queue: each card's decision and session, never its why. */
+/** Today's queue: each card's decision and session, never its why. A header row with the count and Start, then one list. */
 export function QueueList({ queue }: { queue: QueueCard[] }) {
   const first = queue[0];
   return (
-    <Card>
-      <CardHeader>
+    <div className="flex flex-col gap-3">
+      <div className="flex min-h-(--row) items-center justify-between gap-3">
         {/* skullet-own: static text stays real in the skeleton; only the queue is drawn as bars. */}
-        <CardTitle skullet-own="">
-          <h2>Due today</h2>
-        </CardTitle>
+        <h2 skullet-own="" className="flex items-baseline gap-2 type-heading-xs">
+          Due today
+          <span className="type-body-sm text-text-2">{queue.length}</span>
+        </h2>
         {first && (
-          <CardAction>
-            <Link
-              href={`/review/${first.id}`}
-              transitionTypes={["forward"]}
-              className={buttonVariants()}
-            >
-              Start review
-            </Link>
-          </CardAction>
+          <Link
+            href={`/review/${first.id}`}
+            transitionTypes={["forward"]}
+            className={buttonVariants()}
+          >
+            Start review
+          </Link>
         )}
-      </CardHeader>
+      </div>
       <ItemGroup>
         {queue.map((card) => (
           // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
           // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
           <Item key={card.id} role="listitem">
             <ItemContent>
+              {/* The session rides inline after the decision; ItemTitle drops it on a narrow row. */}
               <ItemTitle>
                 <ItemLink
                   render={<Link href={`/review/${card.id}`} transitionTypes={["forward"]} />}
                 >
                   {card.decision}
                 </ItemLink>
+                <span className="type-body-sm text-text-2">{card.sessionName}</span>
               </ItemTitle>
-              <ItemDescription>{card.sessionName}</ItemDescription>
             </ItemContent>
-            <Badge>{stepLabels[card.step]}</Badge>
+            <ItemActions>
+              <Badge>{stepLabels[card.step]}</Badge>
+              <CaretRightIcon aria-hidden="true" className="text-text-3 rtl:-scale-x-100" />
+            </ItemActions>
           </Item>
         ))}
       </ItemGroup>
-    </Card>
+    </div>
   );
 }
 
