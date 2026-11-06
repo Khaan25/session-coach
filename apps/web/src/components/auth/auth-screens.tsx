@@ -34,7 +34,7 @@ export function AuthShell({ art, children }: { art?: React.ReactNode; children: 
         </header>
         <main className="flex flex-1 flex-col justify-center px-(--gutter-sm) pt-8 pb-16 sm:px-(--gutter) sm:pt-12 sm:pb-24">
           {/* The one card every auth screen sits in. */}
-          <div className="mx-auto flex w-full max-w-100 flex-col gap-6 rounded-frame border border-hair bg-page px-6 pt-6 pb-5 sm:px-8 sm:pt-8 sm:pb-7">
+          <div className="mx-auto flex w-full max-w-100 flex-col gap-6 rounded-frame border border-hair bg-page shadow-card px-6 pt-6 pb-5 sm:px-8 sm:pt-8 sm:pb-7">
             {children}
           </div>
         </main>

@@ -429,6 +429,7 @@
   --elev-thumb:
     0 0 0 1px oklch(var(--ink-c) / var(--thumb-ring-alpha)),
     0 1px 2px oklch(var(--text-on-field-c) / calc(var(--shadow-alpha) * 0.5)); /* the selected segment lifted off its grey track; in dark a 1px ring joins the shadow | segmented control */
+  --elev-card: inset 0 1px 0 oklch(var(--paper-c) / 0.06), 0 24px 48px -24px oklch(var(--text-on-field-c) / var(--shadow-alpha)); /* a standalone card lifted off the page: a light top lip and one long soft drop, no ring of its own | auth card, CLI approve */
   --elev-overlay:
     0 0 0 1px var(--line-frame),
     0 12px 24px -12px oklch(var(--text-on-field-c) / var(--shadow-alpha)); /* the overlay's edge plus one short shadow | menu, popover, select, dialog, sheet */

@@ -239,6 +239,7 @@
   --shadow-md: var(--elev-overlay);
   --shadow-lg: var(--elev-overlay);
   --shadow-overlay: var(--elev-overlay);
+  --shadow-card: var(--elev-card);
 
   --ease-step: var(--ease-step);
 
