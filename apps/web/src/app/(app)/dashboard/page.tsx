@@ -6,6 +6,7 @@ import { Container } from "@/components/app/container";
 import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoSessionsEmpty } from "@/components/app/empty-state";
 import { DashboardView, FirstSessionEmpty } from "@/components/dashboard/dashboard-view";
+import { SetupGuide } from "@/components/onboarding/setup-guide";
 import { ProjectSetup } from "@/components/projects/project-setup";
 import { SessionList } from "@/components/sessions/session-list";
 import { buttonVariants } from "@/components/ui/button";
@@ -59,6 +60,7 @@ async function Dashboard({ searchParams }: Pick<PageProps<"/dashboard">, "search
   return (
     <DashboardView
       firstVisit={firstVisit}
+      actions={firstVisit ? <SetupGuide autoOpen /> : undefined}
       before={<ProjectSetup />}
       tabs={
         repos?.length

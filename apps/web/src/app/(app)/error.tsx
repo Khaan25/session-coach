@@ -1,17 +1,14 @@
 "use client";
 
 import { Container } from "@/components/app/container";
-import { ServerErrorState } from "@/components/errors/server-error-state";
+import { LoadErrorState } from "@/components/errors/load-error-state";
 
-// Renders inside the (app) layout, so the sidebar and top bar stay and the learner can move on from there.
+// Renders inside the (app) layout, so the sidebar and top bar stay and the learner can move on from there. Pages
+// with their own error.tsx keep their title over the same framed error; this catches the rest.
 export default function AppError({ error, retry }: { error: unknown; retry: () => void }) {
   return (
     <Container>
-      <ServerErrorState
-        error={error}
-        retry={retry}
-        home={{ href: "/dashboard", label: "Back to the dashboard" }}
-      />
+      <LoadErrorState error={error} retry={retry} noun="this page" />
     </Container>
   );
 }
