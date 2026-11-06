@@ -15,7 +15,17 @@ npx session-coach push <file.jsonl>
 npx session-coach sync
 ```
 
-`login` prints a code and opens the app's `/cli/approve` page; check the code matches, click Approve, and the CLI saves its own token (device-code login, RFC 8628). Nothing to copy. Ctrl+C cancels; the code expires after 10 minutes. On a machine without a browser, open the printed address anywhere you're signed in. `login --token` instead asks for a token from the app's `/setup` page, checks it with the server and saves it only if it works. `push --latest` uploads the newest log of the project in the folder you run it from, and only that project (see [push](#push)). `sync` is for a Claude Code hook that uploads your finished sessions for you (see [sync](#sync)).
+`login` prints a code and opens the app's `/cli/approve` page (`--no-open` only prints it); check the code matches, click Approve, and the CLI saves its own token (device-code login, RFC 8628). Nothing to copy. Ctrl+C cancels; the code expires after 10 minutes. On a machine without a browser, open the printed address anywhere you're signed in. `login --token` instead asks for a token from the app's `/setup` page, checks it with the server and saves it only if it works. `push --latest` uploads the newest log of the project in the folder you run it from, and only that project (see [push](#push)). `sync` is for a Claude Code hook that uploads your finished sessions for you (see [sync](#sync)).
+
+## Output
+
+The CLI follows [Vercel's CLI design guidelines](https://vercel.com/design/cli).
+
+- **stdout is the answer.** Help, `--version`, and after a successful `push` the session ID alone when stdout isn't a terminal: `id=$(npx session-coach push --latest)`. Everything else (progress, prompts, receipts, warnings, errors) goes to stderr.
+- **Glyphs:** `✓` a completed result, `!` a warning, `✗` an error. When stderr isn't a terminal they become `Warning:` and `Error:`. A failure ends with the command that fixes it, on its own line.
+- **Color** only on a terminal. `--no-color` or `NO_COLOR` turns it off; `FORCE_COLOR=1` forces it, `FORCE_COLOR=0` turns it off.
+- **Help:** `--help`, `-h` or `help <command>`, at any depth, works offline.
+- **Exit codes:** 0 success or nothing to do, 1 a failure, 2 a usage error (unknown command or option), 130 Ctrl+C. `sync` always exits 0.
 
 ## init
 

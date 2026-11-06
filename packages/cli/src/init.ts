@@ -114,17 +114,18 @@ export async function settingsLocalIgnored(cwd: string): Promise<boolean | null>
 /**
  * Adds the hooks to `<cwd>/.claude/settings.local.json`, and warns when git would commit that file.
  *
- * @returns What to print and the exit code.
+ * @returns What to print, any warnings, and the exit code.
  */
 export async function runInit(
   cwd: string,
   version: string,
-): Promise<{ message: string; exitCode: number }> {
+): Promise<{ message: string; warnings: string[]; exitCode: number }> {
   const path = join(cwd, ".claude", "settings.local.json");
   const current = await readSettings(path);
-  if ("error" in current) return { message: current.error as string, exitCode: 1 };
+  if ("error" in current) return { message: current.error as string, warnings: [], exitCode: 1 };
   const updated = addSyncHooks(current, version);
-  if ("error" in updated) return { message: `${path}: ${updated.error as string}`, exitCode: 1 };
+  if ("error" in updated)
+    return { message: `${path}: ${updated.error as string}`, warnings: [], exitCode: 1 };
 
   await mkdir(dirname(path), { recursive: true });
   // Written beside it, then renamed over it, so an interrupted write never leaves half a settings file.
@@ -132,24 +133,23 @@ export async function runInit(
   await writeFile(temporary, `${JSON.stringify(updated, null, 2)}\n`);
   await rename(temporary, path);
 
-  const lines = [
-    `Auto-upload is on for ${cwd}.`,
-    `Added the session-coach hooks to ${path} (your personal settings; keep it out of git).`,
-    "Each session in this project now uploads when it ends. Run session-coach init in other projects to add them.",
-  ];
+  const warnings: string[] = [];
   if ((await settingsLocalIgnored(cwd)) === false) {
-    lines.push(
-      `Warning: git doesn't ignore ${SETTINGS_LOCAL} in this project, so it could be committed and the hooks would run for teammates. Add this line to .gitignore:`,
-      SETTINGS_LOCAL,
+    warnings.push(
+      `git doesn't ignore ${SETTINGS_LOCAL} in this project, so it could be committed and the hooks would run for teammates. Add this line to .gitignore:\n    ${SETTINGS_LOCAL}`,
     );
   }
   const shared = await readSettings(join(cwd, ".claude", "settings.json"));
   if (!("error" in shared) && hasSyncHook(shared)) {
-    lines.push(
-      "Note: .claude/settings.json also has a session-coach hook. Remove it there, so teammates don't run it too.",
+    warnings.push(
+      ".claude/settings.json also has a session-coach hook, so teammates run it too. Remove it there.",
     );
   }
-  return { message: lines.join("\n"), exitCode: 0 };
+  return {
+    message: `Auto-upload is on for ${cwd}. Each session here uploads when it ends.`,
+    warnings,
+    exitCode: 0,
+  };
 }
 
 /** Where init writes the hooks: Claude Code's personal, uncommitted settings for the project. */
@@ -157,14 +157,23 @@ export function settingsLocalPath(cwd: string): string {
   return join(cwd, ".claude", "settings.local.json");
 }
 
-export type InitArgs = { url: string | null; yes: boolean } | { error: string };
+export type InitArgs = { url: string | null; yes: boolean; open: boolean } | { error: string };
 
-/** Accepts `--url value`, `--url=value` and `--yes` (say yes to every step, for agents and scripts). */
+/**
+ * Accepts `--url value`, `--url=value`, `--yes` (say yes to every step, for agents and scripts) and `--no-open`
+ * (print the login address without opening a browser).
+ */
 export function parseInitArgs(args: string[]): InitArgs {
   let url: string | null = null;
   let yes = false;
+  let open = true;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] as string;
+    if (arg === "--no-open") {
+      if (!open) return { error: "--no-open was given twice." };
+      open = false;
+      continue;
+    }
     if (arg === "--yes" || arg === "-y") {
       if (yes) return { error: "--yes was given twice." };
       yes = true;
@@ -182,10 +191,10 @@ export function parseInitArgs(args: string[]): InitArgs {
     if (url !== null) return { error: "--url was given twice." };
     url = value;
   }
-  return { url, yes };
+  return { url, yes, open };
 }
 
-/** A step heading: `Step 2 of 4 · Turn on automatic uploads`. */
+/** A step heading: `Step 2 of 4 · Turn on automatic uploads`, after a blank line that separates phases. */
 export function stepHeading(step: number, total: number, title: string): string {
   return `\nStep ${step} of ${total} · ${title}`;
 }

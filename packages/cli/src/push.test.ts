@@ -357,12 +357,12 @@ describe("step 1 responses", () => {
           "This session was already uploaded and is ready or processing. Open the app to see it.",
         ),
     );
-    assert.ok(result.action === "stop" && result.message.includes(ID));
+    assert.ok(result.action === "stop" && result.id === ID && result.unchanged);
     assert.ok(result.action === "stop" && result.exitCode === 0);
   });
 
   const failures: [number, RegExp][] = [
-    [401, /session-coach login again/],
+    [401, /refused your sign-in/],
     [413, /over 50 MB/],
     [429, /Wait a while/],
     [400, /rejected/],
@@ -391,8 +391,8 @@ describe("step 3 responses", () => {
   it("202 confirms and prints the session id", () => {
     const out = interpretProcess(202, { id: ID }, ID);
     assert.equal(out.exitCode, 0);
-    assert.match(out.message, /^Uploaded\. Cards will appear in the app\./);
-    assert.match(out.message, new RegExp(`Session id: ${ID}`));
+    assert.equal(out.message, "Uploaded. Cards will appear in the app.");
+    assert.equal(out.id, ID);
   });
 
   it("409 prints the status it reports", () => {
@@ -408,8 +408,9 @@ describe("step 3 responses", () => {
 
   it("422 says the upload didn't land", () => {
     const out = interpretProcess(422, null, ID);
-    assert.match(out.message, /upload didn't land, run push again/i);
+    assert.match(out.message, /didn't reach the server/);
     assert.equal(out.exitCode, 1);
+    assert.equal(out.retry, true);
   });
 
   it("503 shows the server's reason, or the generic line without one", () => {
@@ -422,7 +423,10 @@ describe("step 3 responses", () => {
   });
 
   it("maps 401, 413, 404 and 500", () => {
-    assert.match(interpretProcess(401, null, ID).message, /session-coach login again/);
+    assert.deepEqual(interpretProcess(401, null, ID).next, {
+      text: "Sign in again",
+      command: "session-coach login",
+    });
     assert.match(interpretProcess(413, null, ID).message, /over 50 MB/);
     assert.match(interpretProcess(404, null, ID).message, /doesn't know/);
     assert.match(interpretProcess(500, null, ID).message, /HTTP 500/);

@@ -26,12 +26,12 @@ export function applyKeys(
 }
 
 /**
- * Asks for a secret without echoing it. On a terminal the typed characters are never written; when stdin is piped
- * (scripts, tests) it reads the first line.
+ * Asks for a secret without echoing it. Prompts go to stderr, so stdout carries only results. On a terminal the typed
+ * characters are never written; when stdin is piped (scripts, tests) it reads the first line.
  */
 export function promptHidden(question: string): Promise<string> {
   const input = process.stdin;
-  const output = process.stdout;
+  const output = process.stderr;
   output.write(question);
 
   if (!input.isTTY) {
@@ -75,7 +75,7 @@ export function promptHidden(question: string): Promise<string> {
  */
 export function promptLine(question: string): Promise<string | null> {
   return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    const rl = createInterface({ input: process.stdin, output: process.stderr });
     let answered = false;
     rl.question(question, (answer) => {
       answered = true;

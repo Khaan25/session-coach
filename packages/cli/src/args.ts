@@ -1,16 +1,25 @@
 // Argument parsing for `login` and `push`. Pure, so node --test covers it without a terminal.
 
-/** `token`: sign in by pasting a token from /setup instead of approving in the browser. */
-export type LoginArgs = { url: string | null; token: boolean } | { error: string };
+/**
+ * `token`: sign in by pasting a token from /setup instead of approving in the browser. `open`: false with `--no-open`,
+ * which prints the approve address without opening a browser.
+ */
+export type LoginArgs = { url: string | null; token: boolean; open: boolean } | { error: string };
 export type PushArgs = { file: string } | { latest: true } | { error: string };
 
-/** Accepts `--url value`, `--url=value` and `--token`; anything else is an error. */
+/** Accepts `--url value`, `--url=value`, `--token` and `--no-open`; anything else is an error. */
 export function parseLoginArgs(args: string[]): LoginArgs {
   let url: string | null = null;
   let token = false;
+  let open = true;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] as string;
     let value: string | undefined;
+    if (arg === "--no-open") {
+      if (!open) return { error: "--no-open was given twice." };
+      open = false;
+      continue;
+    }
     if (arg === "--token") {
       if (token) return { error: "--token was given twice." };
       token = true;
@@ -27,7 +36,7 @@ export function parseLoginArgs(args: string[]): LoginArgs {
     if (url !== null) return { error: "--url was given twice." };
     url = value;
   }
-  return { url, token };
+  return { url, token, open };
 }
 
 /** `push` takes one file, or `--latest` alone; no other flags. */
