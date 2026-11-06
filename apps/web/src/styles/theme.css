@@ -139,6 +139,24 @@
   animation: vt-slide-in-left var(--dur-route) var(--ease-drawer) both;
 }
 
+/* Auth: the card resizes on the drawer curve while its two snapshots stretch to fill it, and the form inside swaps with
+   a short crossfade: the old one leaves fast, the new one arrives just after, with no movement to fight the resize. */
+::view-transition-group(.auth-card) {
+  animation-duration: var(--dur-route);
+  animation-timing-function: var(--ease-drawer);
+}
+::view-transition-old(.auth-card),
+::view-transition-new(.auth-card) {
+  height: 100%;
+  animation: none;
+}
+::view-transition-old(.auth-swap) {
+  animation: vt-fade-out var(--dur-fast) var(--ease-step) both;
+}
+::view-transition-new(.auth-swap) {
+  animation: vt-swap-in var(--dur-route) var(--ease-out-expo) var(--dur-press) both;
+}
+
 ::view-transition-group(.morph) {
   animation-duration: var(--dur-route);
   animation-timing-function: var(--ease-drawer);
@@ -149,6 +167,11 @@
   from {
     opacity: 0;
     translate: 0 var(--enter-rise);
+  }
+}
+@keyframes vt-swap-in {
+  from {
+    opacity: 0;
   }
 }
 @keyframes vt-fade-out {

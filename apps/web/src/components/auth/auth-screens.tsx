@@ -1,3 +1,4 @@
+import { ViewTransition } from "react";
 import Link from "next/link";
 
 import { AuthNotice } from "@/components/auth/auth-notice";
@@ -33,10 +34,13 @@ export function AuthShell({ art, children }: { art?: React.ReactNode; children: 
           <BrandLink />
         </header>
         <main className="flex flex-1 flex-col justify-center px-(--gutter-sm) pt-8 pb-16 sm:px-(--gutter) sm:pt-12 sm:pb-24">
-          {/* The one card every auth screen sits in. */}
-          <div className="mx-auto flex w-full max-w-100 flex-col gap-6 rounded-frame border border-hair bg-page px-6 pt-6 pb-5 shadow-card sm:px-8 sm:pt-8 sm:pb-7">
-            {children}
-          </div>
+          {/* The one card every auth screen sits in. It stays mounted across routes, so a change of screen resizes it
+              smoothly (auth-card) while the content inside crossfades (auth-swap, in the layout). */}
+          <ViewTransition update="auth-card" default="none">
+            <div className="mx-auto flex w-full max-w-100 flex-col gap-6 rounded-frame border border-hair bg-page px-6 pt-6 pb-5 shadow-card sm:px-8 sm:pt-8 sm:pb-7">
+              {children}
+            </div>
+          </ViewTransition>
         </main>
         <footer className="px-(--gutter-sm) py-8 sm:px-(--gutter)">
           <ul className="flex justify-center gap-6">
