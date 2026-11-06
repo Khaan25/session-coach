@@ -94,8 +94,8 @@ Supabase Auth with `@supabase/ssr` cookie sessions. The plan with all 29 edge ca
   gets Google's URL from `signInWithOAuth` and redirects; Google returns to `/auth/callback`, which calls
   `exchangeCodeForSession(code)`. Provider errors map to a code on `/auth/error`, never raw text from the URL (#7).
 - **Sign-out:** `signOut` (`scope: "local"`, this browser) from the user menus; `signOutEverywhere`
-  (`scope: "global"`, revokes every refresh token) from Settings. Both are POST Server Actions, never GET links, so
-  another site can't sign a learner out (#26).
+  (`scope: "global"`, revokes every refresh token and deletes the learner's CLI tokens) from Settings. Both are POST
+  Server Actions, never GET links, so another site can't sign a learner out (#26).
 
 Rules every flow follows:
 
