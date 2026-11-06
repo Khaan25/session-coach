@@ -6,7 +6,7 @@ import {
 } from "@/components/marketing/landing-sections";
 import { siteUrl } from "@/lib/site";
 
-// The landing page follows docs/design/serveros-redesign.md: a centred hero over the real dashboard, then a bento grid,
+// The landing page: a centred hero over the real dashboard, then a bento grid,
 // the trust band and the install command. The hero's text is there on first paint (no entrance, no LCP delay); the sections blur in on scroll.
 // Structured data for search results: what the product is, that it's free during the trial, and who makes it.
 const jsonLd = {

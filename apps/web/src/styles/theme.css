@@ -87,7 +87,7 @@
 }
 
 /*
- * Entrances and route changes (serveros redesign, docs/design/serveros-redesign.md). A block that appears lifts a few
+ * Entrances and route changes (docs/DECISIONS.md, 2026-11-06). A block that appears lifts a few
  * pixels out of a light blur on the out-expo curve. Every distance and duration is a token that reduced motion zeroes
  * (tokens.css), so under reduce these settle at once.
  */

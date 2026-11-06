@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { CodeBlock } from "@/components/ui/code-block";
 
-// The landing page (docs/design/serveros-redesign.md): a centred hero, then a bento grid, the trust band and the
+// The landing page: a centred hero, then a bento grid, the trust band and the
 // install command, each blurring in on scroll. Copy must match the code and docs/CODEBASE.md; anything they don't say is a TODO(zia).
 
 const section =
