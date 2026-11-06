@@ -158,7 +158,7 @@ export function HowItWorksSteps() {
           </div>
           <Reveal className="grid min-w-0 flex-1 grid-cols-1 gap-6 pb-16 group-last:pb-0 lg:grid-cols-2 lg:gap-12">
             <div className="flex flex-col gap-3 pt-1">
-              <h3 className="type-heading text-balance text-text-1">{title}</h3>
+              <h2 className="type-heading text-balance text-text-1">{title}</h2>
               <p className="max-w-md type-body text-pretty text-text-2">{body}</p>
             </div>
             <Picture>{visual}</Picture>

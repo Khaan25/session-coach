@@ -1,4 +1,4 @@
-import { Suspense, ViewTransition } from "react";
+import { Suspense } from "react";
 import { Skeleton } from "skullet/react";
 
 /**
@@ -17,13 +17,11 @@ export function MeasuredSuspense({
   skeleton: React.ReactNode;
   children: React.ReactNode;
 }) {
-  // The skeleton fades out and the content fades in on the route recipe (theme.css); "none" keeps both still in
-  // unrelated transitions.
+  // No crossfade of its own: the layout already fades the route in, and a second fade from skeleton to content
+  // added about 250 ms to every page change. The skeleton is measured from the real view, so the swap does not move.
   return (
     <Suspense fallback={<MeasuredSkeleton label={label}>{skeleton}</MeasuredSkeleton>}>
-      <ViewTransition enter="route-fade" default="none">
-        {children}
-      </ViewTransition>
+      {children}
     </Suspense>
   );
 }
@@ -37,10 +35,8 @@ export function MeasuredSkeleton({
   children: React.ReactNode;
 }) {
   return (
-    <ViewTransition exit="route-fade" default="none">
-      <Skeleton loading label={label}>
-        {children}
-      </Skeleton>
-    </ViewTransition>
+    <Skeleton loading label={label}>
+      {children}
+    </Skeleton>
   );
 }

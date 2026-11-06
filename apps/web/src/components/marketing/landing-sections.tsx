@@ -70,6 +70,7 @@ export function Hero() {
             width={1440}
             height={900}
             sizes="(min-width: 1120px) 1072px, 100vw"
+            preload
             className="h-auto w-full dark:hidden"
           />
           <Image
