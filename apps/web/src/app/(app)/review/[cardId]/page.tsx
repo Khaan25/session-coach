@@ -20,13 +20,16 @@ export default function QuizPage({ params }: PageProps<"/review/[cardId]">) {
   return (
     <CardTransition>
       <Container>
-        {/* Skullet measures the real quiz, drawn from a sample card, so nothing moves when the card lands. */}
-        <MeasuredSuspense
-          label="Loading the card"
-          skeleton={<QuizView card={SAMPLE_QUIZ_CARD} nextHref={null} />}
-        >
-          <Quiz params={params} />
-        </MeasuredSuspense>
+        {/* One task on screen: the card sits in a single reading column. */}
+        <div className="mx-auto flex w-full max-w-(--measure) flex-col gap-6">
+          {/* Skullet measures the real quiz, drawn from a sample card, so nothing moves when the card lands. */}
+          <MeasuredSuspense
+            label="Loading the card"
+            skeleton={<QuizView card={SAMPLE_QUIZ_CARD} nextHref={null} />}
+          >
+            <Quiz params={params} />
+          </MeasuredSuspense>
+        </div>
       </Container>
     </CardTransition>
   );

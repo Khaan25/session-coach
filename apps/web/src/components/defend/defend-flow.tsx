@@ -10,6 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
+import { Stat, StatDescription, StatLabel, StatValue } from "@/components/ui/stat";
 import { Textarea } from "@/components/ui/textarea";
 import { clockOffset, formatClock, secondsLeft } from "@/lib/defend/clock";
 import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
@@ -264,9 +265,9 @@ export function DefendFlow({ defendable }: { defendable: number }) {
   );
 }
 
-/** The one focused column every step sits in. */
+/** The one focused column every step sits in: the reading measure, the same column as a review card. */
 export function DefendColumn({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 py-6">{children}</div>;
+  return <div className="mx-auto flex w-full max-w-(--measure) flex-col gap-8">{children}</div>;
 }
 
 /** Before the clock: what this is, the three rules, and Start. */
@@ -499,7 +500,6 @@ export function DefendResult({
   return (
     <>
       <div className="flex flex-col gap-2">
-        {result && <ScoreBadge score={result.score} />}
         <h1 ref={headingRef} tabIndex={-1} className="type-heading">
           {!result ? "Time's up" : defended ? "Defended" : "Not defended this time"}
         </h1>
@@ -517,7 +517,16 @@ export function DefendResult({
         </p>
       </div>
       {result && (
-        <DataList>
+        <Stat>
+          <StatLabel>Score</StatLabel>
+          <StatValue>{result.score} of 2</StatValue>
+          <StatDescription>
+            <ScoreBadge score={result.score} />
+          </StatDescription>
+        </Stat>
+      )}
+      {result && (
+        <DataList variant="divided" orientation="vertical">
           <DataListItem>
             <DataListLabel>What was missing</DataListLabel>
             <DataListValue>{result.missing || "Nothing"}</DataListValue>
