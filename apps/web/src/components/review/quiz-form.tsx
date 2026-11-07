@@ -95,10 +95,10 @@ export function QuizForm({
   const [error, setError] = useState<string | null>(null);
   // Which request is in flight, so each button says what it is doing.
   const [pending, setPending] = useState<"answer" | "skip" | null>(null);
-  const [grade, setGrade] = useState<Grade | null>(null);
-  const [skipped, setSkipped] = useState(false);
+  // `skipped` is "I don't know yet"; it only exists alongside a grade.
+  const [result, setResult] = useState<{ grade: Grade; skipped: boolean } | null>(null);
   // The submit button unmounts when the result replaces the form, so focus moves to the result heading.
-  const { target: resultHeading } = useFocusWhenReplaced<HTMLHeadingElement>(grade !== null);
+  const { target: resultHeading } = useFocusWhenReplaced<HTMLHeadingElement>(result !== null);
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,8 +111,8 @@ export function QuizForm({
     toast
       .promise(send(cardId, { answer: trimmed }), {
         loading: "Scoring your answer…",
-        success: (result) => {
-          setGrade(result);
+        success: (grade) => {
+          setResult({ grade, skipped: false });
           return {
             type: "success",
             title: "Answer scored",
@@ -137,10 +137,7 @@ export function QuizForm({
     setError(null);
     setPending("skip");
     send(cardId, { dontKnow: true })
-      .then((result) => {
-        setSkipped(true);
-        setGrade(result);
-      })
+      .then((grade) => setResult({ grade, skipped: true }))
       .catch((reason: unknown) => {
         setError(reason instanceof Error ? reason.message : "Try again.");
       })
@@ -154,12 +151,12 @@ export function QuizForm({
     setError(PASTE_OFF);
   }
 
-  if (grade)
+  if (result)
     return (
       <QuizResult
-        grade={grade}
+        grade={result.grade}
         answer={answer}
-        skipped={skipped}
+        skipped={result.skipped}
         nextHref={nextHref}
         headingRef={resultHeading}
       />
