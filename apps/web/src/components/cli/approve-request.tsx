@@ -43,6 +43,12 @@ function clock(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+/** Asking (with the last error, if any), one answer in flight, or answered. */
+type Phase =
+  | { kind: "asking"; error: string | null }
+  | { kind: "sending"; decision: "approve" | "deny" }
+  | { kind: "done"; done: "approved" | "denied" };
+
 /**
  * One pending CLI login as option C draws it (canvas: "CLI approve · C · One question"): the code huge, what asked and
  * when, two answers, and every explanation folded below. Nothing happens until a click, so a link someone else sent
@@ -51,29 +57,26 @@ function clock(seconds: number): string {
 export function ApproveRequest({ request }: { request: ApproveRequestData }) {
   const secondsLeft = useSecondsLeft(request.secondsLeft);
   const dryRun = useDryRun();
-  const [pending, setPending] = useState<"approve" | "deny" | null>(null);
-  const [done, setDone] = useState<"approved" | "denied" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<Phase>({ kind: "asking", error: null });
 
   async function decide(decision: "approve" | "deny") {
-    if (dryRun) return setDone(decision === "approve" ? "approved" : "denied");
-    setPending(decision);
-    setError(null);
+    const done = decision === "approve" ? "approved" : "denied";
+    if (dryRun) return setPhase({ kind: "done", done });
+    setPhase({ kind: "sending", decision });
     const response = await fetch(`/api/cli/device/${decision}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userCode: request.userCode }),
     }).catch(() => null);
-    setPending(null);
-    if (response?.ok) {
-      setDone(decision === "approve" ? "approved" : "denied");
-      return;
-    }
+    if (response?.ok) return setPhase({ kind: "done", done });
     const body: { error?: string } | null = await response?.json().catch(() => null);
-    setError(body?.error ?? "Check your connection and try again.");
+    setPhase({ kind: "asking", error: body?.error ?? "Check your connection and try again." });
   }
 
-  if (done) return <ApproveDone done={done} clientName={request.clientName} />;
+  if (phase.kind === "done")
+    return <ApproveDone done={phase.done} clientName={request.clientName} />;
+  const pending = phase.kind === "sending" ? phase.decision : null;
+  const error = phase.kind === "asking" ? phase.error : null;
   if (secondsLeft <= 0) return <ApproveNotice {...SETTLED_COPY.expired} />;
 
   return (
