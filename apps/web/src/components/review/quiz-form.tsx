@@ -64,8 +64,12 @@ async function postAnswer(cardId: string, attempt: Attempt): Promise<Grade> {
   if (!response) throw new Error("Check your connection and try again.");
   const body = await response.json().catch(() => null);
   if (!response.ok) throw new Error(body?.error ?? "Try again.");
-  // The connection dropped mid-body: the server may have saved the answer already.
-  if (!body) throw new Error("The result didn't arrive. Reload to see whether it was saved.");
+  // The connection dropped mid-body: the server may have saved the answer already. A resend then gets the route's 409,
+  // which says when the card is next due.
+  if (!body)
+    throw new Error(
+      "The result didn't arrive. Send it again: if it was saved, you'll see when this card is due next.",
+    );
   return body as Grade;
 }
 
