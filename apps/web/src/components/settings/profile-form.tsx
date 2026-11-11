@@ -37,7 +37,8 @@ type Profile = {
 
 /**
  * The Profile section of /settings, one frame: display name and email (read-only, synced from sign-in), time zone and email
- * reminders. Saves the three columns a learner may write through the `updateProfile` Server Action, with one button.
+ * reminders, all through the `updateProfile` Server Action. Save profile saves the name and time zone; the reminder
+ * switch saves on flip, like the report switches, so turning reminders off never waits on a button.
  */
 export function ProfileForm({ profile, timezones }: { profile: Profile; timezones: string[] }) {
   const id = useId();
@@ -45,6 +46,7 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
   const [timezone, setTimezone] = useState(profile.timezone);
   const [notify, setNotify] = useState(profile.notify_email);
   const [pending, setPending] = useState(false);
+  const [notifyPending, setNotifyPending] = useState(false);
   return (
     <form
       onSubmit={(event) => {
@@ -54,11 +56,9 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
         toast
           .promise(
             // A blank name is sent as null: the database and profileUpdateSchema reject "".
-            save({ display_name: name || null, timezone, notify_email: notify }).then(
-              ({ error }) => {
-                if (error) throw new Error(error);
-              },
-            ),
+            save({ display_name: name || null, timezone }).then(({ error }) => {
+              if (error) throw new Error(error);
+            }),
             {
               loading: "Saving your profile",
               success: "Profile saved",
@@ -69,8 +69,8 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
           .finally(() => setPending(false));
       }}
     >
-      {/* One section and one frame: the three fields are one row in profiles, saved by one Server Action, so the Save in
-          the frame's footer covers exactly what is above it. */}
+      {/* One section and one frame: the three fields are one row in profiles, saved by one Server Action. The Save in the
+          frame's footer covers the name and time zone; the reminder switch saves itself. */}
       <SettingsSection
         id="profile"
         icon={<UserIcon />}
@@ -143,7 +143,24 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
               id={`${id}-notify`}
               aria-describedby={`${id}-notify-hint`}
               checked={notify}
-              onCheckedChange={setNotify}
+              disabled={notifyPending}
+              onCheckedChange={(next) => {
+                setNotify(next);
+                setNotifyPending(true);
+                toast
+                  .promise(
+                    save({ notify_email: next }).then(({ error }) => {
+                      if (error) throw new Error(error);
+                    }),
+                    {
+                      loading: "Saving",
+                      success: next ? "Reminders on" : "Reminders off",
+                      error: (error: Error) => error.message,
+                    },
+                  )
+                  .catch(() => setNotify(!next))
+                  .finally(() => setNotifyPending(false));
+              }}
             />
           </Field>
         </FieldGroup>
