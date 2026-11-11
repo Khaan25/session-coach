@@ -76,7 +76,11 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("type-body-sm text-pretty text-text-2", className)}
+      // Full width under a narrow header, so an action doesn't squeeze it into a thin column (see CardAction).
+      className={cn(
+        "col-span-full type-body-sm text-pretty text-text-2 @sm/card-header:col-span-1",
+        className,
+      )}
       {...props}
     />
   );
@@ -87,7 +91,9 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-action"
       className={cn(
-        "col-start-2 row-span-2 row-start-1 frame-head-action self-center justify-self-end",
+        // Beside the title only under a narrow header; beside title and description from @sm up. row-end, not
+        // row-span: the span utilities set the grid-row shorthand, which would reset row-start-1.
+        "col-start-2 row-start-1 row-end-2 frame-head-action self-center justify-self-end @sm/card-header:row-end-3",
         className,
       )}
       {...props}

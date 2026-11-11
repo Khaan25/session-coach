@@ -19,7 +19,8 @@ export function SectionHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    // Stacked on phones, so the action doesn't squeeze the description into a thin column.
+    <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:gap-4">
       {/* skullet-own: static text stays real in the skeletons; only the meta and action are drawn as bars. */}
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
