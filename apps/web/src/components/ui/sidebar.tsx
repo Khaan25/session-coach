@@ -155,7 +155,10 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { state, openMobile, setOpenMobile } = useSidebar();
+  // Read here, not from context: the provider flips to mobile before a Suspense'd sidebar hydrates, and the
+  // sidebar would then hydrate the Sheet against server HTML for the desktop div (a hydration error on phones).
+  const isMobile = useIsMobile();
 
   if (collapsible === "none") {
     return (
