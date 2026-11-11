@@ -233,16 +233,6 @@
   scroll-padding-top: calc(var(--topbar) + var(--space-10));
 }
 
-/* Marketing reveals (components/marketing/reveal.tsx) start hidden in inline styles that only JavaScript lifts. With
-   scripting off, show them as they are. */
-@media (scripting: none) {
-  [data-reveal] {
-    opacity: 1 !important;
-    filter: none !important;
-    transform: none !important;
-  }
-}
-
 /* Reduced motion: no snapshot animates; the new page simply replaces the old. */
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
