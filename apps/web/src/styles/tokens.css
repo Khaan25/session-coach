@@ -298,7 +298,6 @@
   --dur-450: 450ms; /* a drawer and its overlay sliding, on the drawer curve | drawer */
   --dur-route: 220ms; /* a route's content crossfading in on navigation | view-transition */
   --dur-enter: 240ms; /* a block appearing in the app: result card, revealed content | animate-enter */
-  --dur-reveal: 700ms; /* a marketing section blurring in on scroll or load; marketing only | marketing reveal */
   --enter-blur: 8px; /* how blurred an entering block starts | animate-enter, view-transition, marketing reveal */
   --enter-rise: 12px; /* how far an entering block rises | animate-enter, view-transition, marketing reveal */
   --route-slide: 24px; /* how far a card slides on a directional route change | view-transition */
@@ -812,7 +811,6 @@
     --sheet-shift: 0px;
     --dur-route: 0ms;
     --dur-enter: 0ms;
-    --dur-reveal: 0ms;
     --enter-blur: 0px;
     --enter-rise: 0px;
     --route-slide: 0px;
@@ -833,7 +831,6 @@
   --sheet-shift: 0px;
   --dur-route: 0ms;
   --dur-enter: 0ms;
-  --dur-reveal: 0ms;
   --enter-blur: 0px;
   --enter-rise: 0px;
   --route-slide: 0px;

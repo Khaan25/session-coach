@@ -1,32 +1,7 @@
-"use client";
-
 import { cn } from "cn";
-import { MotionConfig, motion } from "motion/react";
 
-// A marketing block that blurs in once as it scrolls into view: --enter-blur, --enter-rise and --dur-reveal on
-// --ease-out-expo (motion takes numbers, so the token values are repeated here). Reduced motion shows the block as it
-// is: the motion-reduce classes override the inline start styles, so nothing waits on a scroll that never animates.
-// Without JavaScript the start styles would stay, so styles/theme.css shows every [data-reveal] under scripting: none.
-// shortcut: these copy --enter-blur (8px), --enter-rise (12px), --dur-reveal (0.7s) and --ease-out-expo; retune both together.
-const hidden = { opacity: 0, filter: "blur(8px)", y: 12 };
-const shown = { opacity: 1, filter: "blur(0px)", y: 0 };
-
+// A marketing block that blurs in as it scrolls into view. Pure CSS (the `reveal` utility in theme.css, a scroll
+// timeline), so nothing waits on JavaScript: on a slow phone the old JS reveal left the steps blank for seconds.
 export function Reveal({ className, children }: { className?: string; children: React.ReactNode }) {
-  return (
-    <MotionConfig reducedMotion="user">
-      <motion.div
-        data-reveal
-        initial={hidden}
-        whileInView={shown}
-        viewport={{ once: true, amount: 0.2 }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className={cn(
-          "motion-reduce:transform-none! motion-reduce:opacity-100! motion-reduce:filter-none!",
-          className,
-        )}
-      >
-        {children}
-      </motion.div>
-    </MotionConfig>
-  );
+  return <div className={cn("reveal", className)}>{children}</div>;
 }
