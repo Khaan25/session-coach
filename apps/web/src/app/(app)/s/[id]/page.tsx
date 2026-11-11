@@ -11,11 +11,10 @@ import { SessionSampleView } from "./session-sample-view";
 
 export const metadata: Metadata = { title: "Session" };
 
-// cacheComponents needs at least one param to prerender the shell (the layout's breadcrumb reads the pathname). A
-// learner's ids can't be known at build time, so this is a placeholder; every real id loads at request time.
-export function generateStaticParams() {
-  return [{ id: "00000000-0000-0000-0000-000000000000" }];
-}
+// No generateStaticParams: session ids are per learner. A placeholder param prerendered one shell, but every real id
+// then rendered a fallback shell in production, where the layout's breadcrumb (usePathname) threw outside Suspense
+// and the page came back blank. The route blocks instead, like /review/[cardId].
+export const instant = false;
 
 export default function SessionPage({ params }: PageProps<"/s/[id]">) {
   // Skullet measures the real page, drawn from a sample session, so the header and each card keep their shape when the
