@@ -61,7 +61,7 @@ function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Tr
       data-slot="combobox-trigger"
       data-cuelume-open=""
       // Icon-only, it needs a name; with a value inside, the value names it.
-      aria-label={children == null ? "Show options" : undefined}
+      aria-label={children === null || children === undefined ? "Show options" : undefined}
       className={mergeClass(fieldActionClass, className)}
       {...props}
     >
@@ -179,10 +179,10 @@ function ComboboxContent({
         collisionPadding={8}
         className="isolate z-(--z-overlay) outline-none"
       >
-        <InPopupContext.Provider value={true}>
+        <InPopupContext.Provider value>
           <ComboboxPrimitive.Popup
             data-slot="combobox-content"
-            data-chips={!!anchor}
+            data-chips={Boolean(anchor)}
             className={mergeClass(comboboxPopupClass, className)}
             {...props}
           />

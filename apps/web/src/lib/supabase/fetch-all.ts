@@ -14,9 +14,13 @@ export async function fetchAll<T>(
   const rows: T[] = [];
   for (;;) {
     const { data, error } = await page(rows.length, rows.length + PAGE_SIZE - 1);
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     rows.push(...(data ?? []));
     // A short page means the table ran out; a full page may have more behind it.
-    if (!data || data.length < PAGE_SIZE) return rows;
+    if (!data || data.length < PAGE_SIZE) {
+      return rows;
+    }
   }
 }

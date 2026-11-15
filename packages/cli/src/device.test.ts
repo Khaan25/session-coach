@@ -9,8 +9,8 @@ import {
   interpretStart,
   openerFor,
   pollForToken,
-  type DeviceStart,
 } from "./device.ts";
+import type { DeviceStart } from "./device.ts";
 
 const URL_BASE = "https://app.test";
 const START: DeviceStart = {
@@ -23,10 +23,10 @@ const START: DeviceStart = {
 /** A fetch answering each poll with the next [status, body]; records request bodies. */
 function fakeFetch(replies: [number, unknown][]) {
   const bodies: unknown[] = [];
-  const impl = (async (_url: string, init: RequestInit) => {
+  const impl = ((_url: string, init: RequestInit) => {
     bodies.push(JSON.parse(String(init.body)));
     const [status, body] = replies[bodies.length - 1] ?? [400, { error: "authorization_pending" }];
-    return new Response(JSON.stringify(body), { status });
+    return Promise.resolve(Response.json(body, { status }));
   }) as unknown as typeof fetch;
   return { impl, bodies };
 }
@@ -37,9 +37,10 @@ function fakeClock() {
   const sleeps: number[] = [];
   return {
     now: () => t,
-    sleep: async (ms: number) => {
+    sleep: (ms: number) => {
       sleeps.push(ms);
       t += ms;
+      return Promise.resolve();
     },
     sleeps,
   };
@@ -66,7 +67,7 @@ describe("pollForToken", () => {
     const clock = fakeClock();
     const result = await pollForToken(URL_BASE, START, { fetchImpl: f.impl, ...clock });
     assert.equal(result.kind, "success");
-    assert.deepEqual(clock.sleeps, [5000, 10000, 15000]);
+    assert.deepEqual(clock.sleeps, [5000, 10_000, 15_000]);
   });
 
   it("stops on expired_token", async () => {
@@ -95,11 +96,15 @@ describe("pollForToken", () => {
 
   it("keeps polling through a network error and a 5xx", async () => {
     let calls = 0;
-    const impl = (async () => {
-      calls++;
-      if (calls === 1) throw new TypeError("fetch failed");
-      if (calls === 2) return new Response("{}", { status: 503 });
-      return new Response(JSON.stringify({ token: "sc_ok", email: null }), { status: 200 });
+    const impl = (() => {
+      calls += 1;
+      if (calls === 1) {
+        return Promise.reject(new TypeError("fetch failed"));
+      }
+      if (calls === 2) {
+        return Promise.resolve(new Response("{}", { status: 503 }));
+      }
+      return Promise.resolve(Response.json({ token: "sc_ok", email: null }, { status: 200 }));
     }) as unknown as typeof fetch;
     const result = await pollForToken(URL_BASE, START, { fetchImpl: impl, ...fakeClock() });
     assert.deepEqual(result, { kind: "success", token: "sc_ok", email: null });
@@ -161,11 +166,12 @@ describe("openerFor", () => {
     const opened = openerFor('https://app.test/a b"&calc|x^%PATH%', "win32");
     assert.ok(opened);
     assert.equal(opened[0], "rundll32");
-    assert.doesNotMatch(opened[1][1] ?? "", /[\s"]/);
+    assert.doesNotMatch(opened[1][1] ?? "", /[\s"]/u);
   });
 
   it("refuses anything that isn't http(s)", () => {
     assert.equal(openerFor("file:///etc/passwd", "darwin"), null);
+    // oxlint-disable-next-line no-script-url -- the test checks that a javascript: URL is refused
     assert.equal(openerFor("javascript:alert(1)", "win32"), null);
     assert.equal(openerFor("not a url", "linux"), null);
   });

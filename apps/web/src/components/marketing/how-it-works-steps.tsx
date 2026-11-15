@@ -23,7 +23,8 @@ const upload = [
   "Uploaded. Cards will appear in the app.",
 ].join("\n");
 
-const quote = sample.cards[0].evidence[0].quote;
+const [firstCard] = sample.cards;
+const [{ quote }] = firstCard.evidence;
 
 // lib/review/schedule.ts: a new card is due 1 day after the session, then 3 and 7 days after each 2.
 const stops = [

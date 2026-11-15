@@ -26,7 +26,7 @@ export function useAuthForm(
   const preview = use(AuthPreviewContext);
   const dryRun = useDryRun() || preview !== null;
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
-    dryRun ? async () => preview ?? {} : action,
+    dryRun ? () => Promise.resolve(preview ?? {}) : action,
     preview ?? {},
   );
   // Set when the browser-side check fails; cleared when a submit goes through, so the server's answer shows.
@@ -35,11 +35,13 @@ export function useAuthForm(
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     const form = event.currentTarget;
     const found = validate(new FormData(form));
-    if (Object.keys(found).length === 0) return setClientErrors(undefined);
+    if (Object.keys(found).length === 0) {
+      return setClientErrors(undefined);
+    }
     event.preventDefault();
     setClientErrors(found);
     // The first invalid field in page order.
-    const first = Array.from(form.elements).find(
+    const first = [...form.elements].find(
       (element): element is HTMLInputElement =>
         element instanceof HTMLInputElement && element.name in found,
     );

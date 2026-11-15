@@ -24,15 +24,18 @@ export function styleFor(
 ): Style {
   const rich = stream.isTTY === true && env.TERM !== "dumb";
   let color = rich;
-  if (noColor || env.NO_COLOR) color = false;
-  else if (env.FORCE_COLOR !== undefined) color = env.FORCE_COLOR !== "0";
+  if (noColor || env.NO_COLOR) {
+    color = false;
+  } else if (env.FORCE_COLOR !== undefined) {
+    color = env.FORCE_COLOR !== "0";
+  }
   return { rich, color };
 }
 
 const CODES = { bold: 1, red: 31, green: 32, yellow: 33, cyan: 36 } as const;
 
 function paint(style: Style, code: keyof typeof CODES, text: string): string {
-  return style.color ? `\u001b[${CODES[code]}m${text}\u001b[0m` : text;
+  return style.color ? `\u001B[${CODES[code]}m${text}\u001B[0m` : text;
 }
 
 /** Label rows: a 2-column gutter, a 16-character label, the value at column 18. */
@@ -50,7 +53,7 @@ export function success(style: Style, headline: string, details: [string, string
   const head = style.rich
     ? `${paint(style, "green", "✓")} ${paint(style, "bold", headline)}`
     : headline;
-  return details.length ? `${head}\n${rows(details)}` : head;
+  return details.length > 0 ? `${head}\n${rows(details)}` : head;
 }
 
 /** A nonfatal condition that needs attention. */
@@ -66,7 +69,7 @@ export function failure(
   next?: Next,
 ): string {
   const head = style.rich ? `${paint(style, "red", "✗")} ${headline}` : `Error: ${headline}`;
-  const body = details.length ? `${head}\n${rows(details)}` : head;
+  const body = details.length > 0 ? `${head}\n${rows(details)}` : head;
   return next ? `${body}\n\n${step(style, next, "  ")}` : body;
 }
 

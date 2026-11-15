@@ -14,7 +14,8 @@ export function rawPathFor(userId: string, externalId: string): string {
   return `${userId}/${externalId}.jsonl.gz`;
 }
 
-const BEARER = /^Bearer\s+(\S+)$/i;
+const BEARER = /^Bearer\s+\S+$/iu;
+const BEARER_PREFIX = /^Bearer\s+/iu;
 
 /**
  * The CLI token from an `Authorization: Bearer sc_…` header.
@@ -23,6 +24,5 @@ const BEARER = /^Bearer\s+(\S+)$/i;
  * @returns The token, or null when the header is missing or isn't a bearer token.
  */
 export function bearerToken(header: string | null): string | null {
-  const match = header?.match(BEARER);
-  return match ? match[1] : null;
+  return header && BEARER.test(header) ? header.replace(BEARER_PREFIX, "") : null;
 }

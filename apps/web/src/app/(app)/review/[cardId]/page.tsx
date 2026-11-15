@@ -37,10 +37,16 @@ export default function QuizPage({ params }: PageProps<"/review/[cardId]">) {
 
 async function Quiz({ params }: Pick<PageProps<"/review/[cardId]">, "params">) {
   const [{ cardId }, user] = await Promise.all([params, getCurrentUser()]);
-  if (!answerRequestSchema.shape.cardId.safeParse(cardId).success) notFound();
-  if (!user) notFound();
+  if (!answerRequestSchema.shape.cardId.safeParse(cardId).success) {
+    notFound();
+  }
+  if (!user) {
+    notFound();
+  }
   const [card, queue] = await load(user.id, cardId);
-  if (!card) notFound();
+  if (!card) {
+    notFound();
+  }
   // "Start review" walks the queue: after this card, the first other card still in it.
   const next = queue.find(({ id }) => id !== card.id);
   return <QuizView card={card} nextHref={next ? `/review/${next.id}` : null} />;
@@ -48,5 +54,5 @@ async function Quiz({ params }: Pick<PageProps<"/review/[cardId]">, "params">) {
 
 /** Reads the clock outside render (cacheComponents and the compiler's purity rule), then both queries. */
 async function load(userId: string, cardId: string) {
-  return Promise.all([getQuizCard(userId, cardId), reviewQueue(userId, new Date())]);
+  return await Promise.all([getQuizCard(userId, cardId), reviewQueue(userId, new Date())]);
 }

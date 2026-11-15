@@ -1,7 +1,8 @@
 import "server-only";
 
 import { fakeModel } from "@/lib/model/fake";
-import { reasoningEffort, reasoningField, type ReasoningEffort } from "@/lib/model/reasoning";
+import { reasoningEffort, reasoningField } from "@/lib/model/reasoning";
+import type { ReasoningEffort } from "@/lib/model/reasoning";
 import { ProviderHttpError, retryWaitMs, sleep } from "@/lib/model/retry";
 
 /** A model job. Each reads its model name from `MODEL_<TASK>` (`MODEL_GRADE`, `MODEL_EXTRACT`). */
@@ -42,13 +43,13 @@ const CHAT_URL = {
 const TIMEOUT_MS = 30_000;
 
 /** A markdown fence around JSON, opening or closing. */
-const JSON_FENCE = /^```(?:json)?\s*|\s*```$/g;
+const JSON_FENCE = /^```(?:json)?\s*|\s*```$/gu;
 
 /**
  * The most tokens one reply may use. Five extraction cards fit in well under this; the cap keeps a runaway reply from
  * eating Groq's 8,000 tokens per minute that grading shares.
  */
-const MAX_OUTPUT_TOKENS = 2_048;
+const MAX_OUTPUT_TOKENS = 2048;
 
 /**
  * Calls the model configured for `task` and returns its JSON output, parsed but not validated: the caller checks the
@@ -70,17 +71,20 @@ const MAX_OUTPUT_TOKENS = 2_048;
 export async function callModel(task: ModelTask, input: ModelInput): Promise<unknown> {
   const provider = process.env.MODEL_PROVIDER;
   if (provider === "fake") {
-    if (process.env.NODE_ENV === "production")
+    if (process.env.NODE_ENV === "production") {
       throw new ModelConfigError("MODEL_PROVIDER=fake is for development and tests only");
+    }
     return fakeModel(task, input.data);
   }
-  if (provider !== "gemini" && provider !== "openrouter" && provider !== "groq")
+  if (provider !== "gemini" && provider !== "openrouter" && provider !== "groq") {
     throw new ModelConfigError("MODEL_PROVIDER must be gemini, openrouter or groq");
+  }
   const modelEnv = `MODEL_${task.toUpperCase()}`;
   const model = process.env[modelEnv];
   const key = process.env[KEY_ENV[provider]];
-  if (!model || !key)
+  if (!model || !key) {
     throw new ModelConfigError(`${modelEnv} and ${KEY_ENV[provider]} must be set`);
+  }
 
   const reasoning = reasoningEffort(modelEnv, process.env);
 
@@ -89,12 +93,16 @@ export async function callModel(task: ModelTask, input: ModelInput): Promise<unk
     try {
       const text = await request(provider, model, key, input, reasoning);
       // Some models wrap JSON in a markdown fence even when asked not to.
-      return JSON.parse(text.trim().replace(JSON_FENCE, ""));
+      return JSON.parse(text.trim().replaceAll(JSON_FENCE, ""));
     } catch (error) {
-      if (input.signal?.aborted) throw error;
+      if (input.signal?.aborted) {
+        throw error;
+      }
       lastError = error;
       const waitMs = retryWaitMs(error);
-      if (waitMs === null || attempt === 1) break;
+      if (waitMs === null || attempt === 1) {
+        break;
+      }
       await sleep(waitMs, input.signal);
     }
   }

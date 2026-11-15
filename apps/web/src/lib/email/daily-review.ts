@@ -83,7 +83,9 @@ export function cronAuthorized(
   header: string | null,
   secret: string | undefined,
 ): secret is string {
-  if (!secret || !header?.startsWith("Bearer ")) return false;
+  if (!secret || !header?.startsWith("Bearer ")) {
+    return false;
+  }
   return constantTimeEqual(header.slice("Bearer ".length), secret);
 }
 
@@ -111,7 +113,9 @@ export function dailyReviewRecipients(
   const newByUser = Map.groupBy(newCards, (card) => card.user_id);
   const answersByUser = Map.groupBy(answers, (answer) => answer.user_id);
   return profiles.flatMap(({ id, email, timezone, notify_email }) => {
-    if (!notify_email || !email) return [];
+    if (!notify_email || !email) {
+      return [];
+    }
     const today = localDate(timezone, now);
     const mine = reviewsByUser.get(id) ?? [];
     const queue = todayQueue({
@@ -131,7 +135,9 @@ export function dailyReviewRecipients(
     });
     const due = queue.due.map((card) => card.decision);
     const fresh = queue.fresh.map((card) => card.decision);
-    if (due.length + fresh.length === 0) return [];
+    if (due.length + fresh.length === 0) {
+      return [];
+    }
     const mastered = mine.filter((review) => review.mastered).length;
     return [{ userId: id, email, today, due, fresh, answered: mine.length, mastered }];
   });
@@ -279,7 +285,7 @@ export async function sendDailyReviews(
       const message = await compose(recipient);
       claimed = await deps.claim(userId, today);
       if (!claimed) {
-        result.skipped++;
+        result.skipped += 1;
         continue;
       }
       resendId = await deps.send({
@@ -287,27 +293,29 @@ export async function sendDailyReviews(
         ...message,
         idempotencyKey: `daily_review/${userId}/${today}`,
       });
-      result.sent++;
-    } catch (err) {
-      result.failed++;
-      console.error(`[cron/daily-review] send failed for user ${userId}`, errorMessage(err));
+      result.sent += 1;
+    } catch (error) {
+      result.failed += 1;
+      console.error(`[cron/daily-review] send failed for user ${userId}`, errorMessage(error));
       // Only a sure rejection frees the day: after a timeout the email may be out, and a rerun with a changed payload
       // under the same Idempotency-Key would be refused anyway. That learner waits for tomorrow.
-      if (claimed && err instanceof SendRejectedError) {
-        await deps.release(userId, today).catch((releaseErr: unknown) => {
+      if (claimed && error instanceof SendRejectedError) {
+        try {
+          await deps.release(userId, today);
+        } catch (releaseError) {
           console.error(
             `[cron/daily-review] claim not released for user ${userId}`,
-            errorMessage(releaseErr),
+            errorMessage(releaseError),
           );
-        });
+        }
       }
       continue;
     }
     // The email is out; a failure here only loses the provider id.
-    await deps.record(userId, today, resendId).catch((err: unknown) => {
+    await deps.record(userId, today, resendId).catch((error: unknown) => {
       console.error(
         `[cron/daily-review] resend_id not saved for user ${userId}`,
-        errorMessage(err),
+        errorMessage(error),
       );
     });
   }

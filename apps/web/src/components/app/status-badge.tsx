@@ -1,7 +1,8 @@
 import type { SessionStatus } from "@session-coach/shared/session";
 
-import { Status, type StatusValue } from "@/components/ui/status";
-import { isEmptyReady, NO_DECISIONS } from "@/lib/sessions/status-label";
+import { Status } from "@/components/ui/status";
+import type { StatusValue } from "@/components/ui/status";
+import { NO_DECISIONS, isEmptyReady } from "@/lib/sessions/status-label";
 
 // A session's status as the design system's status word: queued and running in ink (running with the turning arc), ready in
 // secondary text, failed in fail text. The word carries the status, never the hue alone.

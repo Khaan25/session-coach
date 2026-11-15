@@ -1,6 +1,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -19,7 +20,6 @@ function ItemGroup({ className, ...props }: React.ComponentProps<"div">) {
        * A div, and it has to stay one: `Item` renders a div, so a native `ul` here would be a list whose
        * children are not `li`. The role puts the semantics back without inventing the wrong element.
        */
-      // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="list"
       data-slot="item-group"
       className={cn(

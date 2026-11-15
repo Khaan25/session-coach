@@ -8,7 +8,8 @@ import {
   TerminalWindowIcon,
 } from "@phosphor-icons/react/ssr";
 
-import { Sprite, type SpriteName } from "@/components/art/sprite";
+import { Sprite } from "@/components/art/sprite";
+import type { SpriteName } from "@/components/art/sprite";
 import { buttonVariants } from "@/components/ui/button";
 import type { Cardless } from "@/lib/sessions/queries";
 import {
@@ -111,13 +112,15 @@ const cardlessCopy = {
   },
 } as const;
 
+const NO_SESSIONS: Cardless = { reason: "no-sessions" };
+
 /**
  * A card screen (review queue, progress) for a learner with no visible card. `cardless` (from `cardlessReason`) picks
  * the way forward: set up the CLI, wait for the session being read, open the session that failed, or look at the
  * sessions that gave none. Leave it out for a first run.
  */
 export function NoCardsYetEmpty({
-  cardless = { reason: "no-sessions" },
+  cardless = NO_SESSIONS,
   variant,
 }: PresetProps & { cardless?: Cardless }) {
   const { title, description, action } = cardlessCopy[cardless.reason];

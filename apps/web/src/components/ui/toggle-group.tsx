@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group";
-import { type VariantProps } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import { toggleVariants } from "@/components/ui/toggle";
@@ -36,6 +36,10 @@ function ToggleGroup({
     spacing?: number;
     orientation?: "horizontal" | "vertical";
   }) {
+  const contextValue = React.useMemo(
+    () => ({ variant, size, spacing, orientation }),
+    [variant, size, spacing, orientation],
+  );
   return (
     <ToggleGroupPrimitive
       data-slot="toggle-group"
@@ -51,9 +55,7 @@ function ToggleGroup({
       )}
       {...props}
     >
-      <ToggleGroupContext.Provider value={{ variant, size, spacing, orientation }}>
-        {children}
-      </ToggleGroupContext.Provider>
+      <ToggleGroupContext.Provider value={contextValue}>{children}</ToggleGroupContext.Provider>
     </ToggleGroupPrimitive>
   );
 }
@@ -71,16 +73,16 @@ function ToggleGroupItem({
     <TogglePrimitive
       data-slot="toggle-group-item"
       data-cuelume-toggle=""
-      data-variant={context.variant || variant}
-      data-size={context.size || size}
+      data-variant={context.variant ?? variant}
+      data-size={context.size ?? size}
       data-spacing={context.spacing}
       className={cn(
         "shrink-0 group-data-[spacing=0]/toggle-group:rounded-none focus:z-(--z-raised) focus-visible:z-(--z-raised) group-data-[spacing=0]/toggle-group:focus-visible:focus-ring-inset group-data-[spacing=0]/toggle-group:data-pressed:focus-visible:focus-ring-ink",
         "group-data-horizontal/toggle-group:data-[spacing=0]:first:rounded-s-soft group-data-vertical/toggle-group:data-[spacing=0]:first:rounded-t-soft group-data-horizontal/toggle-group:data-[spacing=0]:last:rounded-e-soft group-data-vertical/toggle-group:data-[spacing=0]:last:rounded-b-soft",
         "group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:frame-shared group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:shadow-none group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:frame-shared-y group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:shadow-none",
         toggleVariants({
-          variant: context.variant || variant,
-          size: context.size || size,
+          variant: context.variant ?? variant,
+          size: context.size ?? size,
         }),
         className,
       )}

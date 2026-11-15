@@ -8,8 +8,8 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
+import type { ReactNode } from "react";
 
 // Where the design system's overlays portal to. Base UI portals to document.body by default, which sits outside
 // the page root, so the tokens, the theme and the font never reach a popup. PortalProvider renders an
@@ -43,7 +43,9 @@ type PortalScope = {
 
 const PortalContext = createContext<PortalScope | undefined>(undefined);
 
-const noLock = () => () => {};
+const noLock = () => () => {
+  // Nothing was made inert, so there is nothing to release.
+};
 
 /** Sets inert on every element outside `keep`, from its parent up to body. Returns the undo. */
 function inertOutside(keep: HTMLElement) {
@@ -51,22 +53,27 @@ function inertOutside(keep: HTMLElement) {
   let node: HTMLElement | null = keep;
   while (node && node !== node.ownerDocument.body) {
     const parent: HTMLElement | null = node.parentElement;
-    if (!parent) break;
-    for (const sibling of Array.from(parent.children)) {
+    if (!parent) {
+      break;
+    }
+    for (const sibling of parent.children) {
       if (
         sibling === node ||
         !(sibling instanceof HTMLElement) ||
         sibling.inert ||
         sibling.tagName === "SCRIPT"
-      )
+      ) {
         continue;
+      }
       sibling.inert = true;
       set.push(sibling);
     }
     node = parent;
   }
   return () => {
-    for (const el of set) el.inert = false;
+    for (const el of set) {
+      el.inert = false;
+    }
   };
 }
 
@@ -78,15 +85,21 @@ export function PortalProvider({ children }: { children: ReactNode }) {
   const role = parent ? "stage" : "root";
 
   const scope = useMemo<PortalScope>(() => {
-    if (role === "stage") return { container, lock: noLock };
+    if (role === "stage") {
+      return { container, lock: noLock };
+    }
     return {
       container,
       lock: () => {
         count.current += 1;
-        if (count.current === 1 && container) undo.current = inertOutside(container);
+        if (count.current === 1 && container) {
+          undo.current = inertOutside(container);
+        }
         let released = false;
         return () => {
-          if (released) return;
+          if (released) {
+            return;
+          }
           released = true;
           count.current -= 1;
           if (count.current === 0) {
@@ -118,9 +131,11 @@ export function usePortalContainer() {
 export function useModalLock(active: boolean) {
   const scope = useContext(PortalContext);
   const lock = scope?.lock;
-  const ready = !!scope?.container;
+  const ready = Boolean(scope?.container);
   useLayoutEffect(() => {
-    if (!active || !lock || !ready) return;
+    if (!active || !lock || !ready) {
+      return;
+    }
     return lock();
   }, [active, lock, ready]);
 }

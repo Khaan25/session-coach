@@ -19,7 +19,9 @@ export function RetrySessionButton({ sessionId }: { sessionId: string }) {
 
   async function retry() {
     // /canvas: the session is synthetic, so there is nothing to retry.
-    if (dryRun) return;
+    if (dryRun) {
+      return;
+    }
     setPending(true);
     const response = await fetch(`/api/sessions/${sessionId}/retry`, { method: "POST" }).catch(
       () => null,

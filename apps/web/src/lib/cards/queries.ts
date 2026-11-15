@@ -2,18 +2,13 @@ import "server-only";
 
 import { z } from "zod";
 
-import { SESSION_COLUMNS, type SessionSummary } from "@/lib/sessions/rows";
+import { SESSION_COLUMNS } from "@/lib/sessions/rows";
+import type { SessionSummary } from "@/lib/sessions/rows";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-import {
-  CARD_COLUMNS,
-  CARD_HEAD_COLUMNS,
-  type CardHead,
-  type CardView,
-  lockUnanswered,
-  type SessionCard,
-} from "./columns";
+import { CARD_COLUMNS, CARD_HEAD_COLUMNS, lockUnanswered } from "./columns";
+import type { CardHead, CardView, SessionCard } from "./columns";
 
 /** The summary plus when its current run started, so the page can tell a stuck run (`isStuck`) from a live one. */
 export type SessionWithRun = SessionSummary & { processing_started_at: string | null };
@@ -36,7 +31,9 @@ export async function getSessionWithCards(
   sessionId: string,
 ): Promise<{ session: SessionWithRun; cards: SessionCard[] } | null> {
   // A malformed id would be a Postgres cast error; it is simply not found.
-  if (!z.uuid().safeParse(sessionId).success) return null;
+  if (!z.uuid().safeParse(sessionId).success) {
+    return null;
+  }
   const supabase = await createClient();
   const { data: session, error } = await supabase
     .from("sessions")
@@ -44,9 +41,15 @@ export async function getSessionWithCards(
     .eq("id", sessionId)
     .eq("user_id", userId)
     .maybeSingle<SessionWithRun>();
-  if (error) throw new Error(`getSessionWithCards: ${error.message}`);
-  if (!session) return null;
-  if (session.status !== "ready") return { session, cards: [] };
+  if (error) {
+    throw new Error(`getSessionWithCards: ${error.message}`);
+  }
+  if (!session) {
+    return null;
+  }
+  if (session.status !== "ready") {
+    return { session, cards: [] };
+  }
 
   // reviews(card_id) is one-to-one (card_id is its primary key): a row exists once the card is answered or skipped.
   const { data: rows, error: headsError } = await supabase
@@ -56,11 +59,15 @@ export async function getSessionWithCards(
     .eq("user_id", userId)
     .order("position")
     .overrideTypes<(CardHead & { reviews: unknown })[], { merge: false }>();
-  if (headsError) throw new Error(`getSessionWithCards: ${headsError.message}`);
+  if (headsError) {
+    throw new Error(`getSessionWithCards: ${headsError.message}`);
+  }
   const answered = rows
     .filter(({ reviews }) => reviews !== null && !(Array.isArray(reviews) && reviews.length === 0))
     .map(({ id }) => id);
-  if (answered.length === 0) return { session, cards: lockUnanswered(rows, []) };
+  if (answered.length === 0) {
+    return { session, cards: lockUnanswered(rows, []) };
+  }
 
   return { session, cards: lockUnanswered(rows, await revealAnswered(userId, answered)) };
 }
@@ -84,7 +91,9 @@ async function revealAnswered(userId: string, cardIds: string[]): Promise<CardVi
       (CardView & { user_id: string; hidden: boolean; reviews: unknown })[],
       { merge: false }
     >();
-  if (error) throw new Error(`revealAnswered: ${error.message}`);
+  if (error) {
+    throw new Error(`revealAnswered: ${error.message}`);
+  }
   return data
     .filter((row) => row.user_id === userId && !row.hidden && answeredBy(row.reviews, userId))
     .map(({ id, position, decision, why, source, evidence, files, question, flagged }) => ({

@@ -34,8 +34,10 @@ const isPoint = (value: unknown): value is Point =>
 export const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
 export function isCamera(value: unknown): value is Camera {
-  if (!isPoint(value)) return false;
-  const z = (value as Camera).z;
+  if (!isPoint(value)) {
+    return false;
+  }
+  const { z } = value as Camera;
   return finite(z) && z >= MIN_ZOOM && z <= MAX_ZOOM;
 }
 
@@ -45,26 +47,31 @@ export function isCamera(value: unknown): value is Camera {
  */
 export function loadLayout(ids: ReadonlySet<string>): SavedLayout {
   const empty: SavedLayout = { camera: null, positions: {} };
-  let raw: string | null = null;
+  let raw: string | null;
   try {
-    raw = window.localStorage.getItem(KEY);
+    raw = globalThis.window.localStorage.getItem(KEY);
   } catch {
     return empty;
   }
-  if (!raw || raw.length > MAX_BYTES) return empty;
+  if (!raw || raw.length > MAX_BYTES) {
+    return empty;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
     return empty;
   }
-  if (typeof parsed !== "object" || parsed === null || (parsed as { v?: unknown }).v !== VERSION)
+  if (typeof parsed !== "object" || parsed === null || (parsed as { v?: unknown }).v !== VERSION) {
     return empty;
+  }
   const { camera, positions } = parsed as { camera?: unknown; positions?: unknown };
   const kept: Record<string, Point> = {};
   if (typeof positions === "object" && positions !== null) {
     for (const [id, point] of Object.entries(positions).slice(0, MAX_POSITIONS)) {
-      if (ids.has(id) && isPoint(point)) kept[id] = { x: point.x, y: point.y };
+      if (ids.has(id) && isPoint(point)) {
+        kept[id] = { x: point.x, y: point.y };
+      }
     }
   }
   return { camera: isCamera(camera) ? camera : null, positions: kept };
@@ -80,7 +87,7 @@ export function saveLayout(layout: SavedLayout) {
     const positions = Object.fromEntries(
       Object.entries(layout.positions).map(([id, p]) => [id, point(p)]),
     );
-    window.localStorage.setItem(KEY, JSON.stringify({ v: VERSION, camera, positions }));
+    globalThis.window.localStorage.setItem(KEY, JSON.stringify({ v: VERSION, camera, positions }));
   } catch {
     // Quota or privacy mode: the canvas still works, it just forgets.
   }

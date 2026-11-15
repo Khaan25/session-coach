@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Kind } from "@/lib/ui/kind";
-import { durationUnitFor, EMPTY_VALUE, formatDurations } from "@/lib/ui/format";
+import { EMPTY_VALUE, durationUnitFor, formatDurations } from "@/lib/ui/format";
 import { useOffscreen } from "@/lib/ui/use-offscreen";
 import { cn } from "cn";
 
@@ -77,12 +77,12 @@ type TimelineProps = Omit<React.ComponentProps<"section">, "children"> & {
 
 const ROW = { default: 40, sm: 32 } as const;
 const WINDOW_FROM = 200;
-const statusWord = (s: TimelineSpan) =>
-  s.status === "waiting"
-    ? (s.waitingLabel ?? statusLabels.waiting)
-    : s.status
-      ? statusLabels[s.status]
-      : "";
+const statusWord = (s: TimelineSpan) => {
+  if (s.status === "waiting") {
+    return s.waitingLabel ?? statusLabels.waiting;
+  }
+  return s.status ? statusLabels[s.status] : "";
+};
 
 function Timeline({
   label,
@@ -101,7 +101,10 @@ function Timeline({
 }: TimelineProps) {
   // A queued span has not started running, so it has no elapsed time: no bar and no duration yet.
   const ends = spans.map((s) => s.end ?? (s.status === "queued" ? s.start : (now ?? s.start)));
-  const total = ends.reduce((m, e) => Math.max(m, e), Math.max(1, now ?? 0));
+  let total = Math.max(1, now ?? 0);
+  for (const e of ends) {
+    total = Math.max(total, e);
+  }
   // Ticks fall on whole steps of the timeline's one unit: 0, 1, 2, 3 min, never 0.8 min.
   const { unit, size: unitSize } = durationUnitFor([total]);
   const unitScale = niceScale(0, total / unitSize, 4);
@@ -116,7 +119,7 @@ function Timeline({
     spans[i].status === "queued" ? EMPTY_VALUE : d,
   );
   const tickLabels = ticks.map((t) => `${t.toLocaleString("en-US")}${unit}`);
-  const totalLabel = formatDurations([total]).values[0];
+  const [totalLabel] = formatDurations([total]).values;
   const running = spans.some(
     (s) =>
       s.status === "running" ||
@@ -125,7 +128,7 @@ function Timeline({
   const failed = spans.some((s) => s.status === "fail");
   const frameRef = useOffscreen<HTMLElement>(running);
   const scrollRef = React.useRef<HTMLDivElement>(null);
-  const windowed = !!maxHeight && spans.length >= WINDOW_FROM;
+  const windowed = Boolean(maxHeight) && spans.length >= WINDOW_FROM;
   const virtualizer = useVirtualizer({
     count: windowed ? spans.length : 0,
     getScrollElement: () => scrollRef.current,
@@ -144,7 +147,9 @@ function Timeline({
   const [trackPx, setTrackPx] = React.useState(0);
   React.useEffect(() => {
     const el = trackRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const measure = () => setTrackPx(el.clientWidth);
     measure();
     const observer = new ResizeObserver(measure);
@@ -153,11 +158,13 @@ function Timeline({
   }, []);
 
   const show = (index: number) => {
-    if (windowed) virtualizer.scrollToIndex(index, { align: "center" });
-    else
+    if (windowed) {
+      virtualizer.scrollToIndex(index, { align: "center" });
+    } else {
       scrollRef.current
         ?.querySelector<HTMLElement>(`[data-index="${index}"]`)
         ?.scrollIntoView({ block: "nearest" });
+    }
   };
   const focusRow = (index: number) => {
     const next = Math.max(0, Math.min(spans.length - 1, index));
@@ -220,25 +227,40 @@ function Timeline({
       (s.status === "waiting" ? (statusWord(s).length + 2) * charPx : 0);
     const gap = 8;
     const barPx = (frac(end) - frac(s.start)) * trackPx;
-    const place: "in" | "after" | "before" =
-      trackPx === 0
-        ? s.status !== "waiting" && frac(end) - frac(s.start) >= 0.22
-          ? "in"
-          : frac(end) <= 0.84
-            ? "after"
-            : "before"
-        : s.status !== "waiting" && barPx >= labelPx + gap * 2
-          ? "in"
-          : (1 - frac(end)) * trackPx >= labelPx + gap
-            ? "after"
-            : "before";
     // A quiet bar is grey unless it is open (the timeline's kind, run blue by default) or in trouble.
-    const colored = bars === "kind" || open || !!trouble;
+    const colored = bars === "kind" || open || Boolean(trouble);
+    // Before the track is measured (trackPx 0), fractions of the track stand in for pixels.
+    const barFits = trackPx === 0 ? frac(end) - frac(s.start) >= 0.22 : barPx >= labelPx + gap * 2;
+    const roomAfter =
+      trackPx === 0 ? frac(end) <= 0.84 : (1 - frac(end)) * trackPx >= labelPx + gap;
+    let place: "in" | "after" | "before" = roomAfter ? "after" : "before";
+    if (s.status !== "waiting" && barFits) {
+      place = "in";
+    }
+    let placeClass = "end-[calc(100%-var(--bar-start)+var(--space-2))]";
+    if (place === "after") {
+      placeClass = "start-[calc(var(--bar-end)+var(--space-2))]";
+    } else if (place === "in") {
+      placeClass = "end-[calc(100%-var(--bar-end)+var(--space-2))]";
+    }
+    let durationText = "text-text-2";
+    if (place === "in") {
+      durationText = colored ? "text-on-field" : "text-text-1";
+    } else if (trouble === "fail") {
+      durationText = "text-fail-text";
+    } else if (trouble === "warn") {
+      durationText = "text-warn-text";
+    }
+    let rowTabIndex: number | undefined;
+    if (onSpanClick) {
+      rowTabIndex = index === tabRow ? 0 : -1;
+    }
     const name =
       s.status === "queued"
         ? `${s.label}, ${statusWord(s).toLowerCase()}`
         : `${s.label}, started at ${formatDurations([s.start]).values[0]}, ${isRunning || s.status === "waiting" ? "so far" : "took"} ${durations[index]}${s.status && s.status !== "ok" ? `, ${statusWord(s).toLowerCase()}` : ""}`;
     return (
+      // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- the role is set below ("option" when clickable, else "listitem"); the rule can't read a conditional role
       <div
         key={s.id}
         data-index={index}
@@ -249,7 +271,7 @@ function Timeline({
         role={onSpanClick ? "option" : "listitem"}
         aria-selected={onSpanClick ? open : undefined}
         aria-label={name}
-        tabIndex={onSpanClick ? (index === tabRow ? 0 : -1) : undefined}
+        tabIndex={rowTabIndex}
         onFocus={onSpanClick ? () => setFocusIndex(index) : undefined}
         onKeyDown={onSpanClick ? (event) => onKeyDown(event, index) : undefined}
         onClick={onSpanClick ? () => onSpanClick(s) : undefined}
@@ -280,12 +302,12 @@ function Timeline({
           <span className="min-w-(--timeline-label-min) truncate type-label text-text-1">
             {s.label}
           </span>
-          {s.meta != null && (
+          {s.meta !== null && s.meta !== undefined && (
             <span className="min-w-0 shrink truncate type-tag text-text-3 @max-md/timeline:hidden">
               {s.meta}
             </span>
           )}
-          {s.figure != null && (
+          {s.figure !== null && s.figure !== undefined && (
             <span
               data-slot="timeline-figure"
               className="ms-auto shrink-0 data type-tag text-text-3 @max-md/timeline:hidden @max-[16rem]/name:hidden"
@@ -311,17 +333,19 @@ function Timeline({
                 glide,
               )}
             />
-          ) : s.status === "queued" ? null : (
-            <span
-              data-slot="timeline-bar"
-              data-status={trouble}
-              data-kind={bars === "quiet" && open && !trouble ? (kind ?? "run") : undefined}
-              className={cn(
-                "absolute start-(--bar-start) top-1/2 h-4 w-[calc(var(--bar-end)-var(--bar-start))] min-w-1 -translate-y-1/2 rounded-inner forced-colors:bg-[CanvasText]",
-                colored ? "bg-accent-mark" : "bg-(--line-control-hover)",
-                glide,
-              )}
-            />
+          ) : (
+            s.status !== "queued" && (
+              <span
+                data-slot="timeline-bar"
+                data-status={trouble}
+                data-kind={bars === "quiet" && open && !trouble ? (kind ?? "run") : undefined}
+                className={cn(
+                  "absolute start-(--bar-start) top-1/2 h-4 w-[calc(var(--bar-end)-var(--bar-start))] min-w-1 -translate-y-1/2 rounded-inner forced-colors:bg-[CanvasText]",
+                  colored ? "bg-accent-mark" : "bg-(--line-control-hover)",
+                  glide,
+                )}
+              />
+            )
           )}
           {s.status !== "queued" && (
             <span
@@ -329,20 +353,8 @@ function Timeline({
               data-place={place}
               className={cn(
                 "absolute top-1/2 -translate-y-1/2 type-label-sm data whitespace-nowrap",
-                place === "after"
-                  ? "start-[calc(var(--bar-end)+var(--space-2))]"
-                  : place === "in"
-                    ? "end-[calc(100%-var(--bar-end)+var(--space-2))]"
-                    : "end-[calc(100%-var(--bar-start)+var(--space-2))]",
-                place === "in"
-                  ? colored
-                    ? "text-on-field"
-                    : "text-text-1"
-                  : trouble === "fail"
-                    ? "text-fail-text"
-                    : trouble === "warn"
-                      ? "text-warn-text"
-                      : "text-text-2",
+                placeClass,
+                durationText,
                 glide,
               )}
             >
@@ -373,6 +385,42 @@ function Timeline({
       </div>
     );
   };
+
+  let body: React.ReactNode;
+  if (loading) {
+    body = Array.from({ length: 4 }, (_, i) => (
+      <div key={i} aria-hidden className={cn(columns, "h-(--timeline-row) rule-row")}>
+        <span className="ps-4">
+          <span className="block h-2 w-2/3 bg-(--surface-skeleton)" />
+        </span>
+        <span className="relative h-full">
+          <span
+            className="absolute start-(--skeleton-start) top-1/2 h-3 w-(--skeleton-w) -translate-y-1/2 bg-(--surface-skeleton)"
+            style={
+              {
+                "--skeleton-start": `${i * 18}%`,
+                "--skeleton-w": `${30 - i * 4}%`,
+              } as React.CSSProperties
+            }
+          />
+        </span>
+        {marked && <span className="@max-xl/timeline:hidden" />}
+      </div>
+    ));
+  } else if (spans.length === 0) {
+    body = <p className="px-4 py-6 type-body text-text-2">No steps yet.</p>;
+  } else if (windowed) {
+    body = (
+      <div
+        className="relative h-(--timeline-h)"
+        style={{ "--timeline-h": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
+      >
+        {rows.map((r) => row(r.index, r.start))}
+      </div>
+    );
+  } else {
+    body = rows.map((r) => row(r.index, 0));
+  }
 
   return (
     <section
@@ -432,43 +480,12 @@ function Timeline({
                 : undefined
             }
           >
-            {loading ? (
-              Array.from({ length: 4 }, (_, i) => (
-                <div key={i} aria-hidden className={cn(columns, "h-(--timeline-row) rule-row")}>
-                  <span className="ps-4">
-                    <span className="block h-2 w-2/3 bg-(--surface-skeleton)" />
-                  </span>
-                  <span className="relative h-full">
-                    <span
-                      className="absolute start-(--skeleton-start) top-1/2 h-3 w-(--skeleton-w) -translate-y-1/2 bg-(--surface-skeleton)"
-                      style={
-                        {
-                          "--skeleton-start": `${i * 18}%`,
-                          "--skeleton-w": `${30 - i * 4}%`,
-                        } as React.CSSProperties
-                      }
-                    />
-                  </span>
-                  {marked && <span className="@max-xl/timeline:hidden" />}
-                </div>
-              ))
-            ) : spans.length === 0 ? (
-              <p className="px-4 py-6 type-body text-text-2">No steps yet.</p>
-            ) : windowed ? (
-              <div
-                className="relative h-(--timeline-h)"
-                style={{ "--timeline-h": `${virtualizer.getTotalSize()}px` } as React.CSSProperties}
-              >
-                {rows.map((r) => row(r.index, r.start))}
-              </div>
-            ) : (
-              rows.map((r) => row(r.index, 0))
-            )}
+            {body}
           </div>
         </div>
       </div>
-      {footer != null && (
-        <div data-slot="timeline-footer" className={"shrink-0 rule-top"}>
+      {footer !== null && footer !== undefined && (
+        <div data-slot="timeline-footer" className="shrink-0 rule-top">
           {footer}
         </div>
       )}

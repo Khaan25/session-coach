@@ -5,7 +5,8 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import { localStack } from "../tests/local-stack.ts";
@@ -23,13 +24,16 @@ const modelAnswer =
 let userId = "";
 
 async function shot(page: Page, name: string) {
-  if (process.env.E2E_SHOTS)
+  if (process.env.E2E_SHOTS) {
     await page.screenshot({ path: join(process.env.E2E_SHOTS, `${name}.png`) });
+  }
 }
 
 test.beforeAll(async () => {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-  if (created.error) throw created.error;
+  if (created.error) {
+    throw created.error;
+  }
   userId = created.data.user.id;
   const sessionId = randomUUID();
   const session = await admin.from("sessions").insert({
@@ -41,7 +45,9 @@ test.beforeAll(async () => {
     title: "Add rate limiting",
     repo: "session-coach",
   });
-  if (session.error) throw session.error;
+  if (session.error) {
+    throw session.error;
+  }
   const card = await admin
     .from("decision_cards")
     .insert({
@@ -57,15 +63,21 @@ test.beforeAll(async () => {
     })
     .select("id")
     .single();
-  if (card.error) throw card.error;
+  if (card.error) {
+    throw card.error;
+  }
   const answer = await admin
     .from("answers")
     .insert({ card_id: card.data.id, user_id: userId, review_step: 0, answer: "a", score: 2 });
-  if (answer.error) throw answer.error;
+  if (answer.error) {
+    throw answer.error;
+  }
 });
 
 test.afterAll(async () => {
-  if (userId) await admin.auth.admin.deleteUser(userId);
+  if (userId) {
+    await admin.auth.admin.deleteUser(userId);
+  }
 });
 
 test("start a defense, answer, answer the follow-up, see the grade", async ({ page }) => {
@@ -75,7 +87,7 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/u);
 
   // Defend it is off the sidebar: /progress links to it (and Today does once the day's cards are done).
   await page.goto("/progress");
@@ -88,7 +100,7 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
 
   // The question and a running 3 minute clock from the server.
   await expect(page.getByRole("heading", { name: question })).toBeVisible();
-  await expect(page.getByText(/^[23]:\d\d left$/)).toBeVisible();
+  await expect(page.getByText(/^[23]:\d\d left$/u)).toBeVisible();
   // Exact: the timer bar is labelled "1 of 2 · your answer" too.
   const box = page.getByLabel("Your answer", { exact: true });
   // Paste is refused and says why.
@@ -114,7 +126,7 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
   await page.getByRole("button", { name: "Finish" }).click();
 
   await expect(
-    page.getByRole("heading", { name: /^(Defended|Not defended this time)$/ }),
+    page.getByRole("heading", { name: /^(?:Defended|Not defended this time)$/u }),
   ).toBeVisible();
   await shot(page, "4-result");
   const defense = await admin
@@ -124,7 +136,8 @@ test("start a defense, answer, answer the follow-up, see the grade", async ({ pa
     .single();
   expect(defense.data?.status).toBe("finished");
   // The label shows only for a 2.
-  const defended = page.getByText(/is saved as defended \(timed, follow-up\)\./);
-  if (defense.data?.score === 2) await expect(defended).toBeVisible();
-  else await expect(defended).toHaveCount(0);
+  const defended = page.getByText(/is saved as defended \(timed, follow-up\)\./u);
+  await (defense.data?.score === 2
+    ? expect(defended).toBeVisible()
+    : expect(defended).toHaveCount(0));
 });

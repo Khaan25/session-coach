@@ -3,7 +3,8 @@
  * Contract and field rules: docs/PLAY_API.md. Auth: requireDashboardKey().
  * Optional fields are omitted when unanswerable, never zeroed.
  */
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { requireDashboardKey } from "@/lib/dashboard-api-auth";
 import { buildRetentionCohorts } from "@/lib/play-stats";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -23,7 +24,9 @@ const RETENTION_DAYS = 120;
  */
 export async function GET(req: NextRequest) {
   const denied = requireDashboardKey(req);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   try {
     const now = new Date();
@@ -37,39 +40,41 @@ export async function GET(req: NextRequest) {
     // Retention is the expensive, optional part: a failure omits it instead of failing the summary. It reads alongside
     // the counts, and its catch keeps it from rejecting unhandled when a count fails first.
     const since = daysAgo(RETENTION_DAYS);
-    const retentionRead = Promise.all([
-      fetchAll<{ id: string; created_at: string }>((from, to) =>
-        supabase
-          .from("profiles")
-          .select("id, created_at")
-          .gte("created_at", since)
-          .order("id")
-          .range(from, to),
-      ),
-      fetchAll<{ user_id: string; created_at: string }>((from, to) =>
-        supabase
-          .from("sessions")
-          .select("user_id, created_at")
-          .gte("created_at", since)
-          .order("id")
-          .range(from, to),
-      ),
-      fetchAll<{ user_id: string; created_at: string }>((from, to) =>
-        supabase
-          .from("answers")
-          .select("user_id, created_at")
-          .gte("created_at", since)
-          .order("id")
-          .range(from, to),
-      ),
-    ])
-      .then(([cohorts, uploads, answers]) =>
-        buildRetentionCohorts(cohorts, [...uploads, ...answers], now),
-      )
-      .catch((err: unknown) => {
-        console.error("[api/dashboard/v1/summary] retention omitted", err);
+    const readRetention = async () => {
+      try {
+        const [cohorts, uploads, answers] = await Promise.all([
+          fetchAll<{ id: string; created_at: string }>((from, to) =>
+            supabase
+              .from("profiles")
+              .select("id, created_at")
+              .gte("created_at", since)
+              .order("id")
+              .range(from, to),
+          ),
+          fetchAll<{ user_id: string; created_at: string }>((from, to) =>
+            supabase
+              .from("sessions")
+              .select("user_id, created_at")
+              .gte("created_at", since)
+              .order("id")
+              .range(from, to),
+          ),
+          fetchAll<{ user_id: string; created_at: string }>((from, to) =>
+            supabase
+              .from("answers")
+              .select("user_id, created_at")
+              .gte("created_at", since)
+              .order("id")
+              .range(from, to),
+          ),
+        ]);
+        return buildRetentionCohorts(cohorts, [...uploads, ...answers], now);
+      } catch (error) {
+        console.error("[api/dashboard/v1/summary] retention omitted", error);
         return [];
-      });
+      }
+    };
+    const retentionRead = readRetention();
 
     // Counts are checked before retention is awaited, so a failed count answers 500 without waiting on retention.
     const [total, last7, last30] = await Promise.all([
@@ -77,7 +82,11 @@ export async function GET(req: NextRequest) {
       countProfiles(daysAgo(7)),
       countProfiles(daysAgo(30)),
     ]);
-    for (const result of [total, last7, last30]) if (result.error) throw result.error;
+    for (const result of [total, last7, last30]) {
+      if (result.error) {
+        throw result.error;
+      }
+    }
     const usersTotal = total.count ?? 0;
     const retention = await retentionRead;
 
@@ -89,11 +98,13 @@ export async function GET(req: NextRequest) {
       new_users_30d: last30.count ?? 0,
       generated_at: now.toISOString(),
     };
-    if (retention.length > 0) body.retention = { cohorts: retention };
+    if (retention.length > 0) {
+      body.retention = { cohorts: retention };
+    }
 
     return NextResponse.json(body);
-  } catch (err) {
-    console.error("[api/dashboard/v1/summary] failed", err);
+  } catch (error) {
+    console.error("[api/dashboard/v1/summary] failed", error);
     return NextResponse.json({ error: "Failed to compute summary" }, { status: 500 });
   }
 }

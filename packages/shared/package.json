@@ -14,7 +14,7 @@
   },
   "scripts": {
     "typecheck": "bun check",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
     "test": "node --test --experimental-strip-types src/*.test.ts"
   },
   "dependencies": {

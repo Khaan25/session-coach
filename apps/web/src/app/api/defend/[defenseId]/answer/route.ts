@@ -7,12 +7,12 @@ import { NextResponse } from "next/server";
 
 import { requireUser, serverError } from "@/lib/api/http";
 import {
-  defendAnswerSchema,
-  deadlineOf,
+  ANSWER_SECONDS,
   FOLLOW_UP_INSTRUCTIONS,
   FOLLOW_UP_SECONDS,
+  deadlineOf,
+  defendAnswerSchema,
   followUpData,
-  ANSWER_SECONDS,
   parseFollowUp,
 } from "@/lib/defend/defend";
 import {
@@ -45,11 +45,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 export async function POST(request: Request, context: { params: Promise<{ defenseId: string }> }) {
   const signedIn = await requireUser();
-  if (signedIn instanceof NextResponse) return signedIn;
+  if (signedIn instanceof NextResponse) {
+    return signedIn;
+  }
   const { user } = signedIn;
 
-  const defenseId = parseDefenseId((await context.params).defenseId);
-  if (!defenseId) return invalidDefenseId();
+  const params = await context.params;
+  const defenseId = parseDefenseId(params.defenseId);
+  if (!defenseId) {
+    return invalidDefenseId();
+  }
   const body: unknown = await request.json().catch(() => null);
   const parsed = defendAnswerSchema.safeParse(body);
   if (!parsed.success) {
@@ -62,7 +67,9 @@ export async function POST(request: Request, context: { params: Promise<{ defens
     const admin = createAdminClient();
     const now = new Date();
     const loaded = await loadDefense(admin, defenseId, user.id);
-    if (!loaded) return NextResponse.json({ error: "Defense not found" }, { status: 404 });
+    if (!loaded) {
+      return NextResponse.json({ error: "Defense not found" }, { status: 404 });
+    }
     const { defense, card } = loaded;
     if (defense.status !== "answering") {
       return NextResponse.json(
@@ -76,14 +83,18 @@ export async function POST(request: Request, context: { params: Promise<{ defens
       { startedAt: defense.started_at, seconds: ANSWER_SECONDS },
       now,
     );
-    if (late) return late;
+    if (late) {
+      return late;
+    }
 
     const question = await limitedModelCall(
       user.id,
       { instructions: FOLLOW_UP_INSTRUCTIONS, data: followUpData(card, answer) },
       parseFollowUp,
     );
-    if (question instanceof Response) return question;
+    if (question instanceof Response) {
+      return question;
+    }
     if (!question) {
       console.error("[api/defend/answer] follow-up output invalid twice", { defenseId });
       return NextResponse.json(
@@ -106,7 +117,9 @@ export async function POST(request: Request, context: { params: Promise<{ defens
       .eq("id", defenseId)
       .eq("status", "answering")
       .select("id");
-    if (stored.error) throw stored.error;
+    if (stored.error) {
+      throw stored.error;
+    }
     if (stored.data.length === 0) {
       return NextResponse.json(
         { error: "This defense was just answered. Reload to continue." },

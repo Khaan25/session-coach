@@ -6,24 +6,25 @@
  */
 import { NextResponse } from "next/server";
 
-import { requireUser, serverError, UNIQUE_VIOLATION } from "@/lib/api/http";
+import { UNIQUE_VIOLATION, requireUser, serverError } from "@/lib/api/http";
 import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
-import { callModel, ModelCallError, ModelConfigError } from "@/lib/model/call-model";
+import { ModelCallError, ModelConfigError, callModel } from "@/lib/model/call-model";
 import {
-  answerRequestSchema,
   DONT_KNOW_ANSWER,
   GRADE_INSTRUCTIONS,
+  answerRequestSchema,
   gradeData,
   parseGrade,
   skipGrade,
 } from "@/lib/review/grade";
 import { levelOf } from "@/lib/review/level";
-import { isDue, nextReview, type Step } from "@/lib/review/schedule";
+import { isDue, nextReview } from "@/lib/review/schedule";
+import type { Step } from "@/lib/review/schedule";
 import {
-  answeredSince,
-  countAnsweredToday,
   DAILY_CAP,
   DAILY_CAP_MESSAGE,
+  answeredSince,
+  countAnsweredToday,
 } from "@/lib/review/today";
 import { localDate } from "@/lib/sessions/rows";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -64,7 +65,9 @@ type GradedCard = {
  */
 export async function POST(request: Request) {
   const signedIn = await requireUser();
-  if (signedIn instanceof NextResponse) return signedIn;
+  if (signedIn instanceof NextResponse) {
+    return signedIn;
+  }
   const { user } = signedIn;
 
   const body: unknown = await request.json().catch(() => null);
@@ -106,14 +109,23 @@ export async function POST(request: Request) {
         .gte("created_at", answeredSince(now))
         .overrideTypes<{ created_at: string }[], { merge: false }>(),
     ]);
-    if (cardResult.error) throw cardResult.error;
-    if (reviewResult.error) throw reviewResult.error;
-    if (profileResult.error) throw profileResult.error;
-    if (answersResult.error) throw answersResult.error;
+    if (cardResult.error) {
+      throw cardResult.error;
+    }
+    if (reviewResult.error) {
+      throw reviewResult.error;
+    }
+    if (profileResult.error) {
+      throw profileResult.error;
+    }
+    if (answersResult.error) {
+      throw answersResult.error;
+    }
     const card = cardResult.data;
     // Decided here, not by the query: the service role sees every learner's cards.
-    if (!card || card.user_id !== user.id || card.hidden)
+    if (!card || card.user_id !== user.id || card.hidden) {
       return NextResponse.json({ error: "Card not found" }, { status: 404 });
+    }
     const timeZone = profileResult.data?.timezone ?? "UTC";
     const today = localDate(timeZone, now);
     if (reviewResult.data && !isDue(reviewResult.data, today)) {
@@ -134,11 +146,14 @@ export async function POST(request: Request) {
       timeZone,
       today,
     );
-    if (answeredToday >= DAILY_CAP)
+    if (answeredToday >= DAILY_CAP) {
       return NextResponse.json({ error: DAILY_CAP_MESSAGE }, { status: 409 });
+    }
 
     const grade = dontKnow ? skipGrade() : await gradeAnswer(user.id, card, answer);
-    if (grade instanceof Response) return grade;
+    if (grade instanceof Response) {
+      return grade;
+    }
     if (!grade) {
       console.error("[api/review/answer] grading output invalid twice", { cardId });
       return NextResponse.json(
@@ -176,7 +191,9 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
-    if (moved.error) throw moved.error;
+    if (moved.error) {
+      throw moved.error;
+    }
 
     const { error: answerError } = await admin.from("answers").insert({
       card_id: cardId,
@@ -202,8 +219,9 @@ export async function POST(request: Request) {
             .eq("card_id", cardId)
             .eq("updated_at", schedule.updated_at);
       const { error: undoError } = await undo;
-      if (undoError)
+      if (undoError) {
         console.error("[api/review/answer] schedule not put back", { cardId }, undoError);
+      }
       throw answerError;
     }
 
@@ -245,7 +263,9 @@ export async function POST(request: Request) {
  */
 async function gradeAnswer(userId: string, card: GradedCard, answer: string) {
   const limited = await userRateLimit("grade", userId);
-  if (limited) return tooManyRequests(limited);
+  if (limited) {
+    return tooManyRequests(limited);
+  }
   const input = { instructions: GRADE_INSTRUCTIONS, data: gradeData(card, answer) };
   return parseGrade(await callModel("grade", input)) ?? parseGrade(await callModel("grade", input));
 }

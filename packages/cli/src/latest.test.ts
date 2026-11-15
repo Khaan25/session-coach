@@ -7,6 +7,19 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { findLatestLog, formatSize, projectDirName, resolveCwd } from "./latest.ts";
 import { validateFileName } from "./push.ts";
 
+/** Writes a fake log and sets its modified time (seconds since epoch). */
+async function log(folder: string, name: string, content: string, mtime: number) {
+  await mkdir(folder, { recursive: true });
+  const path = join(folder, name);
+  await writeFile(path, content);
+  await utimes(path, mtime, mtime);
+}
+
+/** A fake log body: a first line without a `cwd` (as Claude Code writes some), then one that records it. */
+function body(recorded: string): string {
+  return `${JSON.stringify({ type: "summary" })}\n${JSON.stringify({ type: "user", cwd: recorded })}\n`;
+}
+
 describe("projectDirName", () => {
   it("replaces / and _ with -", () => {
     assert.equal(
@@ -47,19 +60,6 @@ describe("findLatestLog", () => {
     dir = join(projects, projectDirName(cwd));
   });
   afterEach(() => rm(projects, { recursive: true, force: true }));
-
-  /** Writes a fake log and sets its modified time (seconds since epoch). */
-  async function log(folder: string, name: string, body: string, mtime: number) {
-    await mkdir(folder, { recursive: true });
-    const path = join(folder, name);
-    await writeFile(path, body);
-    await utimes(path, mtime, mtime);
-  }
-
-  /** A fake log body: a first line without a `cwd` (as Claude Code writes some), then one that records it. */
-  function body(recorded: string): string {
-    return `${JSON.stringify({ type: "summary" })}\n${JSON.stringify({ type: "user", cwd: recorded })}\n`;
-  }
 
   it("says so when the project folder does not exist", async () => {
     assert.deepEqual(await findLatestLog(projects, cwd), {

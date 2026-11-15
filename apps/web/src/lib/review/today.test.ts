@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { localDate } from "../sessions/rows.ts";
-import { answeredSince, countAnsweredToday, DAILY_CAP, NEW_SLOTS, todayQueue } from "./today.ts";
+import { DAILY_CAP, NEW_SLOTS, answeredSince, countAnsweredToday, todayQueue } from "./today.ts";
 
 const now = new Date("2026-11-04T12:00:00Z");
 const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 3_600_000).toISOString();

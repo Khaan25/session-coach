@@ -6,7 +6,8 @@ import { SectionHeader } from "@/components/setup/section-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { CodeBlock } from "@/components/ui/code-block";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AGENT_NAMES, setupPrompt, type SetupAgent } from "@/lib/setup/ai-prompt";
+import { AGENT_NAMES, setupPrompt } from "@/lib/setup/ai-prompt";
+import type { SetupAgent } from "@/lib/setup/ai-prompt";
 
 // Each product's own mark (components/setup/agent-logos.tsx).
 const ICONS: Record<SetupAgent, React.ComponentType<React.ComponentProps<"svg">>> = {

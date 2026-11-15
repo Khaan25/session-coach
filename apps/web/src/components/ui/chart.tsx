@@ -13,8 +13,8 @@ import * as RechartsPrimitive from "recharts";
 const THEMES = { light: "", dark: ".dark" } as const;
 
 const INITIAL_DIMENSION = { width: 320, height: 200 } as const;
-const colons = /:/g;
-type TooltipValueType = number | string | Array<number | string>;
+const colons = /:/gu;
+type TooltipValueType = number | string | (number | string)[];
 type TooltipNameType = number | string;
 
 export type ChartConfig = Record<
@@ -61,10 +61,11 @@ function ChartContainer({
   };
 }) {
   const uniqueId = React.useId();
-  const chartId = `chart-${id ?? uniqueId.replace(colons, "")}`;
+  const chartId = `chart-${id ?? uniqueId.replaceAll(colons, "")}`;
+  const contextValue = React.useMemo(() => ({ config }), [config]);
 
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={contextValue}>
       <div
         data-slot="chart"
         data-chart={chartId}
@@ -99,7 +100,9 @@ function chartVars(config: ChartConfig) {
   const vars: Record<string, string> = {};
   for (const [key, item] of Object.entries(config)) {
     const color = item.theme ? `light-dark(${item.theme.light}, ${item.theme.dark})` : item.color;
-    if (color) vars[`--color-${key}`] = color;
+    if (color) {
+      vars[`--color-${key}`] = color;
+    }
   }
   return vars as React.CSSProperties;
 }
@@ -189,7 +192,7 @@ function ChartTooltipContent({
     }
 
     // A 0 label still shows.
-    if (value == null || value === false || value === "") {
+    if (value === null || value === undefined || value === false || value === "") {
       return null;
     }
 
@@ -209,7 +212,7 @@ function ChartTooltipContent({
         className,
       )}
     >
-      {!nestLabel ? tooltipLabel : null}
+      {nestLabel ? null : tooltipLabel}
       <div className="grid gap-1.5">
         {payload
           .filter((item) => item.type !== "none")
@@ -245,7 +248,7 @@ function ChartTooltipContent({
                         {nestLabel ? tooltipLabel : null}
                         <span className="text-text-2">{itemConfig?.label ?? item.name}</span>
                       </div>
-                      {item.value != null && (
+                      {item.value !== null && item.value !== undefined && (
                         <span className="data text-text-1">
                           {typeof item.value === "number"
                             ? item.value.toLocaleString()
@@ -317,7 +320,7 @@ function ChartLegendContent({
 
 function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key: string) {
   if (typeof payload !== "object" || payload === null) {
-    return undefined;
+    return;
   }
 
   const payloadPayload =

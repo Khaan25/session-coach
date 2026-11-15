@@ -5,11 +5,8 @@ import { MeasuredSuspense } from "@/components/app/measured-suspense";
 import { NoCardsYetEmpty, NoReviewsEmpty } from "@/components/app/empty-state";
 import type { Score } from "@/components/app/score-badge";
 import { SAMPLE_PROGRESS } from "@/components/progress/progress-sample";
-import {
-  ProgressEmpty,
-  ProgressSummary,
-  type ProgressPageData,
-} from "@/components/progress/progress-view";
+import { ProgressEmpty, ProgressSummary } from "@/components/progress/progress-view";
+import type { ProgressPageData } from "@/components/progress/progress-view";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import type { Progress as ProgressData } from "@/lib/progress/progress";
 import { getOwnership, getProgress } from "@/lib/progress/queries";
@@ -39,17 +36,24 @@ export default function ProgressPage({ searchParams }: PageProps<"/progress">) {
 // error.tsx, which offers a retry.
 async function ProgressView({ searchParams }: Pick<PageProps<"/progress">, "searchParams">) {
   const user = await getCurrentUser();
-  const repo = parseRepo((await searchParams).repo);
+  const query = await searchParams;
+  const repo = parseRepo(query.repo);
   const data = user ? await load(user.id, repo) : null;
   // A repo the learner has no session in: show every project rather than an empty page, as the dashboard does.
-  if (repo && data?.repos && !data.repos.includes(repo)) redirect("/progress");
+  if (repo && data?.repos && !data.repos.includes(repo)) {
+    redirect("/progress");
+  }
 
   // No card: `cardlessReason` picks the copy (first run points at the CLI; a session being read, a failed one, or
   // sessions that gave none point at the sessions). Cards but no answer yet point at the queue. A project picked
   // from the tabs keeps the page and its tabs, even at zero.
-  if (!user || !data) return <ProgressEmpty empty={<NoCardsYetEmpty />} />;
+  if (!user || !data) {
+    return <ProgressEmpty empty={<NoCardsYetEmpty />} />;
+  }
   const { progress } = data;
-  if (repo) return <ProgressSummary data={data} />;
+  if (repo) {
+    return <ProgressSummary data={data} />;
+  }
   if (progress.totalCards === 0) {
     return <ProgressEmpty empty={<NoCardsYetEmpty cardless={await cardlessReason(user.id)} />} />;
   }

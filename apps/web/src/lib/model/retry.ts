@@ -35,23 +35,30 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 /** The wait before a retry when the provider gives no `retry-after`: a timeout, a 5xx, non-JSON output. */
-export const RETRY_WAIT_MS = 2_000;
+export const RETRY_WAIT_MS = 2000;
 
 /** The longest `retry-after` honored, so two extraction calls still finish inside the pipeline's deadline. */
 export const MAX_RETRY_WAIT_MS = 20_000;
 
 /** The HTTP-date form `retry-after` uses (RFC 9110 IMF-fixdate), so an ISO date or other text isn't read as one. */
-const SECONDS = /^\d+$/;
-const HTTP_DATE = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+const SECONDS = /^\d+$/u;
+const HTTP_DATE = /^[A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT$/u;
 
 /** A `retry-after` value (seconds or an HTTP date) in milliseconds from `now`, or null when it isn't readable. */
 function parseRetryAfterMs(raw: string | null, now: number): number | null {
   const value = raw?.trim();
-  if (!value) return null;
-  if (SECONDS.test(value)) return Number(value) * 1_000;
-  if (!HTTP_DATE.test(value)) return null;
+  if (!value) {
+    return null;
+  }
+  if (SECONDS.test(value)) {
+    return Number(value) * 1000;
+  }
+  if (!HTTP_DATE.test(value)) {
+    return null;
+  }
   const ms = Date.parse(value) - now;
-  return ms >= 0 ? ms : null; // NaN (an impossible date) fails this too
+  // NaN (an impossible date) fails this too
+  return ms >= 0 ? ms : null;
 }
 
 /**
@@ -63,12 +70,18 @@ function parseRetryAfterMs(raw: string | null, now: number): number | null {
  *   A 429 waits for its `retry-after`, capped at `MAX_RETRY_WAIT_MS`.
  */
 export function retryWaitMs(error: unknown, now = Date.now()): number | null {
-  if (!(error instanceof ProviderHttpError)) return RETRY_WAIT_MS;
+  if (!(error instanceof ProviderHttpError)) {
+    return RETRY_WAIT_MS;
+  }
   if (error.status === 429) {
     const ms = parseRetryAfterMs(error.retryAfter, now);
     return ms === null ? RETRY_WAIT_MS : Math.min(ms, MAX_RETRY_WAIT_MS);
   }
-  if (error.status === 408) return RETRY_WAIT_MS;
-  if (error.status >= 400 && error.status < 500) return null;
+  if (error.status === 408) {
+    return RETRY_WAIT_MS;
+  }
+  if (error.status >= 400 && error.status < 500) {
+    return null;
+  }
   return RETRY_WAIT_MS;
 }

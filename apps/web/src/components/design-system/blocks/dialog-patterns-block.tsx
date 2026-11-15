@@ -31,7 +31,7 @@ import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/comp
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 
-import { cards, REVIEW_DAYS, session } from "../sample";
+import { REVIEW_DAYS, cards, session } from "@/components/design-system/sample";
 
 /*
  * Close confirmation. Every way out (Escape, the backdrop, the close button) lands in onOpenChange, so holding
@@ -125,7 +125,12 @@ function NestedDialogExample() {
           {/* Button rows: a group of choices, not a list. */}
           <ItemGroup role="group" aria-label="Review days">
             {REVIEW_DAYS.map((day) => (
-              <Item key={day} size="sm" render={<button type="button" />}>
+              <Item
+                key={day}
+                size="sm"
+                // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the element is Base UI's `render` target; its label is the children the parent component passes in
+                render={<button type="button" />}
+              >
                 <ItemContent>
                   <ItemTitle>Day {day}</ItemTitle>
                 </ItemContent>

@@ -5,7 +5,8 @@ import { initialsOf } from "@/lib/auth/initials";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getProfile } from "@/lib/auth/profile";
 
-import { type SiteNavUser, SiteNavAccount } from "./site-nav-account";
+import { SiteNavAccount } from "./site-nav-account";
+import type { SiteNavUser } from "./site-nav-account";
 import { SiteNavBar } from "./site-nav-bar";
 
 /**

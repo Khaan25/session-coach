@@ -10,7 +10,7 @@ import { adoptBrowserTimezone } from "@/app/(app)/settings/actions";
  */
 export function DetectTimezone() {
   useEffect(() => {
-    void adoptBrowserTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    void adoptBrowserTimezone(new Intl.DateTimeFormat().resolvedOptions().timeZone);
   }, []);
   return null;
 }

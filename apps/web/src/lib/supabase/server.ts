@@ -23,8 +23,9 @@ export async function createClient() {
       getAll: () => cookieStore.getAll(),
       setAll(cookiesToSet) {
         try {
-          for (const { name, value, options } of cookiesToSet)
+          for (const { name, value, options } of cookiesToSet) {
             cookieStore.set(name, value, options);
+          }
         } catch {
           // Server Components can't set cookies; proxy.ts refreshes the session instead.
         }

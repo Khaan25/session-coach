@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/app/empty-state";
-import { ScoreBadge, type Score } from "@/components/app/score-badge";
+import { ScoreBadge } from "@/components/app/score-badge";
+import type { Score } from "@/components/app/score-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DataList, DataListItem, DataListLabel, DataListValue } from "@/components/ui/data-list";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
@@ -27,7 +28,7 @@ const TIME_UP = {
   late: "Time ran out before your answer arrived, so this one ends here.",
   failed: "Your answer couldn't be sent before the clock ran out, so this one ends here.",
 } as const;
-export const PASTE_OFF = "Paste is off in Defend it. Type it in your own words.";
+const PASTE_OFF = "Paste is off in Defend it. Type it in your own words.";
 /** How long the paste note stays in place of the hint. */
 const PASTE_NOTE_MS = 4000;
 /** Shown once, before the clock starts; while it runs each control carries one line instead. */
@@ -70,9 +71,23 @@ type Step =
   | { kind: "time-up"; reason: TimeUpReason };
 
 /** Thrown for a 409 the learner can only answer by starting again: the time ran out, or the defense moved on. */
-class Conflict extends Error {
+class ConflictError extends Error {
   /** Set when start found a defense still running, e.g. from before a reload. */
   running = false;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "ConflictError";
+  }
+}
+
+/** What a failed start says: a defense still running gets how long until a new one can start. */
+function startErrorMessage(reason: unknown) {
+  // There's no route to resume it, so say how long until a new one can start.
+  if (reason instanceof ConflictError && reason.running) {
+    return "A defense from earlier is still running, maybe from before a reload. It ends within about 3 minutes; start again then.";
+  }
+  return reason instanceof Error ? reason.message : "Try again.";
 }
 
 async function post<T>(url: string, body?: unknown): Promise<T> {
@@ -81,14 +96,18 @@ async function post<T>(url: string, body?: unknown): Promise<T> {
     headers: { "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   }).catch(() => null);
-  if (!response) throw new Error("Check your connection and try again.");
+  if (!response) {
+    throw new Error("Check your connection and try again.");
+  }
   const data = await response.json().catch(() => null);
   if (response.status === 409) {
-    const conflict = new Conflict(data?.error ?? "Start again.");
+    const conflict = new ConflictError(data?.error ?? "Start again.");
     conflict.running = typeof data?.defenseId === "string";
     throw conflict;
   }
-  if (!response.ok) throw new Error(data?.error ?? "Try again.");
+  if (!response.ok) {
+    throw new Error(data?.error ?? "Try again.");
+  }
   return data as T;
 }
 
@@ -99,7 +118,9 @@ async function post<T>(url: string, body?: unknown): Promise<T> {
 function useSecondsLeft(dueAt: string | null, offset: number) {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
-    if (!dueAt) return;
+    if (!dueAt) {
+      return;
+    }
     const tick = () => setNow(Date.now());
     // The first frame catches `now` up from whenever it last ticked, so a new clock never starts from a stale time.
     const first = requestAnimationFrame(tick);
@@ -130,15 +151,21 @@ export function DefendFlow({ defendable }: { defendable: number }) {
   const field = useRef<HTMLTextAreaElement>(null);
   // Each new question starts with an empty box and the cursor in it.
   useEffect(() => {
-    if (timed) field.current?.focus();
-  }, [timed?.question]); // eslint-disable-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- refocus per new question, not on every new `timed` object
+    if (timed) {
+      field.current?.focus();
+    }
+  }, [timed?.question]); // oxlint-disable-line react/exhaustive-deps -- refocus per new question, not on every new `timed` object
 
   function start() {
-    if (pending) return;
+    if (pending) {
+      return;
+    }
     setPending(true);
     setError(null);
-    post<Started>("/api/defend/start")
-      .then((started) => {
+    const run = async () => {
+      try {
+        const started = await post<Started>("/api/defend/start");
         setAnswer("");
         setStep({
           kind: "answering",
@@ -153,18 +180,13 @@ export function DefendFlow({ defendable }: { defendable: number }) {
           offset: clockOffset(started.serverNow, Date.now()),
           total: secondsLeft(started.answerDueAt, 0, new Date(started.serverNow).getTime()),
         });
-      })
-      .catch((reason: unknown) =>
-        setError(
-          // There's no route to resume it, so say how long until a new one can start.
-          reason instanceof Conflict && reason.running
-            ? "A defense from earlier is still running, maybe from before a reload. It ends within about 3 minutes; start again then."
-            : reason instanceof Error
-              ? reason.message
-              : "Try again.",
-        ),
-      )
-      .finally(() => setPending(false));
+      } catch (error_: unknown) {
+        setError(startErrorMessage(error_));
+      } finally {
+        setPending(false);
+      }
+    };
+    void run();
   }
 
   function send(current: Timed, text: string) {
@@ -172,15 +194,22 @@ export function DefendFlow({ defendable }: { defendable: number }) {
     setError(null);
     const done = () => setPending(false);
     const failed = (reason: unknown) => {
-      if (reason instanceof Conflict) setStep({ kind: "time-up", reason: "late" });
+      if (reason instanceof ConflictError) {
+        setStep({ kind: "time-up", reason: "late" });
+      }
       // Past 0:00 the box is locked, so a failed send can't be retried here: end it with a way to start again.
-      else if (secondsLeft(current.dueAt, current.offset, Date.now()) === 0)
+      else if (secondsLeft(current.dueAt, current.offset, Date.now()) === 0) {
         setStep({ kind: "time-up", reason: "failed" });
-      else setError(reason instanceof Error ? reason.message : "Try again.");
+      } else {
+        setError(reason instanceof Error ? reason.message : "Try again.");
+      }
     };
-    if (current.kind === "answering") {
-      post<FollowUp>(`/api/defend/${current.defenseId}/answer`, { answer: text })
-        .then((next) => {
+    const run = async () => {
+      try {
+        if (current.kind === "answering") {
+          const next = await post<FollowUp>(`/api/defend/${current.defenseId}/answer`, {
+            answer: text,
+          });
           setAnswer("");
           setStep({
             kind: "follow-up",
@@ -191,45 +220,64 @@ export function DefendFlow({ defendable }: { defendable: number }) {
             offset: clockOffset(next.serverNow, Date.now()),
             total: secondsLeft(next.followUpDueAt, 0, new Date(next.serverNow).getTime()),
           });
-        })
-        .catch(failed)
-        .finally(done);
-    } else {
-      post<Graded>(`/api/defend/${current.defenseId}/follow-up`, { answer: text })
-        .then((result) => setStep({ kind: "graded", card: current.card, result }))
-        .catch(failed)
-        .finally(done);
-    }
+        } else {
+          const result = await post<Graded>(`/api/defend/${current.defenseId}/follow-up`, {
+            answer: text,
+          });
+          setStep({ kind: "graded", card: current.card, result });
+        }
+      } catch (error_: unknown) {
+        failed(error_);
+      } finally {
+        done();
+      }
+    };
+    void run();
   }
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!timed || pending) return;
+    if (!timed || pending) {
+      return;
+    }
     const trimmed = answer.trim();
-    if (!trimmed) return setError("Write your answer before you send it.");
-    if (trimmed.length > MAX_ANSWER) return setError(`Keep it under ${MAX_ANSWER} characters.`);
+    if (!trimmed) {
+      return setError("Write your answer before you send it.");
+    }
+    if (trimmed.length > MAX_ANSWER) {
+      return setError(`Keep it under ${MAX_ANSWER} characters.`);
+    }
     send(timed, trimmed);
   }
 
   // At 0:00 the box locks and what's typed goes in; nothing typed means the time is simply up.
   const expired = timed !== null && left === 0;
   const onDeadline = useEffectEvent(() => {
-    if (!timed || pending) return;
+    if (!timed || pending) {
+      return;
+    }
     const trimmed = answer.trim().slice(0, MAX_ANSWER);
-    if (trimmed) send(timed, trimmed);
-    else setStep({ kind: "time-up", reason: "empty" });
+    if (trimmed) {
+      send(timed, trimmed);
+    } else {
+      setStep({ kind: "time-up", reason: "empty" });
+    }
   });
   useEffect(() => {
-    if (!timed) return;
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- re-arm only when the deadline moves, not on every new `timed` object
+    if (!timed) {
+      return;
+    }
     const ms = new Date(timed.dueAt).getTime() - (Date.now() + timed.offset);
     const id = setTimeout(onDeadline, Math.max(0, ms));
     return () => clearTimeout(id);
-  }, [timed?.dueAt, timed?.offset]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timed?.dueAt, timed?.offset]); // oxlint-disable-line react/exhaustive-deps -- re-arm only when the deadline moves, not on every new `timed` object
 
-  if (step.kind === "ready")
+  if (step.kind === "ready") {
     return <DefendStart defendable={defendable} pending={pending} error={error} onStart={start} />;
+  }
 
-  if (step.kind === "graded" || step.kind === "time-up")
+  if (step.kind === "graded" || step.kind === "time-up") {
     return (
       <DefendResult
         result={step.kind === "graded" ? step.result : null}
@@ -243,6 +291,7 @@ export function DefendFlow({ defendable }: { defendable: number }) {
         }}
       />
     );
+  }
 
   return (
     <form onSubmit={submit} noValidate>
@@ -381,15 +430,31 @@ export function DefendTimed({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
-      if (timer.current) clearTimeout(timer.current);
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
     },
     [],
   );
+  const pendingLabel = followUp ? "Grading…" : "Writing the follow-up…";
+  let hint: React.ReactNode = "No need to be long. The reason and what breaks without it.";
+  if (blocked) {
+    hint = (
+      <span className="flex items-center gap-1 text-warning-text">
+        <ProhibitIcon aria-hidden="true" />
+        {PASTE_OFF}
+      </span>
+    );
+  } else if (followUp) {
+    hint = "Graded together with your first answer.";
+  }
   // Client-side only: it raises the bar, it doesn't stop a determined learner, so the label never says "verified".
   function blockPaste(event: React.ClipboardEvent | React.DragEvent) {
     event.preventDefault();
     setBlocked(true);
-    if (timer.current) clearTimeout(timer.current);
+    if (timer.current) {
+      clearTimeout(timer.current);
+    }
     timer.current = setTimeout(() => setBlocked(false), PASTE_NOTE_MS);
   }
   return (
@@ -436,27 +501,14 @@ export function DefendTimed({
           }}
         />
         <FieldDescription id={`${id}-hint`} aria-live="polite">
-          {blocked ? (
-            <span className="flex items-center gap-1 text-warning-text">
-              <ProhibitIcon aria-hidden="true" />
-              {PASTE_OFF}
-            </span>
-          ) : followUp ? (
-            "Graded together with your first answer."
-          ) : (
-            "No need to be long. The reason and what breaks without it."
-          )}
+          {hint}
         </FieldDescription>
         <FieldError id={`${id}-error`}>{error}</FieldError>
       </Field>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={pending || expired}>
           {pending ? (
-            followUp ? (
-              "Grading…"
-            ) : (
-              "Writing the follow-up…"
-            )
+            pendingLabel
           ) : (
             <>
               {followUp ? "Finish" : "Send"}
@@ -490,6 +542,20 @@ export function DefendResult({
   onAgain?: () => void;
 }) {
   const defended = result?.score === 2;
+  let heading = "Time's up";
+  let summary: React.ReactNode = `${TIME_UP[reason]} Start again for another decision.`;
+  if (result && defended) {
+    heading = "Defended";
+    summary = <>&ldquo;{card?.decision}&rdquo; is saved as defended (timed, follow-up).</>;
+  } else if (result) {
+    heading = "Not defended this time";
+    summary = (
+      <>
+        &ldquo;{card?.decision}&rdquo;, from {card?.sessionName}. Explain it again in your next
+        review, then defend it again.
+      </>
+    );
+  }
   const again = (
     <Button
       variant={result && !defended ? "secondary" : "default"}
@@ -503,20 +569,9 @@ export function DefendResult({
     <>
       <div className="flex flex-col gap-2">
         <h1 ref={headingRef} tabIndex={-1} className="type-heading">
-          {!result ? "Time's up" : defended ? "Defended" : "Not defended this time"}
+          {heading}
         </h1>
-        <p className="type-body text-text-2">
-          {!result ? (
-            `${TIME_UP[reason]} Start again for another decision.`
-          ) : defended ? (
-            <>&ldquo;{card?.decision}&rdquo; is saved as defended (timed, follow-up).</>
-          ) : (
-            <>
-              &ldquo;{card?.decision}&rdquo;, from {card?.sessionName}. Explain it again in your
-              next review, then defend it again.
-            </>
-          )}
-        </p>
+        <p className="type-body text-text-2">{summary}</p>
       </div>
       {result && (
         <Stat>

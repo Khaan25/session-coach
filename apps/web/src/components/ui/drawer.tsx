@@ -49,7 +49,7 @@ function Drawer({
     defaultOpen,
     onOpenChange,
   });
-  const hasSnapPoints = snapPoints != null && snapPoints.length > 0;
+  const hasSnapPoints = snapPoints !== null && snapPoints !== undefined && snapPoints.length > 0;
   const locks = open && modal === true;
   const contextValue = React.useMemo(
     () => ({ hasSnapPoints, modal, locks, showSwipeHandle, swipeDirection }),

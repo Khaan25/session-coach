@@ -4,9 +4,9 @@
 
 import { wordCount } from "../pipeline/evidence.ts";
 
-const WORD = /[a-z0-9]{3,}/g;
+const WORD = /[a-z0-9]{3,}/gu;
 
-const words = (text: string) => new Set(text.toLowerCase().match(WORD) ?? []);
+const words = (text: string) => new Set(text.toLowerCase().match(WORD));
 
 /**
  * Grades by word overlap with the model answer: at least 60% of its words scores 2, at least 25% scores 1, else 0.
@@ -25,7 +25,12 @@ export function fakeGrade(data: {
   const answer = words(`${String(data.answer ?? "")} ${String(data.follow_up_answer ?? "")}`);
   const hits = [...key].filter((word) => answer.has(word)).length;
   const ratio = key.size === 0 ? 0 : hits / key.size;
-  const score = ratio >= 0.6 ? 2 : ratio >= 0.25 ? 1 : 0;
+  let score: 0 | 1 | 2 = 0;
+  if (ratio >= 0.6) {
+    score = 2;
+  } else if (ratio >= 0.25) {
+    score = 1;
+  }
   return {
     score,
     missing: score === 2 ? "" : `FAKE: your answer covered ${hits} of ${key.size} key words.`,
@@ -35,7 +40,7 @@ export function fakeGrade(data: {
 /** The most cards the fake returns: the real limit is 5, 3 is enough to click through. */
 const FAKE_CARDS = 3;
 
-const WHITESPACE = /\s+/;
+const WHITESPACE = /\s+/u;
 
 /**
  * Extracts one card per prompt or reply of at least 5 words, up to 3, quoting that event's first 12 words. The quote is
@@ -55,14 +60,18 @@ export function fakeExtract(data: { events?: unknown }) {
   const title = opening === "" ? "FAKE: a session with no prompt" : `FAKE: ${opening}`;
   const decisions = events
     .flatMap((event: { id?: unknown; kind?: unknown; text?: unknown }) => {
-      if (event.kind !== "prompt" && event.kind !== "reply") return [];
+      if (event.kind !== "prompt" && event.kind !== "reply") {
+        return [];
+      }
       const quote = String(event.text ?? "")
         .trim()
         .split(WHITESPACE)
         .slice(0, 12)
         .join(" ");
       // The same word count `checkEvidence` uses, so punctuation-only tokens don't make a card it then drops.
-      if (typeof event.id !== "string" || wordCount(quote) < 5) return [];
+      if (typeof event.id !== "string" || wordCount(quote) < 5) {
+        return [];
+      }
       return [{ id: event.id, quote }];
     })
     .slice(0, FAKE_CARDS)
@@ -97,7 +106,11 @@ export function fakeFollowUp(data: { question?: unknown }) {
  */
 export function fakeModel(task: string, data: Record<string, unknown>): unknown {
   // A defense's follow-up rides the grade task, told apart by `mode`; every other grade call is a plain grade.
-  if (task === "grade") return data.mode === "follow_up" ? fakeFollowUp(data) : fakeGrade(data);
-  if (task === "extract") return fakeExtract(data);
+  if (task === "grade") {
+    return data.mode === "follow_up" ? fakeFollowUp(data) : fakeGrade(data);
+  }
+  if (task === "extract") {
+    return fakeExtract(data);
+  }
   throw new Error(`The fake model provider has no "${task}"`);
 }

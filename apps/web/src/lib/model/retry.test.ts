@@ -12,7 +12,7 @@ const http = (status: number, retryAfter: string | null = null) =>
   new ProviderHttpError("groq", status, retryAfter);
 
 test("a 429 waits for retry-after seconds, capped", () => {
-  assert.equal(retryWaitMs(http(429, "3")), 3_000);
+  assert.equal(retryWaitMs(http(429, "3")), 3000);
   assert.equal(retryWaitMs(http(429, "0")), 0);
   assert.equal(retryWaitMs(http(429, "600")), MAX_RETRY_WAIT_MS);
 });
@@ -36,8 +36,9 @@ test("a 429 with no usable retry-after waits the default", () => {
 });
 
 test("other 4xx answers are not retried", () => {
-  for (const status of [400, 401, 403, 404, 413, 422])
+  for (const status of [400, 401, 403, 404, 413, 422]) {
     assert.equal(retryWaitMs(http(status)), null);
+  }
 });
 
 test("5xx, timeouts and non-JSON output wait the default", () => {
@@ -54,5 +55,5 @@ test("sleep rejects as soon as its signal aborts", async () => {
   const waiting = sleep(60_000, stop.signal);
   stop.abort();
   await assert.rejects(waiting, { name: "AbortError" });
-  assert.ok(Date.now() - started < 1_000);
+  assert.ok(Date.now() - started < 1000);
 });

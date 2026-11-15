@@ -32,7 +32,7 @@ export function ReviewHeader() {
 
 /** Today's queue: each card's decision and session, never its why. A header row with the count and Start, then one list. */
 export function QueueList({ queue }: { queue: QueueCard[] }) {
-  const first = queue[0];
+  const [first] = queue;
   return (
     <div className="flex flex-col gap-3">
       <div className="flex min-h-(--row) items-center justify-between gap-3">
@@ -54,7 +54,6 @@ export function QueueList({ queue }: { queue: QueueCard[] }) {
       <ItemGroup>
         {queue.map((card) => (
           // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-          // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
           <Item key={card.id} role="listitem">
             <ItemContent>
               {/* The session rides inline after the decision; ItemTitle drops it on a narrow row. */}

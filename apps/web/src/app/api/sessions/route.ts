@@ -13,10 +13,10 @@ import { MAX_UPLOAD_BYTES } from "@session-coach/shared/limits";
 import { uploadRequestSchema } from "@session-coach/shared/upload";
 import { NextResponse } from "next/server";
 
-import { requireCliUser, serverError, UNIQUE_VIOLATION } from "@/lib/api/http";
+import { UNIQUE_VIOLATION, requireCliUser, serverError } from "@/lib/api/http";
 import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
 import { isStuck } from "@/lib/sessions/stuck";
-import { rawPathFor, SESSIONS_BUCKET } from "@/lib/sessions/upload";
+import { SESSIONS_BUCKET, rawPathFor } from "@/lib/sessions/upload";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -29,7 +29,9 @@ async function signedUploadUrl(admin: ReturnType<typeof createAdminClient>, path
   const { data, error } = await admin.storage
     .from(SESSIONS_BUCKET)
     .createSignedUploadUrl(path, { upsert: true });
-  if (error) throw new Error(`createSignedUploadUrl: ${error.message}`);
+  if (error) {
+    throw new Error(`createSignedUploadUrl: ${error.message}`);
+  }
   return data.signedUrl;
 }
 
@@ -47,7 +49,9 @@ async function signedUploadUrl(admin: ReturnType<typeof createAdminClient>, path
 export async function POST(request: Request) {
   try {
     const userId = await requireCliUser(request);
-    if (userId instanceof NextResponse) return userId;
+    if (userId instanceof NextResponse) {
+      return userId;
+    }
 
     const body: unknown = await request.json().catch(() => null);
     const parsed = uploadRequestSchema.safeParse(body);
@@ -64,13 +68,16 @@ export async function POST(request: Request) {
     }
     // After validation, so a malformed request doesn't spend the learner's budget.
     const limited = await userRateLimit("push", userId);
-    if (limited) return tooManyRequests(limited);
+    if (limited) {
+      return tooManyRequests(limited);
+    }
 
     const admin = createAdminClient();
     const rawPath = rawPathFor(userId, meta.external_id);
     // The URL depends only on the path, so it is signed while the row is written. A processed repeat never awaits it,
     // so a signing failure can't turn its 409 into a 500; the empty catch only marks that rejection handled.
     const uploadUrl = signedUploadUrl(admin, rawPath);
+    // oxlint-disable-next-line promise/prefer-await-to-then, no-empty-function -- marks the rejection handled without awaiting it
     uploadUrl.catch(() => {});
     const { data: created, error: insertError } = await admin
       .from("sessions")
@@ -85,7 +92,9 @@ export async function POST(request: Request) {
         .eq("user_id", userId)
         .eq("external_id", meta.external_id)
         .single();
-      if (readError) throw new Error(readError.message);
+      if (readError) {
+        throw new Error(readError.message);
+      }
       if (existing.status === "pending") {
         // Restarts the stuck clock for this upload attempt (see isStuck), so the sweep can't fail it mid-upload.
         const { error: touchError } = await admin
@@ -93,11 +102,14 @@ export async function POST(request: Request) {
           .update({ processing_started_at: new Date().toISOString() })
           .eq("id", existing.id)
           .eq("status", "pending");
-        if (touchError) throw new Error(touchError.message);
+        if (touchError) {
+          throw new Error(touchError.message);
+        }
         return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 409 });
       }
-      if (existing.status !== "failed" && !isStuck(existing, new Date()))
+      if (existing.status !== "failed" && !isStuck(existing, new Date())) {
         return NextResponse.json({ id: existing.id }, { status: 409 });
+      }
 
       // Compare-and-set on the status and run read, so of two racing pushes only one resets it and clears its cards,
       // and a push that read an older run can't reset a newer one.
@@ -117,23 +129,31 @@ export async function POST(request: Request) {
           ? reset.eq("processing_started_at", existing.processing_started_at)
           : reset.is("processing_started_at", null)
       ).select("id");
-      if (resetError) throw new Error(resetError.message);
-      if (resetRows.length === 0) return NextResponse.json({ id: existing.id }, { status: 409 });
+      if (resetError) {
+        throw new Error(resetError.message);
+      }
+      if (resetRows.length === 0) {
+        return NextResponse.json({ id: existing.id }, { status: 409 });
+      }
       // After the claim, so a losing push never deletes cards; before answering, so the new run can't start first.
       const { error: cardsError } = await admin
         .from("decision_cards")
         .delete()
         .eq("session_id", existing.id);
-      if (cardsError) throw new Error(cardsError.message);
+      if (cardsError) {
+        throw new Error(cardsError.message);
+      }
       return NextResponse.json({ id: existing.id, upload_url: await uploadUrl }, { status: 201 });
     }
-    if (insertError) throw new Error(insertError.message);
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
 
     return NextResponse.json({ id: created.id, upload_url: await uploadUrl }, { status: 201 });
-  } catch (err) {
+  } catch (error) {
     return serverError(
       "[api/sessions] create",
-      err,
+      error,
       "The session couldn't be registered. Try again.",
     );
   }

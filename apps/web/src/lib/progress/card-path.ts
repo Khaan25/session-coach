@@ -1,5 +1,6 @@
 import type { Score } from "../../components/app/score-badge.tsx";
-import { nextReview, type Step } from "../review/schedule.ts";
+import { nextReview } from "../review/schedule.ts";
+import type { Step } from "../review/schedule.ts";
 import { localDate } from "../sessions/rows.ts";
 
 // /progress teaches the schedule through one of the learner's own cards: its answers replayed through `nextReview`, the
@@ -50,6 +51,8 @@ const dayLabel = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+const format = (date: string) => dayLabel.format(new Date(`${date}T00:00:00Z`));
+
 /**
  * Replays the card's answers through the schedule, so each stop says why the card moved where it did.
  *
@@ -65,7 +68,6 @@ export function cardPath({
   now,
 }: CardPathInput): CardPath {
   const today = localDate(timeZone, now);
-  const format = (date: string) => dayLabel.format(new Date(`${date}T00:00:00Z`));
   const label = (date: string) => (date === today ? "Today" : format(date));
 
   const stops: PathStop[] = [
@@ -80,17 +82,22 @@ export function cardPath({
     const step = Math.min(Math.max(answer.review_step, 0), 3) as Step;
     const day = localDate(timeZone, new Date(answer.created_at));
     const after = nextReview(step, answer.score, day, answer.skipped);
-    const due = !after.due_on ? "" : after.due_on === today ? "today" : format(after.due_on);
+    let due = "";
+    if (after.due_on) {
+      due = after.due_on === today ? "today" : format(after.due_on);
+    }
     let outcome: string;
-    if (after.mastered) outcome = "Explained on day 11: you own this decision.";
-    else if (answer.skipped)
+    if (after.mastered) {
+      outcome = "Explained on day 11: you own this decision.";
+    } else if (answer.skipped) {
       outcome = `You said you don't know yet, so it keeps its step: due ${due}.`;
-    else if (step === 0)
+    } else if (step === 0) {
       outcome = `${SCORE_NAMES[answer.score]}, so it starts on day 1: due ${due}.`;
-    else if (answer.score === 2)
+    } else if (answer.score === 2) {
       outcome = `Explained, so it moves up to ${STEP_NAMES[after.step].toLowerCase()}: due ${due}.`;
-    else
+    } else {
       outcome = `${SCORE_NAMES[answer.score]}, so it goes back to ${STEP_NAMES[after.step].toLowerCase()}: due ${due}.`;
+    }
     stops.push({
       date: label(day),
       what: REVIEW_NAMES[step],
@@ -100,7 +107,9 @@ export function cardPath({
     });
   }
 
-  if (review.mastered || !review.due_on) return { decision, session, stops, next: null };
+  if (review.mastered || !review.due_on) {
+    return { decision, session, stops, next: null };
+  }
   const step = Math.min(Math.max(review.step, 1), 3);
   const back = STEP_NAMES[Math.max(step - 1, 1)].toLowerCase();
   const dueToday = review.due_on <= today;

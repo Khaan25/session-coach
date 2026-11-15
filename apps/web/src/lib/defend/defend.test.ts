@@ -3,12 +3,12 @@ import { test } from "node:test";
 
 import {
   ANSWER_SECONDS,
+  FOLLOW_UP_SECONDS,
+  GRACE_MS,
   deadlineOf,
   defendAnswerSchema,
   defendGradeData,
   followUpData,
-  FOLLOW_UP_SECONDS,
-  GRACE_MS,
   isLate,
   openWindow,
   parseFollowUp,
@@ -25,7 +25,7 @@ test("the answer window is 180 s and the follow-up 120 s", () => {
 });
 
 test("an answer is on time until the deadline plus 5 s, and late after", () => {
-  assert.equal(GRACE_MS, 5_000);
+  assert.equal(GRACE_MS, 5000);
   assert.equal(isLate(start, ANSWER_SECONDS, at(0)), false);
   assert.equal(isLate(start, ANSWER_SECONDS, at(180)), false);
   assert.equal(isLate(start, ANSWER_SECONDS, at(185)), false);
@@ -48,8 +48,9 @@ test("openWindow gives the clock an unfinished defense is on", () => {
     openWindow({ status: "follow_up", started_at: start, follow_up_started_at: followUpAt }),
     { startedAt: followUpAt, seconds: 120 },
   );
-  for (const status of ["finished", "expired"])
+  for (const status of ["finished", "expired"]) {
     assert.equal(openWindow({ status, started_at: start, follow_up_started_at: followUpAt }), null);
+  }
   assert.equal(
     openWindow({ status: "follow_up", started_at: start, follow_up_started_at: null }),
     null,
@@ -116,7 +117,7 @@ test("the prompt data carries the card and answers but no ids", () => {
     followUpAnswer: "yes",
   });
   assert.equal(grade.mode, "defend_grade");
-  assert.deepEqual(Object.keys(grade).sort(), [
+  assert.deepEqual(Object.keys(grade).toSorted(), [
     "answer",
     "evidence",
     "follow_up_answer",

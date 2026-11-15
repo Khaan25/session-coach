@@ -58,7 +58,9 @@ export default function DesignSystemPage() {
 /** Checked per request, so a preview build promoted to production can't keep a baked-in answer. */
 async function ProductionGate() {
   await connection();
-  if (process.env.VERCEL_ENV === "production") notFound();
+  if (process.env.VERCEL_ENV === "production") {
+    notFound();
+  }
   return (
     <TooltipProvider>
       <main className="mx-auto flex w-full max-w-(--container) flex-col gap-12 px-(--gutter-sm) py-6 sm:px-(--gutter)">

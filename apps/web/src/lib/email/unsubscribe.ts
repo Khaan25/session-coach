@@ -28,7 +28,9 @@ export function unsubscribeTokenValid(
   token: string,
   secret: string | undefined,
 ): boolean {
-  if (!secret) return false;
+  if (!secret) {
+    return false;
+  }
   return constantTimeEqual(token, unsubscribeToken(userId, secret));
 }
 

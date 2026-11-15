@@ -16,7 +16,7 @@ test("a link's token checks out for its own learner only", () => {
   assert.equal(url.pathname, "/api/unsubscribe");
   assert.equal(url.searchParams.get("u"), id);
   const token = url.searchParams.get("t") ?? "";
-  assert.match(token, /^[\w-]{43}$/);
+  assert.match(token, /^[\w-]{43}$/u);
   assert.equal(unsubscribeTokenValid(id, token, "s3cret"), true);
   assert.equal(unsubscribeTokenValid(other, token, "s3cret"), false);
   assert.equal(unsubscribeTokenValid(id, token, "rotated"), false);

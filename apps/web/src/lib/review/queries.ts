@@ -6,8 +6,9 @@ import { sessionName } from "@/lib/sessions/name";
 import { localDate } from "@/lib/sessions/rows";
 import { createClient } from "@/lib/supabase/server";
 
-import { newCardsSince, type Step } from "./schedule";
-import { answeredSince, countAnsweredToday, DAILY_CAP, todayQueue } from "./today";
+import { newCardsSince } from "./schedule";
+import type { Step } from "./schedule";
+import { DAILY_CAP, answeredSince, countAnsweredToday, todayQueue } from "./today";
 
 // Learner reads through the RLS client: hidden cards and model_answer never come back. The caller passes the signed-in
 // learner's id, so access is decided before the query. The daily email cron, the dashboard banner and the queue share
@@ -28,7 +29,9 @@ async function learnerTimeZone(supabase: Supabase, userId: string) {
     .select("timezone")
     .eq("id", userId)
     .maybeSingle();
-  if (error) throw new Error(`learnerTimeZone: ${error.message}`);
+  if (error) {
+    throw new Error(`learnerTimeZone: ${error.message}`);
+  }
   return data?.timezone ?? "UTC";
 }
 
@@ -40,7 +43,8 @@ async function learnerTimeZone(supabase: Supabase, userId: string) {
  * @param now - The current time; defaults to now.
  */
 export async function dueTodayCount(userId: string, now = new Date()): Promise<number> {
-  return (await reviewQueue(userId, now)).length;
+  const queue = await reviewQueue(userId, now);
+  return queue.length;
 }
 
 /** One row of the review queue. `step` 0 is a card never answered. */
@@ -100,8 +104,12 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
       .gte("created_at", answeredSince(now))
       .overrideTypes<{ created_at: string }[], { merge: false }>(),
   ]);
-  if (recent.error) throw new Error(`reviewQueue: ${recent.error.message}`);
-  if (answers.error) throw new Error(`reviewQueue: ${answers.error.message}`);
+  if (recent.error) {
+    throw new Error(`reviewQueue: ${recent.error.message}`);
+  }
+  if (answers.error) {
+    throw new Error(`reviewQueue: ${answers.error.message}`);
+  }
   const today = localDate(timeZone, now);
   const due = await supabase
     .from("reviews")
@@ -112,7 +120,9 @@ export async function reviewQueue(userId: string, now: Date): Promise<QueueCard[
     .order("due_on")
     .order("card_id")
     .overrideTypes<{ step: Step; due_on: string; card: CardRow | null }[], { merge: false }>();
-  if (due.error) throw new Error(`reviewQueue: ${due.error.message}`);
+  if (due.error) {
+    throw new Error(`reviewQueue: ${due.error.message}`);
+  }
 
   const toQueue = (card: CardRow, step: Step, dueOn: string | null): QueueCard => ({
     id: card.id,
@@ -181,8 +191,12 @@ export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue>
       .overrideTypes<{ created_at: string }[], { merge: false }>(),
   ]);
   const today = localDate(timeZone, now);
-  if (cards.error) throw new Error(`emptyQueue: ${cards.error.message}`);
-  if (answers.error) throw new Error(`emptyQueue: ${answers.error.message}`);
+  if (cards.error) {
+    throw new Error(`emptyQueue: ${cards.error.message}`);
+  }
+  if (answers.error) {
+    throw new Error(`emptyQueue: ${answers.error.message}`);
+  }
   const answeredToday = countAnsweredToday(
     answers.data.map(({ created_at }) => created_at),
     timeZone,
@@ -198,7 +212,9 @@ export async function emptyQueue(userId: string, now: Date): Promise<EmptyQueue>
     .order("due_on")
     .limit(1)
     .maybeSingle();
-  if (next.error) throw new Error(`emptyQueue: ${next.error.message}`);
+  if (next.error) {
+    throw new Error(`emptyQueue: ${next.error.message}`);
+  }
   return {
     hasCards: (cards.count ?? 0) > 0,
     doneToday: answeredToday >= DAILY_CAP,
@@ -232,8 +248,12 @@ export async function getQuizCard(userId: string, cardId: string): Promise<QuizC
     .eq("user_id", userId)
     .maybeSingle()
     .overrideTypes<CardRow & { question: string }, { merge: false }>();
-  if (error) throw new Error(`getQuizCard: ${error.message}`);
-  if (!data) return null;
+  if (error) {
+    throw new Error(`getQuizCard: ${error.message}`);
+  }
+  if (!data) {
+    return null;
+  }
   return {
     id: data.id,
     decision: data.decision,

@@ -24,12 +24,12 @@ export function isStuck(
   }: { status: string; processing_started_at: string | null; created_at: string },
   now: Date,
 ): boolean {
-  const since =
-    status === "processing"
-      ? processing_started_at
-      : status === "pending"
-        ? (processing_started_at ?? created_at)
-        : null;
+  let since: string | null = null;
+  if (status === "processing") {
+    since = processing_started_at;
+  } else if (status === "pending") {
+    since = processing_started_at ?? created_at;
+  }
   return since !== null && now.getTime() - Date.parse(since) > STUCK_MS;
 }
 
@@ -59,7 +59,11 @@ export async function failStuckSessions(admin: SupabaseClient, now: Date): Promi
       )
       .select("id"),
   ]);
-  if (runs.error) throw new Error(runs.error.message);
-  if (uploads.error) throw new Error(uploads.error.message);
+  if (runs.error) {
+    throw new Error(runs.error.message);
+  }
+  if (uploads.error) {
+    throw new Error(uploads.error.message);
+  }
   return runs.data.length + uploads.data.length;
 }

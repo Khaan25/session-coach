@@ -43,7 +43,7 @@ const card = (
   decision,
   question,
   sessionId: `sample-${i}`,
-  sessionName: SAMPLE_SESSIONS[i === 2 ? 1 : 0]!.title ?? "",
+  sessionName: SAMPLE_SESSIONS[i === 2 ? 1 : 0].title ?? "",
   repo,
   step,
   dueOn: null,

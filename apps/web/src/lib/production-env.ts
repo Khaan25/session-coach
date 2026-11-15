@@ -11,16 +11,20 @@ export const EXAMPLE_SUPPORT_EMAIL = "support@example.com";
  * @returns One message per problem; empty outside Vercel production or when everything is set.
  */
 export function productionEnvProblems(env: Record<string, string | undefined>): string[] {
-  if (env.VERCEL_ENV !== "production") return [];
+  if (env.VERCEL_ENV !== "production") {
+    return [];
+  }
   const problems: string[] = [];
-  if (!env.NEXT_PUBLIC_SITE_URL?.trim())
+  if (!env.NEXT_PUBLIC_SITE_URL?.trim()) {
     problems.push(
       "NEXT_PUBLIC_SITE_URL is unset, so robots.txt and sitemap.xml would name localhost.",
     );
+  }
   const email = env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim().toLowerCase();
-  if (!email || email.endsWith("@example.com"))
+  if (!email || email.endsWith("@example.com")) {
     problems.push(
       "NEXT_PUBLIC_SUPPORT_EMAIL is unset or an example.com address, so /support and /delete-account would show an inbox no one reads.",
     );
+  }
   return problems;
 }

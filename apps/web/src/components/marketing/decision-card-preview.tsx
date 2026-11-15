@@ -15,7 +15,7 @@ import {
 // (model_answer) stays off the page, as it does for learners. Two blank cards behind it make the stack a deck.
 // Hidden cards never reach a learner, so they are not counted or shown.
 const cards = sample.cards.filter((visible) => !visible.hidden);
-const card = cards[0];
+const [card] = cards;
 const { session } = sample;
 const reviewDays = [1, 4, 11];
 

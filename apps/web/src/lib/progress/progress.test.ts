@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { computeProgress, type ProgressInput } from "./progress.ts";
+import { computeProgress } from "./progress.ts";
+import type { ProgressInput } from "./progress.ts";
 
 const now = new Date("2026-10-29T12:00:00Z");
 
@@ -18,15 +19,21 @@ const base: ProgressInput = {
     { card_id: "b", step: 1, mastered: false },
     { card_id: "c", step: 2, mastered: false },
     { card_id: "d", step: 3, mastered: false },
-    { card_id: "hidden", step: 3, mastered: true }, // not a visible card: ignored
+    // not a visible card: ignored
+    { card_id: "hidden", step: 3, mastered: true },
   ],
   answers: [
-    { card_id: "a", score: 2, created_at: "2026-10-28T10:00:00Z" }, // mastered and scored 2: counted once
-    { card_id: "c", score: 2, created_at: "2026-10-25T10:00:00Z" }, // scored 2 this week
-    { card_id: "d", score: 2, created_at: "2026-10-20T10:00:00Z" }, // scored 2, but 9 days ago
+    // mastered and scored 2: counted once
+    { card_id: "a", score: 2, created_at: "2026-10-28T10:00:00Z" },
+    // scored 2 this week
+    { card_id: "c", score: 2, created_at: "2026-10-25T10:00:00Z" },
+    // scored 2, but 9 days ago
+    { card_id: "d", score: 2, created_at: "2026-10-20T10:00:00Z" },
     { card_id: "b", score: 1, created_at: "2026-10-29T08:00:00Z" },
-    { card_id: "b", score: 0, created_at: "2026-09-01T08:00:00Z" }, // outside the 30 days
-    { card_id: "hidden", score: 2, created_at: "2026-10-29T08:00:00Z" }, // ignored
+    // outside the 30 days
+    { card_id: "b", score: 0, created_at: "2026-09-01T08:00:00Z" },
+    // ignored
+    { card_id: "hidden", score: 2, created_at: "2026-10-29T08:00:00Z" },
   ],
   sessions: [
     { id: "s1", title: "Add RLS", repo: null, branch: null },
@@ -39,7 +46,8 @@ const base: ProgressInput = {
 
 test("headline: mastered cards plus cards scored 2 in the last 7 days, each once", () => {
   const p = computeProgress(base);
-  assert.equal(p.canStillExplain, 2); // a (mastered, also scored 2) and c
+  // a (mastered, also scored 2) and c
+  assert.equal(p.canStillExplain, 2);
   assert.equal(p.totalCards, 5);
 });
 

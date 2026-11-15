@@ -1,4 +1,4 @@
-import { AuthEmail, AuthText } from "../auth-layout";
+import { AuthEmail, AuthText } from "@/emails/auth-layout";
 
 // Reset password. On {{ .SiteURL }} for the reason in confirmation.tsx.
 export default function RecoveryEmail() {

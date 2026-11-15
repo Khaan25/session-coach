@@ -7,13 +7,13 @@ import { NextResponse } from "next/server";
 
 import {
   ANSWER_SECONDS,
+  UNFINISHED,
   deadlineOf,
   isLate,
   openWindow,
   pickCard,
-  UNFINISHED,
 } from "@/lib/defend/defend";
-import { requireUser, serverError, UNIQUE_VIOLATION } from "@/lib/api/http";
+import { UNIQUE_VIOLATION, requireUser, serverError } from "@/lib/api/http";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sessionName } from "@/lib/sessions/name";
 
@@ -33,7 +33,9 @@ import { sessionName } from "@/lib/sessions/name";
  */
 export async function POST() {
   const signedIn = await requireUser();
-  if (signedIn instanceof NextResponse) return signedIn;
+  if (signedIn instanceof NextResponse) {
+    return signedIn;
+  }
   const { user } = signedIn;
 
   try {
@@ -46,7 +48,9 @@ export async function POST() {
       .eq("user_id", user.id)
       .in("status", UNFINISHED)
       .maybeSingle();
-    if (open.error) throw open.error;
+    if (open.error) {
+      throw open.error;
+    }
     if (open.data) {
       const window = openWindow(open.data);
       if (window && !isLate(window.startedAt, window.seconds, now)) {
@@ -64,7 +68,9 @@ export async function POST() {
         .update({ status: "expired" })
         .eq("id", open.data.id)
         .in("status", UNFINISHED);
-      if (expired.error) throw expired.error;
+      if (expired.error) {
+        throw expired.error;
+      }
     }
 
     // shortcut: PostgREST returns at most 1,000 rows a read, far above the 5 answers a day; page it if that changes.
@@ -73,15 +79,22 @@ export async function POST() {
       .select("card_id")
       .eq("user_id", user.id)
       .eq("score", 2);
-    if (answered.error) throw answered.error;
+    if (answered.error) {
+      throw answered.error;
+    }
     const answeredIds = [...new Set(answered.data.map(({ card_id }) => card_id))];
-    const cards = answeredIds.length
-      ? await admin
-          .from("decision_cards")
-          .select("id, question, decision, user_id, hidden, session:sessions(title, repo, branch)")
-          .in("id", answeredIds)
-      : { data: [], error: null };
-    if (cards.error) throw cards.error;
+    const cards =
+      answeredIds.length > 0
+        ? await admin
+            .from("decision_cards")
+            .select(
+              "id, question, decision, user_id, hidden, session:sessions(title, repo, branch)",
+            )
+            .in("id", answeredIds)
+        : { data: [], error: null };
+    if (cards.error) {
+      throw cards.error;
+    }
     const visible = cards.data.filter((card) => card.user_id === user.id && !card.hidden);
     const picked = pickCard(visible.map((card) => card.id));
     const card = visible.find((candidate) => candidate.id === picked);
@@ -104,7 +117,9 @@ export async function POST() {
         { status: 409 },
       );
     }
-    if (created.error) throw created.error;
+    if (created.error) {
+      throw created.error;
+    }
 
     return NextResponse.json(
       {

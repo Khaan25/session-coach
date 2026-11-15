@@ -1,18 +1,19 @@
 import "server-only";
 
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { NO_STORE, requireUser, serverError } from "@/lib/api/http";
 import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  codeState,
   DEVICE_COLUMNS,
+  codeState,
   isSameOrigin,
   normalizeUserCode,
   userCodeSchema,
-  type DeviceRow,
 } from "@/lib/tokens/device";
+import type { DeviceRow } from "@/lib/tokens/device";
 
 /**
  * One device code by the user code a learner typed, with the service role (learners can't read the table).
@@ -26,7 +27,9 @@ export async function findDeviceCode(userCode: string): Promise<DeviceRow | null
     .select(DEVICE_COLUMNS)
     .eq("user_code", userCode)
     .maybeSingle();
-  if (error) throw new Error(`findDeviceCode: ${error.message}`);
+  if (error) {
+    throw new Error(`findDeviceCode: ${error.message}`);
+  }
   return data;
 }
 
@@ -60,7 +63,9 @@ export async function decideDeviceCode(request: NextRequest, decision: "approve"
   }
 
   const signedIn = await requireUser(NO_STORE);
-  if (signedIn instanceof NextResponse) return signedIn;
+  if (signedIn instanceof NextResponse) {
+    return signedIn;
+  }
   const { user } = signedIn;
 
   const body: unknown = await request.json().catch(() => null);
@@ -74,7 +79,9 @@ export async function decideDeviceCode(request: NextRequest, decision: "approve"
   }
 
   const limited = await userRateLimit("deviceDecide", user.id);
-  if (limited) return tooManyRequests(limited);
+  if (limited) {
+    return tooManyRequests(limited);
+  }
 
   try {
     const now = new Date();
@@ -90,7 +97,9 @@ export async function decideDeviceCode(request: NextRequest, decision: "approve"
       .is("approved_at", null)
       .is("denied_at", null)
       .select("id");
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
     if (data.length === 1) {
       return NextResponse.json(
         { status: decision === "approve" ? "approved" : "denied" },
@@ -104,7 +113,7 @@ export async function decideDeviceCode(request: NextRequest, decision: "approve"
       { error: refused.error, field: "userCode" },
       { status: refused.status, headers: NO_STORE },
     );
-  } catch (err) {
-    return serverError(route, err, "That couldn't be saved. Try again.", NO_STORE);
+  } catch (error) {
+    return serverError(route, error, "That couldn't be saved. Try again.", NO_STORE);
   }
 }

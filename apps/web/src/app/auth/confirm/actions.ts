@@ -17,11 +17,13 @@ import { createClient } from "@/lib/supabase/server";
 export async function confirmEmail(formData: FormData): Promise<void> {
   const tokenHash = formData.get("token_hash");
   const type = formData.get("type");
-  if (typeof tokenHash !== "string" || !tokenHash || !isOtpType(type))
+  if (typeof tokenHash !== "string" || !tokenHash || !isOtpType(type)) {
     redirect("/auth/error?code=invalid_link");
+  }
 
   // Checked before the token is spent, like the other auth actions: without it `next` can't be checked.
-  const origin = (await headers()).get("origin");
+  const requestHeaders = await headers();
+  const origin = requestHeaders.get("origin");
   if (!origin) {
     console.error("auth/confirmEmail", "missing Origin header");
     redirect("/auth/error?code=confirm_failed");
@@ -30,7 +32,9 @@ export async function confirmEmail(formData: FormData): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
   if (error) {
-    if (error.code !== "otp_expired") console.error("auth/confirmEmail", error);
+    if (error.code !== "otp_expired") {
+      console.error("auth/confirmEmail", error);
+    }
     redirect(
       `/auth/error?code=${error.code === "otp_expired" ? "link_expired" : "confirm_failed"}`,
     );
@@ -51,9 +55,12 @@ export async function confirmEmail(formData: FormData): Promise<void> {
  */
 export async function confirmEmailCode(formData: FormData): Promise<void> {
   const code = formData.get("code");
-  if (typeof code !== "string" || !code) redirect("/auth/error?code=invalid_link");
+  if (typeof code !== "string" || !code) {
+    redirect("/auth/error?code=invalid_link");
+  }
 
-  const origin = (await headers()).get("origin");
+  const requestHeaders = await headers();
+  const origin = requestHeaders.get("origin");
   if (!origin) {
     console.error("auth/confirmEmailCode", "missing Origin header");
     redirect("/auth/error?code=confirm_failed");
@@ -64,13 +71,15 @@ export async function confirmEmailCode(formData: FormData): Promise<void> {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     const otherBrowser = error.code === "pkce_code_verifier_not_found";
-    if (!otherBrowser) console.error("auth/confirmEmailCode", error);
-    const reason =
-      next === "/update-password"
-        ? "reset_failed"
-        : otherBrowser
-          ? "confirmed_sign_in"
-          : "confirm_failed";
+    if (!otherBrowser) {
+      console.error("auth/confirmEmailCode", error);
+    }
+    let reason = "confirm_failed";
+    if (next === "/update-password") {
+      reason = "reset_failed";
+    } else if (otherBrowser) {
+      reason = "confirmed_sign_in";
+    }
     redirect(`/auth/error?code=${reason}`);
   }
 

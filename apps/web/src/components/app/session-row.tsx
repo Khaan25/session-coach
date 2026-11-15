@@ -33,7 +33,6 @@ export function SessionRow({ session, cardCount, now }: SessionRowProps) {
   const when = formatRelativeTime(created_at, now);
   return (
     // Its list (an ItemGroup, or the dashboard card's rows) is a div with role="list", so the row takes the matching role, not an li.
-    // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <Item role="listitem" data-status={status === "failed" ? "fail" : undefined}>
       <ItemContent>
         <ItemTitle>

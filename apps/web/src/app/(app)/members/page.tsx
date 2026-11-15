@@ -28,7 +28,9 @@ export default function MembersPage() {
 async function Members() {
   const user = await getCurrentUser();
   // Signed out: shows nothing. proxy.ts should send the visitor to sign-in first.
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
   const profile = await getSettingsProfile().catch((error: unknown) => {
     console.error("[members/getSettingsProfile]", error);
     return null;

@@ -26,6 +26,8 @@ export async function listTokens(userId: string): Promise<TokenRow[]> {
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .overrideTypes<TokenRow[], { merge: false }>();
-  if (error) throw new Error(`listTokens: ${error.message}`);
+  if (error) {
+    throw new Error(`listTokens: ${error.message}`);
+  }
   return data;
 }

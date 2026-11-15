@@ -25,13 +25,21 @@ import { Button } from "@/components/ui/button";
 
 type CopyState = "idle" | "fetching" | "copied" | "failed";
 
+const GLYPHS = {
+  idle: CopyIcon,
+  fetching: CircleNotchIcon,
+  copied: CheckIcon,
+  failed: WarningIcon,
+} as const;
+
 /** Write a value that is still being fetched, keeping the press's user activation (WebKit). */
 async function writeFetched(result: Promise<string>): Promise<string> {
   let text = "";
-  const blob = result.then((t) => {
-    text = t;
-    return new Blob([t], { type: "text/plain" });
-  });
+  // An async IIFE, not an await: the clipboard write below has to start inside the press.
+  const blob = (async () => {
+    text = await result;
+    return new Blob([text], { type: "text/plain" });
+  })();
   const canWrite =
     typeof ClipboardItem !== "undefined" && typeof navigator.clipboard?.write === "function";
   if (canWrite) {
@@ -81,7 +89,7 @@ function CopyButton({
   disabled,
   ...props
 }: CopyButtonProps) {
-  const [live, setState] = React.useState<CopyState>("idle");
+  const [live, setLive] = React.useState<CopyState>("idle");
   const [announcement, setAnnouncement] = React.useState("");
   const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const frame = React.useRef(0);
@@ -112,32 +120,28 @@ function CopyButton({
         await navigator.clipboard.writeText(text);
       } else {
         const writing = writeFetched(result);
-        setState("fetching");
+        setLive("fetching");
         text = await writing;
       }
       copied = text;
-      setState("copied");
+      setLive("copied");
       announce(label ? `${label} copied` : "Copied");
     } catch {
-      setState("failed");
+      setLive("failed");
       announce("Could not copy. Select the text and copy it by hand.");
     }
     timer.current = setTimeout(() => {
-      setState("idle");
+      setLive("idle");
       setAnnouncement("");
     }, timeout);
     // Outside the try: a throwing callback is the caller's error, not a failed copy.
-    if (copied !== undefined) onCopy?.(copied);
+    if (copied !== undefined) {
+      onCopy?.(copied);
+    }
   };
 
   const fetching = state === "fetching";
-  const Glyph = fetching
-    ? CircleNotchIcon
-    : state === "copied"
-      ? CheckIcon
-      : state === "failed"
-        ? WarningIcon
-        : CopyIcon;
+  const Glyph = fetching ? CircleNotchIcon : GLYPHS[state];
   const name = label ? `Copy ${label}` : "Copy";
 
   return (

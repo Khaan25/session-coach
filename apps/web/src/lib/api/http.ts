@@ -27,7 +27,9 @@ export async function requireUser(headers?: HeadersInit) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401, headers });
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in" }, { status: 401, headers });
+  }
   return { supabase, user };
 }
 
@@ -39,7 +41,9 @@ export async function requireUser(headers?: HeadersInit) {
  */
 export async function requireCliUser(request: Request): Promise<string | NextResponse> {
   const token = bearerToken(request.headers.get("authorization"));
-  if (!token) return NextResponse.json({ error: "Missing CLI token" }, { status: 401 });
+  if (!token) {
+    return NextResponse.json({ error: "Missing CLI token" }, { status: 401 });
+  }
   const userId = await userForToken(token);
   if (!userId) {
     return NextResponse.json(

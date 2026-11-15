@@ -50,11 +50,15 @@ type EvidenceItem = { quote?: unknown; file?: unknown; verified?: unknown };
 
 /** The first verified quote and its file, or null when there is none. */
 function verifiedQuote(evidence: unknown): { quote: string; file: string | null } | null {
-  if (!Array.isArray(evidence)) return null;
+  if (!Array.isArray(evidence)) {
+    return null;
+  }
   const item = (evidence as EvidenceItem[]).find(
     (e) => e?.verified === true && typeof e.quote === "string" && e.quote.length > 0,
   );
-  if (!item) return null;
+  if (!item) {
+    return null;
+  }
   return { quote: item.quote as string, file: typeof item.file === "string" ? item.file : null };
 }
 
@@ -76,18 +80,26 @@ export function shapeReport(
   const shown = new Set(shownRepos);
   const defendedOn = new Map<string, string>();
   for (const { card_id, finished_at } of defenses) {
-    if (!finished_at) continue;
+    if (!finished_at) {
+      continue;
+    }
     const seen = defendedOn.get(card_id);
-    if (!seen || finished_at > seen) defendedOn.set(card_id, finished_at);
+    if (!seen || finished_at > seen) {
+      defendedOn.set(card_id, finished_at);
+    }
   }
 
   const byRepo = new Map<string, ReportDecision[]>();
   for (const row of owned) {
-    const card = row.card;
+    const { card } = row;
     const repo = card?.session?.repo;
-    if (!card || card.hidden || card.flagged || !repo || !shown.has(repo)) continue;
+    if (!card || card.hidden || card.flagged || !repo || !shown.has(repo)) {
+      continue;
+    }
     const evidence = verifiedQuote(card.evidence);
-    if (!evidence) continue;
+    if (!evidence) {
+      continue;
+    }
     const decisions = byRepo.get(repo) ?? [];
     decisions.push({
       decision: card.decision,
@@ -105,9 +117,9 @@ export function shapeReport(
       owned: decisions.length,
       defended: decisions.filter((d) => d.defendedOn).length,
       // Newest first.
-      decisions: decisions.sort((a, b) => b.ownedOn.localeCompare(a.ownedOn)),
+      decisions: decisions.toSorted((a, b) => b.ownedOn.localeCompare(a.ownedOn)),
     }))
-    .sort((a, b) => b.owned - a.owned || a.repo.localeCompare(b.repo));
+    .toSorted((a, b) => b.owned - a.owned || a.repo.localeCompare(b.repo));
 
   return {
     name,

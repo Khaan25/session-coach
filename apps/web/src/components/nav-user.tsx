@@ -17,7 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useTheme, type Theme } from "@/components/theme/theme-provider";
+import { useTheme } from "@/components/theme/theme-provider";
+import type { Theme } from "@/components/theme/theme-provider";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -91,6 +92,7 @@ export function NavUser({ user }: { user: { name: string; detail: string; initia
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
+              // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the element is Base UI's `render` target; its label is the children the parent component passes in
               render={<button type="submit" form="sidebar-sign-out" className="w-full" />}
             >
               <SignOutIcon />

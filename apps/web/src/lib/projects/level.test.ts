@@ -6,9 +6,12 @@ import { questionLevelSchema } from "@session-coach/shared/project";
 import { QUESTION_LEVEL_OPTIONS, levelOrDefault } from "./level.ts";
 
 test("a stored level maps to itself; anything else is simple", () => {
-  for (const level of questionLevelSchema.options) assert.equal(levelOrDefault(level), level);
-  for (const value of [undefined, null, "", "medium", 2])
+  for (const level of questionLevelSchema.options) {
+    assert.equal(levelOrDefault(level), level);
+  }
+  for (const value of [undefined, null, "", "medium", 2]) {
     assert.equal(levelOrDefault(value), "simple");
+  }
 });
 
 test("the picker offers every level once, in order, each with an example", () => {

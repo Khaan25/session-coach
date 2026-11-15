@@ -27,7 +27,9 @@ export async function updateProfile(input: unknown): Promise<{ error: string | n
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims.sub;
-  if (!userId) return { error: "You're signed out. Sign in and try again." };
+  if (!userId) {
+    return { error: "You're signed out. Sign in and try again." };
+  }
 
   const { data, error } = await supabase
     .from("profiles")
@@ -43,7 +45,9 @@ export async function updateProfile(input: unknown): Promise<{ error: string | n
     const { error: markError } = await supabase.auth.updateUser({
       data: { [TIMEZONE_CHOSEN]: true },
     });
-    if (markError) console.error("[settings/updateProfile] mark timezone", markError.message);
+    if (markError) {
+      console.error("[settings/updateProfile] mark timezone", markError.message);
+    }
   }
 
   revalidatePath("/settings");
@@ -61,7 +65,9 @@ export async function setProjectLevel(input: unknown): Promise<{ error: string |
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims.sub;
-  if (!userId) return { error: "You're signed out. Sign in and try again." };
+  if (!userId) {
+    return { error: "You're signed out. Sign in and try again." };
+  }
 
   const result = await saveProjectLevel(supabase, userId, input);
   if (!result.error) {
@@ -87,14 +93,18 @@ const TIMEZONE_CHOSEN = "timezone_chosen";
  */
 export async function adoptBrowserTimezone(timezone: unknown): Promise<void> {
   const parsed = profileUpdateSchema.pick({ timezone: true }).required().safeParse({ timezone });
-  if (!parsed.success || parsed.data.timezone === "UTC") return;
+  if (!parsed.success || parsed.data.timezone === "UTC") {
+    return;
+  }
 
   const supabase = await createClient();
   // getUser, not getClaims: the token's user_metadata is stale until it refreshes, right after a save in Settings.
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user || user.user_metadata?.[TIMEZONE_CHOSEN] === true) return;
+  if (!user || user.user_metadata?.[TIMEZONE_CHOSEN] === true) {
+    return;
+  }
 
   const { data, error } = await supabase
     .from("profiles")
@@ -103,8 +113,11 @@ export async function adoptBrowserTimezone(timezone: unknown): Promise<void> {
     .eq("timezone", "UTC")
     .gt("created_at", new Date(Date.now() - DETECT_WINDOW_MS).toISOString())
     .select("id");
-  if (error) console.error("[settings/adoptBrowserTimezone] failed", error.message);
-  else if (data.length > 0) revalidatePath("/", "layout");
+  if (error) {
+    console.error("[settings/adoptBrowserTimezone] failed", error.message);
+  } else if (data.length > 0) {
+    revalidatePath("/", "layout");
+  }
 }
 
 const reportOnSchema = z.object({ on: z.boolean() });
@@ -118,11 +131,15 @@ const reportRepoSchema = z.object({ repo: z.string().min(1).max(200), shown: z.b
  */
 export async function setReportOn(input: unknown): Promise<{ error: string | null }> {
   const parsed = reportOnSchema.safeParse(input);
-  if (!parsed.success) return { error: "Try switching it again." };
+  if (!parsed.success) {
+    return { error: "Try switching it again." };
+  }
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims.sub;
-  if (!userId) return { error: "You're signed out. Sign in and try again." };
+  if (!userId) {
+    return { error: "You're signed out. Sign in and try again." };
+  }
 
   const { data, error } = await supabase
     .from("profiles")
@@ -147,11 +164,15 @@ export async function setReportOn(input: unknown): Promise<{ error: string | nul
  */
 export async function setReportRepo(input: unknown): Promise<{ error: string | null }> {
   const parsed = reportRepoSchema.safeParse(input);
-  if (!parsed.success) return { error: "Try ticking it again." };
+  if (!parsed.success) {
+    return { error: "Try ticking it again." };
+  }
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const userId = claims?.claims.sub;
-  if (!userId) return { error: "You're signed out. Sign in and try again." };
+  if (!userId) {
+    return { error: "You're signed out. Sign in and try again." };
+  }
   const { repo, shown } = parsed.data;
 
   // true when a row changed, false when there is no row, or the error's message.
@@ -170,9 +191,17 @@ export async function setReportRepo(input: unknown): Promise<{ error: string | n
     const { error } = await supabase
       .from("projects")
       .insert({ user_id: userId, repo, report_shown: shown });
-    if (error?.code === "42501") return { error: "That project isn't one of yours." };
+    if (error?.code === "42501") {
+      return { error: "That project isn't one of yours." };
+    }
     // 23505: another tab inserted it first, so update that row.
-    saved = !error ? true : error.code === "23505" ? await update() : error.message;
+    if (!error) {
+      saved = true;
+    } else if (error.code === "23505") {
+      saved = await update();
+    } else {
+      saved = error.message;
+    }
   }
   if (saved !== true) {
     console.error("[settings/setReportRepo] failed", saved || "no row updated");
@@ -193,7 +222,9 @@ export async function newReportLink(): Promise<{ error: string | null }> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "You're signed out. Sign in and try again." };
+  if (!user) {
+    return { error: "You're signed out. Sign in and try again." };
+  }
 
   // 32 hex characters: the format the check constraint allows.
   const slug = randomUUID().replaceAll("-", "");

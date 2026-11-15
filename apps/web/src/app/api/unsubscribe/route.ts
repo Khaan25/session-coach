@@ -13,7 +13,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const linkSchema = z.object({
   u: z.uuid(),
-  t: z.string().regex(/^[\w-]{1,128}$/),
+  t: z.string().regex(/^[\w-]{1,128}$/u),
 });
 
 /**
@@ -58,7 +58,9 @@ function checkLink(request: Request): { userId: string; token: string } | Respon
  */
 export function GET(request: Request) {
   const link = checkLink(request);
-  if (link instanceof Response) return link;
+  if (link instanceof Response) {
+    return link;
+  }
   const action = `/api/unsubscribe?u=${link.userId}&t=${link.token}`;
   return page(
     200,
@@ -75,20 +77,24 @@ export function GET(request: Request) {
  */
 export async function POST(request: Request) {
   const link = checkLink(request);
-  if (link instanceof Response) return link;
+  if (link instanceof Response) {
+    return link;
+  }
   try {
     const { error } = await createAdminClient()
       .from("profiles")
       .update({ notify_email: false })
       .eq("id", link.userId);
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
     return page(
       200,
       "You're unsubscribed",
       "<p>You won't get the daily review email any more. Turn it back on any time in Settings.</p>",
     );
-  } catch (err) {
-    console.error("[api/unsubscribe] failed", err instanceof Error ? err.message : err);
+  } catch (error) {
+    console.error("[api/unsubscribe] failed", error instanceof Error ? error.message : error);
     return page(500, "That didn't work. Try the link again, or turn reminders off in Settings.");
   }
 }

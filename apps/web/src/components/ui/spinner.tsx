@@ -23,7 +23,9 @@ function Spinner({
       {...props}
     />
   );
-  if (!label) return icon;
+  if (!label) {
+    return icon;
+  }
   return (
     <output data-slot="spinner" className="contents">
       <span className="sr-only">{label}</span>

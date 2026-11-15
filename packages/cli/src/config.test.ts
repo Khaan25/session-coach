@@ -13,7 +13,7 @@ describe("validateToken", () => {
 
   it("rejects other prefixes, a bare prefix and empty input", () => {
     for (const bad of ["abc123", "sk_abc", "sc_", ""]) {
-      assert.match(validateToken(bad) ?? "", /sc_/);
+      assert.match(validateToken(bad) ?? "", /sc_/u);
     }
   });
 });
@@ -52,7 +52,9 @@ describe("config file", () => {
       await chmod(path, 0o644);
       await saveConfig(path, { token: "sc_x", url: "https://app.test" });
 
-      assert.equal((await stat(path)).mode & 0o777, 0o600);
+      const { mode } = await stat(path);
+      // oxlint-disable-next-line no-bitwise -- masks the permission bits out of a file mode
+      assert.equal(mode & 0o777, 0o600);
       assert.deepEqual(await loadConfig(path), { token: "sc_x", url: "https://app.test" });
     } finally {
       await rm(dir, { recursive: true, force: true });

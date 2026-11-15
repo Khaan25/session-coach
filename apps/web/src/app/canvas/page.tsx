@@ -64,7 +64,9 @@ export default async function CanvasPage() {
         authConfirm: <ConfirmPage {...query({})} />,
         authError: <AuthErrorPage {...query({ code: "link_expired" })} />,
         authErrorUnknown: <AuthErrorPage {...query({})} />,
-        email: <iframe title="Daily review email" srcDoc={email} className="size-full" />,
+        email: (
+          <iframe title="Daily review email" srcDoc={email} sandbox="" className="size-full" />
+        ),
       }}
     />
   );

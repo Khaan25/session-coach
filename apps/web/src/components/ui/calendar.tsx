@@ -3,14 +3,53 @@
 import { CaretDownIcon, CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
 import * as React from "react";
-import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from "react-day-picker";
+import { DayPicker, getDefaultClassNames } from "react-day-picker";
+import type { CustomComponents, DayButton, Locale } from "react-day-picker";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import type { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 
 // A month grid on react-day-picker, in the design system's date-picker look: 32px days on the soft corner, edge to edge,
 // numbers in tabular figures. The selected day (or a range's ends) is ink with paper text; the band between
 // a range's ends is the selected wash with straight inner edges; today carries a short bar under its number;
 // outside days are text-3 and disabled days are struck through.
+
+function CalendarRoot({
+  className,
+  rootRef,
+  ...props
+}: React.ComponentProps<CustomComponents["Root"]>) {
+  return <div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />;
+}
+
+function CalendarChevron({
+  className,
+  orientation,
+  ...props
+}: React.ComponentProps<CustomComponents["Chevron"]>) {
+  if (orientation === "left") {
+    return <CaretLeftIcon className={cn("size-4 rtl:rotate-180", className)} {...props} />;
+  }
+
+  if (orientation === "right") {
+    return <CaretRightIcon className={cn("size-4 rtl:rotate-180", className)} {...props} />;
+  }
+
+  return <CaretDownIcon className={cn("size-4", className)} {...props} />;
+}
+
+function CalendarWeekNumber({
+  children,
+  ...props
+}: React.ComponentProps<CustomComponents["WeekNumber"]>) {
+  return (
+    <td {...props}>
+      <div className="flex size-(--cell-size) items-center justify-center text-center">
+        {children}
+      </div>
+    </td>
+  );
+}
 
 function Calendar({
   className,
@@ -116,30 +155,11 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Root: ({ className, rootRef, ...props }) => {
-          return <div data-slot="calendar" ref={rootRef} className={cn(className)} {...props} />;
-        },
-        Chevron: ({ className, orientation, ...props }) => {
-          if (orientation === "left") {
-            return <CaretLeftIcon className={cn("size-4 rtl:rotate-180", className)} {...props} />;
-          }
-
-          if (orientation === "right") {
-            return <CaretRightIcon className={cn("size-4 rtl:rotate-180", className)} {...props} />;
-          }
-
-          return <CaretDownIcon className={cn("size-4", className)} {...props} />;
-        },
-        DayButton: ({ ...props }) => <CalendarDayButton locale={locale} {...props} />,
-        WeekNumber: ({ children, ...props }) => {
-          return (
-            <td {...props}>
-              <div className="flex size-(--cell-size) items-center justify-center text-center">
-                {children}
-              </div>
-            </td>
-          );
-        },
+        Root: CalendarRoot,
+        Chevron: CalendarChevron,
+        // oxlint-disable-next-line react/no-unstable-nested-components -- closes over `locale`, which react-day-picker doesn't pass to DayButton
+        DayButton: ({ ...dayProps }) => <CalendarDayButton locale={locale} {...dayProps} />,
+        WeekNumber: CalendarWeekNumber,
         ...components,
       }}
       {...props}
@@ -158,7 +178,9 @@ function CalendarDayButton({
 
   const ref = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus();
+    if (modifiers.focused) {
+      ref.current?.focus();
+    }
   }, [modifiers.focused]);
 
   return (

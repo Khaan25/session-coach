@@ -108,6 +108,7 @@ export function ReportView({ report }: { report: LoadedReport }) {
             {r.repo} · {r.owned} owned
           </h2>
           {r.decisions.map((d, j) => (
+            // oxlint-disable-next-line react/no-array-index-key -- decisions carry no id and their text can repeat; the list never reorders
             <DecisionCard key={j} d={d} />
           ))}
         </section>

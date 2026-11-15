@@ -12,7 +12,7 @@ export const ANSWER_SECONDS = 180;
 export const FOLLOW_UP_SECONDS = 120;
 
 /** How late an answer may land after its deadline: covers the network trip, not thinking time. */
-export const GRACE_MS = 5_000;
+export const GRACE_MS = 5000;
 
 /** `defenses.status` values that count as unfinished: the one-per-learner rule covers these. */
 export const UNFINISHED = ["answering", "follow_up"] as const;
@@ -58,10 +58,12 @@ export function openWindow(defense: {
   started_at: string;
   follow_up_started_at: string | null;
 }): { startedAt: string; seconds: number } | null {
-  if (defense.status === "answering")
+  if (defense.status === "answering") {
     return { startedAt: defense.started_at, seconds: ANSWER_SECONDS };
-  if (defense.status === "follow_up" && defense.follow_up_started_at)
+  }
+  if (defense.status === "follow_up" && defense.follow_up_started_at) {
     return { startedAt: defense.follow_up_started_at, seconds: FOLLOW_UP_SECONDS };
+  }
   return null;
 }
 
@@ -74,7 +76,9 @@ export function openWindow(defense: {
  */
 export function pickCard(cardIds: readonly string[], random: () => number = Math.random) {
   const unique = [...new Set(cardIds)];
-  if (unique.length === 0) return null;
+  if (unique.length === 0) {
+    return null;
+  }
   // Clamped so a random() of exactly 1 can't index past the end.
   return unique[Math.min(Math.floor(random() * unique.length), unique.length - 1)] ?? null;
 }

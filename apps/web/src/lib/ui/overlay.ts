@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { cn } from "cn";
 
 // What Dialog and Sheet share: the open state, the backdrop, and the
@@ -21,11 +21,13 @@ function useOverlayOpen<D>({
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean, details: D) => void;
 }) {
-  const [openState, setOpenState] = React.useState(defaultOpen);
+  const [openState, setOpenState] = useState(defaultOpen);
   const open = openProp ?? openState;
-  const setOpen = React.useCallback(
+  const setOpen = useCallback(
     (next: boolean, details: D) => {
-      if (openProp === undefined) setOpenState(next);
+      if (openProp === undefined) {
+        setOpenState(next);
+      }
       onOpenChange?.(next, details);
     },
     [openProp, onOpenChange],
@@ -66,19 +68,34 @@ const backdropClass = cn(
  * "more here". `focusable` gives the scroller a tab stop while it has something to scroll.
  */
 function useScrollFade<E extends HTMLElement>({ focusable = false }: { focusable?: boolean } = {}) {
-  const ref = React.useRef<E | null>(null);
-  React.useLayoutEffect(() => {
+  const ref = useRef<E | null>(null);
+  useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const update = () => {
       const start = el.scrollTop > 1;
       const end = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
-      const fade = start && end ? "both" : start ? "start" : end ? "end" : "";
-      if (fade) el.dataset.fade = fade;
-      else delete el.dataset.fade;
+      let fade = "";
+      if (start && end) {
+        fade = "both";
+      } else if (start) {
+        fade = "start";
+      } else if (end) {
+        fade = "end";
+      }
+      if (fade) {
+        el.dataset.fade = fade;
+      } else {
+        delete el.dataset.fade;
+      }
       if (focusable) {
-        if (el.scrollHeight > el.clientHeight + 1) el.tabIndex = 0;
-        else el.removeAttribute("tabindex");
+        if (el.scrollHeight > el.clientHeight + 1) {
+          el.tabIndex = 0;
+        } else {
+          el.removeAttribute("tabindex");
+        }
       }
     };
     update();
@@ -86,7 +103,9 @@ function useScrollFade<E extends HTMLElement>({ focusable = false }: { focusable
     const ro = new ResizeObserver(update);
     ro.observe(el);
     const observeChildren = () => {
-      for (const child of Array.from(el.children)) ro.observe(child);
+      for (const child of el.children) {
+        ro.observe(child);
+      }
     };
     observeChildren();
     // Content that changes without resizing the scroller (a filtered list) changes what is behind it, and

@@ -107,7 +107,9 @@ function BreadcrumbEllipsis({ className, ...props }: React.ComponentProps<"span"
 
 /** Cuts an ID in the middle and keeps its type prefix: run_8f2a91c0d4e5b6a7 reads run_8f2a…e5b6a7. */
 function shortId(id: string) {
-  if (id.length <= 18) return null;
+  if (id.length <= 18) {
+    return null;
+  }
   const prefix = id.indexOf("_");
   const headLength = prefix > 0 && prefix < 10 ? prefix + 5 : 10;
   return { head: id.slice(0, headLength), tail: id.slice(-6) };

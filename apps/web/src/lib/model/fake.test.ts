@@ -1,25 +1,27 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { checkEvidence } from "../pipeline/evidence.ts";
 import { extractCards } from "../pipeline/extract.ts";
 import { parseSession } from "../pipeline/parser.ts";
 import { fakeModel } from "./fake.ts";
 
-const fixture = readFileSync(
+const fixture = await readFile(
   new URL("../pipeline/fixtures/session.fake.jsonl", import.meta.url),
   "utf8",
 );
 
+const model = (task: "extract", input: { data: Record<string, unknown> }) =>
+  Promise.resolve(fakeModel(task, input.data));
+
 test("fake extraction on a real parsed log gives cards that survive the evidence check", async () => {
   const { events } = parseSession(fixture);
-  const model = async (task: "extract", input: { data: Record<string, unknown> }) =>
-    fakeModel(task, input.data);
   const { cards: drafts, title } = await extractCards(events, model);
-  assert.match(title ?? "", /^FAKE: /);
+  assert.match(title ?? "", /^FAKE: /u);
   assert.ok(drafts.length > 0 && drafts.length <= 3);
   assert.equal(checkEvidence(drafts, events).length, drafts.length);
-  assert.deepEqual((await extractCards(events, model)).cards, drafts);
+  const again = await extractCards(events, model);
+  assert.deepEqual(again.cards, drafts);
 });
 
 test("fake extraction skips short and non-conversation events, and returns no cards when none qualify", () => {
@@ -38,13 +40,13 @@ test("fake extraction skips short and non-conversation events, and returns no ca
 });
 
 test("the fake model still refuses an unknown task", () => {
-  assert.throws(() => fakeModel("summarize", {}), /no "summarize"/);
+  assert.throws(() => fakeModel("summarize", {}), /no "summarize"/u);
 });
 
 test("fake follow-up rides the grade task and fits { question }", () => {
   const out = fakeModel("grade", { mode: "follow_up", question: "Why X?", answer: "because" });
   assert.deepEqual(Object.keys(out as object), ["question"]);
-  assert.match((out as { question: string }).question, /^FAKE: .*Why X\?/);
+  assert.match((out as { question: string }).question, /^FAKE: .*Why X\?/u);
 });
 
 test("fake defense grade reads the follow-up answer too", () => {

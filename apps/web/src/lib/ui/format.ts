@@ -9,7 +9,7 @@ type Unit = { unit: string; size: number };
 
 const durationUnits: readonly Unit[] = [
   { unit: "ms", size: 1 },
-  { unit: "s", size: 1_000 },
+  { unit: "s", size: 1000 },
   { unit: "min", size: 60_000 },
   { unit: "h", size: 3_600_000 },
 ];
@@ -21,13 +21,23 @@ export const EMPTY_VALUE = "None";
 export const CHART_EMPTY = "No data in this range";
 
 /** The largest size in a column, ignoring values that are not finite. */
-const largest = (values: readonly number[]) =>
-  values.reduce((max, v) => (Number.isFinite(v) ? Math.max(max, Math.abs(v)) : max), 0);
+const largest = (values: readonly number[]) => {
+  let max = 0;
+  for (const v of values) {
+    if (Number.isFinite(v)) {
+      max = Math.max(max, Math.abs(v));
+    }
+  }
+  return max;
+};
 
 /** x rounded to `digits` decimals, the way toFixed rounds it. */
 const roundTo = (x: number, digits: number) => Number(x.toFixed(digits));
 
-const NEGATIVE_ZERO = /^-0(\.0+)?$/;
+const NEGATIVE_ZERO = /^-0(?:\.0+)?$/u;
+
+/** Two digits, for the minor unit of an elapsed time. */
+const pad = (n: number) => String(n).padStart(2, "0");
 
 /** toFixed without a sign on a value that rounds to zero. */
 export function fixed(x: number, digits: number) {
@@ -46,12 +56,15 @@ function pickUnit(
   digits: (i: number) => number,
 ) {
   let i = 0;
-  while (i < units.length - 1 && max >= threshold(i + 1)) i++;
+  while (i < units.length - 1 && max >= threshold(i + 1)) {
+    i += 1;
+  }
   while (
     i < units.length - 1 &&
     roundTo(max / units[i].size, digits(i)) * units[i].size >= threshold(i + 1)
-  )
-    i++;
+  ) {
+    i += 1;
+  }
   return i;
 }
 
@@ -81,14 +94,21 @@ export function formatDurations(
  */
 export function formatElapsed(ms: number) {
   const v = Number.isFinite(ms) ? Math.max(0, ms) : 0;
-  if (Math.round(v) < 1000) return `${Math.round(v)}ms`;
+  if (Math.round(v) < 1000) {
+    return `${Math.round(v)}ms`;
+  }
   const tenths = Math.round(v / 100);
-  if (tenths < 600) return `${(tenths / 10).toFixed(1)}s`;
-  const pad = (n: number) => String(n).padStart(2, "0");
+  if (tenths < 600) {
+    return `${(tenths / 10).toFixed(1)}s`;
+  }
   const secs = Math.round(v / 1000);
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ${pad(secs % 60)}s`;
+  if (secs < 3600) {
+    return `${Math.floor(secs / 60)}m ${pad(secs % 60)}s`;
+  }
   const mins = Math.round(v / 60_000);
-  if (mins < 24 * 60) return `${Math.floor(mins / 60)}h ${pad(mins % 60)}m`;
+  if (mins < 24 * 60) {
+    return `${Math.floor(mins / 60)}h ${pad(mins % 60)}m`;
+  }
   const hours = Math.round(v / 3_600_000);
   return `${Math.floor(hours / 24)}d ${pad(hours % 24)}h`;
 }
@@ -103,7 +123,9 @@ const byteUnits: readonly Unit[] = [
 
 /** The number a size shows as in byte unit i, already rounded: one decimal under 10, whole above. */
 function bytesIn(bytes: number, i: number) {
-  if (i === 0) return Math.round(bytes);
+  if (i === 0) {
+    return Math.round(bytes);
+  }
   const v = bytes / byteUnits[i].size;
   const tenths = roundTo(v, 1);
   return tenths < 10 ? tenths : Math.round(v);
@@ -112,7 +134,9 @@ function bytesIn(bytes: number, i: number) {
 /** The byte unit for a size, picked after rounding, so 999,999 bytes reads 1.0 MB and never 1000 KB. */
 function byteUnitFor(bytes: number) {
   let i = 0;
-  while (i < byteUnits.length - 1 && bytesIn(bytes, i) >= 1000) i++;
+  while (i < byteUnits.length - 1 && bytesIn(bytes, i) >= 1000) {
+    i += 1;
+  }
   return i;
 }
 

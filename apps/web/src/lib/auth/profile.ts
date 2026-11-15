@@ -26,13 +26,17 @@ export type ProfileView = z.infer<typeof viewSchema>;
  */
 export const getProfile = cache(async (): Promise<ProfileView | null> => {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("email, display_name, timezone, notify_email")
     .eq("id", user.id)
     .maybeSingle();
-  if (error) throw new Error(`getProfile: ${error.message}`);
+  if (error) {
+    throw new Error(`getProfile: ${error.message}`);
+  }
   return data ? viewSchema.parse(data) : null;
 });

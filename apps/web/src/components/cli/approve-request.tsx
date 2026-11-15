@@ -4,7 +4,8 @@ import { LaptopIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
 import { useDryRun } from "@/components/app/dry-run";
-import { ApproveDone, ApproveNotice, SETTLED_COPY } from "@/components/cli/approve-states";
+import { SETTLED_COPY } from "@/components/cli/approve-copy";
+import { ApproveDone, ApproveNotice } from "@/components/cli/approve-states";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleRow } from "@/components/ui/collapsible";
 import { FieldError } from "@/components/ui/field";
@@ -61,23 +62,30 @@ export function ApproveRequest({ request }: { request: ApproveRequestData }) {
 
   async function decide(decision: "approve" | "deny") {
     const done = decision === "approve" ? "approved" : "denied";
-    if (dryRun) return setPhase({ kind: "done", done });
+    if (dryRun) {
+      return setPhase({ kind: "done", done });
+    }
     setPhase({ kind: "sending", decision });
     const response = await fetch(`/api/cli/device/${decision}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userCode: request.userCode }),
     }).catch(() => null);
-    if (response?.ok) return setPhase({ kind: "done", done });
+    if (response?.ok) {
+      return setPhase({ kind: "done", done });
+    }
     const body: { error?: string } | null = await response?.json().catch(() => null);
     setPhase({ kind: "asking", error: body?.error ?? "Check your connection and try again." });
   }
 
-  if (phase.kind === "done")
+  if (phase.kind === "done") {
     return <ApproveDone done={phase.done} clientName={request.clientName} />;
+  }
   const pending = phase.kind === "sending" ? phase.decision : null;
   const error = phase.kind === "asking" ? phase.error : null;
-  if (secondsLeft <= 0) return <ApproveNotice {...SETTLED_COPY.expired} />;
+  if (secondsLeft <= 0) {
+    return <ApproveNotice {...SETTLED_COPY.expired} />;
+  }
 
   return (
     <>
@@ -100,7 +108,9 @@ export function ApproveRequest({ request }: { request: ApproveRequestData }) {
         </p>
         <div className="grid w-full grid-cols-2 gap-3">
           <Button
-            onClick={() => void decide("approve")}
+            onClick={() => {
+              void decide("approve");
+            }}
             disabled={pending !== null}
             aria-busy={pending === "approve"}
           >
@@ -109,7 +119,9 @@ export function ApproveRequest({ request }: { request: ApproveRequestData }) {
           </Button>
           <Button
             variant="secondary"
-            onClick={() => void decide("deny")}
+            onClick={() => {
+              void decide("deny");
+            }}
             disabled={pending !== null}
             aria-busy={pending === "deny"}
           >

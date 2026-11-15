@@ -37,8 +37,9 @@ export function LoadErrorState({
   }, [error]);
 
   useEffect(() => {
-    if (!online) wasOffline.current = true;
-    else if (wasOffline.current) {
+    if (!online) {
+      wasOffline.current = true;
+    } else if (wasOffline.current) {
       wasOffline.current = false;
       retry();
     }

@@ -4,8 +4,9 @@ import { test } from "node:test";
 import { MAX_POLL_INTERVAL_SECONDS } from "@session-coach/shared/limits";
 
 import {
-  codeState,
+  USER_CODE_ALPHABET,
   clientNameSchema,
+  codeState,
   devicePollSchema,
   formatUserCode,
   isSameOrigin,
@@ -14,7 +15,6 @@ import {
   normalizeUserCode,
   pollOutcome,
   slowerInterval,
-  USER_CODE_ALPHABET,
 } from "./device.ts";
 
 const NOW = new Date("2026-11-04T12:00:00Z");
@@ -31,7 +31,7 @@ const pending = {
 
 test("newDeviceCode is 32 random bytes as base64url and passes the poll schema", () => {
   const code = newDeviceCode();
-  assert.match(code, /^[A-Za-z0-9_-]{43}$/);
+  assert.match(code, /^[A-Za-z0-9_-]{43}$/u);
   assert.notEqual(newDeviceCode(), code);
   assert.ok(devicePollSchema.safeParse({ deviceCode: code }).success);
 });
@@ -40,11 +40,13 @@ test("newUserCode is 8 letters from the unambiguous alphabet, and every letter t
   const seen = new Set<string>();
   for (let i = 0; i < 500; i++) {
     const code = newUserCode();
-    assert.match(code, /^[BCDFGHJKLMNPQRSTVWXZ]{8}$/);
-    for (const letter of code) seen.add(letter);
+    assert.match(code, /^[BCDFGHJKLMNPQRSTVWXZ]{8}$/u);
+    for (const letter of code) {
+      seen.add(letter);
+    }
   }
   assert.equal(seen.size, USER_CODE_ALPHABET.length);
-  assert.doesNotMatch(USER_CODE_ALPHABET, /[AEIOUY01]/);
+  assert.doesNotMatch(USER_CODE_ALPHABET, /[AEIOUY01]/u);
 });
 
 test("formatUserCode and normalizeUserCode round-trip XXXX-XXXX", () => {
@@ -73,7 +75,7 @@ test("clientNameSchema trims, caps at 100 and refuses control characters", () =>
   assert.equal(clientNameSchema.parse("  mac on darwin "), "mac on darwin");
   assert.ok(!clientNameSchema.safeParse("").success);
   assert.ok(!clientNameSchema.safeParse("x".repeat(101)).success);
-  assert.ok(!clientNameSchema.safeParse("mac\u001b[31m").success);
+  assert.ok(!clientNameSchema.safeParse("mac\u001B[31m").success);
   assert.ok(!clientNameSchema.safeParse("mac\nevil").success);
 });
 
@@ -135,9 +137,10 @@ test("pollOutcome: final states win over slow_down", () => {
   );
 });
 
+const h = (init: Record<string, string>) => new Headers(init);
+
 test("isSameOrigin: Origin must match exactly; without it, only Sec-Fetch-Site same-origin passes", () => {
   const site = "https://coach.example.org";
-  const h = (init: Record<string, string>) => new Headers(init);
   assert.ok(isSameOrigin(h({ origin: site }), site));
   assert.ok(!isSameOrigin(h({ origin: "https://evil.example" }), site));
   assert.ok(!isSameOrigin(h({ origin: "null" }), site));

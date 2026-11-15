@@ -42,6 +42,59 @@ export function SessionView({
     .filter(Boolean)
     .join(" · ");
 
+  let body: React.ReactNode;
+  if (stuck) {
+    body = (
+      <SessionFailedState
+        error="This session stopped before its cards were made."
+        action={<RetrySessionButton sessionId={session.id} />}
+      />
+    );
+  } else if (status === "pending" || status === "processing") {
+    body = (
+      <>
+        <ProcessingState status={status} />
+        {userId && <RefreshOnSettle userId={userId} session={session} />}
+      </>
+    );
+  } else if (status === "failed") {
+    body = (
+      <SessionFailedState error={error} action={<RetrySessionButton sessionId={session.id} />} />
+    );
+  } else if (cards.length === 0) {
+    // Extraction drops every card it can't back with an exact quote, so a ready session can end with none.
+    body = (
+      <EmptyState
+        title="No decisions to learn from this session."
+        description={
+          <>
+            <span className="block">
+              It was mostly edits and commands, with no real choice between options. We may also
+              have missed one.
+            </span>
+            <span className="mt-2 block">
+              Next time, ask your agent to explain why it picked an approach, and say your reasons
+              in your prompts. Sessions that state the reasons give better cards.
+            </span>
+          </>
+        }
+      />
+    );
+  } else {
+    // More room between decisions than inside one, so each heading groups with its own card.
+    body = (
+      <div className="flex flex-col gap-8">
+        {cards.map((card) =>
+          card.locked ? (
+            <LockedDecisionCard key={card.id} card={card} />
+          ) : (
+            <DecisionCard key={card.id} card={card} />
+          ),
+        )}
+      </div>
+    );
+  }
+
   return (
     <Container>
       {/* A small title over one line of facts, instead of a stat strip: a missing duration no longer fills a large
@@ -64,47 +117,7 @@ export function SessionView({
         )}
       </header>
 
-      {stuck ? (
-        <SessionFailedState
-          error="This session stopped before its cards were made."
-          action={<RetrySessionButton sessionId={session.id} />}
-        />
-      ) : status === "pending" || status === "processing" ? (
-        <>
-          <ProcessingState status={status} />
-          {userId && <RefreshOnSettle userId={userId} session={session} />}
-        </>
-      ) : status === "failed" ? (
-        <SessionFailedState error={error} action={<RetrySessionButton sessionId={session.id} />} />
-      ) : cards.length === 0 ? (
-        // Extraction drops every card it can't back with an exact quote, so a ready session can end with none.
-        <EmptyState
-          title="No decisions to learn from this session."
-          description={
-            <>
-              <span className="block">
-                It was mostly edits and commands, with no real choice between options. We may also
-                have missed one.
-              </span>
-              <span className="mt-2 block">
-                Next time, ask your agent to explain why it picked an approach, and say your reasons
-                in your prompts. Sessions that state the reasons give better cards.
-              </span>
-            </>
-          }
-        />
-      ) : (
-        // More room between decisions than inside one, so each heading groups with its own card.
-        <div className="flex flex-col gap-8">
-          {cards.map((card) =>
-            card.locked ? (
-              <LockedDecisionCard key={card.id} card={card} />
-            ) : (
-              <DecisionCard key={card.id} card={card} />
-            ),
-          )}
-        </div>
-      )}
+      {body}
     </Container>
   );
 }

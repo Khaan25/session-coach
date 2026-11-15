@@ -41,7 +41,7 @@ const DROPPED_TYPES = new Set([
   "system",
   "file-history-delta",
 ]);
-const INJECTED_TEXT = /^\s*<(command-name|local-command-stdout|local-command-caveat)>/;
+const INJECTED_TEXT = /^\s*<(?:command-name|local-command-stdout|local-command-caveat)>/u;
 
 type Block = Record<string, unknown>;
 // `skipResultOf` is the tool_use id whose later tool_result we don't want.
@@ -74,13 +74,17 @@ function plural(n: number, word: string): string {
 
 function summarizeWrite(input: Block): string | undefined {
   const path = str(input.file_path);
-  if (!path) return undefined;
+  if (!path) {
+    return undefined;
+  }
   return `${path} — wrote ${plural(countLines(str(input.content) ?? ""), "line")}`;
 }
 
 function summarizeEdit(input: Block): string | undefined {
   const path = str(input.file_path);
-  if (!path) return undefined;
+  if (!path) {
+    return undefined;
+  }
   const next = str(input.new_string) ?? "";
   // Redact before cutting, so a secret split by the limit isn't left half visible.
   const first = redact(next.split("\n")[0]?.trim() ?? "").slice(0, 60);
@@ -90,7 +94,9 @@ function summarizeEdit(input: Block): string | undefined {
 
 function summarizeMultiEdit(input: Block): string | undefined {
   const path = str(input.file_path);
-  if (!path || !Array.isArray(input.edits)) return undefined;
+  if (!path || !Array.isArray(input.edits)) {
+    return undefined;
+  }
   return `${path} — ${plural(input.edits.length, "edit")}`;
 }
 
@@ -119,45 +125,62 @@ function toolUse(block: Block): Piece {
       const skipResultOf = str(block.id);
       return text ? { kind: "read", text, skipResultOf } : { ...badInput, skipResultOf };
     }
-    default:
+    default: {
       return { ...unknownOf("tools", nameOf(block.name)), skipResultOf: str(block.id) };
+    }
   }
 }
 
 function toolResultText(content: unknown): string {
-  if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
+  if (typeof content === "string") {
+    return content;
+  }
+  if (!Array.isArray(content)) {
+    return "";
+  }
   return content
-    .filter(isRecord)
+    .filter((part): part is Record<string, unknown> => isRecord(part))
     .map((part) => str(part.text) ?? "")
     .join("\n");
 }
 
 function userPieces(message: Block, skip: boolean, skippedToolIds: Set<string>): Piece[] {
-  if (skip) return ["drop"];
-  const content = message.content;
-  const blocks: unknown[] =
-    typeof content === "string"
-      ? [{ type: "text", text: content }]
-      : Array.isArray(content)
-        ? content
-        : [];
-  if (blocks.length === 0) return [unknownOf("blockTypes", "user/(empty content)")];
+  if (skip) {
+    return ["drop"];
+  }
+  const { content } = message;
+  let blocks: unknown[] = [];
+  if (typeof content === "string") {
+    blocks = [{ type: "text", text: content }];
+  } else if (Array.isArray(content)) {
+    blocks = content;
+  }
+  if (blocks.length === 0) {
+    return [unknownOf("blockTypes", "user/(empty content)")];
+  }
 
   return blocks.map((block): Piece => {
-    if (!isRecord(block)) return unknownOf("blockTypes", "user/(not an object)");
+    if (!isRecord(block)) {
+      return unknownOf("blockTypes", "user/(not an object)");
+    }
     if (block.type === "text") {
       const text = str(block.text);
-      if (text === undefined) return unknownOf("blockTypes", "user/text (no text)");
+      if (text === undefined) {
+        return unknownOf("blockTypes", "user/text (no text)");
+      }
       return INJECTED_TEXT.test(text) ? "drop" : { kind: "prompt", text };
     }
     if (block.type === "tool_result") {
       const callId = str(block.tool_use_id);
-      if (callId !== undefined && skippedToolIds.has(callId)) return "dropResult";
+      if (callId !== undefined && skippedToolIds.has(callId)) {
+        return "dropResult";
+      }
       // Redact before cutting, so a secret split by the limit isn't left half visible.
       const text = redact(toolResultText(block.content)).slice(0, RESULT_MAX_CHARS);
       // A command with no output leaves an empty result; there is nothing to show.
-      if (text.trim() === "") return "drop";
+      if (text.trim() === "") {
+        return "drop";
+      }
       return { kind: "result", text };
     }
     return unknownOf("blockTypes", `user/${nameOf(block.type)}`);
@@ -165,12 +188,15 @@ function userPieces(message: Block, skip: boolean, skippedToolIds: Set<string>):
 }
 
 function assistantPieces(message: Block): Piece[] {
-  const content = message.content;
-  if (!Array.isArray(content) || content.length === 0)
+  const { content } = message;
+  if (!Array.isArray(content) || content.length === 0) {
     return [unknownOf("blockTypes", "assistant/(empty content)")];
+  }
 
   return content.map((block): Piece => {
-    if (!isRecord(block)) return unknownOf("blockTypes", "assistant/(not an object)");
+    if (!isRecord(block)) {
+      return unknownOf("blockTypes", "assistant/(not an object)");
+    }
     switch (block.type) {
       case "text": {
         const text = str(block.text);
@@ -179,20 +205,26 @@ function assistantPieces(message: Block): Piece[] {
           : { kind: "reply", text };
       }
       case "thinking":
-      case "redacted_thinking":
+      case "redacted_thinking": {
         return "drop";
-      case "tool_use":
+      }
+      case "tool_use": {
         return toolUse(block);
-      default:
+      }
+      default: {
         return unknownOf("blockTypes", `assistant/${nameOf(block.type)}`);
+      }
     }
   });
 }
 
 function piecesFor(entry: Block, skippedToolIds: Set<string>): Piece[] {
-  if (entry.type !== "user" && entry.type !== "assistant")
+  if (entry.type !== "user" && entry.type !== "assistant") {
     return [unknownOf("lineTypes", nameOf(entry.type))];
-  if (!isRecord(entry.message)) return [unknownOf("lineTypes", `${entry.type} (no message)`)];
+  }
+  if (!isRecord(entry.message)) {
+    return [unknownOf("lineTypes", `${entry.type} (no message)`)];
+  }
   if (entry.type === "user") {
     // A compact summary is written by the model, not the learner.
     const skip = entry.isMeta === true || entry.isCompactSummary === true;
@@ -204,10 +236,10 @@ function piecesFor(entry: Block, skippedToolIds: Set<string>): Piece[] {
 function countUnknown(stats: ParseStats, item: Unknown): void {
   const group = stats.unknownBreakdown[item.unknown];
   group[item.name] = (group[item.name] ?? 0) + 1;
-  stats.unknownSkipped++;
+  stats.unknownSkipped += 1;
 }
 
-const LINE_BREAK = /\r?\n/;
+const LINE_BREAK = /\r?\n/u;
 
 export function parseSession(raw: string): { events: TimelineEvent[]; stats: ParseStats } {
   const events: TimelineEvent[] = [];
@@ -226,34 +258,38 @@ export function parseSession(raw: string): { events: TimelineEvent[]; stats: Par
 
   const lines = raw.split(LINE_BREAK);
   // A trailing newline leaves one empty string at the end; it is not a line.
-  if (lines.at(-1) === "") lines.pop();
+  if (lines.at(-1) === "") {
+    lines.pop();
+  }
   stats.totalLines = lines.length;
 
-  lines.forEach((text, index) => {
+  for (const [index, text] of lines.entries()) {
     const line = index + 1;
-    if (text.trim() === "") return;
+    if (text.trim() === "") {
+      continue;
+    }
 
     let entry: unknown;
     try {
       entry = JSON.parse(text);
     } catch {
       countUnknown(stats, unknownOf("lineTypes", "(invalid json)"));
-      stats.invalidJson++;
-      return;
+      stats.invalidJson += 1;
+      continue;
     }
     if (!isRecord(entry)) {
       countUnknown(stats, unknownOf("lineTypes", "(not an object)"));
-      stats.invalidJson++;
-      return;
+      stats.invalidJson += 1;
+      continue;
     }
 
     if (entry.isSidechain === true) {
-      stats.sidechainSkipped++;
-      return;
+      stats.sidechainSkipped += 1;
+      continue;
     }
     if (typeof entry.type === "string" && DROPPED_TYPES.has(entry.type)) {
-      stats.dropped++;
-      return;
+      stats.dropped += 1;
+      continue;
     }
 
     const pieces = piecesFor(entry, skippedToolIds);
@@ -262,26 +298,30 @@ export function parseSession(raw: string): { events: TimelineEvent[]; stats: Par
     let unknownHere = 0;
     for (const piece of pieces) {
       if (piece === "drop") {
-        droppedHere++;
+        droppedHere += 1;
       } else if (piece === "dropResult") {
-        droppedHere++;
-        stats.droppedToolResults++;
+        droppedHere += 1;
+        stats.droppedToolResults += 1;
       } else {
-        if (piece.skipResultOf) skippedToolIds.add(piece.skipResultOf);
+        if (piece.skipResultOf) {
+          skippedToolIds.add(piece.skipResultOf);
+        }
         if ("unknown" in piece) {
-          unknownHere++;
+          unknownHere += 1;
           countUnknown(stats, piece);
         } else {
-          keptHere++;
+          keptHere += 1;
           // The read path keeps its structure: only the home prefix goes.
-          const text = piece.kind === "read" ? redactHomePath(piece.text) : redact(piece.text);
-          events.push({ id: `E${events.length + 1}`, kind: piece.kind, text, line });
+          const redacted = piece.kind === "read" ? redactHomePath(piece.text) : redact(piece.text);
+          events.push({ id: `E${events.length + 1}`, kind: piece.kind, text: redacted, line });
         }
       }
     }
     // A line with nothing kept and nothing unrecognised was dropped on purpose.
-    if (keptHere === 0 && unknownHere === 0 && droppedHere > 0) stats.dropped++;
-  });
+    if (keptHere === 0 && unknownHere === 0 && droppedHere > 0) {
+      stats.dropped += 1;
+    }
+  }
 
   stats.kept = events.length;
   return { events, stats };

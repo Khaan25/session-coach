@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { computeOwnership, type OwnershipRow } from "./ownership.ts";
+import { computeOwnership } from "./ownership.ts";
+import type { OwnershipRow } from "./ownership.ts";
 
 // `learner_ownership()`'s rows, in the order Postgres happened to return them.
 const rows: OwnershipRow[] = [

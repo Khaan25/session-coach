@@ -19,14 +19,18 @@ const format = new Intl.RelativeTimeFormat("en-US", { numeric: "auto" });
  */
 export function formatRelativeTime(iso: string, now: Date): string | null {
   const then = Date.parse(iso);
-  if (Number.isNaN(then)) return null;
+  if (Number.isNaN(then)) {
+    return null;
+  }
   const delta = then - now.getTime();
   // Round the magnitude, so 59.5 s reads the same before and after now.
   const seconds = Math.sign(delta) * Math.round(Math.abs(delta) / 1000);
   const abs = Math.abs(seconds);
   const sign = Math.sign(seconds);
   for (const [i, [unit, size]] of UNITS.entries()) {
-    if (abs < size) continue;
+    if (abs < size) {
+      continue;
+    }
     // Round the magnitude so past and future match, and step up when rounding reaches the next unit:
     // 59.5 minutes reads "1 hour", not "60 minutes".
     const n = Math.round(abs / size);

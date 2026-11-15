@@ -35,6 +35,29 @@ type Profile = {
   notify_email: boolean;
 };
 
+/** Waits for a profile save and throws its error. */
+async function settled(action: Promise<{ error: string | null }>) {
+  const { error } = await action;
+  if (error) {
+    throw new Error(error);
+  }
+}
+
+/** Runs a save under a toast; `onFail` rolls back when it fails, and `onSettled` runs either way. */
+async function saveUnderToast(
+  action: Promise<{ error: string | null }>,
+  messages: { loading: string; success: string },
+  { onFail, onSettled }: { onFail?: () => void; onSettled: () => void },
+) {
+  try {
+    await toast.promise(settled(action), { ...messages, error: (error: Error) => error.message });
+  } catch {
+    onFail?.();
+  } finally {
+    onSettled();
+  }
+}
+
 /**
  * The Profile section of /settings, one frame: display name and email (read-only, synced from sign-in), time zone and email
  * reminders, all through the `updateProfile` Server Action. Save profile saves the name and time zone; the reminder
@@ -53,20 +76,12 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
         event.preventDefault();
         const name = String(new FormData(event.currentTarget).get("display_name") ?? "").trim();
         setPending(true);
-        toast
-          .promise(
-            // A blank name is sent as null: the database and profileUpdateSchema reject "".
-            save({ display_name: name || null, timezone }).then(({ error }) => {
-              if (error) throw new Error(error);
-            }),
-            {
-              loading: "Saving your profile",
-              success: "Profile saved",
-              error: (error: Error) => error.message,
-            },
-          )
-          .catch(() => {})
-          .finally(() => setPending(false));
+        void saveUnderToast(
+          // A blank name is sent as null: the database and profileUpdateSchema reject "".
+          save({ display_name: name || null, timezone }),
+          { loading: "Saving your profile", success: "Profile saved" },
+          { onSettled: () => setPending(false) },
+        );
       }}
     >
       {/* One section and one frame: the three fields are one row in profiles, saved by one Server Action. The Save in the
@@ -147,19 +162,11 @@ export function ProfileForm({ profile, timezones }: { profile: Profile; timezone
               onCheckedChange={(next) => {
                 setNotify(next);
                 setNotifyPending(true);
-                toast
-                  .promise(
-                    save({ notify_email: next }).then(({ error }) => {
-                      if (error) throw new Error(error);
-                    }),
-                    {
-                      loading: "Saving",
-                      success: next ? "Reminders on" : "Reminders off",
-                      error: (error: Error) => error.message,
-                    },
-                  )
-                  .catch(() => setNotify(!next))
-                  .finally(() => setNotifyPending(false));
+                void saveUnderToast(
+                  save({ notify_email: next }),
+                  { loading: "Saving", success: next ? "Reminders on" : "Reminders off" },
+                  { onFail: () => setNotify(!next), onSettled: () => setNotifyPending(false) },
+                );
               }}
             />
           </Field>

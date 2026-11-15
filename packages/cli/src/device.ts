@@ -25,17 +25,17 @@ export type PollResult =
   | { kind: "denied" }
   | { kind: "error"; message: string };
 
-const USER_CODE = /^[A-Z]{4}-[A-Z]{4}$/;
+const USER_CODE = /^[A-Z]{4}-[A-Z]{4}$/u;
+
+const OS_NAMES: Record<string, string> = { darwin: "macOS", win32: "Windows", linux: "Linux" };
 
 /** The device label /setup shows: this computer's hostname and OS, within the server's 100-character limit. */
 export function clientName(host: string = hostname(), os: string = platform()): string {
   const name = OS_NAMES[os] ?? os;
   // Control characters would be refused by the server; a hostname shouldn't have any, but strip them anyway.
-  const cleanHost = host.replace(/\p{C}/gu, "").trim().slice(0, 80) || "Unknown computer";
+  const cleanHost = host.replaceAll(/\p{C}/gu, "").trim().slice(0, 80) || "Unknown computer";
   return `${cleanHost} (${name})`;
 }
-
-const OS_NAMES: Record<string, string> = { darwin: "macOS", win32: "Windows", linux: "Linux" };
 
 export function deviceStartRequest(baseUrl: string, name: string): HttpRequest {
   return {
@@ -66,7 +66,9 @@ export function deviceTokenRequest(baseUrl: string, deviceCode: string): HttpReq
  */
 export function interpretStart(status: number, body: unknown): DeviceStart | { error: string } {
   const b = (body ?? {}) as Partial<Record<keyof DeviceStart, unknown>> & { error?: unknown };
-  if (status === 429) return { error: "Too many logins from this network. Try again later." };
+  if (status === 429) {
+    return { error: "Too many logins from this network. Try again later." };
+  }
   if (
     status === 200 &&
     typeof b.deviceCode === "string" &&
@@ -82,8 +84,9 @@ export function interpretStart(status: number, body: unknown): DeviceStart | { e
       interval: Math.max(1, b.interval),
     };
   }
-  if (status === 200)
+  if (status === 200) {
     return { error: "The server didn't answer like Session Coach. Check the site URL." };
+  }
   return { error: `Couldn't start the login (HTTP ${status}).` };
 }
 
@@ -101,12 +104,22 @@ export function interpretPoll(
   if (status === 200 && typeof b.token === "string" && b.token.startsWith("sc_")) {
     return { kind: "success", token: b.token, email: typeof b.email === "string" ? b.email : null };
   }
-  if (status === 429 || b.error === "slow_down") return { kind: "slow_down" };
-  if (b.error === "authorization_pending") return { kind: "pending" };
-  if (b.error === "expired_token") return { kind: "expired" };
-  if (b.error === "access_denied") return { kind: "denied" };
+  if (status === 429 || b.error === "slow_down") {
+    return { kind: "slow_down" };
+  }
+  if (b.error === "authorization_pending") {
+    return { kind: "pending" };
+  }
+  if (b.error === "expired_token") {
+    return { kind: "expired" };
+  }
+  if (b.error === "access_denied") {
+    return { kind: "denied" };
+  }
   // A 5xx is worth another poll; the deadline still ends it.
-  if (status >= 500) return { kind: "pending" };
+  if (status >= 500) {
+    return { kind: "pending" };
+  }
   return { kind: "error", message: `Couldn't finish the login (HTTP ${status}).` };
 }
 
@@ -117,7 +130,10 @@ export type PollOptions = {
   timeoutMs?: number;
 };
 
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const wait = (ms: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
 
 /**
  * Polls until the learner decides or the code expires, waiting `interval` seconds between polls and 5 s longer after
@@ -128,7 +144,7 @@ export async function pollForToken(
   start: DeviceStart,
   { fetchImpl = fetch, sleep = wait, now = Date.now, timeoutMs = 15_000 }: PollOptions = {},
 ): Promise<PollResult> {
-  let interval = start.interval;
+  let { interval } = start;
   const deadline = now() + start.expiresIn * 1000;
   while (now() < deadline) {
     await sleep(interval * 1000);
@@ -137,9 +153,13 @@ export async function pollForToken(
       retry: false,
       fetchImpl,
     });
-    if ("error" in res) continue;
+    if ("error" in res) {
+      continue;
+    }
     const result = interpretPoll(res.status, res.body);
-    if (result.kind === "pending") continue;
+    if (result.kind === "pending") {
+      continue;
+    }
     if (result.kind === "slow_down") {
       interval = Math.min(interval + SLOW_DOWN_STEP_SECONDS, MAX_POLL_INTERVAL_SECONDS);
       continue;
@@ -161,10 +181,16 @@ export function openerFor(url: string, os: string): [string, string[]] | null {
   } catch {
     return null;
   }
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
-  const href = parsed.href;
-  if (os === "darwin") return ["open", [href]];
-  if (os === "win32") return ["rundll32", ["url.dll,FileProtocolHandler", href]];
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return null;
+  }
+  const { href } = parsed;
+  if (os === "darwin") {
+    return ["open", [href]];
+  }
+  if (os === "win32") {
+    return ["rundll32", ["url.dll,FileProtocolHandler", href]];
+  }
   return ["xdg-open", [href]];
 }
 
@@ -174,11 +200,15 @@ export function openerFor(url: string, os: string): [string, string[]] | null {
  */
 export function openBrowser(url: string, os: string = platform()): void {
   const opener = openerFor(url, os);
-  if (!opener) return;
+  if (!opener) {
+    return;
+  }
   const [command, args] = opener;
   try {
     const child = spawn(command, args, { stdio: "ignore", detached: true });
-    child.on("error", () => {});
+    child.on("error", () => {
+      // No browser opener: the URL is already printed.
+    });
     child.unref();
   } catch {
     // The URL is already printed.

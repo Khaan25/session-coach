@@ -5,7 +5,8 @@
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 
-import { test, type Page } from "@playwright/test";
+import { test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
 import { localStack } from "../tests/local-stack.ts";
@@ -40,7 +41,7 @@ const PUBLIC = [
   "/design-system",
   "/canvas",
 ];
-const SIGNED_IN = () => [
+const signedInPaths = () => [
   "/dashboard",
   "/progress",
   "/review",
@@ -66,7 +67,9 @@ test.beforeAll(async () => {
     email_confirm: true,
     user_metadata: { full_name: "Sam Rivera" },
   });
-  if (created.error) throw created.error;
+  if (created.error) {
+    throw created.error;
+  }
   userId = created.data.user.id;
   const session = await admin.from("sessions").insert({
     id: sessionId,
@@ -75,7 +78,9 @@ test.beforeAll(async () => {
     raw_path: `${userId}/screens`,
     status: "ready",
   });
-  if (session.error) throw session.error;
+  if (session.error) {
+    throw session.error;
+  }
   const cards = await admin
     .from("decision_cards")
     .insert(
@@ -95,12 +100,16 @@ test.beforeAll(async () => {
       })),
     )
     .select("id");
-  if (cards.error) throw cards.error;
+  if (cards.error) {
+    throw cards.error;
+  }
   cardId = cards.data[0].id;
 });
 
 test.afterAll(async () => {
-  if (userId) await admin.auth.admin.deleteUser(userId);
+  if (userId) {
+    await admin.auth.admin.deleteUser(userId);
+  }
 });
 
 /** Shoots one route in every viewport and colour scheme. Names are path-safe: `/s/<id>` becomes `s-id`. */
@@ -110,7 +119,7 @@ async function shoot(page: Page, path: string) {
       ? "home"
       : path
           .slice(1)
-          .replace(/[0-9a-f-]{36}/, "id")
+          .replace(/[0-9a-f-]{36}/u, "id")
           .replaceAll("/", "-");
   for (const viewport of VIEWPORTS) {
     await page.setViewportSize(viewport);
@@ -127,7 +136,9 @@ async function shoot(page: Page, path: string) {
 }
 
 test("public routes", async ({ page }) => {
-  for (const path of PUBLIC) await shoot(page, path);
+  for (const path of PUBLIC) {
+    await shoot(page, path);
+  }
 });
 
 test("signed-in routes", async ({ page }) => {
@@ -135,6 +146,8 @@ test("signed-in routes", async ({ page }) => {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(/\/dashboard$/);
-  for (const path of SIGNED_IN()) await shoot(page, path);
+  await page.waitForURL(/\/dashboard$/u);
+  for (const path of signedInPaths()) {
+    await shoot(page, path);
+  }
 });

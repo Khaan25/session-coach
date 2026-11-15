@@ -8,11 +8,16 @@ const CUED =
 
 /** Plays `navigate` for a plain left click on a same-origin link that carries no cue of its own. */
 function navigate(event: MouseEvent) {
-  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
     return;
+  }
   const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-  if (!(link instanceof HTMLAnchorElement) || link.closest(CUED)) return;
-  if (link.target === "_blank" || link.origin !== location.origin) return;
+  if (!(link instanceof HTMLAnchorElement) || link.closest(CUED)) {
+    return;
+  }
+  if (link.target === "_blank" || link.origin !== location.origin) {
+    return;
+  }
   play("navigate");
 }
 

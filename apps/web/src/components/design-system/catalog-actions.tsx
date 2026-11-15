@@ -27,7 +27,9 @@ const TOGGLE_SIZES = ["sm", "default", "lg"] as const;
 
 // A value fetched on demand, so the copy button shows its pending state for a moment.
 const fetchSessionId = () =>
-  new Promise<string>((resolve) => setTimeout(() => resolve(session.id), 1200));
+  new Promise<string>((resolve) => {
+    setTimeout(() => resolve(session.id), 1200);
+  });
 
 function ActionsCatalog() {
   return (

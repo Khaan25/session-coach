@@ -19,6 +19,7 @@ const legal = defineCollection({
   }),
   transform: async (document, context) => ({
     ...document,
+    // oxlint-disable-next-line no-underscore-dangle -- content-collections names its metadata field `_meta`
     slug: document._meta.path,
     html: await compileMarkdown(context, document),
   }),

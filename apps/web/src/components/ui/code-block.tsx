@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { ArrowElbowDownLeftIcon, EyeIcon, EyeSlashIcon } from "@phosphor-icons/react";
 import { cn } from "cn";
 
@@ -56,7 +58,7 @@ const config: Record<
     quotes: `'"\``,
     multi: "`",
     keywords: new Set(jsKeywords.split(" ")),
-    word: /^[A-Za-z_$][\w$]*/,
+    word: /^[A-Za-z_$][\w$]*/u,
   },
   tsx: {
     line: "//",
@@ -64,7 +66,7 @@ const config: Record<
     quotes: `'"\``,
     multi: "`",
     keywords: new Set(jsKeywords.split(" ")),
-    word: /^[A-Za-z_$][\w$]*/,
+    word: /^[A-Za-z_$][\w$]*/u,
   },
   js: {
     line: "//",
@@ -72,16 +74,16 @@ const config: Record<
     quotes: `'"\``,
     multi: "`",
     keywords: new Set(jsKeywords.split(" ")),
-    word: /^[A-Za-z_$][\w$]*/,
+    word: /^[A-Za-z_$][\w$]*/u,
   },
-  json: { quotes: '"', keywords: new Set(["true", "false", "null"]), word: /^[A-Za-z_]\w*/ },
+  json: { quotes: '"', keywords: new Set(["true", "false", "null"]), word: /^[A-Za-z_]\w*/u },
   bash: {
     line: "#",
     quotes: `'"`,
     keywords: new Set(
       "if then else elif fi for while do done case esac in function export local return".split(" "),
     ),
-    word: /^[A-Za-z_./@~-][\w./@~:=-]*/,
+    word: /^[A-Za-z_./@~-][\w./@~:=-]*/u,
   },
   python: {
     line: "#",
@@ -91,15 +93,15 @@ const config: Record<
         " ",
       ),
     ),
-    word: /^[A-Za-z_]\w*/,
+    word: /^[A-Za-z_]\w*/u,
   },
   yaml: {
     line: "#",
     quotes: `'"`,
     keywords: new Set(["true", "false", "null", "yes", "no"]),
-    word: /^[A-Za-z_][\w.-]*/,
+    word: /^[A-Za-z_][\w.-]*/u,
   },
-  text: { quotes: "", keywords: new Set(), word: /^\S+/ },
+  text: { quotes: "", keywords: new Set(), word: /^\S+/u },
 };
 
 /** Resource IDs the tokenizer underlines without being told: run_, agt_, key_, dpl_ and mdl_ prefixes. */
@@ -110,18 +112,18 @@ const refPrefixes: Record<string, Kind> = {
   dpl: "deploy",
   mdl: "model",
 };
-const refPattern = /\b(run|agt|key|dpl|mdl)_[A-Za-z0-9]{4,}\b/g;
+const refPattern = /\b(?:run|agt|key|dpl|mdl)_[A-Za-z0-9]{4,}\b/gu;
 
-const space = /\s/;
-const leadingSpace = /^\s+/;
-const digit = /\d/;
-const wordChar = /[\w$]/;
-const numberLiteral = /^\d[\d_.xXa-fA-FeEn]*/;
-const colonAhead = /^\s*:/;
-const listDash = /^-\s*/;
-const copyPrefix = /^Copy /;
-const trailingNewline = /\n$/;
-const trailingBackslashes = /\\*$/;
+const space = /\s/u;
+const leadingSpace = /^\s+/u;
+const digit = /\d/u;
+const wordChar = /[\w$]/u;
+const numberLiteral = /^\d[\d_.xXa-fA-FeEn]*/u;
+const colonAhead = /^\s*:/u;
+const listDash = /^-\s*/u;
+const copyPrefix = /^Copy /u;
+const trailingNewline = /\n$/u;
+const trailingBackslashes = /\\*$/u;
 
 type State = { block?: boolean; quote?: string };
 
@@ -129,16 +131,19 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
   const c = config[lang];
   const out: Token[] = [];
   const push = (type: TokenType, value: string) => {
-    const last = out[out.length - 1];
-    if (last && last.type === type) last.value += value;
-    else out.push({ type, value });
+    const last = out.at(-1);
+    if (last && last.type === type) {
+      last.value += value;
+    } else {
+      out.push({ type, value });
+    }
   };
   let i = 0;
   while (i < line.length) {
     const rest = line.slice(i);
     if (state.block && c.block) {
       const end = rest.indexOf(c.block[1]);
-      if (end < 0) {
+      if (end === -1) {
         push("comment", rest);
         break;
       }
@@ -149,7 +154,9 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
     }
     if (state.quote) {
       let j = 0;
-      while (j < rest.length && rest[j] !== state.quote) j += rest[j] === "\\" ? 2 : 1;
+      while (j < rest.length && rest[j] !== state.quote) {
+        j += rest[j] === "\\" ? 2 : 1;
+      }
       if (j >= rest.length) {
         push("string", rest);
         break;
@@ -176,7 +183,9 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
     const ch = line[i];
     if (c.quotes.includes(ch)) {
       let j = 1;
-      while (j < rest.length && rest[j] !== ch) j += rest[j] === "\\" ? 2 : 1;
+      while (j < rest.length && rest[j] !== ch) {
+        j += rest[j] === "\\" ? 2 : 1;
+      }
       if (j >= rest.length && c.multi?.includes(ch)) {
         state.quote = ch;
         push("string", rest);
@@ -190,20 +199,20 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
       continue;
     }
     if (space.test(ch)) {
-      const m = rest.match(leadingSpace)![0];
+      const [m = ""] = leadingSpace.exec(rest) ?? [];
       push("plain", m);
       i += m.length;
       continue;
     }
     if (lang !== "text" && digit.test(ch) && !wordChar.test(line[i - 1] ?? "")) {
-      const m = rest.match(numberLiteral)![0];
+      const [m = ""] = numberLiteral.exec(rest) ?? [];
       push("number", m);
       i += m.length;
       continue;
     }
     const word = rest.match(c.word);
     if (word) {
-      const w = word[0];
+      const [w] = word;
       i += w.length;
       if (
         lang === "yaml" &&
@@ -212,9 +221,11 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
           .slice(0, i - w.length)
           .trim()
           .replace(listDash, "")
-      )
+      ) {
         push("key", w);
-      else push(c.keywords.has(w) ? "keyword" : "plain", w);
+      } else {
+        push(c.keywords.has(w) ? "keyword" : "plain", w);
+      }
       continue;
     }
     push(lang === "text" ? "plain" : "punct", ch);
@@ -225,7 +236,9 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
 
 /** Splits plain and string tokens wherever a resource reference appears. */
 function markRefs(tokens: Token[], refs: CodeRef[] = [], detect = true): Token[] {
-  if (!refs.length && !detect) return tokens;
+  if (refs.length === 0 && !detect) {
+    return tokens;
+  }
   const out: Token[] = [];
   for (const token of tokens) {
     if (token.type === "comment" || token.type === "keyword") {
@@ -235,27 +248,37 @@ function markRefs(tokens: Token[], refs: CodeRef[] = [], detect = true): Token[]
     const hits: { start: number; end: number; kind: Kind; href?: string }[] = [];
     for (const ref of refs) {
       // indexOf("") never advances, so an empty ref would loop forever.
-      if (!ref.text) continue;
+      if (!ref.text) {
+        continue;
+      }
       let at = token.value.indexOf(ref.text);
       while (at >= 0) {
         hits.push({ start: at, end: at + ref.text.length, kind: ref.kind, href: ref.href });
         at = token.value.indexOf(ref.text, at + ref.text.length);
       }
     }
-    if (detect)
+    if (detect) {
       for (const m of token.value.matchAll(refPattern)) {
-        if (!hits.some((h) => m.index! < h.end && m.index! + m[0].length > h.start))
-          hits.push({ start: m.index!, end: m.index! + m[0].length, kind: refPrefixes[m[1]] });
+        const start = m.index ?? 0;
+        const end = start + m[0].length;
+        if (!hits.some((h) => start < h.end && end > h.start)) {
+          hits.push({ start, end, kind: refPrefixes[m[0].slice(0, m[0].indexOf("_"))] });
+        }
       }
-    if (!hits.length) {
+    }
+    if (hits.length === 0) {
       out.push(token);
       continue;
     }
     hits.sort((a, b) => a.start - b.start);
     let at = 0;
     for (const hit of hits) {
-      if (hit.start < at) continue;
-      if (hit.start > at) out.push({ type: token.type, value: token.value.slice(at, hit.start) });
+      if (hit.start < at) {
+        continue;
+      }
+      if (hit.start > at) {
+        out.push({ type: token.type, value: token.value.slice(at, hit.start) });
+      }
       out.push({
         type: token.type,
         value: token.value.slice(hit.start, hit.end),
@@ -264,7 +287,9 @@ function markRefs(tokens: Token[], refs: CodeRef[] = [], detect = true): Token[]
       });
       at = hit.end;
     }
-    if (at < token.value.length) out.push({ type: token.type, value: token.value.slice(at) });
+    if (at < token.value.length) {
+      out.push({ type: token.type, value: token.value.slice(at) });
+    }
   }
   return out;
 }
@@ -307,18 +332,23 @@ function TokenLine({
   marks?: [number, number][];
   current?: number;
 }) {
-  if (!tokens.length) return <>{"\n"}</>;
+  if (tokens.length === 0) {
+    return "\n";
+  }
   // Each token's offset into the line, worked out before render rather than mutated inside it.
   const starts: number[] = [];
-  for (let i = 0, offset = 0; i < tokens.length; offset += tokens[i].value.length, i++)
+  let offset = 0;
+  for (const token of tokens) {
     starts.push(offset);
+    offset += token.value.length;
+  }
   return (
     <>
       {tokens.map((token, i) => {
         const start = starts[i];
         const body = marks?.length ? splitMarks(token.value, start, marks, current) : token.value;
         const cls = cn(tokenClass[token.type], token.kind && refClass);
-        if (token.kind && token.href)
+        if (token.kind && token.href) {
           return (
             <a
               key={i}
@@ -329,6 +359,7 @@ function TokenLine({
               {body}
             </a>
           );
+        }
         return (
           <span key={i} data-kind={token.kind} className={cls}>
             {body}
@@ -352,11 +383,15 @@ function splitMarks(
   const end = start + value.length;
   const parts: ReactNode[] = [];
   let at = start;
-  marks.forEach(([a, b], m) => {
-    if (b <= start || a >= end) return;
-    const s = Math.max(a, start),
-      e = Math.min(b, end);
-    if (s > at) parts.push(value.slice(at - start, s - start));
+  for (const [m, [a, b]] of marks.entries()) {
+    if (b <= start || a >= end) {
+      continue;
+    }
+    const s = Math.max(a, start);
+    const e = Math.min(b, end);
+    if (s > at) {
+      parts.push(value.slice(at - start, s - start));
+    }
     parts.push(
       <mark
         key={m}
@@ -367,20 +402,30 @@ function splitMarks(
       </mark>,
     );
     at = e;
-  });
-  if (at < end) parts.push(value.slice(at - start));
+  }
+  if (at < end) {
+    parts.push(value.slice(at - start));
+  }
   return parts;
 }
 
 /** "1,4-6" or [1, 4, 5, 6] to a set of 1-based line numbers. */
 function parseLines(lines?: number[] | string): Set<number> {
-  if (!lines) return new Set();
-  if (Array.isArray(lines)) return new Set(lines);
+  if (!lines) {
+    return new Set();
+  }
+  if (Array.isArray(lines)) {
+    return new Set(lines);
+  }
   const out = new Set<number>();
   for (const part of lines.split(",")) {
     const [a, b] = part.trim().split("-").map(Number);
-    if (!a) continue;
-    for (let n = a; n <= (b || a); n++) out.add(n);
+    if (!a) {
+      continue;
+    }
+    for (let n = a; n <= (b || a); n++) {
+      out.add(n);
+    }
   }
   return out;
 }
@@ -412,7 +457,8 @@ function CopyCodeButton({
 }: {
   text: string | (() => string);
   label?: string;
-  /** icon-xs in a 40px header, icon-sm alone on the code. */ size?: "icon-xs" | "icon-sm";
+  /** icon-xs in a 40px header, icon-sm alone on the code. */
+  size?: "icon-xs" | "icon-sm";
   className?: string;
   onCopy?: (text: string) => void;
   forceState?: "copied" | "failed";
@@ -442,21 +488,21 @@ type CommandLine = { kind: "command" | "output"; text: string };
 function commandLines(code: string, prompt: string): CommandLine[] {
   const lines = code.replace(trailingNewline, "").split("\n");
   const marker = prompt ? `${prompt} ` : "";
-  const anyPrompt = !!marker && lines.some((l) => l.startsWith(marker));
+  const anyPrompt = Boolean(marker) && lines.some((l) => l.startsWith(marker));
   const out: CommandLine[] = [];
   for (const l of lines) {
     const prev = out.at(-1);
-    out.push(
-      !anyPrompt
-        ? { kind: "command", text: l }
-        : l.startsWith(marker)
-          ? { kind: "command", text: l.slice(marker.length) }
-          : // An odd run of trailing backslashes continues the line; an even run is escaped backslashes and does not.
-            prev?.kind === "command" &&
-              (prev.text.match(trailingBackslashes)?.[0].length ?? 0) % 2 === 1
-            ? { kind: "command", text: l }
-            : { kind: "output", text: l },
-    );
+    if (!anyPrompt) {
+      out.push({ kind: "command", text: l });
+    } else if (l.startsWith(marker)) {
+      out.push({ kind: "command", text: l.slice(marker.length) });
+    } else {
+      // An odd run of trailing backslashes continues the line; an even run is escaped backslashes and does not.
+      const continues =
+        prev?.kind === "command" &&
+        (prev.text.match(trailingBackslashes)?.[0].length ?? 0) % 2 === 1;
+      out.push({ kind: continues ? "command" : "output", text: l });
+    }
   }
   return out;
 }
@@ -465,7 +511,9 @@ function commandLines(code: string, prompt: string): CommandLine[] {
 function MaskText({ masked }: { masked: string }) {
   const from = masked.indexOf("\u2022");
   const to = masked.lastIndexOf("\u2022") + 1;
-  if (from < 0) return <>{masked}</>;
+  if (from === -1) {
+    return masked;
+  }
   return (
     <>
       {masked.slice(0, from)}
@@ -476,8 +524,9 @@ function MaskText({ masked }: { masked: string }) {
 }
 
 function Masked({ line, secret, revealed }: { line: string; secret?: string; revealed: boolean }) {
-  if (!secret || revealed || !line.includes(secret))
+  if (!secret || revealed || !line.includes(secret)) {
     return <TokenLine tokens={tokenize(line, "bash")[0]} />;
+  }
   const parts = line.split(secret);
   return (
     <>
@@ -513,7 +562,9 @@ function keyPrefixLength(value: string) {
 /** "sk_demo_••••i0p0": the prefix and the tail stay, with one dot per hidden character, so the mask keeps the key's length. */
 function maskSecret(value: string, tail = 4) {
   const prefix = keyPrefixLength(value);
-  if (value.length <= prefix + tail) return "\u2022".repeat(value.length);
+  if (value.length <= prefix + tail) {
+    return "\u2022".repeat(value.length);
+  }
   return (
     value.slice(0, prefix) + "\u2022".repeat(value.length - prefix - tail) + value.slice(-tail)
   );
@@ -736,13 +787,17 @@ function useMoreRight() {
   const [more, setMore] = useState(false);
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const check = () => setMore(Math.abs(el.scrollLeft) + el.clientWidth < el.scrollWidth - 1);
     check();
     el.addEventListener("scroll", check, { passive: true });
     const ro = new ResizeObserver(check);
     ro.observe(el);
-    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    if (el.firstElementChild) {
+      ro.observe(el.firstElementChild);
+    }
     return () => {
       el.removeEventListener("scroll", check);
       ro.disconnect();
@@ -778,12 +833,12 @@ function CommandBlock({
 }: CodeBlockProps) {
   const [revealed, setRevealed] = useState(defaultRevealed);
   const lines =
-    command !== undefined
-      ? (Array.isArray(command) ? command : [command]).map((text) => ({
+    command === undefined
+      ? commandLines(code ?? "", prompt)
+      : (Array.isArray(command) ? command : [command]).map((text) => ({
           kind: "command" as const,
           text,
-        }))
-      : commandLines(code ?? "", prompt);
+        }));
   const commands = lines.filter((l) => l.kind === "command").map((l) => l.text);
   const copyText = commands.join("\n");
   const sm = size === "sm";
@@ -921,7 +976,9 @@ function Code({ className, variant = "default", kind, href, children, ...props }
       {children}
     </code>
   );
-  if (!href) return code;
+  if (!href) {
+    return code;
+  }
   return (
     <a
       data-slot="code-link"

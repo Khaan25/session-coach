@@ -34,7 +34,8 @@ describe("sync state", () => {
   });
 
   it("is empty when the file is missing, corrupt, another version or the wrong shape", async () => {
-    assert.deepEqual(Object.keys((await loadState(path)).done), []);
+    const missing = await loadState(path);
+    assert.deepEqual(Object.keys(missing.done), []);
     await saveState(path, { version: 1, done: {} });
     for (const text of [
       "{not json",
@@ -46,7 +47,8 @@ describe("sync state", () => {
       '{"version":1,"done":"nope"}',
     ]) {
       await writeFile(path, text);
-      assert.deepEqual(Object.keys((await loadState(path)).done), [], text);
+      const read = await loadState(path);
+      assert.deepEqual(Object.keys(read.done), [], text);
     }
   });
 
@@ -64,7 +66,8 @@ describe("sync state", () => {
         },
       }),
     );
-    assert.deepEqual(Object.keys((await loadState(path)).done), ["good"]);
+    const loaded = await loadState(path);
+    assert.deepEqual(Object.keys(loaded.done), ["good"]);
   });
 
   it("treats an id like __proto__ as an ordinary key", async () => {
@@ -76,6 +79,7 @@ describe("sync state", () => {
     const state = await loadState(path);
     assert.deepEqual(Object.keys(state.done), ["__proto__"]);
     assert.ok(Object.hasOwn(state.done, "__proto__"));
+    // oxlint-disable-next-line no-proto -- the test is about a log id that is literally "__proto__"
     assert.equal(state.done["__proto__"]?.outcome, "pushed");
     // An own key, not the prototype: the entry didn't replace it, and the global prototype is untouched.
     assert.equal(Object.getPrototypeOf(state.done), null);
@@ -100,7 +104,9 @@ describe("sync state", () => {
 
     await saveState(path, mine);
     const saved = await loadState(path);
-    assert.deepEqual(Object.keys(saved.done).sort(), ["mine", "shared", "theirs"]);
+    const ids = Object.keys(saved.done);
+    ids.sort();
+    assert.deepEqual(ids, ["mine", "shared", "theirs"]);
     assert.equal(saved.done.shared?.outcome, "pushed", "in-memory wins for the same id");
     assert.equal(saved.done.theirs?.outcome, "failed");
     assert.ok("theirs" in mine.done, "the in-memory state learns the merged entries too");
@@ -109,8 +115,11 @@ describe("sync state", () => {
   it("writes the file readable by its owner only", async () => {
     await saveState(path, { version: 1, done: {} });
     if (process.platform !== "win32") {
-      assert.equal((await stat(path)).mode & 0o777, 0o600);
+      const { mode } = await stat(path);
+      // oxlint-disable-next-line no-bitwise -- masks the permission bits out of a file mode
+      assert.equal(mode & 0o777, 0o600);
     }
-    assert.equal((await readFile(path, "utf8")).endsWith("\n"), true);
+    const written = await readFile(path, "utf8");
+    assert.equal(written.endsWith("\n"), true);
   });
 });

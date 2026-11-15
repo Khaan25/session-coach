@@ -16,24 +16,33 @@ export function parseLoginArgs(args: string[]): LoginArgs {
     const arg = args[i] as string;
     let value: string | undefined;
     if (arg === "--no-open") {
-      if (!open) return { error: "--no-open was given twice." };
+      if (!open) {
+        return { error: "--no-open was given twice." };
+      }
       open = false;
       continue;
     }
     if (arg === "--token") {
-      if (token) return { error: "--token was given twice." };
+      if (token) {
+        return { error: "--token was given twice." };
+      }
       token = true;
       continue;
     }
     if (arg === "--url") {
-      value = args[++i];
-      if (value === undefined) return { error: "--url needs a value." };
+      i += 1;
+      value = args[i];
+      if (value === undefined) {
+        return { error: "--url needs a value." };
+      }
     } else if (arg.startsWith("--url=")) {
       value = arg.slice("--url=".length);
     } else {
       return { error: `Unknown argument: ${arg}` };
     }
-    if (url !== null) return { error: "--url was given twice." };
+    if (url !== null) {
+      return { error: "--url was given twice." };
+    }
     url = value;
   }
   return { url, token, open };
@@ -43,13 +52,21 @@ export function parseLoginArgs(args: string[]): LoginArgs {
 export function parsePushArgs(args: string[]): PushArgs {
   const latest = args.includes("--latest");
   const others = args.filter((arg) => arg !== "--latest");
-  if (latest && others.length > 0) return { error: "Use either a file or --latest, not both." };
+  if (latest && others.length > 0) {
+    return { error: "Use either a file or --latest, not both." };
+  }
   if (latest) {
     return args.length > 1 ? { error: "--latest was given twice." } : { latest: true };
   }
   const [file, ...rest] = args;
-  if (!file) return { error: "push needs a file or --latest." };
-  if (file.startsWith("-")) return { error: `Unknown argument: ${file}` };
-  if (rest.length > 0) return { error: `Unknown argument: ${rest[0]}` };
+  if (!file) {
+    return { error: "push needs a file or --latest." };
+  }
+  if (file.startsWith("-")) {
+    return { error: `Unknown argument: ${file}` };
+  }
+  if (rest.length > 0) {
+    return { error: `Unknown argument: ${rest[0]}` };
+  }
   return { file };
 }

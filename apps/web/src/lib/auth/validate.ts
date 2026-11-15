@@ -4,7 +4,7 @@
 export const MIN_PASSWORD = 10;
 
 /** Only catches typos; Supabase decides what a valid address is. */
-export const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
 
 /** A message per field, keyed by the input's `name`. An empty object means the form can go to the server. */
 export type AuthFieldErrors = { email?: string; password?: string };
@@ -16,14 +16,22 @@ function text(data: FormData, name: string) {
 
 function checkEmail(data: FormData) {
   const email = text(data, "email").trim();
-  if (!email) return "Enter your email address.";
-  if (!EMAIL.test(email)) return "Enter an email address like name@example.com.";
+  if (!email) {
+    return "Enter your email address.";
+  }
+  if (!EMAIL.test(email)) {
+    return "Enter an email address like name@example.com.";
+  }
 }
 
 function checkNewPassword(data: FormData, empty: string) {
   const password = text(data, "password");
-  if (!password) return empty;
-  if (password.length < MIN_PASSWORD) return `Use at least ${MIN_PASSWORD} characters.`;
+  if (!password) {
+    return empty;
+  }
+  if (password.length < MIN_PASSWORD) {
+    return `Use at least ${MIN_PASSWORD} characters.`;
+  }
 }
 
 function only(errors: AuthFieldErrors): AuthFieldErrors {

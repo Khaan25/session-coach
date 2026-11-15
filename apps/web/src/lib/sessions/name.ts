@@ -1,10 +1,11 @@
 // Tags Claude Code injects before a prompt. The tag and everything inside it is noise, never part of the title.
 const DROPPED_TAG =
-  /^<(system-reminder|local-command-caveat|local-command-stdout|command-name|command-message|command-args)(?:\s[^>]*)?>/;
+  // oxlint-disable-next-line prefer-named-capture-group -- web targets ES2017, where TypeScript rejects named groups (TS1503)
+  /^<(system-reminder|local-command-caveat|local-command-stdout|command-name|command-message|command-args)(?:\s[^>]*)?>/u;
 // A paste is the prompt itself, so only its tags go and the text inside stays.
-const PASTED_OPEN = /^<pasted_content(?:\s[^>]*)?>/;
+const PASTED_OPEN = /^<pasted_content(?:\s[^>]*)?>/u;
 const PASTED_CLOSE = "</pasted_content>";
-const WHITESPACE = /\s+/g;
+const WHITESPACE = /\s+/gu;
 
 /**
  * Turns a prompt's text into a title by removing injected tags from the start and collapsing whitespace.
@@ -39,7 +40,7 @@ export function cleanPromptTitle(text: string): string {
       ).trimStart();
       continue;
     }
-    return rest.replace(WHITESPACE, " ").trim();
+    return rest.replaceAll(WHITESPACE, " ").trim();
   }
 }
 

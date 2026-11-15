@@ -48,7 +48,9 @@ export function buildRetentionCohorts(
   const offsets = new Map<string, Set<number>>();
   for (const a of activity) {
     const cohort = cohortOf.get(a.user_id);
-    if (!cohort) continue;
+    if (!cohort) {
+      continue;
+    }
     const offset = (Date.parse(utcDay(a.created_at)) - Date.parse(cohort)) / DAY_MS;
     if (offset === 1 || offset === 7 || offset === 30) {
       const set = offsets.get(a.user_id) ?? new Set<number>();
@@ -61,24 +63,36 @@ export function buildRetentionCohorts(
   const byDay = new Map<string, { signups: number; d1: number; d7: number; d30: number }>();
   for (const [userId, day] of cohortOf) {
     const row = byDay.get(day) ?? { signups: 0, d1: 0, d7: 0, d30: 0 };
-    row.signups++;
+    row.signups += 1;
     const seen = offsets.get(userId);
-    if (seen?.has(1)) row.d1++;
-    if (seen?.has(7)) row.d7++;
-    if (seen?.has(30)) row.d30++;
+    if (seen?.has(1)) {
+      row.d1 += 1;
+    }
+    if (seen?.has(7)) {
+      row.d7 += 1;
+    }
+    if (seen?.has(30)) {
+      row.d30 += 1;
+    }
     byDay.set(day, row);
   }
 
   const today = Date.parse(utcDay(now.toISOString()));
   return [...byDay.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
+    .toSorted(([a], [b]) => a.localeCompare(b))
     .map(([date, row]) => {
       // Strictly greater: the window is day N+k, so it is complete only once day N+k is over (k = 1, 7, 30).
       const age = (today - Date.parse(date)) / DAY_MS;
       const cohort: RetentionCohort = { date, signups: row.signups };
-      if (age > 1) cohort.d1 = row.d1;
-      if (age > 7) cohort.d7 = row.d7;
-      if (age > 30) cohort.d30 = row.d30;
+      if (age > 1) {
+        cohort.d1 = row.d1;
+      }
+      if (age > 7) {
+        cohort.d7 = row.d7;
+      }
+      if (age > 30) {
+        cohort.d30 = row.d30;
+      }
       return cohort;
     });
 }

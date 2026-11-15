@@ -33,7 +33,9 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 test.beforeAll(async () => {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-  if (created.error) throw created.error;
+  if (created.error) {
+    throw created.error;
+  }
   userId = created.data.user.id;
   sessionId = randomUUID();
   const session = await admin.from("sessions").insert({
@@ -44,7 +46,9 @@ test.beforeAll(async () => {
     status: "ready",
     title: "Add rate limiting",
   });
-  if (session.error) throw session.error;
+  if (session.error) {
+    throw session.error;
+  }
   const cards = await admin
     .from("decision_cards")
     .insert(
@@ -65,22 +69,32 @@ test.beforeAll(async () => {
       })),
     )
     .select("id, position");
-  if (cards.error) throw cards.error;
+  if (cards.error) {
+    throw cards.error;
+  }
   const byPosition = new Map(cards.data.map(({ id, position }) => [position, id]));
-  cardId = byPosition.get(0)!;
-  dueCardId = byPosition.get(1)!;
-  spareCardId = byPosition.get(2)!;
+  const [first, second, third] = [0, 1, 2].map((position) => byPosition.get(position));
+  if (first === undefined || second === undefined || third === undefined) {
+    throw new Error("The seeded session is missing a card.");
+  }
+  cardId = first;
+  dueCardId = second;
+  spareCardId = third;
   // Profiles default to UTC, so the learner's today is the UTC date.
   const review = await admin
     .from("reviews")
     .insert({ card_id: dueCardId, user_id: userId, step: 2, due_on: today(), last_score: 2 });
-  if (review.error) throw review.error;
+  if (review.error) {
+    throw review.error;
+  }
 });
 
 test.afterAll(async () => {
   if (userId) {
     const deleted = await admin.auth.admin.deleteUser(userId);
-    if (deleted.error) throw deleted.error;
+    if (deleted.error) {
+      throw deleted.error;
+    }
   }
 });
 
@@ -89,7 +103,9 @@ test("the why and the evidence aren't readable through the REST API with the lea
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const signedIn = await learner.auth.signInWithPassword({ email, password });
-  if (signedIn.error) throw signedIn.error;
+  if (signedIn.error) {
+    throw signedIn.error;
+  }
   for (const column of ["why", "evidence", "model_answer"]) {
     const read = await learner.from("decision_cards").select(`id, ${column}`).eq("id", cardId);
     expect(read.error?.code, `${column} readable`).toBe("42501");
@@ -108,12 +124,15 @@ test("an unanswered card hides its why until the learner says they don't know ye
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/u);
 
   const response = await page.goto(`/s/${sessionId}`);
   await expect(page.getByRole("heading", { name: question })).toBeVisible();
   // Not hidden by CSS: the why is nowhere in the HTML or the RSC payload.
-  const html = await response!.text();
+  if (!response) {
+    throw new Error(`No response for /s/${sessionId}.`);
+  }
+  const html = await response.text();
   const content = await page.content();
   for (const secret of [why, modelAnswer, quote]) {
     expect(html).not.toContain(secret);
@@ -122,7 +141,7 @@ test("an unanswered card hides its why until the learner says they don't know ye
 
   await page
     .getByRole("region", { name: "Rate limit uploads per token, not per IP" })
-    .getByRole("button", { name: /I don.t know yet/ })
+    .getByRole("button", { name: /I don.t know yet/u })
     .click();
   await expect(page.getByRole("heading", { name: "Here's the why" })).toBeVisible();
   await expect(page.getByText(why).first()).toBeVisible();
@@ -150,7 +169,7 @@ test("a skip keeps the card's step, and the day stops at 5 answers", async ({ pa
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/u);
 
   // A miss would drop a step-2 card to step 1; a skip leaves it on step 2, due tomorrow.
   const skip = await page.request.post("/api/review/answer", {
@@ -175,15 +194,16 @@ test("a skip keeps the card's step, and the day stops at 5 answers", async ({ pa
       score: 2,
     })),
   );
-  if (filler.error) throw filler.error;
+  if (filler.error) {
+    throw filler.error;
+  }
 
   const capped = await page.request.post("/api/review/answer", {
     data: { cardId: spareCardId, answer: "A shared IP would block learners." },
   });
   expect(capped.status()).toBe(409);
-  expect((await capped.json()).error).toBe(
-    "You've done 5 cards today. This one comes back tomorrow.",
-  );
+  const cappedBody = await capped.json();
+  expect(cappedBody.error).toBe("You've done 5 cards today. This one comes back tomorrow.");
   const written = await admin.from("answers").select("id").eq("card_id", spareCardId);
   expect(written.data).toEqual([]);
   const scheduled = await admin.from("reviews").select("card_id").eq("card_id", spareCardId);

@@ -64,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${monaSans.variable} ${geistMono.variable} h-full`}
     >
       <head>
+        {/* oxlint-disable-next-line react/no-danger -- the theme script must run inline before paint */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="flex min-h-full flex-col">

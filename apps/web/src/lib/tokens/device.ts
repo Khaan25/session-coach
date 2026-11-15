@@ -21,7 +21,9 @@ export function newDeviceCode(): string {
 /** 8 letters from `USER_CODE_ALPHABET`, uniform (randomInt has no modulo bias). Stored without the dash. */
 export function newUserCode(): string {
   let code = "";
-  for (let i = 0; i < 8; i++) code += USER_CODE_ALPHABET[randomInt(USER_CODE_ALPHABET.length)];
+  for (let i = 0; i < 8; i++) {
+    code += USER_CODE_ALPHABET[randomInt(USER_CODE_ALPHABET.length)];
+  }
   return code;
 }
 
@@ -35,9 +37,11 @@ export function formatUserCode(code: string): string {
  * alphabet, so a bad code never reaches a query.
  */
 export function normalizeUserCode(input: string | null | undefined): string | null {
-  if (!input || input.length > 32) return null;
-  const code = input.toUpperCase().replace(/[\s-]/g, "");
-  return new RegExp(`^[${USER_CODE_ALPHABET}]{8}$`).test(code) ? code : null;
+  if (!input || input.length > 32) {
+    return null;
+  }
+  const code = input.toUpperCase().replaceAll(/[\s-]/gu, "");
+  return new RegExp(`^[${USER_CODE_ALPHABET}]{8}$`, "u").test(code) ? code : null;
 }
 
 /** The device label the CLI sends: printable text, 1 to 100 characters. */
@@ -52,7 +56,7 @@ export const deviceStartSchema = z.object({ clientName: clientNameSchema });
 
 /** The polled device code: base64url, 43 characters from `newDeviceCode`; a little slack, never unbounded. */
 export const devicePollSchema = z.object({
-  deviceCode: z.string().regex(/^[A-Za-z0-9_-]{32,128}$/),
+  deviceCode: z.string().regex(/^[A-Za-z0-9_-]{32,128}$/u),
 });
 
 export const userCodeSchema = z.object({ userCode: z.string().max(32) });
@@ -87,10 +91,18 @@ export function codeState(
   row: Pick<DeviceRow, "expires_at" | "approved_at" | "denied_at" | "token_issued_at">,
   now: Date,
 ): CodeState {
-  if (row.token_issued_at) return "used";
-  if (row.denied_at) return "denied";
-  if (row.approved_at) return "approved";
-  if (Date.parse(row.expires_at) <= now.getTime()) return "expired";
+  if (row.token_issued_at) {
+    return "used";
+  }
+  if (row.denied_at) {
+    return "denied";
+  }
+  if (row.approved_at) {
+    return "approved";
+  }
+  if (Date.parse(row.expires_at) <= now.getTime()) {
+    return "expired";
+  }
   return "pending";
 }
 
@@ -118,8 +130,12 @@ export function pollOutcome(
   >,
   now: Date,
 ): PollOutcome {
-  if (row.denied_at) return "access_denied";
-  if (row.token_issued_at || Date.parse(row.expires_at) <= now.getTime()) return "expired_token";
+  if (row.denied_at) {
+    return "access_denied";
+  }
+  if (row.token_issued_at || Date.parse(row.expires_at) <= now.getTime()) {
+    return "expired_token";
+  }
   // 1 s of slack: network jitter can land two on-time polls closer together than the interval.
   if (
     row.last_polled_at &&
@@ -139,7 +155,9 @@ export function pollOutcome(
  */
 export function isSameOrigin(headers: Pick<Headers, "get">, origin: string): boolean {
   const sent = headers.get("origin");
-  if (sent) return sent === origin;
+  if (sent) {
+    return sent === origin;
+  }
   return headers.get("sec-fetch-site") === "same-origin";
 }
 

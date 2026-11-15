@@ -24,7 +24,7 @@ export function syncHooks(version: string) {
   };
 }
 
-const OUR_COMMAND = /\bsession-coach(@\S+)? sync\b/;
+const OUR_COMMAND = /\bsession-coach(?:@\S+)? sync\b/u;
 
 type HookGroup = { hooks?: { command?: unknown }[] };
 
@@ -68,9 +68,13 @@ export function addSyncHooks(
 
 /** Whether a settings file already holds a session-coach sync hook, so init can warn about running it twice. */
 export function hasSyncHook(settings: Record<string, unknown>): boolean {
-  const hooks = settings.hooks;
-  if (typeof hooks !== "object" || hooks === null) return false;
-  return Object.values(hooks).some((groups) => Array.isArray(groups) && groups.some(isOurs));
+  const { hooks } = settings;
+  if (typeof hooks !== "object" || hooks === null) {
+    return false;
+  }
+  return Object.values(hooks).some(
+    (groups) => Array.isArray(groups) && groups.some((group) => isOurs(group)),
+  );
 }
 
 /** Reads a JSON settings file: `{}` when it doesn't exist, an error when it isn't a JSON object. */
@@ -78,8 +82,10 @@ async function readSettings(path: string): Promise<Record<string, unknown> | { e
   let text: string;
   try {
     text = await readFile(path, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return {};
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return {};
+    }
     return { error: `Couldn't read ${path}.` };
   }
   try {
@@ -105,9 +111,9 @@ export async function settingsLocalIgnored(cwd: string): Promise<boolean | null>
   try {
     await promisify(execFile)("git", ["check-ignore", "-q", SETTINGS_LOCAL], { cwd });
     return true;
-  } catch (err) {
+  } catch (error) {
     // check-ignore exits 1 for a path that isn't ignored and 128 outside a repo; ENOENT means no git.
-    return (err as { code?: unknown }).code === 1 ? false : null;
+    return (error as { code?: unknown }).code === 1 ? false : null;
   }
 }
 
@@ -122,10 +128,13 @@ export async function runInit(
 ): Promise<{ message: string; warnings: string[]; exitCode: number }> {
   const path = join(cwd, ".claude", "settings.local.json");
   const current = await readSettings(path);
-  if ("error" in current) return { message: current.error as string, warnings: [], exitCode: 1 };
+  if ("error" in current) {
+    return { message: current.error as string, warnings: [], exitCode: 1 };
+  }
   const updated = addSyncHooks(current, version);
-  if ("error" in updated)
+  if ("error" in updated) {
     return { message: `${path}: ${updated.error as string}`, warnings: [], exitCode: 1 };
+  }
 
   await mkdir(dirname(path), { recursive: true });
   // Written beside it, then renamed over it, so an interrupted write never leaves half a settings file.
@@ -170,25 +179,34 @@ export function parseInitArgs(args: string[]): InitArgs {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i] as string;
     if (arg === "--no-open") {
-      if (!open) return { error: "--no-open was given twice." };
+      if (!open) {
+        return { error: "--no-open was given twice." };
+      }
       open = false;
       continue;
     }
     if (arg === "--yes" || arg === "-y") {
-      if (yes) return { error: "--yes was given twice." };
+      if (yes) {
+        return { error: "--yes was given twice." };
+      }
       yes = true;
       continue;
     }
     let value: string | undefined;
     if (arg === "--url") {
-      value = args[++i];
-      if (value === undefined) return { error: "--url needs a value." };
+      i += 1;
+      value = args[i];
+      if (value === undefined) {
+        return { error: "--url needs a value." };
+      }
     } else if (arg.startsWith("--url=")) {
       value = arg.slice("--url=".length);
     } else {
       return { error: `Unknown argument: ${arg}` };
     }
-    if (url !== null) return { error: "--url was given twice." };
+    if (url !== null) {
+      return { error: "--url was given twice." };
+    }
     url = value;
   }
   return { url, yes, open };
@@ -202,8 +220,14 @@ export function stepHeading(step: number, total: number, title: string): string 
 /** Reads a yes/no answer. Empty means the default; anything not starting with y or n is asked again (null). */
 export function parseYesNo(answer: string, defaultYes: boolean): boolean | null {
   const a = answer.trim().toLowerCase();
-  if (a === "") return defaultYes;
-  if (a.startsWith("y")) return true;
-  if (a.startsWith("n")) return false;
+  if (a === "") {
+    return defaultYes;
+  }
+  if (a.startsWith("y")) {
+    return true;
+  }
+  if (a.startsWith("n")) {
+    return false;
+  }
   return null;
 }

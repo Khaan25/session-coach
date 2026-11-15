@@ -15,25 +15,37 @@ type Reply = { status: number; body?: unknown; headers?: Record<string, string> 
 /** A fetch answering steps ①, ② and ③ from `replies` by step; records each call's method and url. */
 function fakeFetch(replies: { create?: Reply; put?: Reply; process?: Reply }) {
   const calls: string[] = [];
-  const impl = (async (url: string, init: RequestInit) => {
+  const impl = ((url: string, init: RequestInit) => {
     calls.push(`${init.method} ${url}`);
-    const step = init.method === "PUT" ? "put" : url.endsWith("/process") ? "process" : "create";
+    let step: "put" | "process" | "create" = "create";
+    if (init.method === "PUT") {
+      step = "put";
+    } else if (url.endsWith("/process")) {
+      step = "process";
+    }
     const defaults: Record<string, Reply> = {
       create: { status: 201, body: { id: ID, upload_url: UPLOAD_URL } },
       put: { status: 200 },
       process: { status: 202, body: {} },
     };
-    const reply = replies[step] ?? defaults[step]!;
-    if (reply instanceof Error) throw reply;
-    return new Response(JSON.stringify(reply.body ?? null), {
-      status: reply.status,
-      headers: reply.headers,
-    });
+    const reply = replies[step] ?? defaults[step];
+    if (reply === undefined) {
+      return Promise.reject(new Error(`no reply for step ${step}`));
+    }
+    if (reply instanceof Error) {
+      return Promise.reject(reply);
+    }
+    return Promise.resolve(
+      Response.json(reply.body ?? null, {
+        status: reply.status,
+        headers: reply.headers,
+      }),
+    );
   }) as unknown as typeof fetch;
   return { impl, calls };
 }
 
-const LOG = JSON.stringify({ type: "user", timestamp: "2026-11-04T10:00:00.000Z" }) + "\n";
+const LOG = `${JSON.stringify({ type: "user", timestamp: "2026-11-04T10:00:00.000Z" })}\n`;
 
 describe("uploadLog", () => {
   let dir: string;
@@ -75,7 +87,7 @@ describe("uploadLog", () => {
     assert.ok(result.kind === "not_created");
     assert.deepEqual(result.answer, { status: 429, body: {}, retryAfter: 60 });
     assert.equal(result.result.exitCode, 1);
-    assert.match(result.result.message, /Try again in 1 minute\./);
+    assert.match(result.result.message, /Try again in 1 minute\./u);
     assert.equal(f.calls.length, 1);
   });
 

@@ -27,7 +27,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Status } from "@/components/ui/status";
 import { Switch } from "@/components/ui/switch";
 
-import { cards, REVIEW_DAYS, session } from "../sample";
+import { REVIEW_DAYS, cards, session } from "@/components/design-system/sample";
 
 const PREFERENCES = [
   {

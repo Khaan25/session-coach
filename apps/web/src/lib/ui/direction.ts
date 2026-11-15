@@ -1,6 +1,7 @@
 "use client";
 
-import { useLayoutEffect, useState, type RefObject } from "react";
+import { useLayoutEffect, useState } from "react";
+import type { RefObject } from "react";
 
 // The design system's own components read the reading direction from the DOM with useDomDirection, so a
 // component under a plain dir="rtl" mirrors with no provider. Base UI's own direction-aware parts read
@@ -23,7 +24,9 @@ export function useDomDirection(target: DirectionTarget): Direction {
   useLayoutEffect(() => {
     const doc =
       resolve(target)?.ownerDocument ?? (typeof document === "undefined" ? null : document);
-    if (!doc) return;
+    if (!doc) {
+      return;
+    }
     const read = () => {
       const el = resolve(target) ?? doc.documentElement;
       setDir(getComputedStyle(el).direction === "rtl" ? "rtl" : "ltr");

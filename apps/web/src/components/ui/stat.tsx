@@ -1,6 +1,7 @@
 import { Children, Fragment } from "react";
 import { ArrowDownRightIcon, ArrowRightIcon, ArrowUpRightIcon } from "@phosphor-icons/react/ssr";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import { Sparkline } from "@/components/ui/sparkline";
@@ -105,7 +106,7 @@ function StatLabel({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-const afterSeparator = /(?<=[,.\s])/;
+const afterSeparator = /(?<=[,.\s])/u;
 
 /**
  * Breaks a figure only after a separator. "12,480,991,204" becomes the groups "12," "480," "991," "204",
@@ -132,6 +133,7 @@ function StatValue({ className, children, ...props }: React.ComponentProps<"div"
       {...props}
     >
       <span className="contents group-data-[loading]/stat:hidden">
+        {/* oxlint-disable-next-line react/no-react-children -- string children are split into wrap-safe groups; no other API reaches them */}
         {Children.map(children, (child) =>
           typeof child === "string" || typeof child === "number" ? (
             <span className="min-w-0 [overflow-wrap:normal]">{groupsOf(String(child))}</span>
@@ -168,25 +170,39 @@ const trendWord = { up: "Up", down: "Down", flat: "No change" };
 
 const plain = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
 
+/** The change from `from` to `to` in percent; Infinity when it grows from zero. */
+function percentChange(from: number, to: number) {
+  if (from === 0) {
+    return to === 0 ? 0 : Infinity;
+  }
+  return ((to - from) / Math.abs(from)) * 100;
+}
+
+function trendOf(first: number, last: number) {
+  if (last > first) {
+    return "up";
+  }
+  return last < first ? "down" : "flat";
+}
+
+const formatEnUS = (v: number) => v.toLocaleString("en-US");
+
 /** Works out the trend and the change between two numbers. Under 0.05% counts as flat. */
 function deltaOf(from: number, to: number) {
   const diff = to - from;
-  const pct = from === 0 ? (to === 0 ? 0 : Infinity) : (diff / Math.abs(from)) * 100;
-  const trend: Trend = !Number.isFinite(pct)
-    ? diff > 0
-      ? "up"
-      : "down"
-    : Math.abs(pct) < 0.05
-      ? "flat"
-      : pct > 0
-        ? "up"
-        : "down";
-  const change = !Number.isFinite(pct)
-    ? "new"
-    : trend === "flat"
-      ? "0%"
-      : `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${Math.abs(pct).toLocaleString("en-US", { maximumFractionDigits: 1 })}%`;
-  return { trend, change };
+  const pct = percentChange(from, to);
+  if (!Number.isFinite(pct)) {
+    return { trend: (diff > 0 ? "up" : "down") as Trend, change: "new" };
+  }
+  if (Math.abs(pct) < 0.05) {
+    return { trend: "flat" as Trend, change: "0%" };
+  }
+  const trend: Trend = pct > 0 ? "up" : "down";
+  const sign = pct > 0 ? "+" : "−";
+  return {
+    trend,
+    change: `${sign}${Math.abs(pct).toLocaleString("en-US", { maximumFractionDigits: 1 })}%`,
+  };
 }
 
 type StatDeltaProps = React.ComponentProps<"div"> & {
@@ -217,11 +233,15 @@ function StatDelta({
   const known =
     from !== undefined && to !== undefined && Number.isFinite(from) && Number.isFinite(to);
   // Half a pair (only from, or only to) has no change either.
-  if (!known && (from !== undefined || to !== undefined) && children === undefined) return null;
-  const computed = known ? deltaOf(from, to) : undefined;
+  if (!known && (from !== undefined || to !== undefined) && children === undefined) {
+    return null;
+  }
+  const computed = known ? { ...deltaOf(from, to), from } : undefined;
   const trend = given ?? computed?.trend ?? "flat";
   // 0 to 0 says nothing: no arrow, no "0% vs 0".
-  if (computed && from === 0 && to === 0 && children === undefined) return null;
+  if (computed && from === 0 && to === 0 && children === undefined) {
+    return null;
+  }
   const Arrow = trendIcon[trend];
   return (
     <div
@@ -238,7 +258,7 @@ function StatDelta({
       <span className="data">{children ?? computed?.change}</span>
       {computed && (
         <span data-slot="stat-baseline" className="text-text-3">
-          vs <span className="data">{format(from!)}</span>
+          vs <span className="data">{format(computed.from)}</span>
           {period && ` ${period}`}
         </span>
       )}
@@ -275,14 +295,17 @@ function StatTrend({
   label?: string;
   className?: string;
 }) {
-  if (data.length < 2) return null;
+  if (data.length < 2) {
+    return null;
+  }
   const values = data.filter((v): v is number => v !== null && Number.isFinite(v));
-  const f = (v: number) => v.toLocaleString("en-US");
-  const first = values[0],
-    last = values[values.length - 1];
-  const words = values.length
-    ? `${last > first ? "up" : last < first ? "down" : "flat"} from ${f(first)} to ${f(last)}, low ${f(Math.min(...values))}, high ${f(Math.max(...values))}`
-    : "no data";
+  const f = formatEnUS;
+  const [first] = values;
+  const last = values.at(-1) ?? first;
+  const words =
+    values.length > 0
+      ? `${trendOf(first, last)} from ${f(first)} to ${f(last)}, low ${f(Math.min(...values))}, high ${f(Math.max(...values))}`
+      : "no data";
   return (
     <div
       data-slot="stat-trend"

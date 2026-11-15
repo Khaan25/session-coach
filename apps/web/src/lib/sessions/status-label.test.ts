@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isEmptyReady, NO_DECISIONS, sessionLabel } from "./status-label.ts";
+import { NO_DECISIONS, isEmptyReady, sessionLabel } from "./status-label.ts";
 
 test("ready with 0 cards says no decisions were found", () => {
   assert.equal(sessionLabel("ready", 0), NO_DECISIONS);

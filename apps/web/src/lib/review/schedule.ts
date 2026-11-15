@@ -49,13 +49,16 @@ export function addDays(date: string, days: number): string {
  * @returns The new step and due date; passing the day-11 review (step 3) masters the card.
  */
 export function nextReview(step: Step, score: Score, today: string, skipped = false): ReviewState {
-  if (score < 2)
+  if (score < 2) {
     return {
       step: Math.max(skipped ? step : step - 1, 1) as Step,
       due_on: addDays(today, 1),
       mastered: false,
     };
-  if (step === 3) return { step: 3, due_on: null, mastered: true };
+  }
+  if (step === 3) {
+    return { step: 3, due_on: null, mastered: true };
+  }
   return { step: (step + 1) as Step, due_on: addDays(today, GAP_DAYS[step]), mastered: false };
 }
 
@@ -73,6 +76,8 @@ const dayFormat = new Intl.DateTimeFormat("en-GB", {
  * @param today - The learner's today, YYYY-MM-DD.
  */
 export function dueInWords(due: string, today: string): string {
-  if (due === addDays(today, 1)) return "tomorrow";
+  if (due === addDays(today, 1)) {
+    return "tomorrow";
+  }
   return `on ${dayFormat.format(new Date(`${due}T00:00:00Z`))}`;
 }

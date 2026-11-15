@@ -90,7 +90,6 @@ export function DeviceSection({ initialTokens }: { initialTokens: DeviceListRow[
           <ItemGroup>
             {tokens.map((token) => (
               // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-              // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
               <Item key={token.id} role="listitem">
                 <ItemMedia variant="icon">
                   <LaptopIcon aria-hidden="true" />
@@ -141,7 +140,9 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: DeviceListRow) => voi
 
   async function create() {
     // /canvas: no token is made for whoever is looking; the dialog shows where the token would be.
-    if (dryRun) return setToken("A new token shows here once, on the real page.");
+    if (dryRun) {
+      return setToken("A new token shows here once, on the real page.");
+    }
     setPending(true);
     const response = await fetch("/api/cli/tokens", {
       method: "POST",
@@ -264,7 +265,9 @@ export function RevokeTokenDialog({
   const dryRun = useDryRun();
 
   async function revoke() {
-    if (dryRun) return onRevoke();
+    if (dryRun) {
+      return onRevoke();
+    }
     setPending(true);
     const response = await fetch(`/api/cli/tokens?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
@@ -308,7 +311,12 @@ export function RevokeTokenDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Keep it</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={() => void revoke()}>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              void revoke();
+            }}
+          >
             Revoke
           </AlertDialogAction>
         </AlertDialogFooter>

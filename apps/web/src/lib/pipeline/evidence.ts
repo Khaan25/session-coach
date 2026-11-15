@@ -8,10 +8,10 @@ export type CheckedCard = Omit<
   "id" | "session_id" | "user_id" | "created_at" | "flagged" | "hidden"
 >;
 
-const SINGLE_QUOTES = /[\u2018\u2019\u201A\u201B\u2032]/g;
-const DOUBLE_QUOTES = /[\u201C\u201D\u201E\u201F\u2033]/g;
-const DASHES = /[\u2010-\u2015\u2212]/g;
-const WHITESPACE = /\s+/g;
+const SINGLE_QUOTES = /[\u2018\u2019\u201A\u201B\u2032]/gu;
+const DOUBLE_QUOTES = /[\u201C\u201D\u201E\u201F\u2033]/gu;
+const DASHES = /[\u2010-\u2015\u2212]/gu;
+const WHITESPACE = /\s+/gu;
 
 /**
  * The form both sides of a quote check are compared in: NFKC, curly quotes and dashes as ASCII, whitespace collapsed,
@@ -20,22 +20,24 @@ const WHITESPACE = /\s+/g;
 const normalize = (text: string) =>
   text
     .normalize("NFKC")
-    .replace(SINGLE_QUOTES, "'")
-    .replace(DOUBLE_QUOTES, '"')
-    .replace(DASHES, "-")
-    .replace(WHITESPACE, " ")
+    .replaceAll(SINGLE_QUOTES, "'")
+    .replaceAll(DOUBLE_QUOTES, '"')
+    .replaceAll(DASHES, "-")
+    .replaceAll(WHITESPACE, " ")
     .trim()
     .toLowerCase();
 
 /** The path of a write or edit event: the parser writes `<path> — <summary>`. */
 function fileOf(event: TimelineEvent | undefined): string | null {
-  if (!event || (event.kind !== "write" && event.kind !== "edit")) return null;
+  if (!event || (event.kind !== "write" && event.kind !== "edit")) {
+    return null;
+  }
   return event.text.split(" — ")[0] ?? null;
 }
 
 const isDecisionsFile = (file: string | null) => file?.split("/").at(-1) === "DECISIONS.md";
 
-const EDIT_TEXT = /^.* — replaced \d+ lines? with \d+: ([\s\S]*)$/;
+const EDIT_PREFIX = /^.* — replaced \d+ lines? with \d+: /u;
 
 /**
  * The written words of a write or edit event, without the parser's metadata. Only an edit carries any: the parser
@@ -45,7 +47,8 @@ const EDIT_TEXT = /^.* — replaced \d+ lines? with \d+: ([\s\S]*)$/;
  * upgrade when the parser keeps the written text.
  */
 function writtenText(event: TimelineEvent): string {
-  return EDIT_TEXT.exec(event.text)?.[1] ?? "";
+  const prefix = EDIT_PREFIX.exec(event.text);
+  return prefix ? event.text.slice(prefix[0].length) : "";
 }
 
 /** The fewest words a quote needs to count as verified; the prompt asks for 5 to 30. */
@@ -93,7 +96,7 @@ const isGroundedQuote = ({ verified, event, file, normalized }: CheckedQuote) =>
  *   need not be its position.
  */
 export function isGrounded(draft: ExtractedCard, events: readonly TimelineEvent[]): boolean {
-  return checkQuotes(draft, events).some(isGroundedQuote);
+  return checkQuotes(draft, events).some((quote) => isGroundedQuote(quote));
 }
 
 /**
@@ -118,7 +121,7 @@ export function checkEvidence(
 
   return drafts
     .map((draft) => ({ draft, checked: checkQuotes(draft, events) }))
-    .filter(({ checked }) => checked.some(isGroundedQuote))
+    .filter(({ checked }) => checked.some((quote) => isGroundedQuote(quote)))
     .map(({ draft, checked }, position) => ({
       position,
       decision: draft.decision,

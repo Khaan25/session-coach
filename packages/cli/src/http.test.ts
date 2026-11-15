@@ -8,11 +8,13 @@ const REQ = { url: "https://app.test/api/x", init: { method: "GET" } };
 /** A fetch that answers with each of `replies` in turn: a status, or an Error to throw. */
 function fakeFetch(replies: (number | Error)[]) {
   const calls: RequestInit[] = [];
-  const impl = (async (_url: string, init: RequestInit) => {
+  const impl = ((_url: string, init: RequestInit) => {
     calls.push(init);
     const reply = replies[calls.length - 1];
-    if (reply instanceof Error) throw reply;
-    return new Response(JSON.stringify({ n: calls.length }), { status: reply });
+    if (reply instanceof Error) {
+      return Promise.reject(reply);
+    }
+    return Promise.resolve(Response.json({ n: calls.length }, { status: reply }));
   }) as unknown as typeof fetch;
   return { impl, calls };
 }
@@ -61,19 +63,21 @@ describe("send", () => {
     assert.deepEqual(await send(REQ, { timeoutMs: 1000, retry: false, fetchImpl: f.impl }), {
       error: "timeout",
     });
-    assert.match(unreachable("timeout", 15_000), /15 s/);
-    assert.doesNotMatch(unreachable("network", 15_000), /--url, then/);
+    assert.match(unreachable("timeout", 15_000), /15 s/u);
+    assert.doesNotMatch(unreachable("network", 15_000), /--url, then/u);
   });
 
   it("treats a timeout while reading the body as a timeout, and a non-JSON body as null", async () => {
-    const stalled = (async () => ({
-      status: 200,
-      json: () => Promise.reject(timeoutError),
-    })) as unknown as typeof fetch;
+    const stalled = (() =>
+      Promise.resolve({
+        status: 200,
+        json: () => Promise.reject(timeoutError),
+      })) as unknown as typeof fetch;
     assert.deepEqual(await send(REQ, { timeoutMs: 1000, retry: false, fetchImpl: stalled }), {
       error: "timeout",
     });
-    const html = (async () => new Response("<html>", { status: 200 })) as unknown as typeof fetch;
+    const html = (() =>
+      Promise.resolve(new Response("<html>", { status: 200 }))) as unknown as typeof fetch;
     assert.deepEqual(await send(REQ, { timeoutMs: 1000, retry: false, fetchImpl: html }), {
       status: 200,
       body: null,
@@ -91,24 +95,27 @@ describe("login token check", () => {
   it("accepts a 200 and names the account; refuses anything else", () => {
     const ok = interpretMe(200, { email: "a@b.test" }, "https://app.test");
     assert.equal(ok.exitCode, 0);
-    assert.match(ok.message, /as a@b\.test/);
+    assert.match(ok.message, /as a@b\.test/u);
     assert.equal(interpretMe(200, { email: null }, "https://app.test").exitCode, 0);
     assert.equal(interpretMe(200, null, "https://app.test").exitCode, 1);
     assert.equal(interpretMe(200, { ok: true }, "https://app.test").exitCode, 1);
-    assert.match(interpretMe(401, null, "https://app.test").message, /Nothing was saved/);
+    assert.match(interpretMe(401, null, "https://app.test").message, /Nothing was saved/u);
     assert.equal(interpretMe(500, null, "https://app.test").exitCode, 1);
   });
 });
 
-describe("send Retry-After", () => {
-  const reply = (headers: Record<string, string>) =>
-    (async () => new Response("{}", { status: 429, headers })) as unknown as typeof fetch;
+/** A fetch that answers 429 with these headers. */
+function tooManyRequests(headers: Record<string, string>) {
+  return (() =>
+    Promise.resolve(new Response("{}", { status: 429, headers }))) as unknown as typeof fetch;
+}
 
+describe("send Retry-After", () => {
   it("returns Retry-After in seconds when the server sends a number", async () => {
     const res = await send(REQ, {
       timeoutMs: 1000,
       retry: false,
-      fetchImpl: reply({ "retry-after": "120" }),
+      fetchImpl: tooManyRequests({ "retry-after": "120" }),
     });
     assert.deepEqual(res, { status: 429, body: {}, retryAfter: 120 });
   });
@@ -116,7 +123,11 @@ describe("send Retry-After", () => {
   it("leaves it out when missing or an HTTP date", async () => {
     const dated = { "retry-after": "Wed, 21 Oct 2026 07:28:00 GMT" };
     for (const headers of [{}, dated] as Record<string, string>[]) {
-      const res = await send(REQ, { timeoutMs: 1000, retry: false, fetchImpl: reply(headers) });
+      const res = await send(REQ, {
+        timeoutMs: 1000,
+        retry: false,
+        fetchImpl: tooManyRequests(headers),
+      });
       assert.deepEqual(res, { status: 429, body: {} });
     }
   });

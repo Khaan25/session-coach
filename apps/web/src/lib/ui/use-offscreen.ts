@@ -12,15 +12,20 @@ function useOffscreen<E extends HTMLElement = HTMLElement>(active = true) {
   const ref = useRef<E>(null);
   useEffect(() => {
     const el = ref.current;
-    if (!el || !active || typeof IntersectionObserver === "undefined") return;
+    if (!el || !active || typeof IntersectionObserver === "undefined") {
+      return;
+    }
     const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) el.removeAttribute("data-offscreen");
-      else el.setAttribute("data-offscreen", "");
+      if (entry.isIntersecting) {
+        delete el.dataset.offscreen;
+      } else {
+        el.dataset.offscreen = "";
+      }
     });
     io.observe(el);
     return () => {
       io.disconnect();
-      el.removeAttribute("data-offscreen");
+      delete el.dataset.offscreen;
     };
   }, [active]);
   return ref;

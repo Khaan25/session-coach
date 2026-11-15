@@ -1,4 +1,5 @@
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import { CHART_EMPTY, EMPTY_VALUE } from "@/lib/ui/format";
@@ -41,12 +42,25 @@ type SparklineProps = Omit<React.ComponentProps<"div">, "children"> &
 const VIEW_H = 100;
 const PAD = 8;
 
+function trendOf(first: number, last: number) {
+  if (last > first) {
+    return "up";
+  }
+  return last < first ? "down" : "flat";
+}
+
+const formatEnUS = (v: number) => v.toLocaleString("en-US");
+
+const pct = (px: number, total: number) => `${(px / total) * 100}%`;
+
 /** The sentence a screen reader hears for the values: "up from 412 to 549, low 401, high 549". */
 function trendWords(values: number[], format: (v: number) => string) {
-  if (!values.length) return "no data";
-  const first = values[0],
-    last = values[values.length - 1];
-  const direction = last > first ? "up" : last < first ? "down" : "flat";
+  if (values.length === 0) {
+    return "no data";
+  }
+  const [first] = values;
+  const last = values.at(-1) ?? first;
+  const direction = trendOf(first, last);
   return `${direction} from ${format(first)} to ${format(last)}, low ${format(Math.min(...values))}, high ${format(Math.max(...values))}`;
 }
 
@@ -58,7 +72,7 @@ function Sparkline({
   area,
   end = variant === "line",
   labels,
-  valueFormat = (v) => v.toLocaleString("en-US"),
+  valueFormat = formatEnUS,
   size = "default",
   className,
   ...props
@@ -70,25 +84,32 @@ function Sparkline({
   const hi = variant === "bar" ? Math.max(0, ...values, lo + 1) : Math.max(...values, lo + 1);
   const viewW = Math.max(n - 1, 1) * 10;
   const y = (v: number) => PAD + (1 - (v - lo) / (hi - lo || 1)) * (VIEW_H - PAD * 2);
-  const x = (i: number) =>
-    variant === "bar" ? (i + 0.5) * (viewW / n) : n === 1 ? viewW / 2 : (i / (n - 1)) * viewW;
+  const x = (i: number) => {
+    if (variant === "bar") {
+      return (i + 0.5) * (viewW / n);
+    }
+    return n === 1 ? viewW / 2 : (i / (n - 1)) * viewW;
+  };
   const nameAt = (i: number) => labels?.[i] ?? `Point ${i + 1}`;
 
   const segments: { x: number; y: number }[][] = [];
   let run: { x: number; y: number }[] = [];
-  data.forEach((v, i) => {
+  for (const [i, v] of data.entries()) {
     if (v === null || !Number.isFinite(v)) {
-      if (run.length) segments.push(run);
+      if (run.length > 0) {
+        segments.push(run);
+      }
       run = [];
-      return;
+      continue;
     }
     run.push({ x: x(i), y: y(v) });
-  });
-  if (run.length) segments.push(run);
+  }
+  if (run.length > 0) {
+    segments.push(run);
+  }
 
   const lastIndex = data.findLastIndex((v) => v !== null && Number.isFinite(v));
-  const lastValue = lastIndex >= 0 ? data[lastIndex] : null;
-  const pct = (px: number, total: number) => `${(px / total) * 100}%`;
+  const lastValue = lastIndex === -1 ? null : data[lastIndex];
 
   // A div, not a span: it holds the data table. It stays inline-block, so it still sits in a line of text; do not put it inside a <p>.
   return (
@@ -156,7 +177,7 @@ function Sparkline({
                   pts.length > 1 && (
                     <path
                       key={`a${i}`}
-                      d={`M${pts[0].x},${VIEW_H}${pts.map((p) => `L${p.x},${p.y}`).join("")}L${pts[pts.length - 1].x},${VIEW_H}Z`}
+                      d={`M${pts[0].x},${VIEW_H}${pts.map((p) => `L${p.x},${p.y}`).join("")}L${pts.at(-1)?.x},${VIEW_H}Z`}
                       className="fill-accent-wash"
                     />
                   ),

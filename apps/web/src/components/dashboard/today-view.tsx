@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { Sprite, type SpriteName } from "@/components/art/sprite";
+import { Sprite } from "@/components/art/sprite";
+import type { SpriteName } from "@/components/art/sprite";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader } from "@/components/ui/card";
 import type { QueueCard } from "@/lib/review/queries";

@@ -2,7 +2,8 @@
  * GET /api/dashboard/v1/users: the user roster, paginated with `?limit=` and `?cursor=`.
  * Contract and filters: docs/PLAY_API.md. Auth: requireDashboardKey().
  */
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { requireDashboardKey } from "@/lib/dashboard-api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
@@ -22,7 +23,9 @@ const STAGES = ["purchase"];
  */
 export async function GET(req: NextRequest) {
   const denied = requireDashboardKey(req);
-  if (denied) return denied;
+  if (denied) {
+    return denied;
+  }
 
   const params = req.nextUrl.searchParams;
   const limit = parsePositiveInt(params.get("limit"), DEFAULT_LIMIT);
@@ -65,7 +68,9 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: true })
       .order("id", { ascending: true })
       .range(from, from + limit - 1);
-    if (profiles.error) throw profiles.error;
+    if (profiles.error) {
+      throw profiles.error;
+    }
 
     const ids = profiles.data.map((p) => p.id);
     const lastSeen = await lastSeenByUser(supabase, ids);
@@ -86,8 +91,8 @@ export async function GET(req: NextRequest) {
       users,
       next_cursor: profiles.data.length === limit ? String(page + 1) : null,
     });
-  } catch (err) {
-    console.error("[api/dashboard/v1/users] failed", err);
+  } catch (error) {
+    console.error("[api/dashboard/v1/users] failed", error);
     return NextResponse.json({ error: "Failed to list users" }, { status: 502 });
   }
 }
@@ -101,7 +106,9 @@ export async function GET(req: NextRequest) {
  */
 async function lastSeenByUser(supabase: ReturnType<typeof createAdminClient>, ids: string[]) {
   const latest = new Map<string, string>();
-  if (ids.length === 0) return latest;
+  if (ids.length === 0) {
+    return latest;
+  }
   // shortcut: reads every activity row for the page's users; move to a max(created_at) view when it gets slow.
   const [uploads, answers] = await Promise.all([
     fetchAll<{ user_id: string; created_at: string }>((from, to) =>
@@ -124,17 +131,22 @@ async function lastSeenByUser(supabase: ReturnType<typeof createAdminClient>, id
   for (const row of [...uploads, ...answers]) {
     const current = latest.get(row.user_id);
     // PostgREST may format timestamptz with an offset, so compare parsed times, not strings.
-    if (!current || Date.parse(row.created_at) > Date.parse(current))
+    if (!current || Date.parse(row.created_at) > Date.parse(current)) {
       latest.set(row.user_id, row.created_at);
+    }
   }
   return latest;
 }
 
-const POSITIVE_INT = /^[1-9]\d*$/;
+const POSITIVE_INT = /^[1-9]\d*$/u;
 
 /** A query value as a positive integer: the fallback when absent, null when malformed. */
 function parsePositiveInt(value: string | null, fallback: number): number | null {
-  if (value === null || value === "") return fallback;
-  if (!POSITIVE_INT.test(value)) return null;
+  if (value === null || value === "") {
+    return fallback;
+  }
+  if (!POSITIVE_INT.test(value)) {
+    return null;
+  }
   return Number(value);
 }

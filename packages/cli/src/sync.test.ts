@@ -1,30 +1,32 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { chmod, mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
-import { createServer, type Server } from "node:http";
+import { createServer } from "node:http";
+import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { gunzipSync } from "node:zlib";
+import { promisify } from "node:util";
+import { gunzip as gunzipCallback } from "node:zlib";
 
 import { configPath, saveConfig } from "./config.ts";
 import { projectDirName } from "./latest.ts";
 import { loadState, saveState, syncPaths } from "./state.ts";
 import {
   API_TIMEOUT_MS,
-  parseHookInput,
-  readStdin,
-  runSync,
   SYNC_DEADLINE_MS,
   SYNC_MAX_AGE_MS,
   SYNC_MAX_LOGS,
   SYNC_QUIET_MS,
   UPLOAD_TIMEOUT_MS,
-  type SyncDeps,
+  parseHookInput,
+  readStdin,
+  runSync,
 } from "./sync.ts";
+import type { SyncDeps } from "./sync.ts";
 
 const FAKE_SK = "sk-FAKE0example0key0for0tests0only";
 const CWD = "/work/my_project";
@@ -42,23 +44,31 @@ const healthy: Handler = ({ method, url, json }) => {
     const id = json.external_id;
     return { status: 201, body: { id: `id-${id}`, upload_url: `https://storage.test/up/${id}` } };
   }
-  if (method === "PUT") return { status: 200 };
+  if (method === "PUT") {
+    return { status: 200 };
+  }
   return { status: 202, body: {} };
 };
+
+const gunzip = promisify(gunzipCallback);
 
 /** A fetch that records each request and answers from `handler`. */
 function fakeServer(handler: Handler = healthy) {
   const calls: Request[] = [];
   /** The bodies of the PUTs: the gzipped logs. */
   const puts: Uint8Array[] = [];
-  const impl = (async (url: string, init: RequestInit) => {
-    if (init.method === "PUT") puts.push(init.body as Uint8Array);
+  const impl = ((url: string, init: RequestInit) => {
+    if (init.method === "PUT") {
+      puts.push(init.body as Uint8Array);
+    }
     const json = typeof init.body === "string" ? JSON.parse(init.body) : null;
     const req = { method: init.method ?? "GET", url, json };
     calls.push(req);
     const reply = handler(req);
-    if (reply instanceof Error) throw reply;
-    return new Response(JSON.stringify(reply.body ?? null), { status: reply.status });
+    if (reply instanceof Error) {
+      return Promise.reject(reply);
+    }
+    return Promise.resolve(Response.json(reply.body ?? null, { status: reply.status }));
   }) as unknown as typeof fetch;
   return {
     impl,
@@ -84,11 +94,15 @@ describe("parseHookInput", () => {
       }),
     );
     assert.equal(input.cwd, "/w");
-    assert.deepEqual([...input.currentIds].sort(), ["s1", "t1"]);
+    const ids = [...input.currentIds];
+    ids.sort();
+    assert.deepEqual(ids, ["s1", "t1"]);
   });
 
   it("reads a Windows transcript path too", () => {
-    const input = parseHookInput(JSON.stringify({ transcript_path: "C:\\Users\\me\\p\\t2.jsonl" }));
+    const input = parseHookInput(
+      JSON.stringify({ transcript_path: String.raw`C:\Users\me\p\t2.jsonl` }),
+    );
     assert.deepEqual([...input.currentIds], ["t2"]);
   });
 
@@ -139,7 +153,9 @@ describe("readStdin", () => {
       assert.equal(stream.listenerCount("data"), 0);
       assert.equal(stream.isPaused(), true);
       // Later chunks are ignored: nothing is collected after it finished.
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await new Promise((resolve) => {
+        setTimeout(resolve, 20);
+      });
       assert.equal(stream.listenerCount("data"), 0);
     } finally {
       clearInterval(sender);
@@ -151,7 +167,8 @@ describe("readStdin", () => {
     const stream = new PassThrough();
     const text = readStdin(stream, 1000, 10);
     stream.write("y".repeat(500));
-    assert.equal((await text).length, 10);
+    const read = await text;
+    assert.equal(read.length, 10);
   });
 });
 
@@ -173,7 +190,11 @@ describe("runSync", () => {
     await saveConfig(configPath(home), { token: "sc_testtoken", url: "https://app.test" });
   });
   afterEach(async () => {
-    await chmod(join(home, ".session-coach"), 0o700).catch(() => {});
+    try {
+      await chmod(join(home, ".session-coach"), 0o700);
+    } catch {
+      // A test that never made the folder has nothing to unlock.
+    }
     await rm(home, { recursive: true, force: true });
   });
 
@@ -192,7 +213,9 @@ describe("runSync", () => {
     const writes: unknown[][] = [];
     const saved = { ...console };
     for (const name of ["log", "error", "warn", "info", "debug"] as const) {
-      console[name] = (...args: unknown[]) => void writes.push(args);
+      console[name] = (...args: unknown[]) => {
+        writes.push(args);
+      };
     }
     try {
       await runSync({
@@ -212,8 +235,17 @@ describe("runSync", () => {
     assert.deepEqual(writes, [], "sync must not print");
   }
 
-  const logText = () => readFile(syncPaths(home).log, "utf8").catch(() => "");
-  const done = async () => Object.keys((await loadState(syncPaths(home).state)).done);
+  const logText = async () => {
+    try {
+      return await readFile(syncPaths(home).log, "utf8");
+    } catch {
+      return "";
+    }
+  };
+  const done = async () => {
+    const state = await loadState(syncPaths(home).state);
+    return Object.keys(state.done);
+  };
 
   it("uploads a finished session through the three steps", async () => {
     await log("a", HOUR);
@@ -226,11 +258,13 @@ describe("runSync", () => {
     assert.equal(server.calls[0]?.url, "https://app.test/api/sessions");
     assert.equal(server.calls[2]?.url, "https://app.test/api/sessions/id-a/process");
     assert.deepEqual(await done(), ["a"]);
-    assert.match(await logText(), /1 uploaded, 0 already on the server, 0 failed/);
+    assert.match(await logText(), /1 uploaded, 0 already on the server, 0 failed/u);
   });
 
   it("skips the running session, named by transcript_path or by session_id", async () => {
-    for (const id of ["a", "b", "c"]) await log(id, HOUR);
+    for (const id of ["a", "b", "c"]) {
+      await log(id, HOUR);
+    }
     const server = fakeServer();
     const stdin = JSON.stringify({
       cwd: CWD,
@@ -290,7 +324,9 @@ describe("runSync", () => {
 
   it("uploads one session per start, newest first, and the rest follow on later starts", async () => {
     assert.equal(SYNC_MAX_LOGS, 1);
-    for (let i = 1; i <= 3; i++) await log(`l${i}`, i * HOUR);
+    for (let i = 1; i <= 3; i++) {
+      await log(`l${i}`, i * HOUR);
+    }
     for (const expected of ["l1", "l2", "l3"]) {
       const server = fakeServer();
       await sync(server);
@@ -302,7 +338,9 @@ describe("runSync", () => {
   });
 
   it("skips ids in the state file before applying the cap", async () => {
-    for (let i = 1; i <= 5; i++) await log(`l${i}`, i * HOUR);
+    for (let i = 1; i <= 5; i++) {
+      await log(`l${i}`, i * HOUR);
+    }
     const at = "2026-11-02T10:00:00.000Z";
     await saveState(syncPaths(home).state, {
       version: 1,
@@ -321,7 +359,9 @@ describe("runSync", () => {
     const again = fakeServer();
     await sync(again);
     assert.deepEqual(again.registered(), ["b"]);
-    assert.deepEqual((await done()).sort(), ["a", "b"]);
+    const ids = await done();
+    ids.sort();
+    assert.deepEqual(ids, ["a", "b"]);
   });
 
   it("works when the state file is deleted or corrupt, and repairs it", async () => {
@@ -342,7 +382,7 @@ describe("runSync", () => {
     await sync(server);
     assert.equal(server.calls.length, 1);
     assert.deepEqual(await done(), ["a"]);
-    assert.match(await logText(), /0 uploaded, 1 already on the server/);
+    assert.match(await logText(), /0 uploaded, 1 already on the server/u);
   });
 
   it("uploads again on a 409 that carries an upload url", async () => {
@@ -366,8 +406,9 @@ describe("runSync", () => {
       req.url.endsWith("/process") ? { status: 409, body: { status: "failed" } } : healthy(req),
     );
     await sync(server);
-    assert.equal((await loadState(syncPaths(home).state)).done.a?.outcome, "failed");
-    assert.match(await logText(), /a: processing failed/);
+    const state = await loadState(syncPaths(home).state);
+    assert.equal(state.done.a?.outcome, "failed");
+    assert.match(await logText(), /a: processing failed/u);
     const again = fakeServer();
     await sync(again);
     assert.deepEqual(again.calls, []);
@@ -377,7 +418,8 @@ describe("runSync", () => {
     await log("a", HOUR);
     const server = fakeServer(() => ({ status: 400, body: { field: "external_id" } }));
     await sync(server);
-    assert.equal((await loadState(syncPaths(home).state)).done.a?.outcome, "failed");
+    const state = await loadState(syncPaths(home).state);
+    assert.equal(state.done.a?.outcome, "failed");
   });
 
   it("never sends a log recorded in another folder or with no cwd", async () => {
@@ -434,7 +476,8 @@ describe("runSync", () => {
     const server = fakeServer();
     await sync(server);
     assert.equal(server.puts.length, 1);
-    const uploaded = gunzipSync(server.puts[0] as Uint8Array).toString("utf8");
+    const unzipped = await gunzip(server.puts[0] as Uint8Array);
+    const uploaded = unzipped.toString("utf8");
     assert.ok(!uploaded.includes(FAKE_SK), "the secret must not leave the machine");
     assert.ok(uploaded.includes("please keep it"), "the rest of the text is still there");
   });
@@ -474,7 +517,7 @@ describe("runSync", () => {
         assert.equal(server.calls.length, requests);
         assert.deepEqual(server.registered(), ["a"]);
         assert.deepEqual(await done(), []);
-        assert.match(await logText(), new RegExp(expected));
+        assert.match(await logText(), new RegExp(expected, "u"));
       });
     }
 
@@ -484,7 +527,7 @@ describe("runSync", () => {
       const server = fakeServer();
       await sync(server);
       assert.deepEqual(server.calls, []);
-      assert.match(await logText(), /not signed in/);
+      assert.match(await logText(), /not signed in/u);
     });
 
     it("does nothing when the project has no logs", async () => {
@@ -505,16 +548,19 @@ describe("runSync", () => {
 
     it("gives up at the deadline and writes no state for the log it cut off", async () => {
       await log("a", HOUR);
-      const hang = (() => new Promise(() => {})) as unknown as typeof fetch;
+      const hang = (() =>
+        new Promise(() => {
+          // Never settles: the request hangs until the deadline.
+        })) as unknown as typeof fetch;
       await sync(fakeServer(), { fetchImpl: hang, deadlineMs: 30 });
       assert.deepEqual(await done(), []);
-      assert.match(await logText(), /ran out of time/);
+      assert.match(await logText(), /ran out of time/u);
     });
   });
 });
 
 describe("session-coach sync (the real command)", () => {
-  const CLI = fileURLToPath(new URL("./cli.ts", import.meta.url));
+  const CLI = fileURLToPath(new URL("cli.ts", import.meta.url));
   let home: string;
   let server: Server;
   let url: string;
@@ -554,12 +600,19 @@ describe("session-coach sync (the real command)", () => {
           req.method === "POST" && req.url === "/api/sessions"
             ? { id: "id-x", upload_url: `${url}/up/x` }
             : {};
-        const ok = req.url === "/api/sessions" ? 201 : req.method === "PUT" ? 200 : 202;
+        let ok = 202;
+        if (req.url === "/api/sessions") {
+          ok = 201;
+        } else if (req.method === "PUT") {
+          ok = 200;
+        }
         res.writeHead(mode === "broken" ? 500 : ok, { "content-type": "application/json" });
         res.end(JSON.stringify(body));
       });
     });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", resolve);
+    });
     url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     const folder = join(home, ".claude", "projects", projectDirName(CWD));
     await mkdir(folder, { recursive: true });
@@ -584,21 +637,21 @@ describe("session-coach sync (the real command)", () => {
     await signIn(url);
     await assertSilent();
     assert.deepEqual(seen, ["POST /api/sessions", "PUT /up/x", "POST /api/sessions/id-x/process"]);
-    assert.match(await readFile(syncPaths(home).log, "utf8"), /1 uploaded/);
+    assert.match(await readFile(syncPaths(home).log, "utf8"), /1 uploaded/u);
   });
 
   it("is silent and exits 0 on a server error", async () => {
     mode = "broken";
     await signIn(url);
     await assertSilent();
-    assert.match(await readFile(syncPaths(home).log, "utf8"), /stopped: server answered HTTP 500/);
+    assert.match(await readFile(syncPaths(home).log, "utf8"), /stopped: server answered HTTP 500/u);
   });
 
   it("is silent and exits 0 when the server can't be reached", async () => {
     server.close();
     await signIn(url);
     await assertSilent();
-    assert.match(await readFile(syncPaths(home).log, "utf8"), /stopped: network/);
+    assert.match(await readFile(syncPaths(home).log, "utf8"), /stopped: network/u);
   });
 
   it("is silent and exits 0 when not signed in", async () => {

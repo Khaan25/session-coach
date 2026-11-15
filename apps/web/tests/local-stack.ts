@@ -15,6 +15,7 @@ export function localStack(): LocalStack {
   let status: Record<string, string>;
   try {
     status = JSON.parse(
+      // oxlint-disable-next-line node/no-sync -- playwright.config.ts and the specs read the stack at module load, before any async hook
       execFileSync("supabase", ["status", "-o", "json"], {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "ignore"],
@@ -24,7 +25,8 @@ export function localStack(): LocalStack {
     throw new Error("The local Supabase stack isn't running. Start it with `supabase start`.");
   }
   const url = status.API_URL;
-  if (!["127.0.0.1", "localhost"].includes(new URL(url).hostname))
+  if (!["127.0.0.1", "localhost"].includes(new URL(url).hostname)) {
     throw new Error(`supabase status returned ${url}, which isn't local. Refusing to run.`);
+  }
   return { url, anonKey: status.ANON_KEY, serviceKey: status.SERVICE_ROLE_KEY };
 }
