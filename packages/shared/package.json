@@ -13,7 +13,7 @@
     "./upload": "./src/upload.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "lint": "oxlint",
     "test": "node --test --experimental-strip-types src/*.test.ts"
   },
