@@ -1,6 +1,7 @@
 "use server";
 
-import { isAuthWeakPasswordError, type AuthError } from "@supabase/supabase-js";
+import { isAuthWeakPasswordError } from "@supabase/supabase-js";
+import type { AuthError } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -42,7 +43,8 @@ function tooManyFromNetwork(minutes: number) {
  * client can set both, so this is not a trust check: Supabase's redirect allow-list (#11) stops links to other sites.
  */
 async function requestOrigin() {
-  return (await headers()).get("origin");
+  const requestHeaders = await headers();
+  return requestHeaders.get("origin");
 }
 
 /** A form field as a string; a missing field or a file reads as "". */
@@ -58,10 +60,16 @@ function hasErrors(fields: object) {
 
 /** Turns Supabase's weak-password reasons into one sentence that says what to change (#23). */
 function weakPasswordMessage(error: AuthError) {
-  if (!isAuthWeakPasswordError(error)) return `Use at least ${MIN_PASSWORD} characters.`;
+  if (!isAuthWeakPasswordError(error)) {
+    return `Use at least ${MIN_PASSWORD} characters.`;
+  }
   const reasons = new Set(error.reasons);
-  if (reasons.has("pwned")) return "This password has appeared in a data breach. Choose another.";
-  if (reasons.has("length")) return `Use at least ${MIN_PASSWORD} characters.`;
+  if (reasons.has("pwned")) {
+    return "This password has appeared in a data breach. Choose another.";
+  }
+  if (reasons.has("length")) {
+    return `Use at least ${MIN_PASSWORD} characters.`;
+  }
   return "Mix lowercase and uppercase letters, digits and symbols.";
 }
 
@@ -87,24 +95,34 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const email = text(formData, "email").trim();
   const password = text(formData, "password");
   const fields = validateSignIn(formData);
-  if (hasErrors(fields)) return { status: "error", fields, email };
+  if (hasErrors(fields)) {
+    return { status: "error", fields, email };
+  }
   const signInWait = await authAttemptWait("signIn");
-  if (signInWait) return { status: "error", message: tooManyFromNetwork(signInWait), email };
+  if (signInWait) {
+    return { status: "error", message: tooManyFromNetwork(signInWait), email };
+  }
 
   const origin = await requestOrigin();
-  if (!origin) return fail("signIn", "missing Origin header", email);
+  if (!origin) {
+    return fail("signIn", "missing Origin header", email);
+  }
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
-    if (error.code === "email_not_confirmed")
+    if (error.code === "email_not_confirmed") {
       return {
         status: "unconfirmed",
         message: "Confirm your email address first. We can send the link again.",
         email,
       };
-    if (isRateLimit(error)) return { status: "error", message: RATE_LIMITED, email };
-    if (error.code === "invalid_credentials")
+    }
+    if (isRateLimit(error)) {
+      return { status: "error", message: RATE_LIMITED, email };
+    }
+    if (error.code === "invalid_credentials") {
       return { status: "error", message: "That email and password don't match.", email };
+    }
     return fail("signIn", error, email);
   }
   redirect(safeNext(text(formData, "next"), origin));
@@ -124,12 +142,18 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const password = text(formData, "password");
   const name = text(formData, "name").trim();
   const fields = validateSignUp(formData);
-  if (hasErrors(fields)) return { status: "error", fields, email, name };
+  if (hasErrors(fields)) {
+    return { status: "error", fields, email, name };
+  }
   const signUpWait = await authAttemptWait("signUp");
-  if (signUpWait) return { status: "error", message: tooManyFromNetwork(signUpWait), email, name };
+  if (signUpWait) {
+    return { status: "error", message: tooManyFromNetwork(signUpWait), email, name };
+  }
 
   const origin = await requestOrigin();
-  if (!origin) return { ...fail("signUp", "missing Origin header", email), name };
+  if (!origin) {
+    return { ...fail("signUp", "missing Origin header", email), name };
+  }
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
@@ -142,21 +166,26 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   });
   // A taken address must look like a new one (#3), so only errors about the input itself reach the form.
   if (error && error.code !== "user_already_exists") {
-    if (error.code === "weak_password")
+    if (error.code === "weak_password") {
       return { status: "error", fields: { password: weakPasswordMessage(error) }, email, name };
-    if (error.code === "email_address_invalid")
+    }
+    if (error.code === "email_address_invalid") {
       return {
         status: "error",
         fields: { email: "Enter an email address like name@example.com." },
         email,
         name,
       };
-    if (isRateLimit(error)) return { status: "error", message: RATE_LIMITED, email, name };
+    }
+    if (isRateLimit(error)) {
+      return { status: "error", message: RATE_LIMITED, email, name };
+    }
     return { ...fail("signUp", error, email), name };
   }
 
   // The check-email page reads this to offer a resend; a cookie keeps the address out of the URL and server logs.
-  (await cookies()).set(SIGNUP_EMAIL_COOKIE, email, {
+  const jar = await cookies();
+  jar.set(SIGNUP_EMAIL_COOKIE, email, {
     httpOnly: true,
     sameSite: "lax",
     secure: origin.startsWith("https:"),
@@ -175,13 +204,18 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
  */
 export async function resendConfirmation(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
-  if (hasErrors(validateResetRequest(formData)))
+  if (hasErrors(validateResetRequest(formData))) {
     return { status: "error", message: "Enter your email address first." };
+  }
   // A per-IP limit says nothing about the address, so it can be shown without leaking whether an account exists.
   const emailWait = await authAttemptWait("email");
-  if (emailWait) return { status: "error", message: tooManyFromNetwork(emailWait), email };
+  if (emailWait) {
+    return { status: "error", message: tooManyFromNetwork(emailWait), email };
+  }
   const origin = await requestOrigin();
-  if (!origin) return fail("resendConfirmation", "missing Origin header", email);
+  if (!origin) {
+    return fail("resendConfirmation", "missing Origin header", email);
+  }
   const supabase = await createClient();
   const { error } = await supabase.auth.resend({
     type: "signup",
@@ -189,7 +223,9 @@ export async function resendConfirmation(_prev: AuthState, formData: FormData): 
     options: { emailRedirectTo: `${origin}/auth/confirm?next=/dashboard` },
   });
   // Supabase's per-address limit only trips for real accounts, so a rate limit gets the same answer (#2, #4).
-  if (error) console.error("auth/resendConfirmation", error);
+  if (error) {
+    console.error("auth/resendConfirmation", error);
+  }
   return {
     status: "sent",
     message: "If that address is waiting to be confirmed, we sent a new link.",
@@ -208,17 +244,25 @@ export async function resendConfirmation(_prev: AuthState, formData: FormData): 
 export async function requestReset(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const email = text(formData, "email").trim();
   const fields = validateResetRequest(formData);
-  if (hasErrors(fields)) return { status: "error", fields, email };
+  if (hasErrors(fields)) {
+    return { status: "error", fields, email };
+  }
   const emailWait = await authAttemptWait("email");
-  if (emailWait) return { status: "error", message: tooManyFromNetwork(emailWait), email };
+  if (emailWait) {
+    return { status: "error", message: tooManyFromNetwork(emailWait), email };
+  }
   const origin = await requestOrigin();
-  if (!origin) return fail("requestReset", "missing Origin header", email);
+  if (!origin) {
+    return fail("requestReset", "missing Origin header", email);
+  }
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/confirm?next=/update-password`,
   });
   // Supabase's per-address limit only trips for real accounts, so a rate limit gets the same answer (#4).
-  if (error) console.error("auth/requestReset", error);
+  if (error) {
+    console.error("auth/requestReset", error);
+  }
   return { status: "sent", email };
 }
 
@@ -233,30 +277,38 @@ export async function requestReset(_prev: AuthState, formData: FormData): Promis
 export async function updatePassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const password = text(formData, "password");
   const fields = validateNewPassword(formData);
-  if (hasErrors(fields)) return { status: "error", fields };
+  if (hasErrors(fields)) {
+    return { status: "error", fields };
+  }
 
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims?.sub)
+  if (!data?.claims?.sub) {
     return {
       status: "error",
       message: "Your reset link has expired. Request a new one to set a password.",
     };
+  }
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    if (error.code === "weak_password")
+    if (error.code === "weak_password") {
       return { status: "error", fields: { password: weakPasswordMessage(error) } };
-    if (error.code === "same_password")
+    }
+    if (error.code === "same_password") {
       return {
         status: "error",
         fields: { password: "Choose a password different from your current one." },
       };
-    if (error.code === "reauthentication_needed" || error.code === "session_not_found")
+    }
+    if (error.code === "reauthentication_needed" || error.code === "session_not_found") {
       return {
         status: "error",
         message: "Your reset link has expired. Request a new one to set a password.",
       };
-    if (isRateLimit(error)) return { status: "error", message: RATE_LIMITED };
+    }
+    if (isRateLimit(error)) {
+      return { status: "error", message: RATE_LIMITED };
+    }
     return fail("updatePassword", error);
   }
   redirect("/dashboard");
@@ -291,7 +343,9 @@ export async function signInWithGoogle(formData: FormData): Promise<void> {
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut({ scope: "local" });
-  if (error) console.error("auth/signOut", error);
+  if (error) {
+    console.error("auth/signOut", error);
+  }
   redirect("/");
 }
 
@@ -307,7 +361,9 @@ export async function signOutEverywhere(): Promise<{ error: string | null }> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "You're signed out. Sign in and try again." };
+  if (!user) {
+    return { error: "You're signed out. Sign in and try again." };
+  }
 
   // Before signOut, while the session can still delete. RLS limits it to their rows; the filter says so in code.
   const tokens = await supabase.from("cli_tokens").delete().eq("user_id", user.id);
@@ -325,6 +381,8 @@ export async function signOutEverywhere(): Promise<{ error: string | null }> {
   }
 
   const { error } = await supabase.auth.signOut({ scope: "global" });
-  if (error) console.error("auth/signOutEverywhere", error);
+  if (error) {
+    console.error("auth/signOutEverywhere", error);
+  }
   redirect("/");
 }

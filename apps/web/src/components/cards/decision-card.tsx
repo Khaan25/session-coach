@@ -61,10 +61,8 @@ export function DecisionCard({ card }: { card: CardView }) {
         </CardContent>
         {/* Rows straight in the card under a rule, not an ItemGroup: that would draw a second frame inside this one. A
           div with role="list", because Item renders a div. */}
-        {/* eslint-disable-next-line jsx-a11y/prefer-tag-over-role */}
         <div role="list" aria-label="Evidence" className="rule-top">
           {evidence.map((item) => (
-            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
             <Item key={`${item.event_index}-${item.quote}`} role="listitem">
               <ItemContent>
                 <blockquote className="type-body text-text-1">

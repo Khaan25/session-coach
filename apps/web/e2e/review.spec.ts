@@ -22,7 +22,9 @@ let userId = "";
 
 test.beforeAll(async () => {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-  if (created.error) throw created.error;
+  if (created.error) {
+    throw created.error;
+  }
   userId = created.data.user.id;
   const sessionId = randomUUID();
   const session = await admin.from("sessions").insert({
@@ -32,7 +34,9 @@ test.beforeAll(async () => {
     raw_path: `${userId}/e2e`,
     status: "ready",
   });
-  if (session.error) throw session.error;
+  if (session.error) {
+    throw session.error;
+  }
   const card = await admin.from("decision_cards").insert({
     session_id: sessionId,
     user_id: userId,
@@ -44,11 +48,15 @@ test.beforeAll(async () => {
     question,
     model_answer: modelAnswer,
   });
-  if (card.error) throw card.error;
+  if (card.error) {
+    throw card.error;
+  }
 });
 
 test.afterAll(async () => {
-  if (userId) await admin.auth.admin.deleteUser(userId);
+  if (userId) {
+    await admin.auth.admin.deleteUser(userId);
+  }
 });
 
 test("sign in, review a card, get a score", async ({ page }) => {
@@ -57,7 +65,7 @@ test("sign in, review a card, get a score", async ({ page }) => {
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/u);
   // Today's hero: the next card and its one button.
   await expect(page.getByRole("link", { name: "Explain it" })).toBeVisible();
 

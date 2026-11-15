@@ -25,7 +25,9 @@ export function SignOutEverywhereForm() {
       onClick={() =>
         startTransition(async () => {
           const { error } = await run();
-          if (error) toast.add({ title: error, type: "error" });
+          if (error) {
+            toast.add({ title: error, type: "error" });
+          }
         })
       }
     >

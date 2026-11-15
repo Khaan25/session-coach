@@ -1,8 +1,8 @@
 import {
+  BentoSection,
   ClosingSection,
   DeskScene,
   Hero,
-  BentoSection,
   TrustSection,
 } from "@/components/marketing/landing-sections";
 import { siteUrl } from "@/lib/site";
@@ -22,7 +22,7 @@ const jsonLd = {
   offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
-const LESS_THAN = /</g;
+const LESS_THAN = /</gu;
 
 export default function Home() {
   return (
@@ -30,7 +30,10 @@ export default function Home() {
       <script
         type="application/ld+json"
         // Static data built above, so there's nothing user-supplied to escape; < is escaped anyway.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(LESS_THAN, "\\u003c") }}
+        // oxlint-disable-next-line react/no-danger -- JSON-LD has to be inline script text
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replaceAll(LESS_THAN, String.raw`\u003c`),
+        }}
       />
       <Hero />
       <BentoSection />

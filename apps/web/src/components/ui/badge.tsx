@@ -1,6 +1,7 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import type { Kind } from "@/lib/ui/kind";
@@ -74,6 +75,14 @@ type BadgeProps = useRender.ComponentProps<"span"> &
     max?: number;
   };
 
+/** The trouble a variant stands for, when it stands for one. */
+function variantTone(variant: string | null | undefined) {
+  if (variant === "destructive") {
+    return "fail" as const;
+  }
+  return variant === "warn" ? ("warn" as const) : undefined;
+}
+
 function Badge({
   className,
   variant = "default",
@@ -87,14 +96,19 @@ function Badge({
   children,
   ...props
 }: BadgeProps) {
-  const tone =
-    status ?? (variant === "destructive" ? "fail" : variant === "warn" ? "warn" : undefined);
+  const tone = status ?? variantTone(variant);
   const named = kind ?? status;
   const capped = count !== undefined && count > max;
   const word = label ?? children ?? (named ? kindLabels[named] : undefined);
-  const shown = count === undefined ? word : capped ? `${max}+` : count.toLocaleString("en-US");
+  let shown: React.ReactNode = word;
+  if (count !== undefined) {
+    shown = capped ? `${max}+` : count.toLocaleString("en-US");
+  }
   // Trouble is outlined whatever variant was asked for; a kind keeps the asked variant.
-  const look = tone ? (tone === "fail" ? "destructive" : "warn") : variant;
+  let look = variant;
+  if (tone) {
+    look = tone === "fail" ? "destructive" : "warn";
+  }
   return useRender({
     defaultTagName: "span",
     props: mergeProps<"span">(
@@ -128,9 +142,15 @@ type CodeTagStatus = "neutral" | "warn" | "fail";
 /** The status an HTTP status code reads in: 5xx fail, 4xx warn, everything else neutral. */
 function codeStatus(code: number | string | undefined): CodeTagStatus {
   const n = Number(code);
-  if (!Number.isInteger(n)) return "neutral";
-  if (n >= 500 && n < 600) return "fail";
-  if (n >= 400 && n < 500) return "warn";
+  if (!Number.isInteger(n)) {
+    return "neutral";
+  }
+  if (n >= 500 && n < 600) {
+    return "fail";
+  }
+  if (n >= 400 && n < 500) {
+    return "warn";
+  }
   return "neutral";
 }
 

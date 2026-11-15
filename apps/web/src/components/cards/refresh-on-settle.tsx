@@ -17,7 +17,9 @@ export function RefreshOnSettle({ userId, session }: { userId: string; session: 
   const { rows } = useLiveSessions(userId, initial, { prepend: false });
   const status = rows[0]?.status;
   useEffect(() => {
-    if (status && status !== session.status) router.refresh();
+    if (status && status !== session.status) {
+      router.refresh();
+    }
   }, [status, session.status, router]);
   return null;
 }

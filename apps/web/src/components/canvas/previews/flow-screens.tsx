@@ -23,7 +23,8 @@ import { SetupGuide } from "@/components/onboarding/setup-guide";
 import { SAMPLE_PROGRESS } from "@/components/progress/progress-sample";
 import { ProgressSummary } from "@/components/progress/progress-view";
 import { QuizHeader, QuizView } from "@/components/review/review-views";
-import { QuizResult, QuizSendContext } from "@/components/review/quiz-form";
+import { QuizResult } from "@/components/review/quiz-form";
+import { QuizSendContext } from "@/components/review/quiz-send";
 import {
   SAMPLE_GRADES,
   SAMPLE_QUIZ_CARD,
@@ -186,20 +187,20 @@ export function TodayDueScreen() {
         greeting={GREETING}
         lede="Explain it from memory first. The why comes after."
         habit={HABIT}
-        hero={<NextCard card={SAMPLE_QUEUE[0]!} left={SAMPLE_QUEUE.length} />}
+        hero={<NextCard card={SAMPLE_QUEUE[0]} left={SAMPLE_QUEUE.length} />}
       />
     </TodayFrame>
   );
 }
 
 const CARD_PATH = `/review/${SAMPLE_QUIZ_CARD.id}`;
-const NEXT = `/review/${SAMPLE_REVIEW_QUEUE[1]!.id}`;
+const NEXT = `/review/${SAMPLE_REVIEW_QUEUE[1].id}`;
 
 /** Grades an answer without the API: a short wait, then the sample grade for a 2. */
 const canvasSend = () =>
-  new Promise<(typeof SAMPLE_GRADES)[2]>((resolve) =>
-    setTimeout(() => resolve(SAMPLE_GRADES[2]), 800),
-  );
+  new Promise<(typeof SAMPLE_GRADES)[2]>((resolve) => {
+    setTimeout(() => resolve(SAMPLE_GRADES[2]), 800);
+  });
 
 /** /review/[cardId], live: type an answer and submit; the canvas grades it. */
 export function ReviewAnswerScreen() {
@@ -270,7 +271,12 @@ export function DefendScreen() {
     <AppFrame path="/defend">
       <Container>
         <DefendColumn>
-          <DefendStart defendable={9} onStart={() => {}} />
+          <DefendStart
+            defendable={9}
+            onStart={() => {
+              // Inert on the canvas.
+            }}
+          />
         </DefendColumn>
       </Container>
     </AppFrame>
@@ -322,7 +328,12 @@ export function LoadingScreen() {
 export function ErrorScreen() {
   return (
     <AppFrame path="/dashboard" dueCount={0}>
-      <DashboardError error={SAMPLE_ERROR} retry={() => {}} />
+      <DashboardError
+        error={SAMPLE_ERROR}
+        retry={() => {
+          // Inert on the canvas.
+        }}
+      />
     </AppFrame>
   );
 }

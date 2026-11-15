@@ -9,7 +9,7 @@ import { z } from "zod";
  */
 export const uploadRequestSchema = z.object({
   /** Claude Code's session_id. It becomes part of a Storage path, so only safe characters. */
-  external_id: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+  external_id: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/u),
   agent: z.enum(["claude-code", "codex"]).default("claude-code"),
   title: z.string().trim().max(200).nullish(),
   repo: z.string().trim().max(200).nullish(),

@@ -63,7 +63,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 import { GallerySection, Specimen } from "./gallery-section";
-import { cards, REVIEW_DAYS, session } from "./sample";
+import { REVIEW_DAYS, cards, session } from "./sample";
 
 const CONTROL_SIZES = ["sm", "default", "lg"] as const;
 const CARD_FILES = [...new Set(cards.flatMap((card) => card.files))];
@@ -465,7 +465,7 @@ function Comboboxes() {
                   ))}
                   <ComboboxChipsInput
                     aria-label="Files"
-                    placeholder={value.length ? "" : "Files"}
+                    placeholder={value.length > 0 ? "" : "Files"}
                   />
                 </>
               )}

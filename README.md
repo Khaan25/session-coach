@@ -101,15 +101,16 @@ cp .env.example apps/web/.env.local   # fill in values
 pnpm dev                              # http://localhost:3000
 ```
 
-| Command              | What it does                                |
-| -------------------- | ------------------------------------------- |
-| `pnpm dev`           | start the web app                           |
-| `pnpm typecheck`     | TypeScript in every package                 |
-| `pnpm lint`          | oxlint + `@shadcn/lint` design-system rules |
-| `pnpm test`          | every package's tests                       |
-| `pnpm format`        | oxfmt, with the Tailwind class sorter       |
-| `pnpm check:secrets` | scan tracked files for credentials          |
-| `pnpm build`         | production build                            |
+| Command              | What it does                                                    |
+| -------------------- | --------------------------------------------------------------- |
+| `pnpm dev`           | start the web app                                               |
+| `pnpm typecheck`     | `bun check` (tsc's errors, every core) in every package         |
+| `pnpm lint`          | oxlint, every category on, + `@shadcn/lint` design-system rules |
+| `pnpm test`          | every package's tests                                           |
+| `pnpm test:affected` | only the unit tests your branch's diff can reach                |
+| `pnpm format`        | oxfmt, with the Tailwind class sorter                           |
+| `pnpm check:secrets` | scan tracked files for credentials                              |
+| `pnpm build`         | production build                                                |
 
 ### Against the local Supabase stack
 

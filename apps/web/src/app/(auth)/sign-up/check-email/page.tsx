@@ -15,7 +15,8 @@ export const metadata: Metadata = {
 
 // The address comes from the httpOnly cookie signUp set, never the URL. A cookie read, so inside <Suspense>.
 async function Resend() {
-  const email = (await cookies()).get(SIGNUP_EMAIL_COOKIE)?.value;
+  const jar = await cookies();
+  const email = jar.get(SIGNUP_EMAIL_COOKIE)?.value;
   return email ? <ResendConfirmation email={email} /> : null;
 }
 

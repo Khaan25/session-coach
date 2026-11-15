@@ -1,13 +1,7 @@
 // oxlint-disable shadcn/no-inline-styles, shadcn/no-raw-colors -- email clients only read inline styles and hex colours.
-import { Button, Link, render, Section, Text } from "react-email";
+import { Button, Link, Section, Text } from "react-email";
 
-import {
-  type DailyReviewCopy,
-  dailyReviewCopy,
-  type ListedCard,
-  type Recipient,
-} from "@/lib/email/daily-review";
-import { listUnsubscribeHeaders } from "@/lib/email/unsubscribe";
+import type { DailyReviewCopy, ListedCard } from "@/lib/email/daily-review";
 
 import { EmailShell } from "./auth-layout";
 import { color, primaryButton } from "./brand";
@@ -64,6 +58,7 @@ export function DailyReviewEmail({ copy }: { copy: DailyReviewCopy }) {
       >
         {copy.cards.map((card, i) => (
           <Text
+            // oxlint-disable-next-line react/no-array-index-key -- two cards can share a title, and cards have no id here
             key={`${i}-${card.title}`}
             style={{
               margin: 0,
@@ -131,26 +126,4 @@ function Pill({
       {children}
     </span>
   );
-}
-
-/**
- * One learner's reminder: subject, plain text, the rendered HTML and, with a link, the one-click unsubscribe headers.
- *
- * @param recipient - What this learner has to do and has done.
- * @param siteUrl - The deployed origin, without a trailing slash.
- * @param unsubscribeUrl - This learner's signed link (`lib/email/unsubscribe.ts`), or null to leave it out.
- */
-export async function composeDailyReview(
-  recipient: Recipient,
-  siteUrl: string,
-  unsubscribeUrl: string | null = null,
-) {
-  const copy = dailyReviewCopy(recipient, siteUrl, unsubscribeUrl);
-  const html = await render(<DailyReviewEmail copy={copy} />);
-  return {
-    subject: copy.subject,
-    text: copy.text,
-    html,
-    headers: unsubscribeUrl ? listUnsubscribeHeaders(unsubscribeUrl) : undefined,
-  };
 }

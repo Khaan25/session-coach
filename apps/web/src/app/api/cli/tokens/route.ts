@@ -7,7 +7,8 @@
  *   200 `{ revoked: id }`, 400 bad id, 401 signed out, 404 not one of the learner's tokens, 500 anything else.
  * Never log the raw token.
  */
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { NO_STORE, requireUser, serverError } from "@/lib/api/http";
@@ -38,7 +39,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Cross-site request refused" }, { status: 403 });
   }
   const signedIn = await requireUser();
-  if (signedIn instanceof NextResponse) return signedIn;
+  if (signedIn instanceof NextResponse) {
+    return signedIn;
+  }
   const { user } = signedIn;
 
   // Malformed JSON is a 400, not an unlabeled token.
@@ -52,16 +55,18 @@ export async function POST(request: NextRequest) {
   }
 
   const limited = await userRateLimit("tokenCreate", user.id);
-  if (limited) return tooManyRequests(limited);
+  if (limited) {
+    return tooManyRequests(limited);
+  }
 
   try {
     // The user was checked above, and user_id is theirs.
     const created = await createToken(user.id, parsed.data.label);
     return NextResponse.json(created, { status: 201, headers: NO_STORE });
-  } catch (err) {
+  } catch (error) {
     return serverError(
       "[api/cli/tokens] create",
-      err,
+      error,
       "Your token couldn't be created. Try again.",
     );
   }
@@ -74,7 +79,9 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   const signedIn = await requireUser();
-  if (signedIn instanceof NextResponse) return signedIn;
+  if (signedIn instanceof NextResponse) {
+    return signedIn;
+  }
   const { supabase, user } = signedIn;
 
   const id = idSchema.safeParse(request.nextUrl.searchParams.get("id"));
@@ -90,13 +97,17 @@ export async function DELETE(request: NextRequest) {
       .eq("id", id.data)
       .eq("user_id", user.id)
       .select("id");
-    if (error) throw new Error(error.message);
-    if (data.length === 0) return NextResponse.json({ error: "Token not found" }, { status: 404 });
+    if (error) {
+      throw new Error(error.message);
+    }
+    if (data.length === 0) {
+      return NextResponse.json({ error: "Token not found" }, { status: 404 });
+    }
     return NextResponse.json({ revoked: id.data });
-  } catch (err) {
+  } catch (error) {
     return serverError(
       "[api/cli/tokens] revoke",
-      err,
+      error,
       "Your token couldn't be revoked. Try again.",
     );
   }

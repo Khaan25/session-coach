@@ -12,6 +12,7 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
     <html lang="en" suppressHydrationWarning className="h-full">
       <head>
         <title>Something went wrong | Session Coach</title>
+        {/* oxlint-disable-next-line react/no-danger -- the theme script must run inline before paint */}
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="flex min-h-full flex-col">

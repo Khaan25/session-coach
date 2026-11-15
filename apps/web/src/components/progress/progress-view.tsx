@@ -26,12 +26,8 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import type { Ownership } from "@/lib/progress/ownership";
-import {
-  REVIEW_STEPS,
-  stepLabels,
-  type Progress as ProgressData,
-  type ReviewStep,
-} from "@/lib/progress/progress";
+import { REVIEW_STEPS, stepLabels } from "@/lib/progress/progress";
+import type { Progress as ProgressData, ReviewStep } from "@/lib/progress/progress";
 
 // /progress answers "am I making these decisions mine?": the summary line as the hero with today's task under it, then
 // two pairs of framed lists side by side from lg: cards per review step beside the one chart, By project beside By
@@ -63,10 +59,32 @@ export type ProgressPageData = {
 };
 
 /** The page's URL for one project, or for every project. */
-export const progressHref = (repo: string | null) =>
+const progressHref = (repo: string | null) =>
   repo ? `/progress?${new URLSearchParams({ repo })}` : "/progress";
 
 /** Progress with nothing to count yet: the header, then the empty state that says what to do. */
+/** A section's count, muted, after its title on the same line. */
+function Count({ n }: { n: number }) {
+  return <span className="data text-text-3">{n}</span>;
+}
+
+/** What the banner says under its title, by how many cards are due and how many of them are on day 11. */
+function todayAdvice(dueToday: number, dueOnDay11: number) {
+  if (dueToday === 0) {
+    return "Cards come back on day 1, 4 and 11 after you answer them. Come back tomorrow.";
+  }
+  if (dueOnDay11 === 0) {
+    return "Write the why in your own words first. Each one you explain moves a step closer to owned.";
+  }
+  if (dueToday === 1) {
+    return "It's on its day 11 review: explain it and you own it.";
+  }
+  if (dueOnDay11 === 1) {
+    return "One of them is on its day 11 review: explain it and you own it.";
+  }
+  return `${dueOnDay11} of them are on their day 11 review: explain them and you own them.`;
+}
+
 export function ProgressEmpty({ empty }: { empty: React.ReactNode }) {
   return (
     <Container>
@@ -220,9 +238,6 @@ export function ProgressSummary({ data }: { data: ProgressPageData }) {
   );
 }
 
-/** A section's count, muted, after its title on the same line. */
-const Count = ({ n }: { n: number }) => <span className="data text-text-3">{n}</span>;
-
 /** The one task for today: the review queue's count, and what one of its cards is a pass away from. */
 function TodayBanner({
   dueToday,
@@ -251,15 +266,7 @@ function TodayBanner({
         <CardDescription>
           {/* The queue is one list for every project (at most 5 a day), so a project tab doesn't narrow it. */}
           {allProjects && "From all your projects. "}
-          {dueToday === 0
-            ? "Cards come back on day 1, 4 and 11 after you answer them. Come back tomorrow."
-            : dueOnDay11 === 0
-              ? "Write the why in your own words first. Each one you explain moves a step closer to owned."
-              : dueToday === 1
-                ? "It's on its day 11 review: explain it and you own it."
-                : dueOnDay11 === 1
-                  ? "One of them is on its day 11 review: explain it and you own it."
-                  : `${dueOnDay11} of them are on their day 11 review: explain them and you own them.`}
+          {todayAdvice(dueToday, dueOnDay11)}
         </CardDescription>
       </CardHeader>
     </Card>

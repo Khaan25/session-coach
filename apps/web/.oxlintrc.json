@@ -1,135 +1,93 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "nextjs", "import", "jsx-a11y"],
+  "extends": ["../../.oxlintrc.json"],
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "promise",
+    "node",
+    "jsdoc",
+    "react",
+    "react-perf",
+    "nextjs",
+    "jsx-a11y"
+  ],
   "jsPlugins": ["@shadcn/lint"],
   "env": {
     "builtin": true,
     "browser": true,
     "node": true
   },
-  "ignorePatterns": [".next/**", "out/**", "build/**", "next-env.d.ts"],
+  "ignorePatterns": [
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "src/lib/supabase/database.types.ts"
+  ],
   "rules": {
-    "no-array-constructor": "error",
-    "no-unused-expressions": "warn",
-    "no-unused-vars": "warn",
-    "nextjs/google-font-display": "warn",
-    "nextjs/google-font-preconnect": "warn",
-    "nextjs/next-script-for-ga": "warn",
-    "nextjs/no-async-client-component": "warn",
-    "nextjs/no-before-interactive-script-outside-document": "warn",
-    "nextjs/no-css-tags": "warn",
-    "nextjs/no-head-element": "warn",
-    "nextjs/no-html-link-for-pages": "error",
-    "nextjs/no-img-element": "warn",
-    "nextjs/no-page-custom-font": "warn",
-    "nextjs/no-styled-jsx-in-document": "warn",
-    "nextjs/no-sync-scripts": "error",
-    "nextjs/no-title-in-document-head": "warn",
-    "nextjs/no-typos": "warn",
-    "nextjs/no-unwanted-polyfillio": "warn",
-    "nextjs/inline-script-id": "error",
-    "nextjs/no-assign-module-variable": "error",
-    "nextjs/no-document-import-in-page": "error",
-    "nextjs/no-duplicate-head": "error",
-    "nextjs/no-head-import-in-document": "error",
-    "nextjs/no-script-component-in-head": "error",
-    "typescript/ban-ts-comment": "error",
-    "typescript/no-duplicate-enum-values": "error",
-    "typescript/no-empty-object-type": "error",
-    "typescript/no-explicit-any": "error",
-    "typescript/no-extra-non-null-assertion": "error",
-    "typescript/no-misused-new": "error",
-    "typescript/no-namespace": "error",
-    "typescript/no-non-null-asserted-optional-chain": "error",
-    "typescript/no-require-imports": "error",
-    "typescript/no-this-alias": "error",
-    "typescript/no-unnecessary-type-constraint": "error",
-    "typescript/no-unsafe-declaration-merging": "error",
-    "typescript/no-unsafe-function-type": "error",
-    "typescript/no-wrapper-object-types": "error",
-    "typescript/prefer-as-const": "error",
-    "typescript/prefer-namespace-keyword": "error",
-    "typescript/triple-slash-reference": "error",
-    "react/display-name": "error",
-    "react/jsx-key": "error",
-    "react/jsx-no-comment-textnodes": "error",
-    "react/jsx-no-duplicate-props": "error",
-    "react/jsx-no-target-blank": "off",
-    "react/jsx-no-undef": "error",
-    "react/no-children-prop": "error",
-    "react/no-danger-with-children": "error",
-    "react/no-direct-mutation-state": "error",
-    "react/no-find-dom-node": "error",
-    "react/no-is-mounted": "error",
-    "react/no-render-return-value": "error",
-    "react/no-string-refs": "error",
-    "react/no-unescaped-entities": "error",
-    "react/no-unknown-property": "off",
-    "react/no-unsafe": "off",
-    "react/react-in-jsx-scope": "off",
-    "import/no-anonymous-default-export": "warn",
-    "jsx-a11y/alt-text": [
-      "warn",
+    // Configured
+    "react/jsx-filename-extension": ["error", { "extensions": [".tsx"] }],
+    "no-console": ["error", { "allow": ["error", "warn"] }],
+    "react/no-unknown-property": ["error", { "ignore": ["skullet-own"] }], // skullet's skeleton marker attribute
+    "new-cap": ["error", { "capIsNewExceptionPattern": "^[A-Z][A-Za-z]*_[A-Z]" }], // next/font loaders are called without new: Mona_Sans(), Geist_Mono()
+    "jsx-a11y/no-noninteractive-tabindex": [
+      "error",
+      { "roles": ["tabpanel", "region", "application"] }
+    ], // scrollable regions and the canvas widget must be keyboard-reachable
+    "react/only-export-components": [
+      "error",
       {
-        "elements": ["img"],
-        "img": ["Image"]
+        "allowExportNames": [
+          "metadata",
+          "generateMetadata",
+          "viewport",
+          "generateViewport",
+          "generateStaticParams",
+          "dynamic",
+          "revalidate",
+          "runtime",
+          "instant",
+          "dynamicParams",
+          "fetchCache",
+          "preferredRegion",
+          "maxDuration",
+          "alt",
+          "size",
+          "contentType"
+        ]
       }
     ],
-    "jsx-a11y/aria-props": "warn",
-    "jsx-a11y/aria-proptypes": "warn",
-    "jsx-a11y/aria-unsupported-elements": "warn",
-    "jsx-a11y/role-has-required-aria-props": "warn",
-    "jsx-a11y/role-supports-aria-props": "warn",
-    "react/rules-of-hooks": "error",
-    "react/exhaustive-deps": "warn",
-    "react/static-components": "error",
-    "react/use-memo": "error",
-    "react/preserve-manual-memoization": "error",
-    "react/incompatible-library": "warn",
-    "react/immutability": "error",
-    "react/globals": "error",
-    "react/refs": "error",
-    "react/set-state-in-effect": "error",
-    "react/error-boundaries": "error",
-    "react/purity": "error",
-    "react/set-state-in-render": "error",
-    "react/unsupported-syntax": "warn"
+
+    // Off: contradicts the framework or a repo convention
+    "react/react-in-jsx-scope": "off", // React 17+ JSX transform; React is never in scope
+    "react/no-multi-comp": "off", // compound components share a file (docs/rules/components.md)
+    "react/forbid-component-props": "off", // className on components is policed by shadcn/no-restyle instead
+    "react/jsx-props-no-spreading": "off", // wrappers forward props to the primitive they wrap, and copy tables spread into notices (docs/rules/components.md)
+
+    // Off: arbitrary size threshold
+    "react/jsx-max-depth": "off",
+
+    // Off: bans a language feature the code uses by design
+    "react/jsx-no-literals": "off", // the UI is English-only with no i18n layer; copy lives in JSX
+
+    // Off: false positives here
+    "jsx-a11y/prefer-tag-over-role": "off", // wants <output>, <fieldset>, <img> or <li> for roles on components and live regions, where the native tag changes styling or behaviour
+    "react/incompatible-library": "off", // React Compiler notice about libraries such as useVirtualizer; the app doesn't run the compiler
+    "react/todo": "off", // React Compiler bail-out notices ("can't lower X yet"), not defects; the app doesn't run the compiler
+    "react-perf/jsx-no-jsx-as-prop": "off", // flags every slot prop (docs/rules/components.md rung 3) and DOM handler; no React Compiler, no measured render cost
+    "react-perf/jsx-no-new-function-as-prop": "off", // same
+    "react-perf/jsx-no-new-object-as-prop": "off", // same
+    "react-perf/jsx-no-new-array-as-prop": "off" // same
   },
   "overrides": [
     {
-      "files": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
-      "rules": {
-        "constructor-super": "off",
-        "getter-return": "off",
-        "no-class-assign": "off",
-        "no-const-assign": "off",
-        "no-dupe-class-members": "off",
-        "no-dupe-keys": "off",
-        "no-func-assign": "off",
-        "no-import-assign": "off",
-        "no-new-native-nonconstructor": "off",
-        "no-obj-calls": "off",
-        "no-redeclare": "off",
-        "no-setter-return": "off",
-        "no-this-before-super": "off",
-        "no-unreachable": "off",
-        "no-unsafe-negation": "off",
-        "no-var": "error",
-        "no-with": "off",
-        "prefer-const": "error",
-        "prefer-rest-params": "error",
-        "prefer-spread": "error"
-      }
-    },
-    {
       "files": ["src/**/*.{ts,tsx}"],
       "rules": {
-        "shadcn/no-restyle": [
-          "error",
-          {
-            "allow": ["layout"]
-          }
-        ],
+        "shadcn/no-restyle": ["error", { "allow": ["layout"] }],
         "shadcn/no-raw-colors": "error",
         "shadcn/no-arbitrary-values": "error",
         "shadcn/no-inline-styles": "error",
@@ -141,7 +99,36 @@
       "files": ["src/components/ui/**/*.tsx"],
       "rules": {
         "shadcn/no-restyle": "off",
-        "shadcn/no-arbitrary-values": "off"
+        "shadcn/no-arbitrary-values": "off",
+        "react/no-array-index-key": "off", // tokens, chart points and table cells are positional lists with no id
+        "import/no-namespace": "off", // shadcn source imports `* as React`
+        "react/only-export-components": "off" // shadcn files export cva `*Variants` next to their components
+      }
+    },
+    {
+      // Next.js file conventions, config files and React Email templates must default-export
+      "files": [
+        "src/app/**/{page,layout,template,default,loading,error,global-error,not-found,forbidden,unauthorized,sitemap,robots,manifest,icon,apple-icon,opengraph-image,twitter-image}.{ts,tsx}",
+        "src/emails/**/*.tsx",
+        "*.config.{ts,mts,js,mjs}",
+        "content-collections.ts"
+      ],
+      "rules": {
+        "import/no-default-export": "off"
+      }
+    },
+    {
+      // node --test runs lib modules without the @/ alias, and the e2e specs import tests/local-stack.ts, outside it
+      "files": ["src/lib/**", "e2e/**"],
+      "rules": {
+        "import/no-relative-parent-imports": "off"
+      }
+    },
+    {
+      // Command-line scripts print their results
+      "files": ["scripts/**", "src/lib/pipeline/print-timeline.ts"],
+      "rules": {
+        "no-console": "off"
       }
     },
     {

@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 
 /** CSI (arrows, Home/End, Delete) and SS3 escape sequences, or a lone escape plus the byte after it. */
 // oxlint-disable-next-line no-control-regex -- matching ESC is the point
-const ESCAPE_SEQUENCE = /\u001b(?:\[[0-?]*[ -/]*[@-~]|O[@-~]|.)?/gsu;
+const ESCAPE_SEQUENCE = /\u001B(?:\[[0-?]*[ -/]*[@-~]|O[@-~]|.)?/gsu;
 
 const CONTROL_CHAR = /\p{Cc}/u;
 
@@ -13,14 +13,22 @@ const CONTROL_CHAR = /\p{Cc}/u;
  * @returns The new value, and `done` when Enter or Ctrl-C ended the input (characters after it are ignored).
  */
 export function applyKeys(
-  value: string,
+  start: string,
   chunk: string,
 ): { value: string; done: "enter" | "cancel" | null } {
-  for (const char of chunk.replace(ESCAPE_SEQUENCE, "")) {
-    if (char === "\r" || char === "\n") return { value, done: "enter" };
-    if (char === "\u0003") return { value, done: "cancel" };
-    if (char === "\u007f" || char === "\b") value = value.slice(0, -1);
-    else if (!CONTROL_CHAR.test(char)) value += char;
+  let value = start;
+  for (const char of chunk.replaceAll(ESCAPE_SEQUENCE, "")) {
+    if (char === "\r" || char === "\n") {
+      return { value, done: "enter" };
+    }
+    if (char === "\u0003") {
+      return { value, done: "cancel" };
+    }
+    if (char === "\u007F" || char === "\b") {
+      value = value.slice(0, -1);
+    } else if (!CONTROL_CHAR.test(char)) {
+      value += char;
+    }
   }
   return { value, done: null };
 }
@@ -52,19 +60,22 @@ export function promptHidden(question: string): Promise<string> {
     input.resume();
     input.setEncoding("utf8");
 
-    const finish = (done: () => void) => {
+    function finish(done: () => void) {
       input.setRawMode(false);
       input.pause();
       input.off("data", onData);
       output.write("\n");
       done();
-    };
-    const onData = (chunk: string) => {
+    }
+    function onData(chunk: string) {
       const next = applyKeys(value, chunk);
-      value = next.value;
-      if (next.done === "enter") finish(() => resolve(value.trim()));
-      else if (next.done === "cancel") finish(() => reject(new Error("Cancelled.")));
-    };
+      ({ value } = next);
+      if (next.done === "enter") {
+        finish(() => resolve(value.trim()));
+      } else if (next.done === "cancel") {
+        finish(() => reject(new Error("Cancelled.")));
+      }
+    }
     input.on("data", onData);
   });
 }
@@ -84,7 +95,9 @@ export function promptLine(question: string): Promise<string | null> {
     });
     rl.once("SIGINT", () => rl.close());
     rl.once("close", () => {
-      if (!answered) resolve(null);
+      if (!answered) {
+        resolve(null);
+      }
     });
   });
 }

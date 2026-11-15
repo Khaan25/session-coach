@@ -5,7 +5,8 @@ import { Radio as RadioPrimitive } from "@base-ui/react/radio";
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle";
 import { ToggleGroup as ToggleGroupPrimitive } from "@base-ui/react/toggle-group";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import type { Kind } from "@/lib/ui/kind";
@@ -97,7 +98,12 @@ type SegmentedControlProps = SingleProps | MultipleProps;
 function SegmentedControl(props: SegmentedControlProps) {
   const { className, size = "default", fill = false, children } = props;
   const classes = cn(segmentedVariants({ size, fill }), className);
-  const ctx = { size: size ?? "default", multiple: !!props.multiple, countMax: props.countMax };
+  const multipleMode = Boolean(props.multiple);
+  const { countMax } = props;
+  const ctx = React.useMemo(
+    () => ({ size: size ?? "default", multiple: multipleMode, countMax }),
+    [size, multipleMode, countMax],
+  );
   if (props.multiple) {
     const {
       multiple: _m,
@@ -173,16 +179,24 @@ function useOverflow<T extends HTMLElement>() {
   const [over, setOver] = React.useState(false);
   React.useLayoutEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const check = () => setOver(el.scrollWidth > el.clientWidth + 1);
     check();
     const ro = new ResizeObserver(check);
     ro.observe(el);
     const mo = new MutationObserver(check);
     mo.observe(el, { childList: true, characterData: true, subtree: true });
-    const fonts = el.ownerDocument.fonts;
+    const { fonts } = el.ownerDocument;
     fonts?.addEventListener("loadingdone", check);
-    fonts?.ready.then(check);
+    if (fonts) {
+      const recheckWhenReady = async () => {
+        await fonts.ready;
+        check();
+      };
+      void recheckWhenReady();
+    }
     return () => {
       ro.disconnect();
       mo.disconnect();
@@ -205,7 +219,9 @@ function SegmentedControlItem({
   const [labelRef, over] = useOverflow<HTMLSpanElement>();
   // Without countMax, the slot keeps the widest count it has shown, so it never shrinks back.
   const [seen, setSeen] = React.useState(0);
-  if (count !== undefined && count > seen) setSeen(count);
+  if (count !== undefined && count > seen) {
+    setSeen(count);
+  }
   const reserve = itemMax ?? groupMax ?? Math.max(seen, count ?? 0);
   const title = over && typeof children === "string" ? children : undefined;
   const classes = cn(
@@ -255,23 +271,24 @@ function SegmentedControlItem({
   // for a short one) plus its padding and count, so a long label stays readable instead of being
   // crushed to one letter.
   const floorCh = typeof children === "string" ? Math.min(children.length * 0.8, 6) : 0;
-  const countCh = count !== undefined ? fmt.format(Math.max(reserve, count)).length : 0;
-  const minWidth = `calc(${floorCh + countCh}ch + ${(size === "xs" ? 16 : 24) + (count !== undefined ? 6 : 0)}px)`;
+  const countCh = count === undefined ? 0 : fmt.format(Math.max(reserve, count)).length;
+  const minWidth = `calc(${floorCh + countCh}ch + ${(size === "xs" ? 16 : 24) + (count === undefined ? 0 : 6)}px)`;
   const shared = {
     "data-slot": "segmented-control-item",
     "data-kind": kind,
     [multiple ? "data-cuelume-toggle" : "data-cuelume-select"]: "",
-    "aria-describedby": count !== undefined ? countId : undefined,
+    "aria-describedby": count === undefined ? undefined : countId,
     title,
     style: { "--segment-shrink": shrink, "--segment-min": minWidth } as React.CSSProperties,
     className: classes,
   };
-  if (multiple)
+  if (multiple) {
     return (
       <TogglePrimitive {...shared} {...props}>
         {content}
       </TogglePrimitive>
     );
+  }
   return (
     <RadioPrimitive.Root {...shared} {...props}>
       {content}

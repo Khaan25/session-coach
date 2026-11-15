@@ -92,7 +92,9 @@ export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: st
 
   function edit(task: TrackerTask, field: EditField, value: string, restore: () => void) {
     const next = field === "title" ? value.trim() : value.trim() || null;
-    if (next === (task[field] ?? null) || (field === "title" && !next)) return;
+    if (next === (task[field] ?? null) || (field === "title" && !next)) {
+      return;
+    }
     save(task.id, { [field]: next }, () => editTask({ id: task.id, [field]: value }), restore);
   }
 
@@ -112,7 +114,7 @@ export function TaskList({ tasks, context }: { tasks: TrackerTask[]; context: st
         </Collapsible>
       </div>
       <div className="flex flex-col gap-2">
-        <Progress value={optimistic.length ? (doneCount / optimistic.length) * 100 : 0}>
+        <Progress value={optimistic.length > 0 ? (doneCount / optimistic.length) * 100 : 0}>
           <ProgressLabel>
             {doneCount} of {optimistic.length} done
           </ProgressLabel>
@@ -164,12 +166,15 @@ function TaskRow({
   const [draft, setDraft] = useState<string | null>(null);
   // A task without notes starts open, so its "double-click to add" line is in view. Read once: Collapsible's
   // defaultOpen must not change after the first render, and adding notes would change it.
+  // oxlint-disable-next-line react/hook-use-state -- read once on mount; there is deliberately no setter
   const [startOpen] = useState(!task.details);
 
   function finish(field: EditField, value: string | null) {
     setEditing(null);
     setDraft(null);
-    if (value === null) return;
+    if (value === null) {
+      return;
+    }
     onEdit(task, field, value, () => {
       setDraft(value);
       setEditing(field);
@@ -262,15 +267,18 @@ function AddTask({ section }: { section: string }) {
       return;
     }
     setDraft(value);
+    const failed = (title: string) => {
+      toast.add({ title, type: "error" });
+      setOpen(true);
+    };
     startTransition(async () => {
-      const failed = (title: string) => {
-        toast.add({ title, type: "error" });
-        setOpen(true);
-      };
       try {
         const { error } = await addTask({ section, title: value });
-        if (error) failed(error);
-        else setDraft("");
+        if (error) {
+          failed(error);
+        } else {
+          setDraft("");
+        }
       } catch {
         failed("That task couldn't be added. Check your connection.");
       }
@@ -372,12 +380,16 @@ function EditBox({
     defaultValue: initial,
     "aria-label": label,
     onBlur: (event: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      if (!cancelled.current) onDone(event.currentTarget.value);
+      if (!cancelled.current) {
+        onDone(event.currentTarget.value);
+      }
     },
     onKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       // Enter or Esc inside an IME composition belongs to the input method. Safari reports isComposing false on the
       // confirming Enter, hence keyCode 229.
-      if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+      if (event.nativeEvent.isComposing || event.keyCode === 229) {
+        return;
+      }
       if (event.key === "Escape") {
         cancelled.current = true;
         onDone(null);

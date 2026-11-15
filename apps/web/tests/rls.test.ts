@@ -7,7 +7,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { after, before, test } from "node:test";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { localStack } from "./local-stack.ts";
 
@@ -33,8 +34,10 @@ async function makeLearner(tag: string): Promise<Learner> {
   const email = `rls-${tag}-${randomUUID()}@example.test`;
   const password = randomUUID();
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-  if (created.error) throw created.error;
-  const id = created.data.user.id;
+  if (created.error) {
+    throw created.error;
+  }
+  const { id } = created.data.user;
 
   const sessionId = randomUUID();
   const cardId = randomUUID();
@@ -72,12 +75,16 @@ async function makeLearner(tag: string): Promise<Learner> {
   ];
   for (const write of writes) {
     const { error } = await write();
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
   }
 
   const client = createClient(stack.url, stack.anonKey, options);
   const signedIn = await client.auth.signInWithPassword({ email, password });
-  if (signedIn.error) throw signedIn.error;
+  if (signedIn.error) {
+    throw signedIn.error;
+  }
   return { id, client, sessionId, cardId, hiddenCardId, tokenId };
 }
 
@@ -86,7 +93,9 @@ before(async () => {
 });
 
 after(async () => {
-  for (const learner of learners) await admin.auth.admin.deleteUser(learner.id);
+  for (const learner of learners) {
+    await admin.auth.admin.deleteUser(learner.id);
+  }
 });
 
 /** Every (me, other) pair, so each learner is checked against the other. */
@@ -108,8 +117,9 @@ test("a learner reads only their own rows in every table", async () => {
       const { data, error } = await me.client.from(table).select(columns);
       assert.ifError(error);
       assert.ok(data.length > 0, `${table}: own rows visible`);
-      for (const row of data as unknown as Record<string, string>[])
+      for (const row of data as unknown as Record<string, string>[]) {
         assert.equal(row[owner], me.id, `${table}: saw another learner's row`);
+      }
       // Asking for the other learner's rows by id returns nothing.
       const theirs = await me.client.from(table).select(columns).eq(owner, other.id);
       assert.ifError(theirs.error);
@@ -152,7 +162,8 @@ test("decision_cards: model_answer, why and evidence are not readable, and selec
     }
     const key = await me.client.from("decision_cards").select("id, model_answer");
     assert.ok(key.error, "model_answer was readable");
-    assert.equal(key.error.code, "42501"); // insufficient_privilege
+    // insufficient_privilege
+    assert.equal(key.error.code, "42501");
     const star = await me.client.from("decision_cards").select("*");
     assert.ok(star.error, "select * succeeded");
   }
@@ -226,14 +237,14 @@ test("tracker_tasks: members read, add and edit only the granted columns; others
     added.push(taskId);
     const joined = await admin.from("tracker_members").insert({ user_id: member.id });
     assert.ifError(joined.error);
-    const stored = async () =>
-      (
-        await admin
-          .from("tracker_tasks")
-          .select("title, details, owner, section, done_at, done_by")
-          .eq("id", taskId)
-          .single()
-      ).data;
+    const stored = async () => {
+      const row = await admin
+        .from("tracker_tasks")
+        .select("title, details, owner, section, done_at, done_by")
+        .eq("id", taskId)
+        .single();
+      return row.data;
+    };
 
     // Reads: members see the list; a signed-in non-member and anon see no rows.
     const mine = await member.client.from("tracker_tasks").select("id").eq("id", taskId);
@@ -295,7 +306,8 @@ test("tracker_tasks: members read, add and edit only the granted columns; others
       .update({ done_at: null })
       .eq("id", taskId);
     assert.ifError(unticked.error);
-    assert.equal((await stored())?.done_by, null, "unticking kept done_by");
+    const afterUntick = await stored();
+    assert.equal(afterUntick?.done_by, null, "unticking kept done_by");
 
     // Non-members and anon match no rows, so nothing moves.
     for (const client of [outsider.client, anon]) {
@@ -344,7 +356,7 @@ test("report: a learner reads only their own slug, switches only their own repor
     const own = await me.client.from("profiles").select("report_on, report_slug").eq("id", me.id);
     assert.ifError(own.error);
     assert.equal(own.data.length, 1);
-    assert.match(own.data[0]?.report_slug ?? "", /^[0-9a-f]{32}$/);
+    assert.match(own.data[0]?.report_slug ?? "", /^[0-9a-f]{32}$/u);
     assert.equal(own.data[0]?.report_on, false, "report is off by default");
 
     const theirs = await me.client.from("profiles").select("report_slug").eq("id", other.id);
@@ -360,8 +372,12 @@ test("report: a learner reads only their own slug, switches only their own repor
     assert.ok(slug.error, "learner wrote report_slug");
 
     await me.client.from("profiles").update({ report_on: true }).eq("id", other.id);
-    const after = await admin.from("profiles").select("report_on").eq("id", other.id).single();
-    assert.equal(after.data?.report_on, false, "switched on another learner's report");
+    const otherProfile = await admin
+      .from("profiles")
+      .select("report_on")
+      .eq("id", other.id)
+      .single();
+    assert.equal(otherProfile.data?.report_on, false, "switched on another learner's report");
     await admin.from("profiles").update({ report_on: false }).eq("id", me.id);
   }
 });

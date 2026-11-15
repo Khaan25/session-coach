@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 import { Suspense, cache } from "react";
 
 import { Container } from "@/components/app/container";
-import { ReportView, type LoadedReport } from "@/components/report/report-view";
+import { ReportView } from "@/components/report/report-view";
+import type { LoadedReport } from "@/components/report/report-view";
 import { authAttemptWait } from "@/lib/auth/rate-limit";
 import { getReport } from "@/lib/report/queries";
 
 // One read and one rate-limit spend per request, shared by the page and its metadata.
 const load = cache(async (slug: string): Promise<LoadedReport> => {
-  if ((await authAttemptWait("report")) > 0) return "limited";
+  if ((await authAttemptWait("report")) > 0) {
+    return "limited";
+  }
   try {
     return (await getReport(slug)) ?? "off";
   } catch (error) {
@@ -18,7 +21,8 @@ const load = cache(async (slug: string): Promise<LoadedReport> => {
 });
 
 export async function generateMetadata({ params }: PageProps<"/r/[slug]">): Promise<Metadata> {
-  const report = await load((await params).slug);
+  const { slug } = await params;
+  const report = await load(slug);
   const name = typeof report === "object" ? (report.name ?? "Ownership report") : null;
   return {
     title: name ? `${name} | Session Coach` : "Report not shared | Session Coach",
@@ -38,5 +42,6 @@ export default function ReportPage({ params }: PageProps<"/r/[slug]">) {
 }
 
 async function ReportBody({ params }: Pick<PageProps<"/r/[slug]">, "params">) {
-  return <ReportView report={await load((await params).slug)} />;
+  const { slug } = await params;
+  return <ReportView report={await load(slug)} />;
 }

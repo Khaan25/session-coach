@@ -22,8 +22,12 @@ export async function listProjects(userId: string): Promise<ProjectListItem[]> {
     supabase.rpc("learner_repos"),
     supabase.from("projects").select("repo, question_level, onboarded_at").eq("user_id", userId),
   ]);
-  if (repos.error) throw new Error(`listProjects: ${repos.error.message}`);
-  if (projects.error) throw new Error(`listProjects: ${projects.error.message}`);
+  if (repos.error) {
+    throw new Error(`listProjects: ${repos.error.message}`);
+  }
+  if (projects.error) {
+    throw new Error(`listProjects: ${projects.error.message}`);
+  }
   const byRepo = new Map(projects.data.map((row) => [row.repo as string, row]));
   return ((repos.data ?? []) as { repo: string }[]).map(({ repo }) => {
     const row = byRepo.get(repo);

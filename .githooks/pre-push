@@ -1,13 +1,21 @@
 #!/usr/bin/env sh
 # Runs CI's fast gates before a push spends a CI run and a round of bot reviews.
+# The gates run at the same time and print in a fixed order once all finish.
 # The production build runs in CI (`pnpm build` locally).
 # Use `git push --no-verify` only for a check that can genuinely run only in CI.
 echo "pre-push: format, typecheck, lint, test"
+dir=$(mktemp -d)
+trap 'rm -rf "$dir"' EXIT
+gates="format:check typecheck lint test"
+for gate in $gates; do
+  (pnpm run "$gate" >"$dir/$gate.log" 2>&1; echo $? >"$dir/$gate.rc") &
+done
+wait
 fail=0
-for gate in format:check typecheck lint test; do
-  if ! out=$(pnpm run "$gate" 2>&1); then
+for gate in $gates; do
+  if [ "$(cat "$dir/$gate.rc")" -ne 0 ]; then
     echo "  ✗ $gate"
-    printf '%s\n' "$out" | tail -25
+    tail -25 "$dir/$gate.log"
     fail=1
   fi
 done

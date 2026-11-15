@@ -2,17 +2,19 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  SendRejectedError,
   cronAuthorized,
   dailyReviewCopy,
-  type DailyReviewDeps,
   dailyReviewRecipients,
-  type AnswerRow,
-  type NewCardRow,
-  type OutgoingEmail,
-  type ProfileRow,
-  type ReviewRow,
   sendDailyReviews,
-  SendRejectedError,
+} from "./daily-review.ts";
+import type {
+  AnswerRow,
+  DailyReviewDeps,
+  NewCardRow,
+  OutgoingEmail,
+  ProfileRow,
+  ReviewRow,
 } from "./daily-review.ts";
 
 const site = "https://coach.example.test";
@@ -42,9 +44,17 @@ const newCard = (
 });
 
 /** The words without the template: the route renders React Email, which node --test can't load. */
-const compose: Parameters<typeof sendDailyReviews>[1] = async (recipient) => {
+const compose: Parameters<typeof sendDailyReviews>[1] = (recipient) => {
   const { subject, text } = dailyReviewCopy(recipient, site);
-  return { subject, text, html: `<p>${text}</p>` };
+  return Promise.resolve({ subject, text, html: `<p>${text}</p>` });
+};
+
+/** A template that throws, as a broken React Email render would. */
+const broken: typeof compose = () => Promise.reject(new Error("render failed"));
+
+/** Swallows the console.error lines a test expects; the test asserts on the results instead. */
+const silence = () => {
+  // Expected failures log here.
 };
 
 /** In-memory `email_log` and outbox, so reruns behave like the real unique key. */
@@ -52,21 +62,25 @@ function fakeDeps() {
   const log = new Map<string, string | null>();
   const outbox: OutgoingEmail[] = [];
   const deps: DailyReviewDeps = {
-    async claim(userId, sentOn) {
+    claim(userId, sentOn) {
       const key = `${userId}/${sentOn}`;
-      if (log.has(key)) return false;
+      if (log.has(key)) {
+        return Promise.resolve(false);
+      }
       log.set(key, null);
-      return true;
+      return Promise.resolve(true);
     },
-    async send(email) {
+    send(email) {
       outbox.push(email);
-      return `re_${outbox.length}`;
+      return Promise.resolve(`re_${outbox.length}`);
     },
-    async record(userId, sentOn, resendId) {
+    record(userId, sentOn, resendId) {
       log.set(`${userId}/${sentOn}`, resendId);
+      return Promise.resolve();
     },
-    async release(userId, sentOn) {
+    release(userId, sentOn) {
       log.delete(`${userId}/${sentOn}`);
+      return Promise.resolve();
     },
   };
   return { deps, log, outbox };
@@ -166,7 +180,7 @@ test("a rerun the same day sends nothing twice", async () => {
 });
 
 test("one learner's failure doesn't stop the others", async (t) => {
-  t.mock.method(console, "error", () => {});
+  t.mock.method(console, "error", silence);
   const recipients = dailyReviewRecipients(
     [profile("a"), profile("b"), profile("c")],
     ["a", "b", "c"].map((id) => review(id, "2026-10-31")),
@@ -175,10 +189,12 @@ test("one learner's failure doesn't stop the others", async (t) => {
     now,
   );
   const { deps, log, outbox } = fakeDeps();
-  const send = deps.send;
+  const { send } = deps;
   deps.send = async (email) => {
-    if (email.to.startsWith("b@")) throw new SendRejectedError("Resend responded 500");
-    return send(email);
+    if (email.to.startsWith("b@")) {
+      throw new SendRejectedError("Resend responded 500");
+    }
+    return await send(email);
   };
   assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 2,
@@ -203,7 +219,7 @@ test("one learner's failure doesn't stop the others", async (t) => {
 });
 
 test("a timeout keeps the claim, so a rerun the same day doesn't send again", async (t) => {
-  t.mock.method(console, "error", () => {});
+  t.mock.method(console, "error", silence);
   const recipients = dailyReviewRecipients(
     [profile("a")],
     [review("a", "2026-10-31")],
@@ -212,10 +228,8 @@ test("a timeout keeps the claim, so a rerun the same day doesn't send again", as
     now,
   );
   const { deps, log, outbox } = fakeDeps();
-  const send = deps.send;
-  deps.send = async () => {
-    throw Object.assign(new Error("timed out"), { name: "TimeoutError" });
-  };
+  const { send } = deps;
+  deps.send = () => Promise.reject(Object.assign(new Error("timed out"), { name: "TimeoutError" }));
   assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 0,
     skipped: 0,
@@ -232,7 +246,7 @@ test("a timeout keeps the claim, so a rerun the same day doesn't send again", as
 });
 
 test("a failed release is logged and the batch goes on", async (t) => {
-  const errors = t.mock.method(console, "error", () => {});
+  const errors = t.mock.method(console, "error", silence);
   const recipients = dailyReviewRecipients(
     [profile("a"), profile("b")],
     ["a", "b"].map((id) => review(id, "2026-10-31")),
@@ -241,14 +255,14 @@ test("a failed release is logged and the batch goes on", async (t) => {
     now,
   );
   const { deps, outbox } = fakeDeps();
-  const send = deps.send;
+  const { send } = deps;
   deps.send = async (email) => {
-    if (email.to.startsWith("a@")) throw new SendRejectedError("Resend responded 500");
-    return send(email);
+    if (email.to.startsWith("a@")) {
+      throw new SendRejectedError("Resend responded 500");
+    }
+    return await send(email);
   };
-  deps.release = async () => {
-    throw new Error("db down");
-  };
+  deps.release = () => Promise.reject(new Error("db down"));
   assert.deepEqual(await sendDailyReviews(recipients, compose, deps), {
     sent: 1,
     skipped: 0,
@@ -311,7 +325,7 @@ test("the email says what's new and due, lists 3, and links review and settings"
   assert.equal(copy.reviewUrl, `${site}/review`);
   assert.equal(copy.settingsUrl, `${site}/settings`);
   assert.equal(copy.unsubscribeUrl, null);
-  assert.doesNotMatch(copy.text, /Unsubscribe/);
+  assert.doesNotMatch(copy.text, /Unsubscribe/u);
   for (const line of ["- Due one (Due)", "and 2 more", `${site}/review`, `${site}/settings`]) {
     assert.ok(copy.text.includes(line), line);
   }
@@ -326,14 +340,14 @@ test("one new card on a first session reads in the singular, with a first-time l
   assert.equal(copy.heading, "1 decision to explain today");
   assert.equal(copy.summary, "1 new from your sessions");
   assert.equal(copy.more, null);
-  assert.match(copy.progress, /first cards/);
+  assert.match(copy.progress, /first cards/u);
   // Long decisions are cut for the list.
   assert.equal(copy.cards[0].title.length, 90);
   assert.ok(copy.cards[0].title.endsWith("…"));
 });
 
 test("a template error leaves the day unclaimed, so a rerun can still send", async (t) => {
-  t.mock.method(console, "error", () => {});
+  t.mock.method(console, "error", silence);
   const recipients = dailyReviewRecipients(
     [profile("a")],
     [review("a", "2026-10-31")],
@@ -342,9 +356,6 @@ test("a template error leaves the day unclaimed, so a rerun can still send", asy
     now,
   );
   const { deps, log, outbox } = fakeDeps();
-  const broken: typeof compose = async () => {
-    throw new Error("render failed");
-  };
   assert.deepEqual(await sendDailyReviews(recipients, broken, deps), {
     sent: 0,
     skipped: 0,
@@ -373,7 +384,7 @@ test("a long title is cut by character, never through an emoji", () => {
   const [card] = dailyReviewCopy({ due: [title], fresh: [], answered: 1, mastered: 0 }, site).cards;
   assert.equal([...card.title].length, 90);
   assert.ok(card.title.includes("😀"));
-  assert.doesNotMatch(card.title, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
+  assert.doesNotMatch(card.title, /[\uD800-\uDBFF](?![\uDC00-\uDFFF])/u);
 });
 
 test("a signed unsubscribe link goes in the copy and the plain text", () => {

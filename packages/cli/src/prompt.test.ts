@@ -9,16 +9,16 @@ describe("applyKeys", () => {
   });
 
   it("drops arrow, Delete, Home and End sequences whole", () => {
-    const keys = "\u001b[A\u001b[B\u001b[C\u001b[D\u001b[3~\u001b[H\u001b[F\u001bOH\u001bOF";
+    const keys = "\u001B[A\u001B[B\u001B[C\u001B[D\u001B[3~\u001B[H\u001B[F\u001BOH\u001BOF";
     assert.deepEqual(applyKeys("sc_a", `${keys}b${keys}`), { value: "sc_ab", done: null });
   });
 
   it("skips control characters", () => {
-    assert.deepEqual(applyKeys("", "a\u0000\u0001\tb\u001bc"), { value: "ab", done: null });
+    assert.deepEqual(applyKeys("", "a\u0000\u0001\tb\u001Bc"), { value: "ab", done: null });
   });
 
   it("backspace removes the last character", () => {
-    assert.deepEqual(applyKeys("sc_ab", "\u007f\b"), { value: "sc_", done: null });
+    assert.deepEqual(applyKeys("sc_ab", "\u007F\b"), { value: "sc_", done: null });
   });
 
   it("Enter and Ctrl-C end the input", () => {

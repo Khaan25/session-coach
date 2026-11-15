@@ -14,6 +14,36 @@ import type { ProjectListItem } from "@/lib/projects/queries";
  * @param projects - The learner's projects, or null when they couldn't be read.
  */
 export function ProjectsCard({ projects }: { projects: ProjectListItem[] | null }) {
+  let body: React.ReactNode;
+  if (projects === null) {
+    body = (
+      <ErrorState
+        variant="plain"
+        title="Couldn't load your projects"
+        message="Reload the page to try again."
+      />
+    );
+  } else if (projects.length === 0) {
+    body = (
+      <EmptyState
+        variant="plain"
+        title="No projects yet"
+        description="A repo shows up here after you upload a session from it."
+      />
+    );
+  } else {
+    body = (
+      <FieldGroup>
+        {projects.map((project) => (
+          <ProjectLevelField
+            key={project.repo}
+            repo={project.repo}
+            level={project.question_level}
+          />
+        ))}
+      </FieldGroup>
+    );
+  }
   return (
     <SettingsSection
       id="question-level"
@@ -22,29 +52,7 @@ export function ProjectsCard({ projects }: { projects: ProjectListItem[] | null 
       description="Applies to sessions processed after the change. Cards you already have keep their questions."
       done={projects?.length ? projects.every((project) => project.onboarded) : undefined}
     >
-      {projects === null ? (
-        <ErrorState
-          variant="plain"
-          title="Couldn't load your projects"
-          message="Reload the page to try again."
-        />
-      ) : projects.length === 0 ? (
-        <EmptyState
-          variant="plain"
-          title="No projects yet"
-          description="A repo shows up here after you upload a session from it."
-        />
-      ) : (
-        <FieldGroup>
-          {projects.map((project) => (
-            <ProjectLevelField
-              key={project.repo}
-              repo={project.repo}
-              level={project.question_level}
-            />
-          ))}
-        </FieldGroup>
-      )}
+      {body}
     </SettingsSection>
   );
 }

@@ -19,8 +19,12 @@ export async function userForToken(token: string): Promise<string | null> {
     .select("id, user_id")
     .eq("token_hash", hashToken(token))
     .maybeSingle();
-  if (error) throw new Error(`userForToken: ${error.message}`);
-  if (!data) return null;
+  if (error) {
+    throw new Error(`userForToken: ${error.message}`);
+  }
+  if (!data) {
+    return null;
+  }
 
   // Best effort, after the response: a failed stamp must not refuse or slow a valid upload.
   const usedAt = new Date().toISOString();
@@ -29,7 +33,9 @@ export async function userForToken(token: string): Promise<string | null> {
       .from("cli_tokens")
       .update({ last_used_at: usedAt })
       .eq("id", data.id);
-    if (stampError) console.error("[tokens/verify] last_used_at not stamped", stampError.message);
+    if (stampError) {
+      console.error("[tokens/verify] last_used_at not stamped", stampError.message);
+    }
   });
   return data.user_id;
 }

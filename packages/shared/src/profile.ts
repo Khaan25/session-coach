@@ -3,8 +3,9 @@ import { z } from "zod";
 /** True for a time zone name the runtime knows (IANA), e.g. "Asia/Karachi" or "UTC". */
 function isTimeZone(value: string): boolean {
   try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-    return value.length > 0;
+    // Throws a RangeError for a name it doesn't know.
+    const known = new Intl.DateTimeFormat("en-US", { timeZone: value }).resolvedOptions().timeZone;
+    return known.length > 0 && value.length > 0;
   } catch {
     return false;
   }
@@ -18,7 +19,7 @@ export const profileSchema = z.object({
   /** From the provider's name at sign-up, or what the learner set. Trimmed, 1–100 characters. */
   display_name: z.string().trim().min(1).max(100).nullable(),
   /** Provider avatar (Google, GitHub), https only. Server-managed. */
-  avatar_url: z.url({ protocol: /^https$/ }).nullable(),
+  avatar_url: z.url({ protocol: /^https$/u }).nullable(),
   /** IANA time zone, so "due today" means the learner's today. */
   timezone: z.string().refine(isTimeZone, "must be an IANA time zone, e.g. Asia/Karachi"),
   /** Whether to send lesson-ready and daily-review emails. */

@@ -84,7 +84,7 @@ import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { GallerySection, Specimen } from "./gallery-section";
-import { cards, REVIEW_DAYS, session } from "./sample";
+import { REVIEW_DAYS, cards, session } from "./sample";
 
 const SIDES = ["top", "right", "bottom", "left"] as const;
 const SWIPES = ["down", "up", "left", "right"] as const;

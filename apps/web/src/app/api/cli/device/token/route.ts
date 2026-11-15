@@ -6,7 +6,8 @@
  *   (unknown, expired or already collected), access_denied; or `{ error, field }` for a bad body.
  *   429 too many polls from this IP (`Retry-After`), 500 else. Never cached; the token and code are never logged.
  */
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { NO_STORE, serverError } from "@/lib/api/http";
 import { authAttemptWait } from "@/lib/auth/rate-limit";
@@ -45,12 +46,18 @@ export async function POST(request: NextRequest) {
       .select(DEVICE_COLUMNS)
       .eq("device_code_hash", hashToken(parsed.data.deviceCode))
       .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!row) return rfcError("expired_token");
+    if (error) {
+      throw new Error(error.message);
+    }
+    if (!row) {
+      return rfcError("expired_token");
+    }
 
     const now = new Date();
     const outcome = pollOutcome(row, now);
-    if (outcome === "access_denied" || outcome === "expired_token") return rfcError(outcome);
+    if (outcome === "access_denied" || outcome === "expired_token") {
+      return rfcError(outcome);
+    }
 
     if (outcome === "slow_down") {
       const { error: slowError } = await admin
@@ -60,7 +67,9 @@ export async function POST(request: NextRequest) {
           last_polled_at: now.toISOString(),
         })
         .eq("id", row.id);
-      if (slowError) throw new Error(slowError.message);
+      if (slowError) {
+        throw new Error(slowError.message);
+      }
       return rfcError("slow_down");
     }
 
@@ -69,7 +78,9 @@ export async function POST(request: NextRequest) {
         .from("cli_device_codes")
         .update({ last_polled_at: now.toISOString() })
         .eq("id", row.id);
-      if (pollError) throw new Error(pollError.message);
+      if (pollError) {
+        throw new Error(pollError.message);
+      }
       return rfcError("authorization_pending");
     }
 
@@ -81,9 +92,13 @@ export async function POST(request: NextRequest) {
       .is("token_issued_at", null)
       .select("approved_by")
       .maybeSingle();
-    if (claimError) throw new Error(claimError.message);
+    if (claimError) {
+      throw new Error(claimError.message);
+    }
     // approved_by is set whenever pollOutcome says approved; a row without it can't be turned into a token.
-    if (!claimed?.approved_by) return rfcError("expired_token");
+    if (!claimed?.approved_by) {
+      return rfcError("expired_token");
+    }
     const approvedBy = claimed.approved_by;
 
     try {
@@ -95,21 +110,22 @@ export async function POST(request: NextRequest) {
         { token: created.token, email: profile.data?.email ?? null },
         { headers: NO_STORE },
       );
-    } catch (err) {
+    } catch (error_) {
       // Release the claim so the next poll can try again; the code is still approved and unexpired.
       const { error: releaseError } = await admin
         .from("cli_device_codes")
         .update({ token_issued_at: null })
         .eq("id", row.id);
       // Logged on its own: the thrown error below is the token failure, and a stuck claim makes retries expired_token.
-      if (releaseError)
+      if (releaseError) {
         console.error("[api/cli/device/token] claim release failed", releaseError.message);
-      throw err;
+      }
+      throw error_;
     }
-  } catch (err) {
+  } catch (error) {
     return serverError(
       "[api/cli/device/token] poll",
-      err,
+      error,
       "Couldn't check the login. Try again.",
       NO_STORE,
     );

@@ -8,7 +8,7 @@ New here? [docs/CODEBASE.md](docs/CODEBASE.md) explains how the code works and w
 - `pnpm typecheck` and `pnpm lint` (oxlint) after every change; fix all errors before saying you're done
 - `pnpm format` (oxfmt) before committing; `pnpm format:check` runs in the pre-push hook and CI
 - `pnpm check:secrets` scans tracked files for credentials (the pre-commit hook scans staged ones)
-- `pnpm test` runs every package's tests; `pnpm --filter @session-coach/shared test` after touching `packages/shared`
+- `pnpm test` runs every package's tests (`pnpm test:affected` only those your diff reaches, as CI does on a PR); `pnpm --filter @session-coach/shared test` after touching `packages/shared`
 - `pnpm dev` runs the web app on :3000
 
 ## Rules

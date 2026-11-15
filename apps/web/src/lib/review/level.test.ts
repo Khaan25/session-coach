@@ -9,7 +9,9 @@ test("no reviews row is level 0", () => {
 });
 
 test("a pending card's level is its step", () => {
-  for (const step of [0, 1, 2, 3] as const) assert.equal(levelOf({ step, mastered: false }), step);
+  for (const step of [0, 1, 2, 3] as const) {
+    assert.equal(levelOf({ step, mastered: false }), step);
+  }
 });
 
 test("a mastered card is owned, whatever its step", () => {

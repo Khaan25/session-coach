@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import { gunzipSync } from "node:zlib";
+import { promisify } from "node:util";
+import { before, describe, it } from "node:test";
+import { gunzip as gunzipCallback } from "node:zlib";
 
 // This test crosses packages on purpose: the CLI's output must stay readable by the server parser.
+// oxlint-disable-next-line import/no-relative-parent-imports -- the server parser lives in another package with no export for it
 import { parseSession } from "../../../apps/web/src/lib/pipeline/parser.ts";
 import {
   createRequest,
@@ -11,9 +13,9 @@ import {
   interpretProcess,
   interpretPut,
   prepareLog,
-  redactLog,
   processRequest,
   putRequest,
+  redactLog,
   sessionMetadata,
   sessionWhere,
   validateFileName,
@@ -122,7 +124,7 @@ describe("requests", () => {
 describe("file name and bytes", () => {
   it("accepts the server's pattern, with or without .jsonl and a directory", () => {
     assert.equal(
-      validateFileName("5c1e0f0a-3b8e_4c6a.jsonl".replace(".jsonl", "") + ".jsonl"),
+      validateFileName(`${"5c1e0f0a-3b8e_4c6a.jsonl".replace(".jsonl", "")}.jsonl`),
       null,
     );
     assert.equal(validateFileName("/home/me/.claude/abc-123_X.jsonl"), null);
@@ -162,10 +164,16 @@ const secretLog = [
   `not json, but ${FAKE_SK} and ${FAKE_EMAIL}`,
 ].join("\n");
 
+const gunzip = promisify(gunzipCallback);
+
 describe("redaction before upload", () => {
-  const { gzipped } = prepareLog(Buffer.from(secretLog));
-  const sent = putRequest(UPLOAD_URL, gzipped).init.body as Uint8Array;
-  const out = gunzipSync(sent).toString("utf8");
+  let out = "";
+  before(async () => {
+    const { gzipped } = await prepareLog(Buffer.from(secretLog));
+    const sent = putRequest(UPLOAD_URL, gzipped).init.body as Uint8Array;
+    const unzipped = await gunzip(sent);
+    out = unzipped.toString("utf8");
+  });
 
   it("the bytes sent contain neither the key nor the email", () => {
     assert.equal(out.includes(FAKE_SK), false);
@@ -196,18 +204,16 @@ describe("redaction before upload", () => {
     });
   });
 
-  it("the metadata sees the redacted text", () => {
-    const { text } = prepareLog(Buffer.from(secretLog));
+  it("the metadata sees the redacted text", async () => {
+    const { text } = await prepareLog(Buffer.from(secretLog));
     assert.equal(firstTimestamp(text), "2026-10-27T10:11:00.000Z");
   });
 
-  it("an invalid UTF-8 byte arrives as U+FFFD, and the rest of the line is kept", () => {
-    const bytes = Buffer.concat([
-      Buffer.from('{"a":"x'),
-      Buffer.from([0xff]),
-      Buffer.from('y"}\n'),
-    ]);
-    assert.equal(gunzipSync(prepareLog(bytes).gzipped).toString("utf8"), '{"a":"x\ufffdy"}\n');
+  it("an invalid UTF-8 byte arrives as U+FFFD, and the rest of the line is kept", async () => {
+    const bytes = Buffer.concat([Buffer.from('{"a":"x'), Buffer.from([255]), Buffer.from('y"}\n')]);
+    const { gzipped } = await prepareLog(bytes);
+    const unzipped = await gunzip(gzipped);
+    assert.equal(unzipped.toString("utf8"), '{"a":"x\uFFFDy"}\n');
   });
 });
 
@@ -254,14 +260,14 @@ describe("redaction keeps the log's structure", () => {
     .join("\n");
 
   it("parseSession finds the same events before and after redaction", () => {
-    const before = parseSession(original);
+    const unredacted = parseSession(original);
     const after = parseSession(redactLog(original));
-    assert.equal(after.events.length, before.events.length);
+    assert.equal(after.events.length, unredacted.events.length);
     assert.deepEqual(
       after.events.filter((e) => e.kind === "result").map((e) => e.text),
-      before.events.filter((e) => e.kind === "result").map((e) => e.text),
+      unredacted.events.filter((e) => e.kind === "result").map((e) => e.text),
     );
-    assert.deepEqual(after.events, before.events);
+    assert.deepEqual(after.events, unredacted.events);
   });
 
   it("leaves the structural fields exactly as they were", () => {
@@ -290,7 +296,8 @@ describe("redaction keeps the log's structure", () => {
     const event = {
       ...base,
       type: "assistant",
-      id: bad, // top-level id is not structural
+      // top-level id is not structural
+      id: bad,
       message: {
         id: "msg_01ABCdefGHIjklMNOpqrSTUv",
         role: "assistant",
@@ -322,7 +329,9 @@ describe("redaction keeps the log's structure", () => {
     assert.equal(result.tool_use_id, BASH_ID);
     assert.equal(out.message.id, event.message.id);
     assert.equal(out.message.role, "assistant");
-    for (const key of Object.keys(base)) assert.equal(out[key], event[key as keyof typeof base]);
+    for (const key of Object.keys(base)) {
+      assert.equal(out[key], event[key as keyof typeof base]);
+    }
   });
 
   it("redacts a secret in a message field that is not id, role or type", () => {
@@ -362,11 +371,11 @@ describe("step 1 responses", () => {
   });
 
   const failures: [number, RegExp][] = [
-    [401, /refused your sign-in/],
-    [413, /over 50 MB/],
-    [429, /Wait a while/],
-    [400, /rejected/],
-    [500, /HTTP 500/],
+    [401, /refused your sign-in/u],
+    [413, /over 50 MB/u],
+    [429, /Wait a while/u],
+    [400, /rejected/u],
+    [500, /HTTP 500/u],
   ];
   for (const [status, pattern] of failures) {
     it(`${status} stops with a non-zero exit`, () => {
@@ -383,7 +392,7 @@ describe("step 2 response", () => {
     assert.equal(interpretPut(200).exitCode, 0);
     const bad = interpretPut(403);
     assert.equal(bad.exitCode, 1);
-    assert.match(bad.message, /HTTP 403/);
+    assert.match(bad.message, /HTTP 403/u);
   });
 });
 
@@ -397,7 +406,7 @@ describe("step 3 responses", () => {
 
   it("409 prints the status it reports", () => {
     const out = interpretProcess(409, { id: ID, status: "processing" }, ID);
-    assert.match(out.message, /already processing/);
+    assert.match(out.message, /already processing/u);
     assert.equal(out.exitCode, 0);
   });
 
@@ -408,7 +417,7 @@ describe("step 3 responses", () => {
 
   it("422 says the upload didn't land", () => {
     const out = interpretProcess(422, null, ID);
-    assert.match(out.message, /didn't reach the server/);
+    assert.match(out.message, /didn't reach the server/u);
     assert.equal(out.exitCode, 1);
     assert.equal(out.retry, true);
   });
@@ -419,7 +428,7 @@ describe("step 3 responses", () => {
     const out = interpretProcess(503, { error: reason }, ID);
     assert.equal(out.message, reason);
     assert.equal(out.exitCode, 1);
-    assert.match(interpretProcess(503, null, ID).message, /HTTP 503/);
+    assert.match(interpretProcess(503, null, ID).message, /HTTP 503/u);
   });
 
   it("maps 401, 413, 404 and 500", () => {
@@ -427,9 +436,9 @@ describe("step 3 responses", () => {
       text: "Sign in again",
       command: "session-coach login",
     });
-    assert.match(interpretProcess(413, null, ID).message, /over 50 MB/);
-    assert.match(interpretProcess(404, null, ID).message, /doesn't know/);
-    assert.match(interpretProcess(500, null, ID).message, /HTTP 500/);
+    assert.match(interpretProcess(413, null, ID).message, /over 50 MB/u);
+    assert.match(interpretProcess(404, null, ID).message, /doesn't know/u);
+    assert.match(interpretProcess(500, null, ID).message, /HTTP 500/u);
   });
 });
 
@@ -462,7 +471,7 @@ describe("429 with Retry-After", () => {
       create.message,
       "Too many requests to the server in the last hour. Try again in 2 minutes.",
     );
-    assert.match(interpretProcess(429, null, ID, 30).message, /Try again in 1 minute\.$/);
-    assert.match(interpretProcess(429, null, ID).message, /Wait a while/);
+    assert.match(interpretProcess(429, null, ID, 30).message, /Try again in 1 minute\.$/u);
+    assert.match(interpretProcess(429, null, ID).message, /Wait a while/u);
   });
 });

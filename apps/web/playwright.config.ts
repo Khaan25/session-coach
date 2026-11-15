@@ -16,7 +16,7 @@ export default defineConfig({
   // CI runs `next dev` cold on a 2-core runner: the first sign-in compiles /dashboard, which outlasts the 5 s default
   // while other workers compile too. One worker and a longer wait there; the assertions are the same.
   workers: process.env.CI ? 1 : undefined,
-  expect: { timeout: process.env.CI ? 30_000 : 5_000 },
+  expect: { timeout: process.env.CI ? 30_000 : 5000 },
   reporter: "list",
   use: { baseURL: `http://localhost:${PORT}`, trace: "retain-on-failure" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

@@ -20,7 +20,9 @@ let userId = "";
 
 test.beforeAll(async () => {
   const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-  if (created.error) throw created.error;
+  if (created.error) {
+    throw created.error;
+  }
   userId = created.data.user.id;
   // session-coach: 2 cards, one answered 2 and mastered. rapporteur: 1 card, answered 1.
   const plan = [
@@ -38,7 +40,9 @@ test.beforeAll(async () => {
       title,
       repo,
     });
-    if (session.error) throw session.error;
+    if (session.error) {
+      throw session.error;
+    }
     for (const [position, score] of cards.entries()) {
       const card = await admin
         .from("decision_cards")
@@ -55,12 +59,18 @@ test.beforeAll(async () => {
         })
         .select("id")
         .single();
-      if (card.error) throw card.error;
-      if (score === null) continue;
+      if (card.error) {
+        throw card.error;
+      }
+      if (score === null) {
+        continue;
+      }
       const answer = await admin
         .from("answers")
         .insert({ card_id: card.data.id, user_id: userId, review_step: 0, answer: "a", score });
-      if (answer.error) throw answer.error;
+      if (answer.error) {
+        throw answer.error;
+      }
       if (score === 2) {
         const review = await admin.from("reviews").insert({
           card_id: card.data.id,
@@ -69,14 +79,18 @@ test.beforeAll(async () => {
           mastered: true,
           due_on: null,
         });
-        if (review.error) throw review.error;
+        if (review.error) {
+          throw review.error;
+        }
       }
     }
   }
 });
 
 test.afterAll(async () => {
-  if (userId) await admin.auth.admin.deleteUser(userId);
+  if (userId) {
+    await admin.auth.admin.deleteUser(userId);
+  }
 });
 
 test("Today shows what the learner owns, and /progress splits it per repo", async ({ page }) => {
@@ -86,7 +100,7 @@ test("Today shows what the learner owns, and /progress splits it per repo", asyn
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/u);
 
   // Today keeps one quiet line of the overall counts; the per-repo rows moved to /progress (DECISIONS, 2026-11-06).
   await expect(page.getByText("You own 1 of 3 decisions · 1 explained")).toBeVisible();
@@ -107,7 +121,7 @@ test("/progress shows ownership by project and narrows its numbers to a picked o
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page).toHaveURL(/\/dashboard$/u);
 
   await page.goto("/progress");
   await expect(page.getByRole("heading", { name: "By project" })).toBeVisible();
@@ -117,7 +131,7 @@ test("/progress shows ownership by project and narrows its numbers to a picked o
     .getByRole("navigation", { name: "Projects" })
     .getByRole("link", { name: "rapporteur", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/progress\?repo=rapporteur$/);
+  await expect(page).toHaveURL(/\/progress\?repo=rapporteur$/u);
   await expect(page.getByText("1 cards · 0 explained · 0 owned")).toBeVisible();
   // The review queue isn't split by project, and says so.
   await expect(page.getByText("From all your projects.")).toBeVisible();
@@ -129,5 +143,5 @@ test("/progress shows ownership by project and narrows its numbers to a picked o
 
   // A repo the learner has no session in goes back to every project.
   await page.goto("/progress?repo=nope");
-  await expect(page).toHaveURL(/\/progress$/);
+  await expect(page).toHaveURL(/\/progress$/u);
 });

@@ -13,7 +13,7 @@ export const DryRunContext = createContext(false);
 export function useAction<Args extends unknown[]>(
   action: (...args: Args) => Promise<{ error: string | null }>,
 ): (...args: Args) => Promise<{ error: string | null }> {
-  return use(DryRunContext) ? async () => ({ error: null }) : action;
+  return use(DryRunContext) ? () => Promise.resolve({ error: null }) : action;
 }
 
 export function useDryRun() {

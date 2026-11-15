@@ -14,6 +14,14 @@ import { useDomDirection } from "@/lib/ui/direction";
 //
 // The thumb is the focusable control, so the name has to land there, not on the
 // root. Single-thumb sliders inherit the root's `aria-label`; ranges should pass `thumbLabels`.
+/** The thumbs' starting values: an array for a range, one number for one thumb, or the full range when unset. */
+function thumbValuesOf(initial: number | readonly number[] | undefined, min: number, max: number) {
+  if (initial === undefined) {
+    return [min, max];
+  }
+  return Array.isArray(initial) ? initial : [initial];
+}
+
 function Slider({
   className,
   defaultValue,
@@ -31,12 +39,12 @@ function Slider({
   const dir = useDomDirection(box);
   // Base UI takes a number for one thumb or an array for a range; with neither, it is a full range.
   const initial = value ?? defaultValue;
-  const _values = initial === undefined ? [min, max] : Array.isArray(initial) ? initial : [initial];
+  const thumbValues = thumbValuesOf(initial, min, max);
 
   // Without thumbLabels, a range numbers its thumbs off the root's name ("Price 1", "Price 2"), so none is unnamed.
   const thumbLabelAt = (index: number) =>
     thumbLabels?.[index] ??
-    (ariaLabel && _values.length > 1 ? `${ariaLabel} ${index + 1}` : ariaLabel);
+    (ariaLabel && thumbValues.length > 1 ? `${ariaLabel} ${index + 1}` : ariaLabel);
 
   return (
     <DirectionProvider direction={dir}>
@@ -61,7 +69,7 @@ function Slider({
               data-slot="slider-range"
               className="rounded-soft bg-ink select-none forced-colors:bg-[Highlight] forced-colors:[forced-color-adjust:none] data-disabled:bg-text-disabled data-horizontal:h-full data-vertical:w-full"
             />
-            {Array.from({ length: _values.length }, (_, index) => {
+            {Array.from({ length: thumbValues.length }, (_, index) => {
               const thumbLabel = thumbLabelAt(index);
               return (
                 <SliderPrimitive.Thumb

@@ -13,14 +13,22 @@ test("retention counts exact-day returns and omits windows whose day hasn't ende
     { id: "e", created_at: "2026-09-27T08:00:00Z" },
   ];
   const activity = [
-    { user_id: "a", created_at: "2026-10-22T01:00:00Z" }, // day 1
-    { user_id: "a", created_at: "2026-10-22T05:00:00Z" }, // same day, counted once
-    { user_id: "b", created_at: "2026-10-28T00:30:00Z" }, // day 7
-    { user_id: "b", created_at: "2026-10-24T00:00:00Z" }, // day 3, not a window
-    { user_id: "c", created_at: "2026-10-28T09:00:00Z" }, // day 1, finished yesterday
-    { user_id: "d", created_at: "2026-10-29T09:00:00Z" }, // day 1, still today: omitted
-    { user_id: "e", created_at: "2026-10-27T20:00:00Z" }, // day 30
-    { user_id: "zz", created_at: "2026-10-22T00:00:00Z" }, // unknown user, ignored
+    // day 1
+    { user_id: "a", created_at: "2026-10-22T01:00:00Z" },
+    // same day, counted once
+    { user_id: "a", created_at: "2026-10-22T05:00:00Z" },
+    // day 7
+    { user_id: "b", created_at: "2026-10-28T00:30:00Z" },
+    // day 3, not a window
+    { user_id: "b", created_at: "2026-10-24T00:00:00Z" },
+    // day 1, finished yesterday
+    { user_id: "c", created_at: "2026-10-28T09:00:00Z" },
+    // day 1, still today: omitted
+    { user_id: "d", created_at: "2026-10-29T09:00:00Z" },
+    // day 30
+    { user_id: "e", created_at: "2026-10-27T20:00:00Z" },
+    // unknown user, ignored
+    { user_id: "zz", created_at: "2026-10-22T00:00:00Z" },
   ];
   assert.deepEqual(buildRetentionCohorts(profiles, activity, now), [
     { date: "2026-09-27", signups: 1, d1: 0, d7: 0, d30: 1 },

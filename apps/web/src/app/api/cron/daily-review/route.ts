@@ -8,17 +8,14 @@
 import { NextResponse } from "next/server";
 
 import { UNIQUE_VIOLATION } from "@/lib/api/http";
-import { composeDailyReview } from "@/emails/daily-review-email";
+import { composeDailyReview } from "@/emails/compose-daily-review";
 import {
-  type AnswerRow,
   cronAuthorized,
   dailyReviewRecipients,
-  type NewCardRow,
-  type ProfileRow,
   resendSender,
-  type ReviewRow,
   sendDailyReviews,
 } from "@/lib/email/daily-review";
+import type { AnswerRow, NewCardRow, ProfileRow, ReviewRow } from "@/lib/email/daily-review";
 import { unsubscribeUrl } from "@/lib/email/unsubscribe";
 import { newCardsSince } from "@/lib/review/schedule";
 import { answeredSince } from "@/lib/review/today";
@@ -65,8 +62,8 @@ export async function GET(request: Request) {
   let swept: number | undefined;
   try {
     swept = await failStuckSessions(createAdminClient(), now);
-  } catch (err) {
-    console.error("[api/cron/daily-review] stuck-session sweep failed", errorMessage(err));
+  } catch (error) {
+    console.error("[api/cron/daily-review] stuck-session sweep failed", errorMessage(error));
   }
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -130,15 +127,17 @@ export async function GET(request: Request) {
         ]),
       );
     }
-    const answered = reads.flatMap(([rows]) => rows);
-    const unanswered = reads.flatMap(([, rows]) => rows);
-    const answers = reads.flatMap(([, , rows]) => rows);
+    const answered = reads.flatMap((read) => read[0]);
+    const unanswered = reads.flatMap((read) => read[1]);
+    const answers = reads.flatMap((read) => read[2]);
     const reviews: ReviewRow[] = answered.flatMap(({ card, ...review }) =>
       card && !card.hidden ? [{ ...review, decision: card.decision }] : [],
     );
     // reviews(card_id) is one-to-one (card_id is its primary key): null or [] means never answered.
     const newCards: NewCardRow[] = unanswered
-      .filter(({ reviews }) => reviews === null || (Array.isArray(reviews) && reviews.length === 0))
+      .filter(
+        ({ reviews: answer }) => answer === null || (Array.isArray(answer) && answer.length === 0),
+      )
       .map(({ user_id, decision, created_at }) => ({ user_id, decision, created_at }));
     const recipients = dailyReviewRecipients(profiles, reviews, newCards, answers, now);
 
@@ -151,8 +150,12 @@ export async function GET(request: Request) {
           const { error } = await admin
             .from("email_log")
             .insert({ user_id: userId, kind: KIND, sent_on: sentOn });
-          if (error?.code === UNIQUE_VIOLATION) return false;
-          if (error) throw new Error(error.message);
+          if (error?.code === UNIQUE_VIOLATION) {
+            return false;
+          }
+          if (error) {
+            throw new Error(error.message);
+          }
           return true;
         },
         send: resendSender(apiKey, process.env.EMAIL_FROM || DEFAULT_FROM),
@@ -163,7 +166,9 @@ export async function GET(request: Request) {
             .eq("user_id", userId)
             .eq("kind", KIND)
             .eq("sent_on", sentOn);
-          if (error) throw new Error(error.message);
+          if (error) {
+            throw new Error(error.message);
+          }
         },
         async release(userId, sentOn) {
           const { error } = await admin
@@ -172,13 +177,15 @@ export async function GET(request: Request) {
             .eq("user_id", userId)
             .eq("kind", KIND)
             .eq("sent_on", sentOn);
-          if (error) throw new Error(error.message);
+          if (error) {
+            throw new Error(error.message);
+          }
         },
       },
     );
     return NextResponse.json({ ...result, swept });
-  } catch (err) {
-    console.error("[api/cron/daily-review] failed", errorMessage(err));
+  } catch (error) {
+    console.error("[api/cron/daily-review] failed", errorMessage(error));
     return NextResponse.json({ error: "The daily review run failed." }, { status: 500 });
   }
 }

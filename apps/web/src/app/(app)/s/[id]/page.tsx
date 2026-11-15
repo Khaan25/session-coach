@@ -30,9 +30,13 @@ export default function SessionPage({ params }: PageProps<"/s/[id]">) {
 // learner's id: not found (the query filters on the learner's id, and RLS returns no row anyway).
 async function SessionDetail({ params }: Pick<PageProps<"/s/[id]">, "params">) {
   const [{ id }, user] = await Promise.all([params, getCurrentUser()]);
-  if (!user) notFound();
+  if (!user) {
+    notFound();
+  }
   const { now, found } = await load(user.id, id);
-  if (!found) notFound();
+  if (!found) {
+    notFound();
+  }
   return <SessionView {...found} now={now} userId={user.id} stuck={isStuck(found.session, now)} />;
 }
 

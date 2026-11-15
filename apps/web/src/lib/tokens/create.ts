@@ -2,7 +2,8 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { hashToken, newToken } from "@/lib/tokens/hash";
-import { TOKEN_COLUMNS, type TokenRow } from "@/lib/tokens/queries";
+import { TOKEN_COLUMNS } from "@/lib/tokens/queries";
+import type { TokenRow } from "@/lib/tokens/queries";
 
 /**
  * Creates a CLI token for a learner the caller has already checked. Only the sha256 is stored; the raw value comes
@@ -23,6 +24,8 @@ export async function createToken(
     .insert({ user_id: userId, token_hash: hashToken(token), label })
     .select(TOKEN_COLUMNS)
     .single();
-  if (error) throw new Error(`createToken: ${error.message}`);
+  if (error) {
+    throw new Error(`createToken: ${error.message}`);
+  }
   return { ...data, token };
 }

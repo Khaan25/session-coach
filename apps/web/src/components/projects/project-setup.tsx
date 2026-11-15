@@ -16,7 +16,9 @@ export function ProjectSetup() {
 
 async function SetupCards() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
   let projects: Awaited<ReturnType<typeof listProjects>>;
   try {
     projects = await listProjects(user.id);

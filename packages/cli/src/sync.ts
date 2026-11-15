@@ -9,8 +9,10 @@ import type { Readable } from "node:stream";
 
 import type { SessionStatus } from "@session-coach/shared/session";
 
-import { configPath, loadConfig, type Config } from "./config.ts";
-import { defaultProjectsDir, findRecentLogs, resolveCwd, type LogFile } from "./latest.ts";
+import { configPath, loadConfig } from "./config.ts";
+import type { Config } from "./config.ts";
+import { defaultProjectsDir, findRecentLogs, resolveCwd } from "./latest.ts";
+import type { LogFile } from "./latest.ts";
 import { validateFileName } from "./push.ts";
 import { loadState, saveState, syncPaths } from "./state.ts";
 import { uploadLog } from "./upload.ts";
@@ -31,11 +33,11 @@ export const SYNC_MAX_LOGS = 1;
  */
 export const SYNC_DEADLINE_MS = 180_000;
 
-const STDIN_TIMEOUT_MS = 1_000;
+const STDIN_TIMEOUT_MS = 1000;
 const STDIN_MAX_BYTES = 64 * 1024;
 
-const PATH_SEPARATOR = /[\\/]/;
-const JSONL_EXTENSION = /\.jsonl$/;
+const PATH_SEPARATOR = /[\\/]/u;
+const JSONL_EXTENSION = /\.jsonl$/u;
 
 /**
  * Reads a stream to the end, at most `maxBytes` (the last chunk is cut to fit), and gives up waiting after
@@ -50,23 +52,29 @@ export function readStdin(
     const chunks: Buffer[] = [];
     let size = 0;
     let done = false;
-    const onData = (chunk: Buffer | string) => {
-      if (done) return;
+    const timer = setTimeout(finish, timeoutMs);
+    function onData(chunk: Buffer | string) {
+      if (done) {
+        return;
+      }
       const buffer = Buffer.from(chunk);
       const kept = buffer.subarray(0, maxBytes - size);
       chunks.push(kept);
       size += kept.length;
-      if (size >= maxBytes) finish();
-    };
-    const finish = () => {
-      if (done) return;
+      if (size >= maxBytes) {
+        finish();
+      }
+    }
+    function finish() {
+      if (done) {
+        return;
+      }
       done = true;
       clearTimeout(timer);
       stream.off("data", onData);
       stream.pause();
       resolve(Buffer.concat(chunks).toString("utf8"));
-    };
-    const timer = setTimeout(finish, timeoutMs);
+    }
     stream.on("data", onData);
     // These stay attached after `finish`: an error on a stream nobody listens to would be thrown.
     stream.on("end", finish);
@@ -89,7 +97,9 @@ function sessionIdOf(fileName: string): string {
 /** Reads the hook's JSON. Anything that isn't the expected shape is ignored, so bad input never stops a sync. */
 export function parseHookInput(text: string | null): HookInput {
   const input: HookInput = { cwd: null, currentIds: new Set(), ended: null };
-  if (!text) return input;
+  if (!text) {
+    return input;
+  }
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -103,11 +113,19 @@ export function parseHookInput(text: string | null): HookInput {
   const fileId =
     typeof transcript_path === "string" && transcript_path ? sessionIdOf(transcript_path) : null;
   const sessionId = typeof session_id === "string" && session_id ? session_id : null;
-  if (sessionId) input.currentIds.add(sessionId);
-  if (fileId) input.currentIds.add(fileId);
-  if (typeof cwd === "string" && cwd) input.cwd = cwd;
+  if (sessionId) {
+    input.currentIds.add(sessionId);
+  }
+  if (fileId) {
+    input.currentIds.add(fileId);
+  }
+  if (typeof cwd === "string" && cwd) {
+    input.cwd = cwd;
+  }
   // The log is found by its file name, so the transcript's name wins over the session id.
-  if (hook_event_name === "SessionEnd") input.ended = fileId ?? sessionId;
+  if (hook_event_name === "SessionEnd") {
+    input.ended = fileId ?? sessionId;
+  }
   return input;
 }
 
@@ -145,32 +163,52 @@ async function writeLog(path: string, time: number, message: string): Promise<vo
   }
 }
 
+function stop(reason: string): LogResult {
+  return { kind: "stop", reason };
+}
+
 /** Pushes one log the way `push` does, but returns what happened instead of printing it. */
 async function syncLog(file: LogFile, config: Config, deps: SyncDeps): Promise<LogResult> {
-  const stop = (reason: string): LogResult => ({ kind: "stop", reason });
   const uploaded = await uploadLog(file.path, file.name, config, {
     backoffMs: deps.backoffMs,
     fetchImpl: deps.fetchImpl,
   });
-  if (uploaded.kind === "unreadable") return { kind: "skip", reason: "couldn't read the file" };
-  if (uploaded.kind === "too_big") return { kind: "failed", reason: "over 50 MB" };
-  if (uploaded.kind === "unreachable") return stop(uploaded.error);
+  if (uploaded.kind === "unreadable") {
+    return { kind: "skip", reason: "couldn't read the file" };
+  }
+  if (uploaded.kind === "too_big") {
+    return { kind: "failed", reason: "over 50 MB" };
+  }
+  if (uploaded.kind === "unreachable") {
+    return stop(uploaded.error);
+  }
 
   if (uploaded.kind === "not_created") {
     const { status } = uploaded.answer;
-    if (status === 401) return stop("the token was refused, run session-coach login");
-    if (status === 429 || status >= 500) return stop(`server answered HTTP ${status}`);
+    if (status === 401) {
+      return stop("the token was refused, run session-coach login");
+    }
+    if (status === 429 || status >= 500) {
+      return stop(`server answered HTTP ${status}`);
+    }
     // 409 with no upload url: ready or processing already.
-    if (uploaded.result.exitCode === 0) return { kind: "already" };
-    if (status === 400 || status === 413)
+    if (uploaded.result.exitCode === 0) {
+      return { kind: "already" };
+    }
+    if (status === 400 || status === 413) {
       return { kind: "failed", reason: `rejected (HTTP ${status})` };
+    }
     return stop(`server answered HTTP ${status}`);
   }
-  if (uploaded.kind === "not_stored") return stop(`upload answered HTTP ${uploaded.status}`);
+  if (uploaded.kind === "not_stored") {
+    return stop(`upload answered HTTP ${uploaded.status}`);
+  }
 
   // ③ answered; it isn't retried, a later start asks again (a pending session answers 409 with a fresh URL)
   const { status, body } = uploaded.answer;
-  if (status === 202) return { kind: "uploaded" };
+  if (status === 202) {
+    return { kind: "uploaded" };
+  }
   if (status === 409) {
     const state = (body as { status?: SessionStatus } | null)?.status;
     return state === "failed"
@@ -187,7 +225,9 @@ async function syncProject(
   note: (message: string) => Promise<void>,
 ): Promise<void> {
   const config = await loadConfig(configPath(deps.home));
-  if (!config) return note("not signed in, nothing uploaded");
+  if (!config) {
+    return note("not signed in, nothing uploaded");
+  }
 
   const hook = parseHookInput(deps.stdin);
   const cwd = hook.cwd ?? resolveCwd(deps.env, deps.cwd);
@@ -206,14 +246,20 @@ async function syncProject(
       return wanted && validateFileName(file.name) === null && !(id in state.done);
     })
     .slice(0, SYNC_MAX_LOGS);
-  if (queue.length === 0) return;
+  if (queue.length === 0) {
+    return;
+  }
 
   const counts = { uploaded: 0, already: 0, failed: 0 };
   let stopped: string | null = null;
   for (const file of queue) {
-    if (isCancelled()) break;
+    if (isCancelled()) {
+      break;
+    }
     const result = await syncLog(file, config, deps);
-    if (isCancelled()) break;
+    if (isCancelled()) {
+      break;
+    }
     if (result.kind === "stop") {
       stopped = result.reason;
       break;
@@ -222,7 +268,9 @@ async function syncProject(
       await note(`${sessionIdOf(file.name)}: ${result.reason}`);
       continue;
     }
-    if (result.kind === "failed") await note(`${sessionIdOf(file.name)}: ${result.reason}`);
+    if (result.kind === "failed") {
+      await note(`${sessionIdOf(file.name)}: ${result.reason}`);
+    }
     counts[result.kind] += 1;
     state.done[sessionIdOf(file.name)] = {
       outcome: result.kind === "failed" ? "failed" : "pushed",
@@ -259,9 +307,11 @@ export async function runSync(deps: SyncDeps): Promise<void> {
   });
   try {
     await Promise.race([syncProject(deps, syncPaths(deps.home), () => cancelled, note), deadline]);
-    if (cancelled) await note("stopped: ran out of time");
-  } catch (err) {
-    await note(`error: ${err instanceof Error ? err.message : "unknown"}`);
+    if (cancelled) {
+      await note("stopped: ran out of time");
+    }
+  } catch (error) {
+    await note(`error: ${error instanceof Error ? error.message : "unknown"}`);
   } finally {
     clearTimeout(timer);
   }

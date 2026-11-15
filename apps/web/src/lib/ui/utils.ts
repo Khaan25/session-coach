@@ -1,4 +1,4 @@
-import type * as React from "react";
+import type { Ref, RefCallback, RefObject } from "react";
 import { cn } from "cn";
 
 // Helpers for the design system's components. Classes merge with the `cn` package, imported from its source.
@@ -40,7 +40,7 @@ export function mergeClass<State>(
  * Wrap it in useMemo or useCallback when the element should not be detached and attached again on every render.
  * It returns React 19's cleanup, which runs each ref's own cleanup, or clears the ref when it has none.
  */
-export function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]): React.RefCallback<T> {
+export function mergeRefs<T>(...refs: (Ref<T> | undefined)[]): RefCallback<T> {
   return (node) => {
     const cleanups = refs.map((ref) => {
       if (typeof ref === "function") {
@@ -48,15 +48,17 @@ export function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]): React.RefCa
         return typeof cleanup === "function" ? cleanup : () => ref(null);
       }
       if (ref) {
-        (ref as React.RefObject<T | null>).current = node;
+        (ref as RefObject<T | null>).current = node;
         return () => {
-          (ref as React.RefObject<T | null>).current = null;
+          (ref as RefObject<T | null>).current = null;
         };
       }
-      return undefined;
+      return null;
     });
     return () => {
-      for (const cleanup of cleanups) cleanup?.();
+      for (const cleanup of cleanups) {
+        cleanup?.();
+      }
     };
   };
 }

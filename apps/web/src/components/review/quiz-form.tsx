@@ -1,12 +1,13 @@
 "use client";
 
-import { createContext, use, useId, useState } from "react";
+import { use, useId, useState } from "react";
 import Link from "next/link";
 
 import { Sprite } from "@/components/art/sprite";
 import type { Evidence } from "@session-coach/shared/decision";
 
-import { ScoreBadge, type Score } from "@/components/app/score-badge";
+import { ScoreBadge } from "@/components/app/score-badge";
+import type { Score } from "@/components/app/score-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -24,6 +25,7 @@ import { Stat, StatDescription, StatLabel, StatValue } from "@/components/ui/sta
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
 import { useFocusWhenReplaced } from "@/lib/ui/use-focus-when-replaced";
+import { PASTE_OFF, QuizSendContext } from "@/components/review/quiz-send";
 
 // MAX_ANSWER in lib/review/grade.ts; not imported, so zod stays out of the client bundle. The route checks it again.
 const MAX_ANSWER = 4000;
@@ -41,10 +43,6 @@ export type Grade = {
   dropped: boolean;
 };
 
-type Attempt = { answer: string } | { dontKnow: true };
-
-export const PASTE_OFF = "Paste is off here. Type it in your own words.";
-
 /** A calendar date as the learner reads it, e.g. "Fri, Oct 30". It has no time, so it is formatted in UTC. */
 const formatDue = (date: string) =>
   new Intl.DateTimeFormat(undefined, {
@@ -53,32 +51,6 @@ const formatDue = (date: string) =>
     day: "numeric",
     timeZone: "UTC",
   }).format(new Date(`${date}T00:00:00Z`));
-
-/** Sends an explanation, or `{ dontKnow: true }` for an honest skip. */
-async function postAnswer(cardId: string, attempt: Attempt): Promise<Grade> {
-  const response = await fetch("/api/review/answer", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ cardId, ...attempt }),
-  }).catch(() => null);
-  if (!response) throw new Error("Check your connection and try again.");
-  const body = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(body?.error ?? "Try again.");
-  // The connection dropped mid-body: the server may have saved the answer already. A resend then gets the route's 409,
-  // which says when the card is next due.
-  if (!body)
-    throw new Error(
-      "The result didn't arrive. Send it again: if it was saved, you'll see when this card is due next.",
-    );
-  return body as Grade;
-}
-
-/**
- * How an answer reaches the grader: the route by default. /canvas provides a stand-in, so a quiz drawn there never
- * calls the API.
- */
-export const QuizSendContext =
-  createContext<(cardId: string, attempt: Attempt) => Promise<Grade>>(postAnswer);
 
 /**
  * The quiz: the card's question, the learner's explanation and, after submit, the grade. Gets only the question; the
@@ -108,46 +80,66 @@ export function QuizForm({
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending !== null) return;
+    if (pending !== null) {
+      return;
+    }
     const trimmed = answer.trim();
-    if (!trimmed) return setError("Write your explanation before you submit.");
-    if (trimmed.length > MAX_ANSWER) return setError(`Keep it under ${MAX_ANSWER} characters.`);
+    if (!trimmed) {
+      return setError("Write your explanation before you submit.");
+    }
+    if (trimmed.length > MAX_ANSWER) {
+      return setError(`Keep it under ${MAX_ANSWER} characters.`);
+    }
     setError(null);
     setPending("answer");
-    toast
-      .promise(send(cardId, { answer: trimmed }), {
-        loading: "Scoring your answer…",
-        success: (grade) => {
-          setResult({ grade, skipped: false });
-          return {
-            type: "success",
-            title: "Answer scored",
-            description: "Your score and next review are below.",
-          };
-        },
-        error: (reason: unknown) => {
-          const message = reason instanceof Error ? reason.message : "Try again.";
-          setError(message);
-          return {
-            title: "Your answer couldn't be scored",
-            description: `It's still in the box. ${message}`,
-          };
-        },
-      })
-      .catch(() => {})
-      .finally(() => setPending(null));
+    const scoring = toast.promise(send(cardId, { answer: trimmed }), {
+      loading: "Scoring your answer…",
+      success: (grade) => {
+        setResult({ grade, skipped: false });
+        return {
+          type: "success",
+          title: "Answer scored",
+          description: "Your score and next review are below.",
+        };
+      },
+      error: (reason: unknown) => {
+        const message = reason instanceof Error ? reason.message : "Try again.";
+        setError(message);
+        return {
+          title: "Your answer couldn't be scored",
+          description: `It's still in the box. ${message}`,
+        };
+      },
+    });
+    const settle = async () => {
+      try {
+        await scoring;
+      } catch {
+        // The toast's error callback has already shown it.
+      } finally {
+        setPending(null);
+      }
+    };
+    void settle();
   }
 
   function skip() {
-    if (pending !== null) return;
+    if (pending !== null) {
+      return;
+    }
     setError(null);
     setPending("skip");
-    send(cardId, { dontKnow: true })
-      .then((grade) => setResult({ grade, skipped: true }))
-      .catch((reason: unknown) => {
-        setError(reason instanceof Error ? reason.message : "Try again.");
-      })
-      .finally(() => setPending(null));
+    const run = async () => {
+      try {
+        const grade = await send(cardId, { dontKnow: true });
+        setResult({ grade, skipped: true });
+      } catch (error_: unknown) {
+        setError(error_ instanceof Error ? error_.message : "Try again.");
+      } finally {
+        setPending(null);
+      }
+    };
+    void run();
   }
 
   // Client-side only: it nudges people to recall, it doesn't stop a determined one (devtools, typing it out). The
@@ -157,7 +149,7 @@ export function QuizForm({
     setError(PASTE_OFF);
   }
 
-  if (result)
+  if (result) {
     return (
       <QuizResult
         grade={result.grade}
@@ -167,6 +159,7 @@ export function QuizForm({
         headingRef={resultHeading}
       />
     );
+  }
 
   return (
     <QuizAnswer

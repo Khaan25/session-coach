@@ -20,8 +20,12 @@ export type TrackerTask = {
 export async function getTrackerTasks(): Promise<TrackerTask[] | null> {
   const supabase = await createClient();
   const { data: member, error: memberError } = await supabase.rpc("is_tracker_member");
-  if (memberError) throw new Error(`is_tracker_member: ${memberError.message}`);
-  if (!member) return null;
+  if (memberError) {
+    throw new Error(`is_tracker_member: ${memberError.message}`);
+  }
+  if (!member) {
+    return null;
+  }
 
   const { data, error } = await supabase
     .from("tracker_tasks")
@@ -29,8 +33,11 @@ export async function getTrackerTasks(): Promise<TrackerTask[] | null> {
     .order("position")
     // A task added on the page shares its section's last position; the later one goes after.
     .order("created_at")
-    .order("id") // so rows inserted together still keep one order
+    // so rows inserted together still keep one order
+    .order("id")
     .returns<TrackerTask[]>();
-  if (error) throw new Error(`tracker_tasks: ${error.message}`);
+  if (error) {
+    throw new Error(`tracker_tasks: ${error.message}`);
+  }
   return data;
 }

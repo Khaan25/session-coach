@@ -23,7 +23,7 @@ export function validateToken(token: string): string | null {
 /** Hosts where plain http is allowed, so a token never crosses the network unencrypted. */
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /\/+$/u;
 
 /**
  * Normalises a site URL: https, or http for a local host only; no trailing slash.
@@ -59,7 +59,9 @@ export async function loadConfig(path: string): Promise<Config | null> {
     return null;
   }
   const { token, url } = (parsed ?? {}) as { token?: unknown; url?: unknown };
-  if (typeof token !== "string" || typeof url !== "string") return null;
+  if (typeof token !== "string" || typeof url !== "string") {
+    return null;
+  }
   // Same rules as on save, so a hand-edited file can't add a trailing slash or downgrade to http.
   const cleaned = normalizeUrl(url);
   return cleaned ? { token, url: cleaned } : null;

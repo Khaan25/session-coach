@@ -104,7 +104,7 @@ export function ConfirmHeading() {
 }
 
 /** /auth/error's copy by code. The URL only ever picks one of these; its text is never shown (docs/plans/auth.md #7). */
-export const AUTH_ERRORS = {
+const AUTH_ERRORS = {
   link_expired: {
     title: "This link was already used or has expired",
     body: "Each email link works once. If you opened it before, your account may already be confirmed: try signing in. Otherwise, signing in sends a new confirmation link, and Reset password sends a new reset link.",

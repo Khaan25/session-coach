@@ -54,7 +54,9 @@ function readSeen() {
 }
 
 // Nothing to subscribe to: only this component writes the key, and it holds its own open state after that.
-const subscribe = () => () => {};
+const subscribe = () => () => {
+  // Nothing to unsubscribe from.
+};
 
 function markSeen() {
   try {
@@ -80,8 +82,11 @@ export function SetupGuide({ autoOpen = false }: { autoOpen?: boolean }) {
   const change = (next: boolean) => {
     setChosen(next);
     // Reopening walks the steps again from the first.
-    if (next) setStep(0);
-    else markSeen();
+    if (next) {
+      setStep(0);
+    } else {
+      markSeen();
+    }
   };
   const close = () => change(false);
   const current = STEPS[step];

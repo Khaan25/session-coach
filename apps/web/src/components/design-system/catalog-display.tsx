@@ -115,6 +115,7 @@ function BadgesAndStatus() {
         <Badge status="fail" label="Unverified quote" />
         <Badge count={cards.length} />
         <Badge count={1200} max={999} variant="outline" />
+        {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the element is Base UI's `render` target; its label is the children the parent component passes in */}
         <Badge render={<a href="#display" />} variant="outline">
           Linked badge
         </Badge>
@@ -144,15 +145,20 @@ function BadgesAndStatus() {
   );
 }
 
+function avatarFallback(type: (typeof AVATAR_TYPES)[number]) {
+  if (type === "agent") {
+    return <RobotIcon />;
+  }
+  return type === "source" ? "R" : "ZR";
+}
+
 function People() {
   return (
     <Specimen label="Avatar sizes, types, image, badge and group">
       {AVATAR_TYPES.map((type) =>
         AVATAR_SIZES.map((size) => (
           <Avatar key={`${type}-${size}`} type={type} size={size}>
-            <AvatarFallback>
-              {type === "agent" ? <RobotIcon /> : type === "source" ? "R" : "ZR"}
-            </AvatarFallback>
+            <AvatarFallback>{avatarFallback(type)}</AvatarFallback>
           </Avatar>
         )),
       )}

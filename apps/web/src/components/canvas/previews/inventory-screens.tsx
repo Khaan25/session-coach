@@ -1,4 +1,5 @@
 "use client";
+// oxlint-disable react/only-export-components -- a registry of preview frames: its local components exist only to build INVENTORY, so splitting them out would scatter one screen list over several files
 
 // The inventory under the flow: every route, in every state its page can render, one row per area. As in
 // flow-screens.tsx, each frame is the route's real components (or its real loading, error and not-found files) fed
@@ -63,12 +64,8 @@ import { UpdatePasswordForm } from "@/components/auth/update-password-form";
 import { AuthPreviewContext } from "@/components/auth/use-auth-form";
 import type { CardView } from "@/lib/cards/columns";
 import { ApproveRequest } from "@/components/cli/approve-request";
-import {
-  ApproveCodeForm,
-  ApproveDone,
-  ApproveNotice,
-  SETTLED_COPY,
-} from "@/components/cli/approve-states";
+import { SETTLED_COPY } from "@/components/cli/approve-copy";
+import { ApproveCodeForm, ApproveDone, ApproveNotice } from "@/components/cli/approve-states";
 import { SAMPLE_QUEUE } from "@/components/dashboard/dashboard-sample";
 import { NextCard, TodayMessage, TodayView } from "@/components/dashboard/today-view";
 import {
@@ -77,23 +74,19 @@ import {
   DefendStart,
   DefendTimed,
   NothingToDefend,
-  type DefendCard,
-  type TimeUpReason,
 } from "@/components/defend/defend-flow";
+import type { DefendCard, TimeUpReason } from "@/components/defend/defend-flow";
 import { NotFoundBody } from "@/components/errors/not-found-body";
 import { MembersView } from "@/components/members/members-view";
 import { SetupGuide } from "@/components/onboarding/setup-guide";
 import { ProjectSetupCard } from "@/components/projects/project-setup-card";
 import { SAMPLE_PROGRESS } from "@/components/progress/progress-sample";
 import { ProgressEmpty, ProgressSummary } from "@/components/progress/progress-view";
-import { ReportView, type LoadedReport } from "@/components/report/report-view";
-import {
-  PASTE_OFF,
-  QuizAnswer,
-  QuizResult,
-  QuizSendContext,
-  type Grade,
-} from "@/components/review/quiz-form";
+import { ReportView } from "@/components/report/report-view";
+import type { LoadedReport } from "@/components/report/report-view";
+import { QuizAnswer, QuizResult } from "@/components/review/quiz-form";
+import { PASTE_OFF, QuizSendContext } from "@/components/review/quiz-send";
+import type { Grade } from "@/components/review/quiz-form";
 import {
   SAMPLE_GRADES,
   SAMPLE_QUIZ_CARD,
@@ -122,7 +115,8 @@ import type { SessionSummary } from "@/lib/sessions/rows";
 import { PortalProvider } from "@/lib/ui/portal";
 
 import { AppFrame, AuthFrame, FrameWindow, PublicFrame } from "./frames";
-import { useServerScreen, type ServerScreens } from "./server-screens";
+import { useServerScreen } from "./server-screens";
+import type { ServerScreens } from "./server-screens";
 
 /** One frame: the route, its state, what it draws, and a size when it isn't a full page. */
 export type InventoryFrame = {
@@ -144,7 +138,9 @@ const frame = (
 
 /** A server error as Next hands it to a boundary: a digest, the reference code, and no message to show. */
 const SAMPLE_ERROR = Object.assign(new Error("Synthetic canvas error"), { digest: "3790123546" });
-const noop = () => {};
+const noop = () => {
+  // Inert on the canvas.
+};
 
 /**
  * Opens the dialog whose trigger reads `trigger`, once, as a click on it would. The stage PortalProvider keeps the
@@ -154,9 +150,7 @@ function OpenDialog({ trigger, children }: { trigger: string; children: React.Re
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const triggers = ref.current?.querySelectorAll<HTMLElement>("button");
-    Array.from(triggers ?? [])
-      .find((el) => el.textContent?.includes(trigger))
-      ?.click();
+    [...(triggers ?? [])].find((el) => el.textContent?.includes(trigger))?.click();
   }, [trigger]);
   return (
     <div ref={ref} className="contents">
@@ -167,7 +161,9 @@ function OpenDialog({ trigger, children }: { trigger: string; children: React.Re
 
 /** Grades an answer without the API: a short wait, then the sample grade for a 2. */
 const canvasSend = () =>
-  new Promise<Grade>((resolve) => setTimeout(() => resolve(SAMPLE_GRADES[2]), 800));
+  new Promise<Grade>((resolve) => {
+    setTimeout(() => resolve(SAMPLE_GRADES[2]), 800);
+  });
 
 /** Every quiz box on a frame grades through canvasSend, so a submit never reaches /api/review/answer. */
 function Quiz({ children }: { children: React.ReactNode }) {
@@ -440,7 +436,7 @@ function Due({ before }: { before?: React.ReactNode }) {
       lede="Explain it from memory first. The why comes after."
       before={before}
       habit={HABIT}
-      hero={<NextCard card={SAMPLE_QUEUE[0]!} left={SAMPLE_QUEUE.length} />}
+      hero={<NextCard card={SAMPLE_QUEUE[0]} left={SAMPLE_QUEUE.length} />}
     />
   );
 }
@@ -538,7 +534,7 @@ const today: InventoryFrame[] = [
 // Review: the queue (/review) and one card (/review/[cardId]).
 
 const CARD_PATH = `/review/${SAMPLE_QUIZ_CARD.id}`;
-const NEXT = `/review/${SAMPLE_REVIEW_QUEUE[1]!.id}`;
+const NEXT = `/review/${SAMPLE_REVIEW_QUEUE[1].id}`;
 const ANSWER =
   "The token is one learner. An office shares one IP, so an IP limit blocks the whole office.";
 
@@ -768,8 +764,8 @@ const SESSION_PATH = `/s/${SAMPLE_SESSION.id}`;
 const ANSWERED_CARD: CardView = {
   id: "sample-card-0",
   position: 0,
-  decision: SAMPLE_SESSION_CARDS[0]!.decision,
-  question: SAMPLE_SESSION_CARDS[0]!.question,
+  decision: SAMPLE_SESSION_CARDS[0].decision,
+  question: SAMPLE_SESSION_CARDS[0].question,
   why: SAMPLE_GRADES[2].why,
   source: "stated",
   evidence: SAMPLE_GRADES[2].evidence,
@@ -777,8 +773,10 @@ const ANSWERED_CARD: CardView = {
   flagged: false,
 };
 
+const NO_OVERRIDES: Partial<SessionSummary> = {};
+
 function Session({
-  session = {},
+  session = NO_OVERRIDES,
   cards = SAMPLE_SESSION_CARDS,
   stuck,
 }: {
@@ -803,7 +801,7 @@ function Session({
 const sessions: InventoryFrame[] = [
   frame("/s/[id]", "ready, cards to answer", () => <Session />),
   frame("/s/[id]", "ready, one answered", () => (
-    <Session cards={[{ ...ANSWERED_CARD, locked: false }, SAMPLE_SESSION_CARDS[1]!]} />
+    <Session cards={[{ ...ANSWERED_CARD, locked: false }, SAMPLE_SESSION_CARDS[1]]} />
   )),
   frame("/s/[id]", "pending", () => <Session session={{ status: "pending" }} cards={[]} />),
   frame("/s/[id]", "processing", () => <Session session={{ status: "processing" }} cards={[]} />),
@@ -886,7 +884,7 @@ function Setup({ connected = false }: { connected?: boolean }) {
             <SetupSteps
               progress={
                 connected
-                  ? { device: SAMPLE_DEVICES[0]!.label, sessions: 3 }
+                  ? { device: SAMPLE_DEVICES[0].label, sessions: 3 }
                   : { device: null, sessions: 0 }
               }
             />

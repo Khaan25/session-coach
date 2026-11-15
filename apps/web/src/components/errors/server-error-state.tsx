@@ -30,7 +30,9 @@ export function ServerErrorState({
   const dryRun = useDryRun();
   useEffect(() => {
     // TODO(zia): send to an error reporting service once one is chosen.
-    if (!dryRun) console.error(error);
+    if (!dryRun) {
+      console.error(error);
+    }
   }, [error, dryRun]);
 
   const digest = digestOf(error);

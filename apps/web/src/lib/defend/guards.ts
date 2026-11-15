@@ -3,9 +3,10 @@ import "server-only";
 import { NextResponse } from "next/server";
 
 import { tooManyRequests, userRateLimit } from "@/lib/auth/rate-limit";
-import { callModel, ModelCallError, ModelConfigError } from "@/lib/model/call-model";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { defenseIdSchema, isLate, type DefendCard } from "@/lib/defend/defend";
+import { ModelCallError, ModelConfigError, callModel } from "@/lib/model/call-model";
+import type { createAdminClient } from "@/lib/supabase/admin";
+import { defenseIdSchema, isLate } from "@/lib/defend/defend";
+import type { DefendCard } from "@/lib/defend/defend";
 
 // What the two defend answer routes share: the model-error answers, the ownership and deadline checks, and the
 // rate-limited model call. The routes keep their own bodies and docs.
@@ -59,7 +60,9 @@ export async function limitedModelCall<T>(
   parse: (output: unknown) => T | null,
 ) {
   const limited = await userRateLimit("grade", userId);
-  if (limited) return tooManyRequests(limited);
+  if (limited) {
+    return tooManyRequests(limited);
+  }
   return parse(await callModel("grade", input)) ?? parse(await callModel("grade", input));
 }
 
@@ -97,16 +100,24 @@ export async function loadDefense(
     )
     .eq("id", defenseId)
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   // Decided here, not by the query: the service role sees every learner's defenses.
-  if (!defense || defense.user_id !== userId) return null;
+  if (!defense || defense.user_id !== userId) {
+    return null;
+  }
   const { data: card, error: cardError } = await admin
     .from("decision_cards")
     .select("question, why, evidence, model_answer")
     .eq("id", defense.card_id)
     .maybeSingle();
-  if (cardError) throw cardError;
-  if (!card) return null;
+  if (cardError) {
+    throw cardError;
+  }
+  if (!card) {
+    return null;
+  }
   return { defense, card };
 }
 
@@ -120,13 +131,17 @@ export async function refuseIfLate(
   window: { startedAt: string; seconds: number },
   now: Date,
 ) {
-  if (!isLate(window.startedAt, window.seconds, now)) return null;
+  if (!isLate(window.startedAt, window.seconds, now)) {
+    return null;
+  }
   const { error } = await admin
     .from("defenses")
     .update({ status: "expired" })
     .eq("id", defense.id)
     .eq("status", defense.status);
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return NextResponse.json(
     { error: "Time's up, so this defense wasn't saved. Start another one." },
     { status: 409 },

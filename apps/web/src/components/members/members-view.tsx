@@ -108,7 +108,6 @@ export function MembersView({
       >
         <ItemGroup aria-label="Members">
           {/* ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role. */}
-          {/* eslint-disable-next-line jsx-a11y/prefer-tag-over-role */}
           <Item role="listitem">
             <ItemMedia>
               <Avatar>

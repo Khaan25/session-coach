@@ -21,8 +21,8 @@
     "start": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/cli.ts",
     "build": "node build.mjs",
     "prepack": "node build.mjs",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint",
+    "typecheck": "bun check",
+    "lint": "oxlint --deny-warnings",
     "test": "node --test --experimental-strip-types src/*.test.ts"
   },
   "devDependencies": {

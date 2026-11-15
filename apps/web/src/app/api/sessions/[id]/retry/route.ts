@@ -9,7 +9,7 @@
  * Auth: the learner's session cookie.
  */
 import { MAX_UPLOAD_BYTES } from "@session-coach/shared/limits";
-import { after, NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 
 import { requireUser, serverError } from "@/lib/api/http";
@@ -41,10 +41,13 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   const invokedAt = Date.now();
   try {
     const signedIn = await requireUser();
-    if (signedIn instanceof NextResponse) return signedIn;
+    if (signedIn instanceof NextResponse) {
+      return signedIn;
+    }
     const userId = signedIn.user.id;
 
-    const id = idSchema.safeParse((await context.params).id);
+    const params = await context.params;
+    const id = idSchema.safeParse(params.id);
     if (!id.success) {
       return NextResponse.json({ error: "id must be a session id", field: "id" }, { status: 400 });
     }
@@ -54,7 +57,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       .select("user_id, status, raw_path, processing_started_at, created_at")
       .eq("id", id.data)
       .maybeSingle();
-    if (readError) throw new Error(readError.message);
+    if (readError) {
+      throw new Error(readError.message);
+    }
     if (!session || session.user_id !== userId) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
@@ -65,7 +70,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     const { data: file, error: infoError } = await admin.storage
       .from(SESSIONS_BUCKET)
       .info(session.raw_path);
-    if (infoError && !isMissingObject(infoError)) throw new Error(infoError.message);
+    if (infoError && !isMissingObject(infoError)) {
+      throw new Error(infoError.message);
+    }
     if (!file) {
       return NextResponse.json(
         {
@@ -83,7 +90,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     }
 
     const limited = await userRateLimit("process", userId);
-    if (limited) return tooManyRequests(limited);
+    if (limited) {
+      return tooManyRequests(limited);
+    }
 
     const startedAt = new Date().toISOString();
     const claim = admin
@@ -96,7 +105,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
         ? claim.eq("processing_started_at", session.processing_started_at)
         : claim.is("processing_started_at", null)
     ).select("id");
-    if (claimError) throw new Error(claimError.message);
+    if (claimError) {
+      throw new Error(claimError.message);
+    }
     if (claimed.length === 0) {
       return NextResponse.json({ id: id.data, status: "processing" }, { status: 409 });
     }
@@ -104,11 +115,17 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
       .from("decision_cards")
       .delete()
       .eq("session_id", id.data);
-    if (cardsError) throw new Error(cardsError.message);
+    if (cardsError) {
+      throw new Error(cardsError.message);
+    }
 
     after(() => processSession(id.data, startedAt, invokedAt));
     return NextResponse.json({ id: id.data }, { status: 202 });
-  } catch (err) {
-    return serverError("[api/sessions/retry]", err, "The session couldn't be retried. Try again.");
+  } catch (error) {
+    return serverError(
+      "[api/sessions/retry]",
+      error,
+      "The session couldn't be retried. Try again.",
+    );
   }
 }

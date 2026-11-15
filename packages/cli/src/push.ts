@@ -1,6 +1,7 @@
 // Request building and response handling for `push`. Pure, so node --test runs it with no network.
 
-import { gzipSync } from "node:zlib";
+import { promisify } from "node:util";
+import { gzip as gzipCallback } from "node:zlib";
 
 import { redact } from "@session-coach/shared/redact";
 import type { SessionStatus } from "@session-coach/shared/session";
@@ -38,7 +39,9 @@ export type CreateResult =
  */
 export function firstTimestamp(jsonl: string): string | undefined {
   for (const line of jsonl.split("\n")) {
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
     let event: unknown;
     try {
       event = JSON.parse(line);
@@ -46,15 +49,22 @@ export function firstTimestamp(jsonl: string): string | undefined {
       continue;
     }
     const raw = (event as { timestamp?: unknown } | null)?.timestamp;
-    if (typeof raw !== "string" && typeof raw !== "number") continue;
+    if (typeof raw !== "string" && typeof raw !== "number") {
+      continue;
+    }
     const date = new Date(raw);
-    if (!Number.isNaN(date.getTime())) return date.toISOString();
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
   }
   return undefined;
 }
 
 /** The schema's cap on `repo` and `branch`; a longer value would fail the whole push with a 400. */
 const MAX_LABEL = 200;
+
+const gzip = promisify(gzipCallback);
+const PATH_SEPARATOR = /[\\/]/u;
 
 /**
  * Where the session ran: the log's first `cwd` reduced to its folder name (the format the seed and `projects.repo`
@@ -67,21 +77,29 @@ export function sessionWhere(jsonl: string): { repo: string | null; branch: stri
   let cwd: string | undefined;
   let branch: string | undefined;
   for (const line of jsonl.split("\n")) {
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
     let event: { cwd?: unknown; gitBranch?: unknown } | null;
     try {
       event = JSON.parse(line);
     } catch {
       continue;
     }
-    if (!cwd && typeof event?.cwd === "string" && event.cwd.trim()) cwd = event.cwd;
-    if (typeof event?.gitBranch === "string" && event.gitBranch.trim()) branch = event.gitBranch;
+    if (!cwd && typeof event?.cwd === "string" && event.cwd.trim()) {
+      ({ cwd } = event);
+    }
+    if (typeof event?.gitBranch === "string" && event.gitBranch.trim()) {
+      branch = event.gitBranch;
+    }
   }
-  const repo = cwd
-    ?.split(PATH_SEPARATOR)
-    .filter((part) => part.trim())
-    .pop()
-    ?.trim();
+  // The last path segment that isn't blank.
+  let repo: string | undefined;
+  for (const part of cwd?.split(PATH_SEPARATOR) ?? []) {
+    if (part.trim()) {
+      repo = part.trim();
+    }
+  }
   return {
     repo: repo ? repo.slice(0, MAX_LABEL) : null,
     branch: branch ? branch.trim().slice(0, MAX_LABEL) : null,
@@ -89,8 +107,7 @@ export function sessionWhere(jsonl: string): { repo: string | null; branch: stri
 }
 
 /** Path separators, POSIX or Windows. */
-const PATH_SEPARATOR = /[\\/]/;
-const JSONL_EXTENSION = /\.jsonl$/;
+const JSONL_EXTENSION = /\.jsonl$/u;
 
 /**
  * The metadata for step ①.
@@ -112,7 +129,9 @@ export function sessionMetadata(
     ...sessionWhere(jsonl),
   };
   const startedAt = firstTimestamp(jsonl);
-  if (startedAt) meta.started_at = startedAt;
+  if (startedAt) {
+    meta.started_at = startedAt;
+  }
   return meta;
 }
 
@@ -156,7 +175,7 @@ export function processRequest(baseUrl: string, token: string, id: string): Http
 }
 
 /** The server's pattern for `external_id`. */
-const EXTERNAL_ID = /^[A-Za-z0-9_-]{1,128}$/;
+const EXTERNAL_ID = /^[A-Za-z0-9_-]{1,128}$/u;
 
 /**
  * Checks the file name locally against the server's `external_id` pattern, so a bad name fails before any request.
@@ -166,7 +185,9 @@ const EXTERNAL_ID = /^[A-Za-z0-9_-]{1,128}$/;
  */
 export function validateFileName(fileName: string): string | null {
   const base = fileName.split(PATH_SEPARATOR).pop() ?? fileName;
-  if (EXTERNAL_ID.test(base.replace(JSONL_EXTENSION, ""))) return null;
+  if (EXTERNAL_ID.test(base.replace(JSONL_EXTENSION, ""))) {
+    return null;
+  }
   return "Rename the file to letters, numbers, - and _ only (max 128 characters).";
 }
 
@@ -181,8 +202,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** Redacts every string inside a parsed JSON value, at any depth, with no exemption. */
 function redactAll(value: unknown): unknown {
-  if (typeof value === "string") return redact(value);
-  if (Array.isArray(value)) return value.map(redactAll);
+  if (typeof value === "string") {
+    return redact(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => redactAll(item));
+  }
   if (isRecord(value)) {
     return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, redactAll(v)]));
   }
@@ -202,7 +227,9 @@ function redactExcept(
 
 /** A content block: `type` is structural, plus `id` on a tool_use and `tool_use_id` on a tool_result. */
 function redactBlock(block: unknown): unknown {
-  if (!isRecord(block)) return redactAll(block);
+  if (!isRecord(block)) {
+    return redactAll(block);
+  }
   const { type } = block;
   return redactExcept(
     block,
@@ -214,11 +241,14 @@ function redactBlock(block: unknown): unknown {
 }
 
 function redactMessage(message: unknown): unknown {
-  if (!isRecord(message)) return redactAll(message);
+  if (!isRecord(message)) {
+    return redactAll(message);
+  }
   return redactExcept(
     message,
     (k) => MESSAGE_KEYS.has(k),
-    (k, v) => (k === "content" && Array.isArray(v) ? v.map(redactBlock) : redactAll(v)),
+    (k, v) =>
+      k === "content" && Array.isArray(v) ? v.map((block) => redactBlock(block)) : redactAll(v),
   );
 }
 
@@ -229,7 +259,9 @@ function redactMessage(message: unknown): unknown {
  * and `toolUseResult`, is redacted at every depth. Keys, numbers, booleans and null are left as they are.
  */
 function redactEvent(event: unknown): unknown {
-  if (!isRecord(event)) return redactAll(event);
+  if (!isRecord(event)) {
+    return redactAll(event);
+  }
   return redactExcept(
     event,
     (k) => EVENT_KEYS.has(k),
@@ -248,7 +280,9 @@ export function redactLog(text: string): string {
   return text
     .split("\n")
     .map((line) => {
-      if (!line.trim()) return line;
+      if (!line.trim()) {
+        return line;
+      }
       try {
         return JSON.stringify(redactEvent(JSON.parse(line)));
       } catch {
@@ -263,9 +297,9 @@ export function redactLog(text: string): string {
  *
  * @returns The gzip that gets uploaded, and the redacted text for the metadata.
  */
-export function prepareLog(bytes: Uint8Array): { gzipped: Buffer; text: string } {
+export async function prepareLog(bytes: Uint8Array): Promise<{ gzipped: Buffer; text: string }> {
   const text = redactLog(Buffer.from(bytes).toString("utf8"));
-  return { gzipped: gzipSync(text), text };
+  return { gzipped: await gzip(text), text };
 }
 
 /** When to try again after a 429: the server's `Retry-After` in whole minutes, its own wording, or "a while". */
@@ -286,8 +320,12 @@ function commonFailure(status: number, retryAfter: number | undefined): Outcome 
       next: { text: "Sign in again", command: "session-coach login" },
     };
   }
-  if (status === 413) return { message: "Can't upload a log over 50 MB.", exitCode: 1 };
-  if (status === 429) return { message: rateLimited(retryAfter), exitCode: 1, retry: true };
+  if (status === 413) {
+    return { message: "Can't upload a log over 50 MB.", exitCode: 1 };
+  }
+  if (status === 429) {
+    return { message: rateLimited(retryAfter), exitCode: 1, retry: true };
+  }
   return null;
 }
 
@@ -313,12 +351,16 @@ function badRequest(body: unknown): string {
  */
 export function interpretCreate(status: number, body: unknown, retryAfter?: number): CreateResult {
   const common = commonFailure(status, retryAfter);
-  if (common) return { action: "stop", ...common };
+  if (common) {
+    return { action: "stop", ...common };
+  }
 
   const id = idOf(body);
   const uploadUrl = (body as { upload_url?: unknown } | null)?.upload_url;
   if ((status === 201 || status === 409) && id) {
-    if (typeof uploadUrl === "string" && uploadUrl) return { action: "upload", id, uploadUrl };
+    if (typeof uploadUrl === "string" && uploadUrl) {
+      return { action: "upload", id, uploadUrl };
+    }
     if (status === 409) {
       return {
         action: "stop",
@@ -330,7 +372,9 @@ export function interpretCreate(status: number, body: unknown, retryAfter?: numb
       };
     }
   }
-  if (status === 400) return { action: "stop", message: badRequest(body), exitCode: 1 };
+  if (status === 400) {
+    return { action: "stop", message: badRequest(body), exitCode: 1 };
+  }
   return {
     action: "stop",
     message: `The server couldn't register the session (HTTP ${status}).`,
@@ -341,7 +385,9 @@ export function interpretCreate(status: number, body: unknown, retryAfter?: numb
 
 /** Step ② response: any 2xx means the log landed. */
 export function interpretPut(status: number): Outcome {
-  if (status >= 200 && status < 300) return { message: "", exitCode: 0 };
+  if (status >= 200 && status < 300) {
+    return { message: "", exitCode: 0 };
+  }
   return { message: `Couldn't store the log (HTTP ${status}).`, exitCode: 1, retry: true };
 }
 
@@ -374,11 +420,16 @@ export function interpretProcess(
     return { message: "The log didn't reach the server.", exitCode: 1, retry: true };
   }
   const common = commonFailure(status, retryAfter);
-  if (common) return common;
-  if (status === 404)
+  if (common) {
+    return common;
+  }
+  if (status === 404) {
     return { message: "The server doesn't know this session.", exitCode: 1, retry: true };
+  }
   // A 503 says why processing is switched off (such as rate limits not set up), so show the server's sentence.
   const reason = (body as { error?: unknown } | null)?.error;
-  if (status === 503 && typeof reason === "string") return { message: reason, exitCode: 1 };
+  if (status === 503 && typeof reason === "string") {
+    return { message: reason, exitCode: 1 };
+  }
   return { message: `Processing couldn't start (HTTP ${status}).`, exitCode: 1, retry: true };
 }

@@ -5,19 +5,20 @@
  *   polling secret (only its sha256 is stored); `userCode` is what the learner checks on /cli/approve.
  *   400 bad clientName, 429 too many starts from this IP (`Retry-After`), 500 else. Never cached, never logged.
  */
-import { after, NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after } from "next/server";
+import type { NextRequest } from "next/server";
 
-import { NO_STORE, serverError, UNIQUE_VIOLATION } from "@/lib/api/http";
+import { NO_STORE, UNIQUE_VIOLATION, serverError } from "@/lib/api/http";
 import { authAttemptWait } from "@/lib/auth/rate-limit";
 import { clientIp } from "@/lib/auth/client-ip";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   DEVICE_CODE_TTL_SECONDS,
+  POLL_INTERVAL_SECONDS,
   deviceStartSchema,
   formatUserCode,
   newDeviceCode,
   newUserCode,
-  POLL_INTERVAL_SECONDS,
 } from "@/lib/tokens/device";
 import { hashToken } from "@/lib/tokens/hash";
 
@@ -52,7 +53,9 @@ export async function POST(request: NextRequest) {
         .from("cli_device_codes")
         .delete()
         .lt("expires_at", new Date(requestedAt.getTime() - KEEP_EXPIRED_MS).toISOString());
-      if (cleanupError) console.error("[api/cli/device] cleanup failed", cleanupError.message);
+      if (cleanupError) {
+        console.error("[api/cli/device] cleanup failed", cleanupError.message);
+      }
     });
 
     const deviceCode = newDeviceCode();
@@ -69,10 +72,15 @@ export async function POST(request: NextRequest) {
         requested_at: requestedAt.toISOString(),
         expires_at: new Date(requestedAt.getTime() + DEVICE_CODE_TTL_SECONDS * 1000).toISOString(),
       });
-      if (!error) userCode = candidate;
-      else if (error.code !== UNIQUE_VIOLATION) throw new Error(error.message);
+      if (!error) {
+        userCode = candidate;
+      } else if (error.code !== UNIQUE_VIOLATION) {
+        throw new Error(error.message);
+      }
     }
-    if (!userCode) throw new Error("no free user code after 3 tries");
+    if (!userCode) {
+      throw new Error("no free user code after 3 tries");
+    }
 
     const verificationUri = `${request.nextUrl.origin}/cli/approve`;
     const shown = formatUserCode(userCode);
@@ -88,10 +96,10 @@ export async function POST(request: NextRequest) {
       },
       { headers: NO_STORE },
     );
-  } catch (err) {
+  } catch (error) {
     return serverError(
       "[api/cli/device] start",
-      err,
+      error,
       "Couldn't start the login. Try again.",
       NO_STORE,
     );

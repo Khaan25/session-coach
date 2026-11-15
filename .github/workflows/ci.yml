@@ -13,7 +13,31 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Lint, typecheck, build and every test suite are separate jobs, so they run at the same time. On a pull request,
+# `changes` works out which tests the diff can reach (scripts/affected.mjs) and the test jobs run only those; a push to
+# main runs everything. `ci` at the end is the one check to require in branch protection.
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      unit: ${{ steps.affected.outputs.unit }}
+      e2e: ${{ steps.affected.outputs.e2e }}
+      rls: ${{ steps.affected.outputs.rls }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - id: affected
+        if: github.event_name == 'pull_request'
+        run: node scripts/affected.mjs --base "origin/$BASE_REF" --github
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
   # The commit-msg hook checks each commit as it is made; this re-checks every commit on the
   # PR, so one made with --no-verify, or before the hook was installed, still fails.
   commits:
@@ -32,11 +56,37 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
 
-  # Every gate on the web app's supported Node versions (root package.json engines), where the CLI also runs on
-  # learners' machines. The CLI's own `>=20` floor is not tested here.
-  check:
+  lint:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # The pre-commit hook scans staged files; this rescans every tracked file.
+      - run: pnpm check:secrets
+      - run: pnpm format:check
+      - run: pnpm lint
+
+  # `bun check` (the bun devDependency), not tsc: the same errors, on every core.
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  # Unit tests on the web app's supported Node versions (root package.json engines), where the CLI also runs on
+  # learners' machines. The CLI's own `>=20` floor is not tested here.
+  test:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.unit != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -45,20 +95,18 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.node }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      # The pre-commit hook scans staged files; this rescans every tracked file.
-      - run: pnpm check:secrets
-      - run: pnpm format:check
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm test
+      - if: github.event_name == 'push'
+        run: pnpm test
+      - if: github.event_name == 'pull_request'
+        run: |
+          read -ra files <<<"$UNIT"
+          node scripts/run-tests.mjs "${files[@]}"
+        env:
+          UNIT: ${{ needs.changes.outputs.unit }}
 
-  # Its own job, so the production build runs alongside the gates instead of after them.
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -66,12 +114,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       # Turbopack's build cache (on by default since Next 16.3) only helps if .next/cache survives between runs.
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -85,21 +128,18 @@ jobs:
   # keys from `supabase status` itself. Only Postgres, auth, PostgREST, Storage (the init migration adds a bucket) and
   # the Kong gateway start.
   rls:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.rls == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-          cache: pnpm
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
           version: 2.119.0
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - run: supabase start -x realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - run: pnpm test:rls
       # The generated row types must match the migrations: a migration without `pnpm db:types` fails here.
@@ -107,22 +147,84 @@ jobs:
 
   # The browser smoke tests (apps/web/e2e) against a throwaway local stack with the fake model: sign-in, CLI login and
   # push, answer first, grading. Realtime stays on: the dashboard waits for the session to turn ready.
+  # Two shards, filled by recorded run time (scripts/shard-by-time.mjs), not file count. Times come from the latest run
+  # on main (cached by `e2e-timings`), or apps/web/e2e/timings.json before there is one.
   e2e:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.e2e == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-          cache: pnpm
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
           version: 2.119.0
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/web/e2e/timings.json
+          key: e2e-timings-${{ github.run_id }}
+          restore-keys: e2e-timings-
       - run: supabase start -x imgproxy,mailpit,studio,edge-runtime,logflare,vector,supavisor
       - run: pnpm --filter web exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - working-directory: apps/web
+        run: |
+          read -ra files <<<"$(node ../../scripts/shard-by-time.mjs split --timings e2e/timings.json --shards 2 --index "$SHARD" e2e/*.spec.ts)"
+          pnpm exec playwright test --reporter=list,json "${files[@]}"
+        env:
+          SHARD: ${{ matrix.shard }}
+          PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-report.json
+      - if: github.event_name == 'push' && success()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-report-${{ matrix.shard }}
+          path: apps/web/e2e-report.json
+          retention-days: 1
+
+  # On main, folds this run's per-spec times into the cache the next run's shards read.
+  e2e-timings:
+    needs: e2e
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/web/e2e/timings.json
+          key: e2e-timings-${{ github.run_id }}
+          restore-keys: e2e-timings-
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: e2e-report-*
+          path: reports
+      - run: node scripts/shard-by-time.mjs record --timings apps/web/e2e/timings.json reports/*/e2e-report.json
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/web/e2e/timings.json
+          key: e2e-timings-${{ github.run_id }}
+
+  # One status for branch protection: fails if any job failed or was cancelled; a job skipped because the diff can't
+  # reach it counts as passed.
+  ci:
+    if: always()
+    needs: [changes, commits, lint, typecheck, test, build, rls, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: |
+          if [ "$FAILED" = "true" ]; then echo "A required job failed or was cancelled."; exit 1; fi
+          echo "All required jobs passed or were skipped as unreachable."
+        env:
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}

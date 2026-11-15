@@ -3,6 +3,8 @@ packages:
   - packages/*
 
 allowBuilds:
+  # Its postinstall links the platform binary (@oven/bun-*) that `bun check` runs.
+  bun: true
   sharp: false
   unrs-resolver: false
   esbuild: false

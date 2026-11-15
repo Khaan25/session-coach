@@ -20,7 +20,12 @@ export type SetupProgress = { device: string | null; sessions: number | null };
 export function SetupSteps({ progress }: { progress?: SetupProgress }) {
   const device = progress?.device ?? null;
   const sessions = progress?.sessions ?? 0;
-  const current = device === null ? 1 : sessions === 0 ? 2 : null;
+  let current: 1 | 2 | null = null;
+  if (device === null) {
+    current = 1;
+  } else if (sessions === 0) {
+    current = 2;
+  }
   return (
     <section className="flex flex-col gap-3">
       <SectionHeader

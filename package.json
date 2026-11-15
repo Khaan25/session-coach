@@ -11,6 +11,7 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "test:affected": "node scripts/run-tests.mjs --affected origin/main",
     "test:rls": "pnpm --filter web test:rls",
     "test:e2e": "pnpm --filter web test:e2e",
     "db:local": "node scripts/use-local-db.mjs",
@@ -27,6 +28,7 @@
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
   },
   "devDependencies": {
+    "bun": "1.4.4",
     "oxfmt": "^0.75.0"
   }
 }

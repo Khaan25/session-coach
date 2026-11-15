@@ -70,7 +70,9 @@ function limitersFor<K extends string>(
   windows: Record<K, ReturnType<typeof Ratelimit.slidingWindow>>,
   scope: string,
 ) {
-  if (!configured) return null;
+  if (!configured) {
+    return null;
+  }
   return Object.fromEntries(
     Object.entries<ReturnType<typeof Ratelimit.slidingWindow>>(windows).map(([name, limiter]) => [
       name,
@@ -145,7 +147,9 @@ export async function userRateLimit(
 ): Promise<UserLimited | null> {
   if (!userLimiters) {
     warnUnconfigured();
-    if (!refusesUnlimited(action, process.env.VERCEL_ENV)) return null;
+    if (!refusesUnlimited(action, process.env.VERCEL_ENV)) {
+      return null;
+    }
     return {
       message: "This is switched off until rate limits are set up on our side. Try again later.",
       retryAfterSeconds: 3600,
@@ -154,7 +158,9 @@ export async function userRateLimit(
   }
   try {
     const { success, reset } = await userLimiters[action].limit(userId);
-    if (success) return null;
+    if (success) {
+      return null;
+    }
     const retryAfterSeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
     const minutes = Math.ceil(retryAfterSeconds / 60);
     const message = `${USER_LIMIT_ERROR[action]} Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;

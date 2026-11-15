@@ -11,13 +11,13 @@ import {
   useComboboxVirtualizer,
 } from "@/components/ui/virtualized-combobox";
 
-import { cards } from "../sample";
+import { cards } from "@/components/design-system/sample";
 
 type Decision = { id: string; label: string; source: string };
 
 // Ten thousand generated rows, because the count is the point: past about a thousand, mounting every row makes
 // opening the popup slow. The labels cycle through the sample cards.
-const DECISIONS: Decision[] = Array.from({ length: 10000 }, (_, index) => {
+const DECISIONS: Decision[] = Array.from({ length: 10_000 }, (_, index) => {
   const card = cards[index % cards.length];
   return { id: String(index + 1), label: `${index + 1}. ${card.decision}`, source: card.source };
 });

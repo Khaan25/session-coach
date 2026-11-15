@@ -1,4 +1,5 @@
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import { Label } from "@/components/ui/label";
@@ -184,7 +185,7 @@ function FieldSeparator({
   return (
     <div
       data-slot="field-separator"
-      data-content={!!children}
+      data-content={Boolean(children)}
       className={cn("-my-2 flex min-h-5 items-center gap-2", className)}
       {...props}
     >
@@ -212,23 +213,26 @@ function FieldError({
   errors,
   ...props
 }: React.ComponentProps<"div"> & {
-  errors?: Array<{ message?: string } | undefined>;
+  errors?: ({ message?: string } | undefined)[];
 }) {
   let content: React.ReactNode = children;
   if (!content && errors?.length) {
     const uniqueErrors = [
-      ...new Map(errors.filter((e) => e?.message).map((e) => [e!.message, e!])).values(),
+      ...new Map(errors.flatMap((e) => (e?.message ? [[e.message, e] as const] : []))).values(),
     ];
-    content =
-      uniqueErrors.length === 1 ? (
-        uniqueErrors[0].message
-      ) : uniqueErrors.length > 1 ? (
+    if (uniqueErrors.length === 1) {
+      content = uniqueErrors[0].message;
+    } else if (uniqueErrors.length > 1) {
+      content = (
         <ul className="flex flex-col gap-1">
           {uniqueErrors.map((error) => (
             <li key={error.message}>{error.message}</li>
           ))}
         </ul>
-      ) : null;
+      );
+    } else {
+      content = null;
+    }
   }
 
   if (!content) {

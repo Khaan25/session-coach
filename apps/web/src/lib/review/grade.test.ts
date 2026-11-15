@@ -3,9 +3,9 @@ import { test } from "node:test";
 
 import { fakeGrade } from "../model/fake.ts";
 import {
-  answerRequestSchema,
   DONT_KNOW_ANSWER,
   MAX_ANSWER,
+  answerRequestSchema,
   parseGrade,
   skipGrade,
 } from "./grade.ts";
@@ -35,8 +35,9 @@ test("parseGrade rejects anything else", () => {
     { score: 2 },
     { missing: "" },
     { score: 1, missing: "x".repeat(2001) },
-  ])
+  ]) {
     assert.equal(parseGrade(bad), null, JSON.stringify(bad));
+  }
 });
 
 test("answerRequestSchema trims the answer and bounds it to 1-4000 characters", () => {
@@ -60,8 +61,9 @@ test("the fake grader scores by overlap with the model answer", () => {
   assert.equal(fakeGrade({ model_answer, answer: "no idea" }).score, 0);
   assert.equal(fakeGrade({ model_answer, answer: model_answer }).missing, "");
   // Its output always passes the real schema.
-  for (const answer of [model_answer, "postgres", "x"])
+  for (const answer of [model_answer, "postgres", "x"]) {
     assert.notEqual(parseGrade(fakeGrade({ model_answer, answer })), null);
+  }
 });
 
 test("answerRequestSchema takes an honest skip instead of an answer, never both or neither", () => {

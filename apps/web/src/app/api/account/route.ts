@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 
 import { requireUser } from "@/lib/api/http";
-import { accountStoragePaths, SESSIONS_BUCKET } from "@/lib/settings/account-storage";
+import { SESSIONS_BUCKET, accountStoragePaths } from "@/lib/settings/account-storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
@@ -22,7 +22,9 @@ const BATCH = 1000;
  */
 export async function DELETE() {
   const signedIn = await requireUser();
-  if (signedIn instanceof NextResponse) return signedIn;
+  if (signedIn instanceof NextResponse) {
+    return signedIn;
+  }
   const { supabase, user } = signedIn;
 
   try {
@@ -36,9 +38,13 @@ export async function DELETE() {
     const listed: { name: string; id: string | null }[] = [];
     for (;;) {
       const { data, error } = await storage.list(user.id, { limit: BATCH, offset: listed.length });
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       listed.push(...data);
-      if (data.length < BATCH) break;
+      if (data.length < BATCH) {
+        break;
+      }
     }
 
     const paths = accountStoragePaths(
@@ -48,13 +54,17 @@ export async function DELETE() {
     );
     for (let i = 0; i < paths.length; i += BATCH) {
       const { error } = await storage.remove(paths.slice(i, i + BATCH));
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
     }
 
     const { error } = await admin.auth.admin.deleteUser(user.id);
-    if (error) throw error;
-  } catch (err) {
-    console.error("[api/account] delete failed", err);
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error("[api/account] delete failed", error);
     return NextResponse.json(
       { error: "Your account couldn't be deleted. Try again." },
       { status: 500 },

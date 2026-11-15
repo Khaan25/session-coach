@@ -10,7 +10,8 @@ import {
 } from "@/components/settings/settings-sample";
 import { SettingsHeader, SettingsView } from "@/components/settings/settings-view";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { listProjects, type ProjectListItem } from "@/lib/projects/queries";
+import { listProjects } from "@/lib/projects/queries";
+import type { ProjectListItem } from "@/lib/projects/queries";
 import { formatRelativeTime } from "@/lib/relative-time";
 import { getReportSettings } from "@/lib/report/queries";
 import { getSettingsProfile, timeZoneOptions } from "@/lib/settings/profile";
@@ -48,7 +49,9 @@ async function AccountSettings() {
     loadDevices(),
   ]);
   // Signed out: proxy.ts redirects to sign-in, so show nothing here.
-  if (!profile) return null;
+  if (!profile) {
+    return null;
+  }
   const report = await loadReport(projects);
   return (
     <SettingsView
@@ -64,7 +67,9 @@ async function AccountSettings() {
 /** The report settings, or null when the read failed, so the rest of the page still loads. */
 async function loadReport(projects: ProjectListItem[] | null) {
   const user = await getCurrentUser();
-  if (!user || !projects) return null;
+  if (!user || !projects) {
+    return null;
+  }
   try {
     return await getReportSettings(
       user.id,
@@ -79,7 +84,9 @@ async function loadReport(projects: ProjectListItem[] | null) {
 /** The learner's projects, or null when the read failed, so the profile still loads and the card shows the error. */
 async function loadProjects() {
   const user = await getCurrentUser();
-  if (!user) return [];
+  if (!user) {
+    return [];
+  }
   try {
     return await listProjects(user.id);
   } catch (error) {
@@ -94,7 +101,9 @@ async function loadProjects() {
  */
 async function loadDevices() {
   const user = await getCurrentUser();
-  if (!user) return [];
+  if (!user) {
+    return [];
+  }
   const now = new Date();
   try {
     const tokens = await listTokens(user.id);

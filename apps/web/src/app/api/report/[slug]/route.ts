@@ -18,7 +18,8 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
     );
   }
   try {
-    const report = await getReport((await context.params).slug);
+    const { slug } = await context.params;
+    const report = await getReport(slug);
     if (!report) {
       return NextResponse.json(
         { error: "This report isn't shared." },

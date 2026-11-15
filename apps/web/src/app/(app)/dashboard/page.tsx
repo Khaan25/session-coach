@@ -33,12 +33,14 @@ export default function TodayPage() {
 
 async function Today() {
   const user = await getCurrentUser();
-  if (!user) return <NoSessionsEmpty />;
+  if (!user) {
+    return <NoSessionsEmpty />;
+  }
   const { now, hasSession, queue, ownership, profile } = await load(user.id);
   const hello = greeting(profile?.display_name, profile?.timezone ?? "UTC", now);
   const habit = habitLine(ownership);
 
-  if (!hasSession)
+  if (!hasSession) {
     return (
       <TodayView
         greeting={hello}
@@ -61,9 +63,10 @@ async function Today() {
         }
       />
     );
+  }
 
-  const next = queue[0];
-  if (next)
+  const [next] = queue;
+  if (next) {
     return (
       <TodayView
         greeting={hello}
@@ -73,12 +76,13 @@ async function Today() {
         hero={<NextCard card={next} left={queue.length} />}
       />
     );
+  }
 
   const empty = await emptyQueue(user.id, now).catch((error: unknown) => {
     console.error("[dashboard] emptyQueue", error);
     return null;
   });
-  if (empty && !empty.hasCards)
+  if (empty && !empty.hasCards) {
     return (
       <TodayView
         greeting={hello}
@@ -94,9 +98,16 @@ async function Today() {
         }
       />
     );
+  }
 
   // Defend it picks from cards explained at least once, the same rule as POST /api/defend/start.
   const canDefend = (ownership?.overall.explained ?? 0) > 0;
+  let doneDescription = "Nothing is due. New sessions bring new cards.";
+  if (empty?.doneToday) {
+    doneDescription = `You did ${DAILY_CAP} cards today. The rest come back tomorrow.`;
+  } else if (empty?.nextDue) {
+    doneDescription = `Your next card comes back ${dueInWords(empty.nextDue, empty.today)}.`;
+  }
   return (
     <TodayView
       greeting={hello}
@@ -107,13 +118,7 @@ async function Today() {
         <TodayMessage
           sprite="tea"
           title="You're done for today"
-          description={
-            empty?.doneToday
-              ? `You did ${DAILY_CAP} cards today. The rest come back tomorrow.`
-              : empty?.nextDue
-                ? `Your next card comes back ${dueInWords(empty.nextDue, empty.today)}.`
-                : "Nothing is due. New sessions bring new cards."
-          }
+          description={doneDescription}
           action={
             canDefend && (
               <Link href="/defend" className={buttonVariants({ variant: "secondary" })}>
@@ -129,7 +134,9 @@ async function Today() {
 
 /** The one habit line: what the learner already owns and has explained. Null when there is nothing to count. */
 function habitLine(ownership: Ownership | null) {
-  if (!ownership || ownership.overall.total === 0) return null;
+  if (!ownership || ownership.overall.total === 0) {
+    return null;
+  }
   const { explained, owned, total } = ownership.overall;
   return `You own ${owned} of ${total} ${total === 1 ? "decision" : "decisions"} · ${explained} explained`;
 }

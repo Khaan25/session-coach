@@ -8,9 +8,10 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
+import type { ReactNode } from "react";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import type { Kind } from "@/lib/ui/kind";
@@ -65,7 +66,9 @@ type PageHeaderProps = React.ComponentProps<"header"> &
 function scrollParent(el: HTMLElement | null): HTMLElement | null {
   for (let p = el?.parentElement; p; p = p.parentElement) {
     const o = getComputedStyle(p).overflowY;
-    if (o === "auto" || o === "scroll") return p;
+    if (o === "auto" || o === "scroll") {
+      return p;
+    }
   }
   return null;
 }
@@ -90,10 +93,13 @@ function PageHeader({
 
   useEffect(() => {
     const target = anchor.current;
-    if (!condense || !target) return;
+    if (!condense || !target) {
+      return;
+    }
     const root = scrollParent(header.current);
     // The anchor's computed top resolves condenseTop (a var() or calc()) to px.
-    const top = parseFloat(getComputedStyle(target).top) || 0;
+    // oxlint-disable-next-line unicorn/prefer-number-coercion -- parseFloat reads "12px" as 12; Number() would give NaN
+    const top = Number.parseFloat(getComputedStyle(target).top) || 0;
     // Watch the anchor, not the title: the bar hangs off the anchor, so it shows only once the anchor has
     // reached its sticky edge, never over the stats or content below the header. The anchor follows the
     // header, so the title is already out of view by then. The extra 1px lets the stuck, zero-height anchor
@@ -111,6 +117,7 @@ function PageHeader({
       io.disconnect();
       setStuck(false);
     };
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- condenseTop isn't read directly, but it changes the anchor's computed top that the effect reads
   }, [condense, condenseTop]);
 
   const registry = useMemo(

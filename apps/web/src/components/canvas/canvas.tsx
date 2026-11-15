@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import { type Camera, clampZoom, loadLayout, type Point, saveLayout } from "./layout-store";
+import { clampZoom, loadLayout, saveLayout } from "./layout-store";
+import type { Camera, Point } from "./layout-store";
 
 /** One live preview on the canvas. Membership, names and sizes live here in source, never in storage. */
 export type CanvasItem = {
@@ -46,7 +47,7 @@ type Gesture =
   | null;
 
 const isEditable = (el: Element | null) =>
-  !!el &&
+  Boolean(el) &&
   (el instanceof HTMLInputElement ||
     el instanceof HTMLTextAreaElement ||
     el instanceof HTMLSelectElement ||
@@ -55,7 +56,7 @@ const isEditable = (el: Element | null) =>
 /** Focus on a control or a field: Space belongs to it, not to the canvas. */
 const ownsSpace = (el: Element | null) =>
   isEditable(el) ||
-  !!el?.closest("button, a[href], [role='button'], [role='tab'], [role='menuitem']");
+  Boolean(el?.closest("button, a[href], [role='button'], [role='tab'], [role='menuitem']"));
 
 /** The nearest scroll area between `target` and `stop` that can still scroll that way. */
 function scrollerFor(target: EventTarget | null, stop: HTMLElement, dx: number, dy: number) {
@@ -64,25 +65,174 @@ function scrollerFor(target: EventTarget | null, stop: HTMLElement, dx: number, 
   while (el && el !== stop) {
     if (el instanceof HTMLElement) {
       const style = getComputedStyle(el);
-      if (vertical && /(auto|scroll)/.test(style.overflowY) && el.scrollHeight > el.clientHeight) {
-        if (
-          (dy < 0 && el.scrollTop > 0) ||
-          (dy > 0 && el.scrollTop + el.clientHeight < el.scrollHeight - 1)
-        )
-          return el;
+      if (
+        vertical &&
+        /auto|scroll/u.test(style.overflowY) &&
+        el.scrollHeight > el.clientHeight &&
+        ((dy < 0 && el.scrollTop > 0) ||
+          (dy > 0 && el.scrollTop + el.clientHeight < el.scrollHeight - 1))
+      ) {
+        return el;
       }
-      if (!vertical && /(auto|scroll)/.test(style.overflowX) && el.scrollWidth > el.clientWidth) {
-        if (
-          (dx < 0 && el.scrollLeft > 0) ||
-          (dx > 0 && el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
-        )
-          return el;
+      if (
+        !vertical &&
+        /auto|scroll/u.test(style.overflowX) &&
+        el.scrollWidth > el.clientWidth &&
+        ((dx < 0 && el.scrollLeft > 0) ||
+          (dx > 0 && el.scrollLeft + el.clientWidth < el.scrollWidth - 1))
+      ) {
+        return el;
       }
     }
     el = el.parentElement;
   }
   return null;
 }
+
+function onAuxClick(e: React.MouseEvent) {
+  // Middle-click is a pan here, never autoscroll or open-in-new-tab.
+  if (e.button === 1) {
+    e.preventDefault();
+  }
+}
+
+type EntryProps = {
+  item: CanvasItem;
+  register: (id: string, node: HTMLDivElement | null) => void;
+  onMoveStart: (id: string, e: React.PointerEvent) => void;
+  onNudge: (id: string, dx: number, dy: number) => void;
+  moveHelpId: string;
+};
+
+/** One preview: its copyable name and move handle above it, then the live content at its own size. */
+const CanvasEntry = memo(function CanvasEntry({
+  item,
+  register,
+  onMoveStart,
+  onNudge,
+  moveHelpId,
+}: EntryProps) {
+  const { id, name, width, height, render } = item;
+  const [copy, setCopy] = useState<"idle" | "copied" | "manual">("idle");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const manualRef = useRef<HTMLInputElement>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (copy === "manual") {
+      manualRef.current?.select();
+    }
+  }, [copy]);
+
+  const markCopied = () => {
+    setCopy("copied");
+    if (timer.current) {
+      clearTimeout(timer.current);
+    }
+    timer.current = setTimeout(() => setCopy("idle"), 1500);
+  };
+
+  const writeName = async () => {
+    try {
+      await navigator.clipboard.writeText(name);
+    } catch {
+      setCopy("manual");
+      return;
+    }
+    markCopied();
+  };
+
+  const copyName = () => {
+    if (!navigator.clipboard?.writeText) {
+      setCopy("manual");
+      return;
+    }
+    void writeName();
+  };
+
+  const onHandleKey = (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? MOVE_STEP * 5 : MOVE_STEP;
+    const moves: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    };
+    const move = moves[e.key];
+    if (!move) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    onNudge(id, move[0], move[1]);
+  };
+
+  return (
+    <div
+      ref={(node) => register(id, node)}
+      data-canvas-item={id}
+      id={`item-${id}`}
+      className="absolute top-0 left-0 flex flex-col gap-2"
+    >
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-label={`Move ${name}`}
+          aria-describedby={moveHelpId}
+          className="flex size-8 cursor-default touch-none items-center justify-center rounded-soft text-text-3 hover:bg-hover hover:text-text-1 focus-visible:focus-ring"
+          onPointerDown={(e) => onMoveStart(id, e)}
+          onKeyDown={onHandleKey}
+        >
+          <DotsSixVerticalIcon aria-hidden="true" className="size-5" />
+        </button>
+        {copy === "manual" ? (
+          <input
+            ref={manualRef}
+            readOnly
+            value={name}
+            aria-label="Name to copy"
+            onBlur={() => setCopy("idle")}
+            className="bg-transparent type-heading-sm text-text-1 outline-none focus-visible:focus-ring"
+          />
+        ) : (
+          <button
+            type="button"
+            title="Copy this name"
+            className="cursor-default rounded-soft px-1 text-start type-heading-sm text-text-1 hover:text-text-2 focus-visible:focus-ring"
+            onClick={copyName}
+          >
+            {name}
+          </button>
+        )}
+        <span aria-live="polite" className="type-label-sm text-text-3">
+          {copy === "copied" ? "Copied" : ""}
+        </span>
+      </div>
+      <div
+        ref={(node) => {
+          if (node) {
+            node.style.width = `${width}px`;
+            node.style.height = `${height}px`;
+            // Skips painting previews outside the view. With 125 full pages, a pan frame went from 14ms to 7ms at
+            // 50% zoom and 21ms to 7ms at fit. The fixed size above stands in for the skipped content.
+            node.style.contentVisibility = "auto";
+          }
+        }}
+        className="overflow-auto rounded-soft border border-hair bg-background"
+      >
+        {render()}
+      </div>
+    </div>
+  );
+});
 
 /**
  * A pan-and-zoom workspace of live previews. The camera and item positions are written straight to the DOM once per
@@ -119,35 +269,49 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
       // preview (28ms down to 7ms a frame with all 56 in view). Dropped once it settles, so zoomed text is sharp.
       world.classList.add("will-change-transform");
       world.style.transform = `translate(${x}px, ${y}px) scale(${z})`;
-      if (settleTimer.current) clearTimeout(settleTimer.current);
+      if (settleTimer.current) {
+        clearTimeout(settleTimer.current);
+      }
       settleTimer.current = setTimeout(() => {
         // A pause mid-drag keeps the layer; dropping it would re-raster every visible preview when the drag resumes.
-        if (gesture.current) return;
+        if (gesture.current) {
+          return;
+        }
         world.classList.remove("will-change-transform");
       }, SETTLE_MS);
     }
-    if (zoomTextRef.current) zoomTextRef.current.textContent = `${Math.round(z * 100)}%`;
+    if (zoomTextRef.current) {
+      zoomTextRef.current.textContent = `${Math.round(z * 100)}%`;
+    }
   }, []);
 
   const schedule = useCallback(() => {
-    if (!frame.current) frame.current = requestAnimationFrame(paint);
+    if (!frame.current) {
+      frame.current = requestAnimationFrame(paint);
+    }
   }, [paint]);
 
   const flushSave = useCallback(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
     saveTimer.current = null;
     saveLayout({ camera: camera.current, positions: Object.fromEntries(positions.current) });
   }, []);
 
   const queueSave = useCallback(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
     saveTimer.current = setTimeout(flushSave, SAVE_DELAY_MS);
   }, [flushSave]);
 
   const setCamera = useCallback(
     (next: Camera) => {
       const z = clampZoom(next.z);
-      if (![next.x, next.y, z].every(Number.isFinite)) return;
+      if (![next.x, next.y, z].every((v) => Number.isFinite(v))) {
+        return;
+      }
       camera.current = { x: next.x, y: next.y, z };
       schedule();
       queueSave();
@@ -169,7 +333,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   const zoomCenter = useCallback(
     (factor: number) => {
       const shell = shellRef.current;
-      if (shell) zoomAt(factor, shell.clientWidth / 2, shell.clientHeight / 2);
+      if (shell) {
+        zoomAt(factor, shell.clientWidth / 2, shell.clientHeight / 2);
+      }
     },
     [zoomAt],
   );
@@ -180,9 +346,13 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     let maxX = -Infinity;
     let maxY = -Infinity;
     for (const [id, p] of positions.current) {
-      if (only && !only.includes(id)) continue;
+      if (only && !only.includes(id)) {
+        continue;
+      }
       const size = sizes.current.get(id);
-      if (!size) continue;
+      if (!size) {
+        continue;
+      }
       minX = Math.min(minX, p.x);
       minY = Math.min(minY, p.y);
       maxX = Math.max(maxX, p.x + size.w);
@@ -195,7 +365,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     (only?: string[], maxZoom = 1) => {
       const shell = shellRef.current;
       const b = bounds(only);
-      if (!shell || !b) return;
+      if (!shell || !b) {
+        return;
+      }
       const w = shell.clientWidth - FIT_PADDING * 2;
       const h = shell.clientHeight - FIT_PADDING * 2;
       const z = clampZoom(Math.min(w / (b.maxX - b.minX), h / (b.maxY - b.minY), maxZoom));
@@ -213,14 +385,20 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   const placeItem = useCallback((id: string) => {
     const node = nodes.current.get(id);
     const p = positions.current.get(id);
-    if (node && p) node.style.transform = `translate(${p.x}px, ${p.y}px)`;
+    if (node && p) {
+      node.style.transform = `translate(${p.x}px, ${p.y}px)`;
+    }
   }, []);
 
   // Saved layout first, then measure every item and fit once the previews have laid out.
   useEffect(() => {
     const saved = loadLayout(ids);
-    for (const [id, p] of Object.entries(saved.positions)) positions.current.set(id, p);
-    for (const id of ids) placeItem(id);
+    for (const [id, p] of Object.entries(saved.positions)) {
+      positions.current.set(id, p);
+    }
+    for (const id of ids) {
+      placeItem(id);
+    }
     if (saved.camera) {
       camera.current = saved.camera;
       hadSavedCamera.current = true;
@@ -236,7 +414,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
         }
       }
     });
-    for (const node of nodes.current.values()) ro.observe(node);
+    for (const node of nodes.current.values()) {
+      ro.observe(node);
+    }
 
     let settle = 0;
     if (!hadSavedCamera.current) {
@@ -253,7 +433,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   // Wheel needs a non-passive listener so it can stop the page from scrolling or zooming.
   useEffect(() => {
     const shell = shellRef.current;
-    if (!shell) return;
+    if (!shell) {
+      return;
+    }
     const onWheel = (e: WheelEvent) => {
       const rect = shell.getBoundingClientRect();
       if (e.ctrlKey || e.metaKey) {
@@ -261,7 +443,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
         zoomAt(Math.exp(-e.deltaY * 0.01), e.clientX - rect.left, e.clientY - rect.top);
         return;
       }
-      if (scrollerFor(e.target, shell, e.deltaX, e.deltaY)) return;
+      if (scrollerFor(e.target, shell, e.deltaX, e.deltaY)) {
+        return;
+      }
       e.preventDefault();
       const { x, y, z } = camera.current;
       setCamera({ x: x - e.deltaX, y: y - e.deltaY, z });
@@ -274,28 +458,40 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   useEffect(() => {
     const clear = () => {
       spaceHeld.current = false;
-      shellRef.current?.removeAttribute("data-space");
+      const shell = shellRef.current;
+      if (shell) {
+        delete shell.dataset.space;
+      }
     };
     const down = (e: KeyboardEvent) => {
-      if (e.code !== "Space" || e.repeat || ownsSpace(document.activeElement)) return;
+      if (e.code !== "Space" || e.repeat || ownsSpace(document.activeElement)) {
+        return;
+      }
       spaceHeld.current = true;
-      shellRef.current?.setAttribute("data-space", "");
+      const shell = shellRef.current;
+      if (shell) {
+        shell.dataset.space = "";
+      }
       e.preventDefault();
     };
     const up = (e: KeyboardEvent) => {
-      if (e.code === "Space") clear();
+      if (e.code === "Space") {
+        clear();
+      }
     };
     const hidden = () => {
-      if (document.hidden) clear();
+      if (document.hidden) {
+        clear();
+      }
     };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    window.addEventListener("blur", clear);
+    globalThis.addEventListener("keydown", down);
+    globalThis.addEventListener("keyup", up);
+    globalThis.addEventListener("blur", clear);
     document.addEventListener("visibilitychange", hidden);
     return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-      window.removeEventListener("blur", clear);
+      globalThis.removeEventListener("keydown", down);
+      globalThis.removeEventListener("keyup", up);
+      globalThis.removeEventListener("blur", clear);
       document.removeEventListener("visibilitychange", hidden);
     };
   }, []);
@@ -303,27 +499,40 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   // No horizontal overscroll while the canvas is open, so a sideways trackpad pan never swipes back in history.
   useEffect(() => {
     const html = document.documentElement;
-    const body = document.body;
-    const before = [html.style.overscrollBehaviorX, body.style.overscrollBehaviorX];
+    const { body } = document;
+    const [htmlBefore, bodyBefore] = [
+      html.style.overscrollBehaviorX,
+      body.style.overscrollBehaviorX,
+    ];
     html.style.overscrollBehaviorX = "none";
     body.style.overscrollBehaviorX = "none";
-    window.addEventListener("pagehide", flushSave);
+    globalThis.addEventListener("pagehide", flushSave);
     return () => {
-      html.style.overscrollBehaviorX = before[0];
-      body.style.overscrollBehaviorX = before[1];
-      window.removeEventListener("pagehide", flushSave);
-      if (saveTimer.current) flushSave();
-      if (frame.current) cancelAnimationFrame(frame.current);
-      if (settleTimer.current) clearTimeout(settleTimer.current);
+      html.style.overscrollBehaviorX = htmlBefore;
+      body.style.overscrollBehaviorX = bodyBefore;
+      globalThis.removeEventListener("pagehide", flushSave);
+      if (saveTimer.current) {
+        flushSave();
+      }
+      if (frame.current) {
+        cancelAnimationFrame(frame.current);
+      }
+      if (settleTimer.current) {
+        clearTimeout(settleTimer.current);
+      }
     };
   }, [flushSave]);
 
   const endGesture = useCallback(() => {
     const g = gesture.current;
     gesture.current = null;
-    if (g?.kind === "move" || g?.kind === "pan" || g?.kind === "pinch") queueSave();
+    if (g?.kind === "move" || g?.kind === "pan" || g?.kind === "pinch") {
+      queueSave();
+    }
     // Re-arms the settle timer, so the world drops its GPU layer once the gesture is over.
-    if (g?.kind === "pan" || g?.kind === "pinch") schedule();
+    if (g?.kind === "pan" || g?.kind === "pinch") {
+      schedule();
+    }
   }, [queueSave, schedule]);
 
   const startPan = (e: React.PointerEvent) => {
@@ -362,8 +571,12 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (gesture.current || e.button !== 0 || e.pointerType === "touch") return;
-    if (e.target === shellRef.current || e.target === worldRef.current) startPan(e);
+    if (gesture.current || e.button !== 0 || e.pointerType === "touch") {
+      return;
+    }
+    if (e.target === shellRef.current || e.target === worldRef.current) {
+      startPan(e);
+    }
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -372,8 +585,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     const ownMove = g?.kind === "move" && g.pointerId === e.pointerId;
     if (e.pointerType === "touch" && !ownMove && touches.current.has(e.pointerId)) {
       touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (g?.kind === "pinch" && touches.current.size === 2) {
-        const rect = shellRef.current!.getBoundingClientRect();
+      const shell = shellRef.current;
+      if (shell && g?.kind === "pinch" && touches.current.size === 2) {
+        const rect = shell.getBoundingClientRect();
         const [a, b] = [...touches.current.values()];
         const now = {
           cx: (a.x + b.x) / 2,
@@ -382,46 +596,64 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
         };
         const { x, y, z } = camera.current;
         camera.current = { x: x + now.cx - g.last.cx, y: y + now.cy - g.last.cy, z };
-        if (g.last.dist > 0) zoomAt(now.dist / g.last.dist, now.cx - rect.left, now.cy - rect.top);
-        else schedule();
+        if (g.last.dist > 0) {
+          zoomAt(now.dist / g.last.dist, now.cx - rect.left, now.cy - rect.top);
+        } else {
+          schedule();
+        }
         g.last = now;
       }
       return;
     }
-    if (!g || g.kind === "pinch" || g.pointerId !== e.pointerId) return;
+    if (!g || g.kind === "pinch" || g.pointerId !== e.pointerId) {
+      return;
+    }
     if (g.kind === "pan") {
       const dx = e.clientX - g.lastX;
       const dy = e.clientY - g.lastY;
-      if (Math.abs(dx) + Math.abs(dy) > DRAG_SLOP) g.moved = true;
+      if (Math.abs(dx) + Math.abs(dy) > DRAG_SLOP) {
+        g.moved = true;
+      }
       g.lastX = e.clientX;
       g.lastY = e.clientY;
       const { x, y, z } = camera.current;
       setCamera({ x: x + dx, y: y + dy, z });
       return;
     }
-    const z = camera.current.z;
+    const { z } = camera.current;
     const next = {
       x: g.from.x + (e.clientX - g.startX) / z,
       y: g.from.y + (e.clientY - g.startY) / z,
     };
     positions.current.set(g.id, next);
     const node = nodes.current.get(g.id);
-    if (node) node.style.transform = `translate(${next.x}px, ${next.y}px)`;
+    if (node) {
+      node.style.transform = `translate(${next.x}px, ${next.y}px)`;
+    }
   };
 
   const onPointerEnd = (e: React.PointerEvent) => {
     const g = gesture.current;
     if (e.pointerType === "touch") {
       touches.current.delete(e.pointerId);
-      if (g?.kind === "pinch" && touches.current.size < 2) endGesture();
+      if (g?.kind === "pinch" && touches.current.size < 2) {
+        endGesture();
+      }
       // A touch move on a handle ends like a mouse one, below.
-      if (g?.kind !== "move" || g.pointerId !== e.pointerId) return;
+      if (g?.kind !== "move" || g.pointerId !== e.pointerId) {
+        return;
+      }
     }
-    if (!g || g.kind === "pinch" || g.pointerId !== e.pointerId) return;
+    if (!g || g.kind === "pinch" || g.pointerId !== e.pointerId) {
+      return;
+    }
     // After a pan, the release must not click, copy or follow a link.
-    if (e.type === "pointerup" && g.kind === "pan" && g.moved) suppressClick.current = true;
-    if (shellRef.current?.hasPointerCapture(e.pointerId))
+    if (e.type === "pointerup" && g.kind === "pan" && g.moved) {
+      suppressClick.current = true;
+    }
+    if (shellRef.current?.hasPointerCapture(e.pointerId)) {
       shellRef.current.releasePointerCapture(e.pointerId);
+    }
     endGesture();
   };
 
@@ -434,22 +666,24 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     }
     // Links never navigate away from the canvas. A link to `#item-<id>` shows that preview instead.
     const link = (e.target as Element).closest("a[href]");
-    if (!link) return;
+    if (!link) {
+      return;
+    }
     e.preventDefault();
     const href = link.getAttribute("href") ?? "";
     const target = href.startsWith("#item-") ? href.slice(6) : null;
-    if (target && ids.has(target)) reveal(target);
-    else setNotice(`Links are off on the canvas (${href}).`);
-  };
-
-  const onAuxClick = (e: React.MouseEvent) => {
-    // Middle-click is a pan here, never autoscroll or open-in-new-tab.
-    if (e.button === 1) e.preventDefault();
+    if (target && ids.has(target)) {
+      reveal(target);
+    } else {
+      setNotice(`Links are off on the canvas (${href}).`);
+    }
   };
 
   const onShellKeyDown = (e: React.KeyboardEvent) => {
     // Ctrl/Cmd/Alt combos stay with the browser, so its zoom and tab shortcuts keep working.
-    if (e.target !== shellRef.current || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target !== shellRef.current || e.ctrlKey || e.metaKey || e.altKey) {
+      return;
+    }
     const { x, y, z } = camera.current;
     const keys: Record<string, () => void> = {
       ArrowLeft: () => setCamera({ x: x + KEY_PAN, y, z }),
@@ -470,7 +704,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   };
 
   const startMove = useCallback((id: string, e: React.PointerEvent) => {
-    if (e.button !== 0 || spaceHeld.current) return;
+    if (e.button !== 0 || spaceHeld.current) {
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     gesture.current = {
@@ -479,14 +715,17 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
       id,
       startX: e.clientX,
       startY: e.clientY,
-      from: { ...positions.current.get(id)! },
+      from: { x: 0, y: 0, ...positions.current.get(id) },
     };
     shellRef.current?.setPointerCapture(e.pointerId);
   }, []);
 
   const nudge = useCallback(
     (id: string, dx: number, dy: number) => {
-      const p = positions.current.get(id)!;
+      const p = positions.current.get(id);
+      if (!p) {
+        return;
+      }
       positions.current.set(id, { x: p.x + dx, y: p.y + dy });
       placeItem(id);
       queueSave();
@@ -498,7 +737,9 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   const onFocusCapture = (e: React.FocusEvent) => {
     const shell = shellRef.current;
     const item = (e.target as Element).closest<HTMLElement>("[data-canvas-item]");
-    if (!shell || !item || e.target === shell) return;
+    if (!shell || !item || e.target === shell) {
+      return;
+    }
     shell.scrollTop = 0;
     shell.scrollLeft = 0;
     const r = (e.target as Element).getBoundingClientRect();
@@ -516,7 +757,10 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   // Re-placed from the live position on every attach, so a re-render never snaps an item back to its source spot.
   const register = useCallback(
     (id: string, node: HTMLDivElement | null) => {
-      if (!node) return void nodes.current.delete(id);
+      if (!node) {
+        nodes.current.delete(id);
+        return;
+      }
       nodes.current.set(id, node);
       placeItem(id);
     },
@@ -534,6 +778,7 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
         <p id={moveHelpId} className="sr-only">
           Drag to move this preview, or use the arrow keys. Hold Shift to move further.
         </p>
+        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- role="application" is the pan-and-zoom widget; it owns pointer and key input */}
         <div
           ref={shellRef}
           tabIndex={0}
@@ -616,122 +861,3 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     </TooltipProvider>
   );
 }
-
-type EntryProps = {
-  item: CanvasItem;
-  register: (id: string, node: HTMLDivElement | null) => void;
-  onMoveStart: (id: string, e: React.PointerEvent) => void;
-  onNudge: (id: string, dx: number, dy: number) => void;
-  moveHelpId: string;
-};
-
-/** One preview: its copyable name and move handle above it, then the live content at its own size. */
-const CanvasEntry = memo(function CanvasEntry({
-  item,
-  register,
-  onMoveStart,
-  onNudge,
-  moveHelpId,
-}: EntryProps) {
-  const { id, name, width, height, render } = item;
-  const [copy, setCopy] = useState<"idle" | "copied" | "manual">("idle");
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const manualRef = useRef<HTMLInputElement>(null);
-
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (copy === "manual") manualRef.current?.select();
-  }, [copy]);
-
-  const copyName = () => {
-    const done = () => {
-      setCopy("copied");
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopy("idle"), 1500);
-    };
-    if (!navigator.clipboard?.writeText) {
-      setCopy("manual");
-      return;
-    }
-    navigator.clipboard.writeText(name).then(done, () => setCopy("manual"));
-  };
-
-  const onHandleKey = (e: React.KeyboardEvent) => {
-    const step = e.shiftKey ? MOVE_STEP * 5 : MOVE_STEP;
-    const moves: Record<string, [number, number]> = {
-      ArrowLeft: [-step, 0],
-      ArrowRight: [step, 0],
-      ArrowUp: [0, -step],
-      ArrowDown: [0, step],
-    };
-    const move = moves[e.key];
-    if (!move) return;
-    e.preventDefault();
-    e.stopPropagation();
-    onNudge(id, move[0], move[1]);
-  };
-
-  return (
-    <div
-      ref={(node) => register(id, node)}
-      data-canvas-item={id}
-      id={`item-${id}`}
-      className="absolute top-0 left-0 flex flex-col gap-2"
-    >
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          aria-label={`Move ${name}`}
-          aria-describedby={moveHelpId}
-          className="flex size-8 cursor-default touch-none items-center justify-center rounded-soft text-text-3 hover:bg-hover hover:text-text-1 focus-visible:focus-ring"
-          onPointerDown={(e) => onMoveStart(id, e)}
-          onKeyDown={onHandleKey}
-        >
-          <DotsSixVerticalIcon aria-hidden="true" className="size-5" />
-        </button>
-        {copy === "manual" ? (
-          <input
-            ref={manualRef}
-            readOnly
-            value={name}
-            aria-label="Name to copy"
-            onBlur={() => setCopy("idle")}
-            className="bg-transparent type-heading-sm text-text-1 outline-none focus-visible:focus-ring"
-          />
-        ) : (
-          <button
-            type="button"
-            title="Copy this name"
-            className="cursor-default rounded-soft px-1 text-start type-heading-sm text-text-1 hover:text-text-2 focus-visible:focus-ring"
-            onClick={copyName}
-          >
-            {name}
-          </button>
-        )}
-        <span aria-live="polite" className="type-label-sm text-text-3">
-          {copy === "copied" ? "Copied" : ""}
-        </span>
-      </div>
-      <div
-        ref={(node) => {
-          if (node) {
-            node.style.width = `${width}px`;
-            node.style.height = `${height}px`;
-            // Skips painting previews outside the view. With 125 full pages, a pan frame went from 14ms to 7ms at
-            // 50% zoom and 21ms to 7ms at fit. The fixed size above stands in for the skipped content.
-            node.style.contentVisibility = "auto";
-          }
-        }}
-        className="overflow-auto rounded-soft border border-hair bg-background"
-      >
-        {render()}
-      </div>
-    </div>
-  );
-});

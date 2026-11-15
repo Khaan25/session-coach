@@ -6,7 +6,8 @@ import { useState } from "react";
 import { EmptyState } from "@/components/app/empty-state";
 import { ErrorState } from "@/components/app/error-state";
 import { SettingsSection } from "@/components/settings/settings-section";
-import { RevokeTokenDialog, type DeviceListRow } from "@/components/setup/device-section";
+import { RevokeTokenDialog } from "@/components/setup/device-section";
+import type { DeviceListRow } from "@/components/setup/device-section";
 import {
   Item,
   ItemActions,
@@ -25,6 +26,54 @@ import {
  */
 export function DevicesStep({ devices }: { devices: DeviceListRow[] | null }) {
   const [rows, setRows] = useState(devices);
+  let body: React.ReactNode;
+  if (rows === null) {
+    body = (
+      <ErrorState
+        variant="plain"
+        title="Couldn't load your devices"
+        message="Reload the page to try again."
+      />
+    );
+  } else if (rows.length === 0) {
+    body = (
+      <EmptyState
+        variant="plain"
+        title="No computer connected yet"
+        description="Run npx session-coach login on the computer you code on, or follow Setup."
+      />
+    );
+  } else {
+    body = (
+      <ItemGroup aria-label="Connected devices">
+        {rows.map((row) => (
+          // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
+          <Item key={row.id} role="listitem">
+            <ItemMedia variant="icon">
+              <LaptopIcon aria-hidden />
+            </ItemMedia>
+            <ItemContent>
+              <ItemTitle>{row.label}</ItemTitle>
+              <ItemDescription>
+                {/* last_used_at moves on any CLI call, not only a push, so it says "used". */}
+                {row.lastUsed ? `Last used ${row.lastUsed}` : "Never used"}
+              </ItemDescription>
+            </ItemContent>
+            <ItemActions>
+              <RevokeTokenDialog
+                id={row.id}
+                label={row.label}
+                verb="Disconnect"
+                onRevoke={() =>
+                  setRows((current) => current?.filter(({ id }) => id !== row.id) ?? null)
+                }
+              />
+            </ItemActions>
+          </Item>
+        ))}
+      </ItemGroup>
+    );
+  }
   return (
     <SettingsSection
       id="devices"
@@ -33,48 +82,7 @@ export function DevicesStep({ devices }: { devices: DeviceListRow[] | null }) {
       description="Each device is the CLI token it signed in with. Disconnect revokes that token: the computer can't push until you run npx session-coach login there again."
       done={rows ? rows.length > 0 : undefined}
     >
-      {rows === null ? (
-        <ErrorState
-          variant="plain"
-          title="Couldn't load your devices"
-          message="Reload the page to try again."
-        />
-      ) : rows.length === 0 ? (
-        <EmptyState
-          variant="plain"
-          title="No computer connected yet"
-          description="Run npx session-coach login on the computer you code on, or follow Setup."
-        />
-      ) : (
-        <ItemGroup aria-label="Connected devices">
-          {rows.map((row) => (
-            // ItemGroup is a div with role="list" (see ui/item.tsx), so the row takes the matching role.
-            // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
-            <Item key={row.id} role="listitem">
-              <ItemMedia variant="icon">
-                <LaptopIcon aria-hidden />
-              </ItemMedia>
-              <ItemContent>
-                <ItemTitle>{row.label}</ItemTitle>
-                <ItemDescription>
-                  {/* last_used_at moves on any CLI call, not only a push, so it says "used". */}
-                  {row.lastUsed ? `Last used ${row.lastUsed}` : "Never used"}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <RevokeTokenDialog
-                  id={row.id}
-                  label={row.label}
-                  verb="Disconnect"
-                  onRevoke={() =>
-                    setRows((current) => current?.filter(({ id }) => id !== row.id) ?? null)
-                  }
-                />
-              </ItemActions>
-            </Item>
-          ))}
-        </ItemGroup>
-      )}
+      {body}
     </SettingsSection>
   );
 }

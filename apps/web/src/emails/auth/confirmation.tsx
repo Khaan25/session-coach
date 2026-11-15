@@ -1,4 +1,4 @@
-import { AuthEmail, AuthText } from "../auth-layout";
+import { AuthEmail, AuthText } from "@/emails/auth-layout";
 
 // Confirm signup. Built on {{ .SiteURL }}, never {{ .RedirectTo }}: a caller picks redirect_to, so a link on it could
 // send the token_hash to any allow-listed host. The page verifies the token_hash with a button (docs/plans/auth.md).

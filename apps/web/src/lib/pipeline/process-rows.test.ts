@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { gzipSync } from "node:zlib";
+import { promisify } from "node:util";
+import { gzip } from "node:zlib";
 import { decisionCardSchema, getEvidenceFlags } from "@session-coach/shared/decision";
 import type { CheckedCard } from "./evidence.ts";
 import type { TimelineEvent } from "./parser.ts";
@@ -11,12 +12,14 @@ import {
   MAX_TIMELINE_CHARS,
   MAX_TITLE_CHARS,
   buildCardRows,
-  durationMinutes,
   cutTitle,
+  durationMinutes,
   sessionTitle,
   trimTimeline,
   unzipLog,
 } from "./process-rows.ts";
+
+const zip = promisify(gzip);
 
 const event = (n: number, length: number): TimelineEvent => ({
   id: `E${n}`,
@@ -68,12 +71,12 @@ test("trimTimeline keeps the original ids and chronological order", () => {
   );
   assert.deepEqual(
     kept.map((e) => e.line),
-    kept.map((e) => e.line).sort((a, b) => a - b),
+    kept.map((e) => e.line).toSorted((a, b) => a - b),
   );
 });
 
 test("trimTimeline accepts an event that lands exactly on the budget", () => {
-  const events = Array.from({ length: 12 }, (_, i) => event(i + 1, 1_000));
+  const events = Array.from({ length: 12 }, (_, i) => event(i + 1, 1000));
   const used = events.reduce((sum, e) => sum + size(e), 0);
   const last = event(13, 0);
   last.text = "x".repeat(MAX_TIMELINE_CHARS - used - size(last));
@@ -82,7 +85,7 @@ test("trimTimeline accepts an event that lands exactly on the budget", () => {
 });
 
 test("trimTimeline counts the serialized JSON, so many short events can't double the real size", () => {
-  const events = Array.from({ length: 2_000 }, (_, i) => ({
+  const events = Array.from({ length: 2000 }, (_, i) => ({
     ...event(i + 1, 0),
     text: 'say "hi"\n',
   }));
@@ -93,7 +96,7 @@ test("trimTimeline counts the serialized JSON, so many short events can't double
 });
 
 test("trimTimeline caps a huge newest event and still keeps older events that fit", () => {
-  const huge = event(2, MAX_TIMELINE_CHARS + 5_000);
+  const huge = event(2, MAX_TIMELINE_CHARS + 5000);
   const { kept, cut } = trimTimeline([event(1, 100), huge]);
   assert.equal(cut, 0);
   assert.deepEqual(
@@ -121,11 +124,11 @@ test("trimTimeline cuts an oversized event by code points, never inside a surrog
 });
 
 test("trimTimeline caps a multi-million-character event and a long emoji run exactly", () => {
-  const big = trimTimeline([event(1, 5_000_000)]).kept[0];
+  const [big] = trimTimeline([event(1, 5_000_000)]).kept;
   assert.equal(big.text.length, MAX_EVENT_CHARS);
 
-  const emoji: TimelineEvent = { ...event(2, 0), text: "😀".repeat(5_000) };
-  const { text } = trimTimeline([emoji]).kept[0];
+  const emoji: TimelineEvent = { ...event(2, 0), text: "😀".repeat(5000) };
+  const [{ text }] = trimTimeline([emoji]).kept;
   assert.equal([...text].length, MAX_EVENT_CHARS);
   assert.equal(text, "😀".repeat(MAX_EVENT_CHARS));
   assert.equal([...text].at(-1), "😀");
@@ -155,7 +158,7 @@ test("trimTimeline always keeps the first prompt, even when newer events fill th
 
 test("trimTimeline counts the first prompt against the budget, capped at MAX_EVENT_CHARS", () => {
   const events = [
-    prompt(1, 5_000),
+    prompt(1, 5000),
     ...Array.from({ length: 12 }, (_, i) => event(i + 2, MAX_EVENT_CHARS)),
   ];
   const { kept } = trimTimeline(events);
@@ -264,7 +267,7 @@ test("sessionTitle never splits an emoji that straddles the limit", () => {
   assert.ok(title !== null);
   assert.doesNotMatch(
     title,
-    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/,
+    /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u,
   );
   assert.equal(title, `${"x".repeat(MAX_TITLE_CHARS - 1)}😀…`);
   assert.equal([...title].length, MAX_TITLE_CHARS + 1);
@@ -311,16 +314,16 @@ test("a built row plus the database's columns parses with the shared decisionCar
   }
 });
 
-test("unzipLog returns the text of a log under the limit", () => {
-  assert.equal(unzipLog(gzipSync("hello log")), "hello log");
+test("unzipLog returns the text of a log under the limit", async () => {
+  assert.equal(await unzipLog(await zip("hello log")), "hello log");
   assert.equal(MAX_LOG_BYTES, 100 * 1024 * 1024);
 });
 
-test("unzipLog throws LogTooBigError when the log unzips past the limit", () => {
-  const bomb = gzipSync(Buffer.alloc(10_000));
-  assert.throws(() => unzipLog(bomb, 1_000), LogTooBigError);
-  assert.throws(
-    () => unzipLog(Buffer.from("not gzip")),
+test("unzipLog throws LogTooBigError when the log unzips past the limit", async () => {
+  const bomb = await zip(Buffer.alloc(10_000));
+  await assert.rejects(unzipLog(bomb, 1000), LogTooBigError);
+  await assert.rejects(
+    unzipLog(Buffer.from("not gzip")),
     (e: unknown) => !(e instanceof LogTooBigError),
   );
 });

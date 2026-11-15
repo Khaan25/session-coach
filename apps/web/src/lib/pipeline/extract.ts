@@ -1,5 +1,6 @@
 import { decisionSourceSchema } from "@session-coach/shared/decision";
-import { DEFAULT_QUESTION_LEVEL, type QuestionLevel } from "@session-coach/shared/project";
+import { DEFAULT_QUESTION_LEVEL } from "@session-coach/shared/project";
+import type { QuestionLevel } from "@session-coach/shared/project";
 import { z } from "zod";
 import type { ModelInput } from "../model/call-model.ts";
 import { sleep as wait } from "../model/retry.ts";
@@ -77,7 +78,7 @@ const modelCardSchema = z.object({
     .array(
       z
         // E1 is the first event: "E0" or "E01" would point at no event, so the card is dropped here.
-        .object({ event: z.string().regex(/^E[1-9]\d*$/), quote: z.string().trim().min(1) })
+        .object({ event: z.string().regex(/^E[1-9]\d*$/u), quote: z.string().trim().min(1) })
         // The model cites "E2"; the rest of the pipeline works with the number 2.
         .transform(({ event, quote }) => ({ event_index: Number(event.slice(1)), quote })),
     )
@@ -97,7 +98,9 @@ const extractOutputSchema = z.object({ decisions: z.array(z.unknown()) });
 /** The answer's title, or undefined when it is missing, blank or not a string. Never fails the answer. */
 function parseTitle(answer: unknown): string | undefined {
   const title = (answer as { title?: unknown } | null)?.title;
-  if (typeof title !== "string") return undefined;
+  if (typeof title !== "string") {
+    return undefined;
+  }
   const trimmed = title.trim();
   return trimmed === "" ? undefined : cutTitle(trimmed);
 }
@@ -133,7 +136,9 @@ export type ExtractOptions = {
  */
 function parseAnswer(answer: unknown): Extracted | { error: string } {
   const outer = extractOutputSchema.safeParse(answer);
-  if (!outer.success) return { error: z.prettifyError(outer.error) };
+  if (!outer.success) {
+    return { error: z.prettifyError(outer.error) };
+  }
   const results = outer.data.decisions.map((card) => modelCardSchema.safeParse(card));
   const cards = results.flatMap((result) => (result.success ? [result.data] : []));
   if (cards.length === 0 && results.length > 0) {
@@ -172,7 +177,9 @@ export async function extractCards(
     ...cancel,
   });
   const first = parseAnswer(firstAnswer);
-  if ("cards" in first) return first;
+  if ("cards" in first) {
+    return first;
+  }
 
   await sleep(retryDelayMs, signal);
   signal?.throwIfAborted();
@@ -188,7 +195,9 @@ export async function extractCards(
       ...cancel,
     }),
   );
-  if ("cards" in second) return second;
+  if ("cards" in second) {
+    return second;
+  }
 
   throw new ExtractError(`The model returned invalid cards twice. Last error:\n${second.error}`);
 }

@@ -12,9 +12,10 @@ test("keeps same-origin paths with their query and hash", () => {
 
 test("falls back to /dashboard for other origins", () => {
   assert.equal(safeNext("//evil.com", origin), "/dashboard");
-  assert.equal(safeNext("/\\evil.com", origin), "/dashboard");
+  assert.equal(safeNext(String.raw`/\evil.com`, origin), "/dashboard");
   assert.equal(safeNext("https://evil.com", origin), "/dashboard");
   assert.equal(safeNext("https://evil.com/dashboard", origin), "/dashboard");
+  // oxlint-disable-next-line no-script-url -- the test checks that a javascript: URL is refused
   assert.equal(safeNext("javascript:alert(1)", origin), "/dashboard");
 });
 
@@ -24,7 +25,12 @@ test("falls back to /dashboard when the origin isn't in serialized form", () => 
 });
 
 test("falls back to /dashboard when dot segments normalise to a protocol-relative path", () => {
-  for (const next of ["/.//evil.com", "/..//evil.com", "/x/..//evil.com", "/./\\evil.com"]) {
+  for (const next of [
+    "/.//evil.com",
+    "/..//evil.com",
+    "/x/..//evil.com",
+    String.raw`/./\evil.com`,
+  ]) {
     assert.equal(safeNext(next, origin), "/dashboard", next);
   }
 });

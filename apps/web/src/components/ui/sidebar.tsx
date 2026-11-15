@@ -3,7 +3,8 @@
 import * as React from "react";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -70,24 +71,25 @@ function SidebarProvider({
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen);
-  const open = openProp ?? _open;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const open = openProp ?? uncontrolledOpen;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
       if (setOpenProp) {
         setOpenProp(openState);
       } else {
-        _setOpen(openState);
+        setUncontrolledOpen(openState);
       }
     },
     [setOpenProp, open],
   );
 
   // Helper to toggle the sidebar.
-  const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
+  const toggleSidebar = React.useCallback(
+    () => (isMobile ? setOpenMobile((wasOpen) => !wasOpen) : setOpen((wasOpen) => !wasOpen)),
+    [isMobile, setOpen, setOpenMobile],
+  );
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -98,8 +100,8 @@ function SidebarProvider({
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    globalThis.addEventListener("keydown", handleKeyDown);
+    return () => globalThis.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar]);
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
@@ -278,6 +280,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
+      type="button"
       aria-label="Toggle sidebar"
       tabIndex={-1}
       onClick={toggleSidebar}
@@ -512,12 +515,14 @@ function SidebarMenuButton({
         // On a phone the sidebar is a modal sheet, and the layout stays mounted across client
         // navigations, so a link closes it. A button (a menu trigger) leaves it open.
         onClick: (event) => {
-          if (isMobile && event.currentTarget instanceof HTMLAnchorElement) setOpenMobile(false);
+          if (isMobile && event.currentTarget instanceof HTMLAnchorElement) {
+            setOpenMobile(false);
+          }
         },
       },
       props,
     ),
-    render: !tooltip ? render : <TooltipTrigger render={render} />,
+    render: tooltip ? <TooltipTrigger render={render} /> : render,
     state: {
       slot: "sidebar-menu-button",
       sidebar: "menu-button",
@@ -530,11 +535,7 @@ function SidebarMenuButton({
     return comp;
   }
 
-  if (typeof tooltip === "string") {
-    tooltip = {
-      children: tooltip,
-    };
-  }
+  const tooltipProps = typeof tooltip === "string" ? { children: tooltip } : tooltip;
 
   return (
     <Tooltip>
@@ -543,7 +544,7 @@ function SidebarMenuButton({
         side="right"
         align="center"
         hidden={state !== "collapsed" || isMobile}
-        {...tooltip}
+        {...tooltipProps}
       />
     </Tooltip>
   );
@@ -603,7 +604,7 @@ function SidebarMenuSkeleton({
   // A width between 50 and 89%, varied per skeleton but stable across renders: Math.random() fails
   // prerendering under cacheComponents, so the width is derived from the component's id.
   const id = React.useId();
-  const width = `${50 + ([...id].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 40)}%`;
+  const width = `${50 + ([...id].reduce((sum, char) => sum + (char.codePointAt(0) ?? 0), 0) % 40)}%`;
 
   return (
     <div
@@ -670,7 +671,9 @@ function SidebarMenuSubButton({
         "aria-current": isActive ? "page" : undefined,
         // A link closes the mobile sheet, as in SidebarMenuButton.
         onClick: (event) => {
-          if (isMobile && event.currentTarget instanceof HTMLAnchorElement) setOpenMobile(false);
+          if (isMobile && event.currentTarget instanceof HTMLAnchorElement) {
+            setOpenMobile(false);
+          }
         },
         className: cn(
           "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-inner px-2 text-text-2 outline-hidden group-data-[collapsible=icon]:hidden hover:bg-hover hover:text-text-1 focus-visible:focus-ring-inset active:bg-pressed disabled:pointer-events-none disabled:text-text-disabled aria-disabled:pointer-events-none aria-disabled:text-text-disabled data-[size=md]:type-label data-[size=sm]:type-label-sm data-active:bg-selected data-active:text-text-1 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-text-2",

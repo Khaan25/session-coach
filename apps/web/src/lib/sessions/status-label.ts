@@ -28,6 +28,8 @@ export function sessionLabel(
   cardCount?: number,
   { ready = "Ready" }: { ready?: string } = {},
 ): string {
-  if (status === "ready") return isEmptyReady(status, cardCount) ? NO_DECISIONS : ready;
+  if (status === "ready") {
+    return isEmptyReady(status, cardCount) ? NO_DECISIONS : ready;
+  }
   return labels[status];
 }

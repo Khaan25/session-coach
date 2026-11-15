@@ -31,19 +31,26 @@ export function ProjectSetupCard({ repo }: { repo: string }) {
 
   const save = (question_level: QuestionLevel) => {
     setPending(true);
-    toast
-      .promise(
-        saveLevel({ repo, question_level }).then(({ error }) => {
-          if (error) throw new Error(error);
-        }),
-        {
+    const saving = async () => {
+      const { error } = await saveLevel({ repo, question_level });
+      if (error) {
+        throw new Error(error);
+      }
+    };
+    const run = async () => {
+      try {
+        await toast.promise(saving(), {
           loading: "Saving",
           success: `Questions for ${repo} set to ${question_level}`,
           error: (error: Error) => error.message,
-        },
-      )
-      .catch(() => {})
-      .finally(() => setPending(false));
+        });
+      } catch {
+        // The toast has already shown the error.
+      } finally {
+        setPending(false);
+      }
+    };
+    void run();
   };
 
   return (

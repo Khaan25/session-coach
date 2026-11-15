@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { safeNext } from "@/lib/auth/safe-next";
 import { supabaseEnv } from "@/lib/supabase/env";
@@ -39,12 +40,17 @@ export async function updateSession(request: NextRequest) {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet, headers) {
-        for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
+        for (const { name, value } of cookiesToSet) {
+          request.cookies.set(name, value);
+        }
         response = NextResponse.next({ request });
-        for (const { name, value, options } of cookiesToSet)
+        for (const { name, value, options } of cookiesToSet) {
           response.cookies.set(name, value, options);
+        }
         // Cache-Control: private, no-store so a CDN never caches a response that sets a session cookie (#20).
-        for (const [header, value] of Object.entries(headers)) response.headers.set(header, value);
+        for (const [header, value] of Object.entries(headers)) {
+          response.headers.set(header, value);
+        }
       },
     },
   });
@@ -61,14 +67,20 @@ export async function updateSession(request: NextRequest) {
   } else if (signedIn && matches(pathname, SIGNED_OUT_ONLY)) {
     target = `${origin}${safeNext(request.nextUrl.searchParams.get("next"), origin)}`;
   }
-  if (!target) return response;
+  if (!target) {
+    return response;
+  }
 
   // A fresh redirect response drops what setAll wrote, so copy the refreshed cookies and no-store headers across.
   const redirect = NextResponse.redirect(target);
-  for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+  for (const cookie of response.cookies.getAll()) {
+    redirect.cookies.set(cookie);
+  }
   for (const header of ["cache-control", "expires", "pragma"]) {
     const value = response.headers.get(header);
-    if (value) redirect.headers.set(header, value);
+    if (value) {
+      redirect.headers.set(header, value);
+    }
   }
   return redirect;
 }

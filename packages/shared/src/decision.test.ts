@@ -1,16 +1,22 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { test } from "node:test";
+import { readFile } from "node:fs/promises";
+import { before, test } from "node:test";
 import { decisionCardSchema, getEvidenceFlags } from "./decision.ts";
+import type { DecisionCard } from "./decision.ts";
 import { sessionSchema } from "./session.ts";
 
-const fixture = JSON.parse(
-  readFileSync(new URL("../fixtures/session.sample.json", import.meta.url), "utf8"),
-);
+let fixture: { session: unknown; cards: [DecisionCard, ...DecisionCard[]] };
+before(async () => {
+  fixture = JSON.parse(
+    await readFile(new URL("../fixtures/session.sample.json", import.meta.url), "utf8"),
+  );
+});
 
 test("sample fixture matches the shared schemas", () => {
   sessionSchema.parse(fixture.session);
-  for (const card of fixture.cards) decisionCardSchema.parse(card);
+  for (const card of fixture.cards) {
+    decisionCardSchema.parse(card);
+  }
 });
 
 test("flagged and hidden follow the evidence check", () => {
@@ -33,12 +39,12 @@ test("fixture cards agree with getEvidenceFlags", () => {
 });
 
 test("schema rejects cards whose flags disagree with their evidence", () => {
-  const card = fixture.cards[0];
+  const [card] = fixture.cards;
   assert.equal(decisionCardSchema.safeParse({ ...card, hidden: true }).success, false);
 });
 
 test("schema rejects reversed line ranges", () => {
-  const card = fixture.cards[0];
+  const [card] = fixture.cards;
   const evidence = [{ ...card.evidence[0], file: "a.ts", lines: [9, 3] }];
   assert.equal(decisionCardSchema.safeParse({ ...card, evidence }).success, false);
 });

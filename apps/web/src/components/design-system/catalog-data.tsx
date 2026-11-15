@@ -9,11 +9,12 @@ import {
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from "@/components/ui/chart";
+import type { ChartConfig } from "@/components/ui/chart";
 import { niceScale } from "@/components/ui/chart-scale";
 import { Code, CodeBlock, CopyCodeButton, MaskedKey } from "@/components/ui/code-block";
-import { Timeline, type TimelineSpan } from "@/components/ui/timeline";
+import { Timeline } from "@/components/ui/timeline";
+import type { TimelineSpan } from "@/components/ui/timeline";
 
 import { GallerySection, Specimen } from "./gallery-section";
 import { cards, session } from "./sample";
@@ -79,7 +80,7 @@ export function parseLine(line: string) {
   if (!KNOWN_TYPES.has(event.type)) return null; // skip, don't throw
   return resultSchema.parse(event);
 }`;
-const ticks = niceScale(0, session.event_count).ticks;
+const { ticks } = niceScale(0, session.event_count);
 
 function DataCatalog() {
   return (

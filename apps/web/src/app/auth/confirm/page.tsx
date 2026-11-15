@@ -23,10 +23,11 @@ async function ConfirmForm({ searchParams }: Pick<PageProps<"/auth/confirm">, "s
   const params = await searchParams;
   // Supabase's default template verifies on its side and comes back with an error or a PKCE code, not a token_hash.
   const errorCode = first(params.error_code) ?? first(params.error);
-  if (errorCode)
+  if (errorCode) {
     redirect(`/auth/error?code=${errorCode === "otp_expired" ? "link_expired" : "confirm_failed"}`);
+  }
   const code = first(params.code);
-  if (code)
+  if (code) {
     return (
       <AuthCard>
         <form action={confirmEmailCode} className="flex flex-col">
@@ -40,10 +41,13 @@ async function ConfirmForm({ searchParams }: Pick<PageProps<"/auth/confirm">, "s
         </form>
       </AuthCard>
     );
+  }
 
   const tokenHash = first(params.token_hash);
   const type = first(params.type);
-  if (!tokenHash || !isOtpType(type)) return <AuthErrorNotice code="invalid_link" />;
+  if (!tokenHash || !isOtpType(type)) {
+    return <AuthErrorNotice code="invalid_link" />;
+  }
 
   const recovery = type === "recovery";
   return (

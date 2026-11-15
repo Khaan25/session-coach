@@ -6,7 +6,8 @@ import { readFile } from "node:fs/promises";
 import { MAX_UPLOAD_BYTES } from "@session-coach/shared/limits";
 
 import type { Config } from "./config.ts";
-import { send, type SendOptions } from "./http.ts";
+import { send } from "./http.ts";
+import type { SendOptions } from "./http.ts";
 import {
   createRequest,
   interpretCreate,
@@ -15,8 +16,8 @@ import {
   processRequest,
   putRequest,
   sessionMetadata,
-  type CreateResult,
 } from "./push.ts";
+import type { CreateResult } from "./push.ts";
 
 /** Timeouts: the log upload can be up to 50 MB, so it gets longer than the small JSON calls. */
 export const API_TIMEOUT_MS = 15_000;
@@ -61,8 +62,10 @@ export async function uploadLog(
   } catch {
     return { kind: "unreadable" };
   }
-  const { gzipped, text } = prepareLog(bytes);
-  if (gzipped.length > MAX_UPLOAD_BYTES) return { kind: "too_big" };
+  const { gzipped, text } = await prepareLog(bytes);
+  if (gzipped.length > MAX_UPLOAD_BYTES) {
+    return { kind: "too_big" };
+  }
 
   // ① register the session
   // Safe to repeat: a second POST for the same session gets a 409 with a fresh upload URL.
@@ -76,7 +79,9 @@ export async function uploadLog(
     return { kind: "unreachable", error: created.error, timeoutMs: API_TIMEOUT_MS };
   }
   const next = interpretCreate(created.status, created.body, created.retryAfter);
-  if (next.action === "stop") return { kind: "not_created", answer: created, result: next };
+  if (next.action === "stop") {
+    return { kind: "not_created", answer: created, result: next };
+  }
 
   // ② PUT the log to the signed URL
   // Safe to repeat: the PUT upserts the same object.
@@ -85,9 +90,12 @@ export async function uploadLog(
     timeoutMs: UPLOAD_TIMEOUT_MS,
     retry: true,
   });
-  if ("error" in put)
+  if ("error" in put) {
     return { kind: "unreachable", error: put.error, timeoutMs: UPLOAD_TIMEOUT_MS };
-  if (interpretPut(put.status).exitCode !== 0) return { kind: "not_stored", status: put.status };
+  }
+  if (interpretPut(put.status).exitCode !== 0) {
+    return { kind: "not_stored", status: put.status };
+  }
 
   // ③ start processing
   // Not retried: it starts the pipeline, and push or a later sync can simply ask again.

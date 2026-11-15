@@ -28,6 +28,7 @@ export function LegalPage({ document }: { document: Legal }) {
           </p>
         )}
         {/* The HTML is compiled at build time from our own Markdown in content/legal, not user input. */}
+        {/* oxlint-disable-next-line react/no-danger -- build-time HTML from our own Markdown, as the comment above says */}
         <Prose dangerouslySetInnerHTML={{ __html: document.html }} />
       </article>
     </MarketingPage>

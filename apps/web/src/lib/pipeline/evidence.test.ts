@@ -77,10 +77,12 @@ test("a quote of 5 words that is in the event is verified and grounds a card", (
   assert.equal(checkAll([draft([five])]).length, 1);
 });
 
+/** Whether a quote of E2 verifies. */
+const verifiedInE2 = (quote: string) => check([{ event_index: 2, quote }]).evidence[0]?.verified;
+
 test("words are counted after whitespace is collapsed", () => {
-  const verified = (quote: string) => check([{ event_index: 2, quote }]).evidence[0]?.verified;
-  assert.equal(verified("so\n every\tpage   reuses them"), true);
-  assert.equal(verified("  every  page \n reuses them  "), false);
+  assert.equal(verifiedInE2("so\n every\tpage   reuses them"), true);
+  assert.equal(verifiedInE2("  every  page \n reuses them  "), false);
 });
 
 test("whitespace is collapsed on both sides before comparing", () => {
@@ -115,7 +117,9 @@ test("event_index is the id's number, so a timeline that starts at E50 still res
     card.evidence.map((e) => e.verified),
     [true, true, false, false, false, false],
   );
-  for (const item of card.evidence.slice(2)) assert.equal(item.file, null);
+  for (const item of card.evidence.slice(2)) {
+    assert.equal(item.file, null);
+  }
 });
 
 test("an out-of-range index is unverified with no file", () => {
@@ -165,21 +169,23 @@ test("the parser's metadata of a DECISIONS.md write or edit is verified but does
   }
 });
 
+/** Whether a quote grounds a card against a one-prompt timeline with this text. */
+const groundedIn = (text: string, quote: string) =>
+  isGrounded(draft([{ event_index: 1, quote }]), [event(1, "prompt", text)]);
+
 test("curly quotes, dashes, full-width forms and case don't stop a match", () => {
-  const verified = (text: string, quote: string) =>
-    isGrounded(draft([{ event_index: 1, quote }]), [event(1, "prompt", text)]);
   assert.equal(
-    verified(
+    groundedIn(
       "Don\u2019t touch the \u201Cauth\u201D module\u2014ever, please",
       `don't touch the "auth" module-ever`,
     ),
     true,
   );
   assert.equal(
-    verified("Use the ＡＰＩ client in every route", "use the API client in every"),
+    groundedIn("Use the ＡＰＩ client in every route", "use the API client in every"),
     true,
   );
-  assert.equal(verified("Keep it in one file", "keep it in two files"), false);
+  assert.equal(groundedIn("Keep it in one file", "keep it in two files"), false);
 });
 
 test("CJK text without spaces counts words and matches", () => {
@@ -228,16 +234,18 @@ test("inferred is never upgraded", () => {
   assert.equal(check([], "inferred").source, "inferred");
 });
 
+/** Whether a quote of event `index` grounds a card against the shared timeline. */
+const groundedAt = (index: number, quote: string) =>
+  isGrounded(draft([{ event_index: index, quote }]), events);
+
 test("isGrounded is true for a verified prompt, reply or DECISIONS.md quote, false otherwise", () => {
-  const grounded = (index: number, quote: string) =>
-    isGrounded(draft([{ event_index: index, quote }]), events);
-  assert.equal(grounded(1, "Keep the shared styles in"), true);
-  assert.equal(grounded(2, "so every page reuses them"), true);
-  assert.equal(grounded(5, "Styles live in tokens.css so"), true);
-  assert.equal(grounded(5, "replaced 0 lines with 3"), false);
-  assert.equal(grounded(4, "pnpm test --filter web --run"), false);
-  assert.equal(grounded(3, "replaced 1 line with 2"), false);
-  assert.equal(grounded(1, "invented words that nobody wrote"), false);
+  assert.equal(groundedAt(1, "Keep the shared styles in"), true);
+  assert.equal(groundedAt(2, "so every page reuses them"), true);
+  assert.equal(groundedAt(5, "Styles live in tokens.css so"), true);
+  assert.equal(groundedAt(5, "replaced 0 lines with 3"), false);
+  assert.equal(groundedAt(4, "pnpm test --filter web --run"), false);
+  assert.equal(groundedAt(3, "replaced 1 line with 2"), false);
+  assert.equal(groundedAt(1, "invented words that nobody wrote"), false);
 });
 
 test("positions are 0..n-1 after drops", () => {
@@ -257,9 +265,12 @@ test("no id, flagged or hidden is set; evidence fits the shared schema", () => {
   const cards = checkAll([draft([{ event_index: 1, quote: "Keep the shared styles in" }])]);
   assert.equal(cards.length, 1);
   for (const card of cards) {
-    for (const key of ["id", "session_id", "user_id", "created_at", "flagged", "hidden"])
+    for (const key of ["id", "session_id", "user_id", "created_at", "flagged", "hidden"]) {
       assert.equal(key in card, false);
-    for (const item of card.evidence) assert.ok(evidenceSchema.safeParse(item).success);
+    }
+    for (const item of card.evidence) {
+      assert.ok(evidenceSchema.safeParse(item).success);
+    }
   }
 });
 
@@ -268,12 +279,17 @@ test("files: a relative path matching the end of a write or edit path is kept, o
     {
       ...draft([anchor]),
       files: [
-        "src/styles/tokens.css", // equals an event path
-        "styles/tokens.css", // ends an event path after "/"
+        // equals an event path
+        "src/styles/tokens.css",
+        // ends an event path after "/"
+        "styles/tokens.css",
         "tokens.css",
-        "ens.css", // ends the text but not after "/"
-        "src/missing.ts", // no write or edit event wrote it
-        "pnpm", // a bash event is not a write
+        // ends the text but not after "/"
+        "ens.css",
+        // no write or edit event wrote it
+        "src/missing.ts",
+        // a bash event is not a write
+        "pnpm",
       ],
     },
   ]);

@@ -25,14 +25,31 @@ import { useAction } from "@/components/app/dry-run";
 
 import { newReportLink, setReportOn, setReportRepo } from "@/app/(app)/settings/actions";
 
-/** Runs a settings action under a toast; throws its error so the caller can roll back. */
-function save(action: Promise<{ error: string | null }>, success: string) {
-  return toast.promise(
-    action.then(({ error }) => {
-      if (error) throw new Error(error);
-    }),
-    { loading: "Saving", success, error: (error: Error) => error.message },
-  );
+/** Waits for a settings action and throws its error. */
+async function settled(action: Promise<{ error: string | null }>) {
+  const { error } = await action;
+  if (error) {
+    throw new Error(error);
+  }
+}
+
+/** Runs a settings action under a toast; `onFail` rolls back when it fails, and `onSettled` runs either way. */
+async function save(
+  action: Promise<{ error: string | null }>,
+  success: string,
+  { onFail, onSettled }: { onFail?: () => void; onSettled: () => void },
+) {
+  try {
+    await toast.promise(settled(action), {
+      loading: "Saving",
+      success,
+      error: (error: Error) => error.message,
+    });
+  } catch {
+    onFail?.();
+  } finally {
+    onSettled();
+  }
 }
 
 /**
@@ -73,9 +90,10 @@ function ReportControls({ report }: { report: ReportSettings }) {
           onCheckedChange={(next) => {
             setOn(next);
             setPending(true);
-            save(saveOn({ on: next }), next ? "Report shared" : "Report turned off")
-              .catch(() => setOn(!next))
-              .finally(() => setPending(false));
+            void save(saveOn({ on: next }), next ? "Report shared" : "Report turned off", {
+              onFail: () => setOn(!next),
+              onSettled: () => setPending(false),
+            });
           }}
         />
         <FieldLabel htmlFor={`${id}-on`}>Share my report</FieldLabel>
@@ -133,9 +151,9 @@ function ReportControls({ report }: { report: ReportSettings }) {
             disabled={pending}
             onClick={() => {
               setPending(true);
-              save(saveNewLink(), "New link made. The old one no longer works.")
-                .catch(() => {})
-                .finally(() => setPending(false));
+              void save(saveNewLink(), "New link made. The old one no longer works.", {
+                onSettled: () => setPending(false),
+              });
             }}
           >
             Make a new link
@@ -159,12 +177,11 @@ function RepoField({ repo, shown, id }: { repo: string; shown: boolean; id: stri
         onCheckedChange={(next) => {
           setChecked(next);
           setPending(true);
-          save(
+          void save(
             saveRepo({ repo, shown: next }),
             next ? `${repo} is on your report` : `${repo} is off your report`,
-          )
-            .catch(() => setChecked(!next))
-            .finally(() => setPending(false));
+            { onFail: () => setChecked(!next), onSettled: () => setPending(false) },
+          );
         }}
       />
       <FieldLabel htmlFor={id}>{repo}</FieldLabel>

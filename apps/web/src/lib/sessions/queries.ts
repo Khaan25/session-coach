@@ -2,7 +2,8 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 
-import { PAGE_SIZE, SESSION_COLUMNS, type SessionListItem, type SessionSummary } from "./rows";
+import { PAGE_SIZE, SESSION_COLUMNS } from "./rows";
+import type { SessionListItem, SessionSummary } from "./rows";
 
 // Learner reads through the RLS client. The caller passes the signed-in learner's id (from getCurrentUser), so access
 // is decided before the query; the user_id filter also uses the (user_id, created_at) index.
@@ -27,14 +28,18 @@ export async function listSessions({
   const supabase = await createClient();
   const from = (page - 1) * PAGE_SIZE;
   let query = supabase.from("sessions").select(SESSION_COLUMNS).eq("user_id", userId);
-  if (repo) query = query.eq("repo", repo);
+  if (repo) {
+    query = query.eq("repo", repo);
+  }
   // One extra row tells whether a next page exists without a count query.
   const { data, error } = await query
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, from + PAGE_SIZE)
     .overrideTypes<SessionSummary[], { merge: false }>();
-  if (error) throw new Error(`listSessions: ${error.message}`);
+  if (error) {
+    throw new Error(`listSessions: ${error.message}`);
+  }
   const sessions = data.slice(0, PAGE_SIZE);
   return { sessions: await withCardCounts(sessions), hasMore: data.length > PAGE_SIZE };
 }
@@ -55,7 +60,9 @@ export async function recentSessions(userId: string, limit = 5): Promise<Session
     .order("id", { ascending: false })
     .limit(limit)
     .overrideTypes<SessionSummary[], { merge: false }>();
-  if (error) throw new Error(`recentSessions: ${error.message}`);
+  if (error) {
+    throw new Error(`recentSessions: ${error.message}`);
+  }
   return withCardCounts(data);
 }
 
@@ -66,7 +73,9 @@ export async function recentSessions(userId: string, limit = 5): Promise<Session
  */
 async function withCardCounts(sessions: SessionSummary[]): Promise<SessionListItem[]> {
   const ready = sessions.filter(({ status }) => status === "ready").map(({ id }) => id);
-  if (ready.length === 0) return sessions;
+  if (ready.length === 0) {
+    return sessions;
+  }
   const supabase = await createClient();
   // shortcut: counts in JS over at most 20 sessions x ~5 cards; switch to an RPC if sessions grow past ~100 cards.
   const { data, error } = await supabase
@@ -74,9 +83,13 @@ async function withCardCounts(sessions: SessionSummary[]): Promise<SessionListIt
     .select("session_id")
     .in("session_id", ready)
     .overrideTypes<{ session_id: string }[], { merge: false }>();
-  if (error) throw new Error(`withCardCounts: ${error.message}`);
+  if (error) {
+    throw new Error(`withCardCounts: ${error.message}`);
+  }
   const counts = new Map<string, number>();
-  for (const { session_id } of data) counts.set(session_id, (counts.get(session_id) ?? 0) + 1);
+  for (const { session_id } of data) {
+    counts.set(session_id, (counts.get(session_id) ?? 0) + 1);
+  }
   return sessions.map((s) =>
     s.status === "ready" ? { ...s, cardCount: counts.get(s.id) ?? 0 } : s,
   );
@@ -106,9 +119,17 @@ export async function cardlessReason(userId: string): Promise<Cardless> {
     .order("id", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(`cardlessReason: ${error.message}`);
-  if (!data) return { reason: "no-sessions" };
-  if (data.status === "pending" || data.status === "processing") return { reason: "processing" };
-  if (data.status === "failed") return { reason: "failed", sessionId: data.id };
+  if (error) {
+    throw new Error(`cardlessReason: ${error.message}`);
+  }
+  if (!data) {
+    return { reason: "no-sessions" };
+  }
+  if (data.status === "pending" || data.status === "processing") {
+    return { reason: "processing" };
+  }
+  if (data.status === "failed") {
+    return { reason: "failed", sessionId: data.id };
+  }
   return { reason: "no-cards" };
 }

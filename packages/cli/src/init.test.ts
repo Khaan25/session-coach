@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "node:test";
@@ -79,7 +79,11 @@ describe("runInit", () => {
     // The machine's own git config may already ignore the file globally, and a git hook running these tests sets
     // GIT_DIR and friends to this repo; leave both out.
     const saved = { ...process.env };
-    for (const key of Object.keys(process.env)) if (key.startsWith("GIT_")) delete process.env[key];
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith("GIT_")) {
+        Reflect.deleteProperty(process.env, key);
+      }
+    }
     Object.assign(process.env, {
       GIT_CONFIG_GLOBAL: "/dev/null",
       GIT_CONFIG_NOSYSTEM: "1",
@@ -89,11 +93,13 @@ describe("runInit", () => {
       assert.equal(await settingsLocalIgnored(cwd), null);
       await promisify(execFile)("git", ["init", "-q"], { cwd });
       assert.equal(await settingsLocalIgnored(cwd), false);
-      assert.match((await runInit(cwd, "0.4.0")).warnings.join("\n"), /git doesn't ignore/);
+      const unignored = await runInit(cwd, "0.4.0");
+      assert.match(unignored.warnings.join("\n"), /git doesn't ignore/u);
 
       await writeFile(join(cwd, ".gitignore"), ".claude/settings.local.json\n");
       assert.equal(await settingsLocalIgnored(cwd), true);
-      assert.deepEqual((await runInit(cwd, "0.4.0")).warnings, []);
+      const ignored = await runInit(cwd, "0.4.0");
+      assert.deepEqual(ignored.warnings, []);
     } finally {
       process.env = saved;
       await rm(cwd, { recursive: true, force: true });

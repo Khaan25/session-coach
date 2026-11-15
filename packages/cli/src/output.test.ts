@@ -48,7 +48,7 @@ describe("blocks", () => {
   });
 
   it("adds color codes only when color is on", () => {
-    assert.ok(success({ rich: true, color: true }, "x").startsWith("\u001b[32m✓"));
+    assert.ok(success({ rich: true, color: true }, "x").startsWith("\u001B[32m✓"));
   });
 });
 

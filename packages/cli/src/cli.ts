@@ -2,12 +2,13 @@
 import { spawn } from "node:child_process";
 import { basename } from "node:path";
 
+// oxlint-disable-next-line import/no-relative-parent-imports -- the version comes from the package's own manifest
 import pkg from "../package.json" with { type: "json" };
 
 import { parseLoginArgs, parsePushArgs } from "./args.ts";
 import {
-  configPath,
   DEFAULT_URL,
+  configPath,
   loadConfig,
   normalizeUrl,
   saveConfig,
@@ -24,18 +25,11 @@ import {
 import { interpretMe, meRequest, send, unreachable } from "./http.ts";
 import { parseInitArgs, parseYesNo, runInit, settingsLocalPath, stepHeading } from "./init.ts";
 import { defaultProjectsDir, findLatestLog, formatSize, resolveCwd } from "./latest.ts";
-import {
-  failure,
-  type Next,
-  nextStep,
-  rows,
-  shellArg,
-  styleFor,
-  success,
-  warning,
-} from "./output.ts";
+import { failure, nextStep, rows, shellArg, styleFor, success, warning } from "./output.ts";
+import type { Next } from "./output.ts";
 import { promptHidden, promptLine } from "./prompt.ts";
-import { interpretProcess, interpretPut, type Outcome, validateFileName } from "./push.ts";
+import { interpretProcess, interpretPut, validateFileName } from "./push.ts";
+import type { Outcome } from "./push.ts";
 import { parseHookInput, readStdin, runSync } from "./sync.ts";
 import { API_TIMEOUT_MS, uploadLog } from "./upload.ts";
 
@@ -142,20 +136,32 @@ const BAD_URL = "--url must be an https URL (http works only for localhost).";
 
 async function login(args: string[]): Promise<number> {
   const parsed = parseLoginArgs(args);
-  if ("error" in parsed) return usageError("login", parsed.error);
+  if ("error" in parsed) {
+    return usageError("login", parsed.error);
+  }
   const url = siteUrl(parsed.url);
-  if (!url) return usageError("login", BAD_URL);
+  if (!url) {
+    return usageError("login", BAD_URL);
+  }
 
-  if (!parsed.token) return deviceLogin(url, parsed.open);
+  if (!parsed.token) {
+    return deviceLogin(url, parsed.open);
+  }
 
   const token = await promptHidden("CLI token (from the app's /setup page): ");
   const problem = validateToken(token);
-  if (problem) return fail(problem);
+  if (problem) {
+    return fail(problem);
+  }
 
   const me = await send(meRequest(url, token), { timeoutMs: API_TIMEOUT_MS, retry: true });
-  if ("error" in me) return fail(`${unreachable(me.error, API_TIMEOUT_MS)} Nothing was saved.`);
+  if ("error" in me) {
+    return fail(`${unreachable(me.error, API_TIMEOUT_MS)} Nothing was saved.`);
+  }
   const checked = interpretMe(me.status, me.body, url);
-  if (checked.exitCode !== 0) return fail(checked.message);
+  if (checked.exitCode !== 0) {
+    return fail(checked.message);
+  }
 
   await saveConfig(configPath(), { token, url });
   log(success(err, checked.message, [["Saved to", configPath()]]));
@@ -170,9 +176,13 @@ async function deviceLogin(url: string, open: boolean, showNext = true): Promise
     timeoutMs: API_TIMEOUT_MS,
     retry: false,
   });
-  if ("error" in started) return fail(unreachable(started.error, API_TIMEOUT_MS));
+  if ("error" in started) {
+    return fail(unreachable(started.error, API_TIMEOUT_MS));
+  }
   const start = interpretStart(started.status, started.body);
-  if ("error" in start) return fail(start.error);
+  if ("error" in start) {
+    return fail(start.error);
+  }
 
   const page = approveUrl(url, start.userCode);
   log(
@@ -186,7 +196,9 @@ async function deviceLogin(url: string, open: boolean, showNext = true): Promise
       ? "Opening your browser. If it doesn't open, visit that address and check the code matches."
       : "Open that address in a browser where you're signed in, and check the code matches.",
   );
-  if (open) openBrowser(page);
+  if (open) {
+    openBrowser(page);
+  }
   log("Waiting for you to approve in the browser… (Ctrl+C to cancel)");
 
   // Ctrl+C: stop polling and leave nothing behind; the code expires on its own.
@@ -203,9 +215,12 @@ async function deviceLogin(url: string, open: boolean, showNext = true): Promise
       LOGIN_AGAIN,
     );
   }
-  if (result.kind === "denied")
+  if (result.kind === "denied") {
     return fail("The login was denied in the browser. Nothing was saved.");
-  if (result.kind === "error") return fail(`${result.message} Nothing was saved.`, LOGIN_AGAIN);
+  }
+  if (result.kind === "error") {
+    return fail(`${result.message} Nothing was saved.`, LOGIN_AGAIN);
+  }
 
   await saveConfig(configPath(), { token: result.token, url });
   const who = result.email ? `Signed in as ${result.email}` : `Signed in to ${url}`;
@@ -220,7 +235,9 @@ async function deviceLogin(url: string, open: boolean, showNext = true): Promise
 
 async function push(args: string[]): Promise<number> {
   const parsed = parsePushArgs(args);
-  if ("error" in parsed) return usageError("push", parsed.error);
+  if ("error" in parsed) {
+    return usageError("push", parsed.error);
+  }
 
   if ("latest" in parsed) {
     const cwd = resolveCwd(process.env, process.cwd());
@@ -228,9 +245,13 @@ async function push(args: string[]): Promise<number> {
     // written in the last minute, so the first upload is a finished session, not a half-written one.
     const runningSince = process.env.CLAUDECODE ? Date.now() - 60_000 : Infinity;
     const found = await findLatestLog(defaultProjectsDir(), cwd, runningSince);
-    if ("error" in found) return fail(found.error);
+    if ("error" in found) {
+      return fail(found.error);
+    }
     const problem = validateFileName(found.name);
-    if (problem) return fail(`${found.path}: ${problem}`);
+    if (problem) {
+      return fail(`${found.path}: ${problem}`);
+    }
     log(`Uploading ${found.name} (${formatSize(found.size)})…`);
     return pushFile(found.path, "session-coach push --latest");
   }
@@ -245,20 +266,31 @@ async function push(args: string[]): Promise<number> {
  */
 async function pushFile(file: string, rerun: string, printId = true): Promise<number> {
   const nameProblem = validateFileName(file);
-  if (nameProblem) return fail(nameProblem);
+  if (nameProblem) {
+    return fail(nameProblem);
+  }
 
   const config = await loadConfig(configPath());
-  if (!config)
+  if (!config) {
     return fail("You're not signed in.", { text: "Sign in", command: "session-coach login" });
+  }
 
   const uploaded = await uploadLog(file, basename(file), config);
-  if (uploaded.kind === "unreadable") return fail(`Couldn't read ${file}.`);
-  if (uploaded.kind === "too_big") return fail("Can't upload a log over 50 MB.");
-  if (uploaded.kind === "unreachable") return fail(unreachable(uploaded.error, uploaded.timeoutMs));
+  if (uploaded.kind === "unreadable") {
+    return fail(`Couldn't read ${file}.`);
+  }
+  if (uploaded.kind === "too_big") {
+    return fail("Can't upload a log over 50 MB.");
+  }
+  if (uploaded.kind === "unreachable") {
+    return fail(unreachable(uploaded.error, uploaded.timeoutMs));
+  }
   let outcome: Outcome;
-  if (uploaded.kind === "not_created") outcome = uploaded.result;
-  else if (uploaded.kind === "not_stored") outcome = interpretPut(uploaded.status);
-  else {
+  if (uploaded.kind === "not_created") {
+    outcome = uploaded.result;
+  } else if (uploaded.kind === "not_stored") {
+    outcome = interpretPut(uploaded.status);
+  } else {
     const { status, body, retryAfter } = uploaded.answer;
     outcome = interpretProcess(status, body, uploaded.id, retryAfter);
   }
@@ -276,7 +308,9 @@ async function pushFile(file: string, rerun: string, printId = true): Promise<nu
       ? [outcome.message, rows(ids)].join("\n")
       : success(err, outcome.message, ids),
   );
-  if (printId && outcome.id && !process.stdout.isTTY) console.log(outcome.id);
+  if (printId && outcome.id && !process.stdout.isTTY) {
+    console.log(outcome.id);
+  }
   return 0;
 }
 
@@ -316,9 +350,13 @@ const INIT_STEPS = 4;
  */
 async function init(args: string[]): Promise<number> {
   const parsed = parseInitArgs(args);
-  if ("error" in parsed) return usageError("init", parsed.error);
+  if ("error" in parsed) {
+    return usageError("init", parsed.error);
+  }
   const chosen = siteUrl(parsed.url);
-  if (!chosen) return usageError("init", BAD_URL);
+  if (!chosen) {
+    return usageError("init", BAD_URL);
+  }
   let url = chosen;
 
   // Without a terminal (an agent running the setup prompt), running init is the yes for the hooks, the step init
@@ -339,9 +377,13 @@ async function init(args: string[]): Promise<number> {
     for (;;) {
       const line = await promptLine(`${question} [Y/n] `);
       // Ctrl-D or Ctrl-C is a no, never the default.
-      if (line === null) return false;
+      if (line === null) {
+        return false;
+      }
       const answer = parseYesNo(line, true);
-      if (answer !== null) return answer;
+      if (answer !== null) {
+        return answer;
+      }
     }
   };
 
@@ -353,7 +395,7 @@ async function init(args: string[]): Promise<number> {
   const saved = await loadConfig(configPath());
   let signedIn = false;
   if (saved && (parsed.url === null || saved.url === url)) {
-    url = saved.url;
+    ({ url } = saved);
     const me = await send(meRequest(url, saved.token), { timeoutMs: API_TIMEOUT_MS, retry: true });
     if (!("error" in me)) {
       const checked = interpretMe(me.status, me.body, url);
@@ -368,7 +410,9 @@ async function init(args: string[]): Promise<number> {
       "Your browser opens a page with a code. Check it matches the one here, then click Approve. There's no token to copy.",
     );
     const code = await deviceLogin(url, parsed.open, false);
-    if (code !== 0) return code;
+    if (code !== 0) {
+      return code;
+    }
   }
 
   log(stepHeading(2, INIT_STEPS, "Turn on automatic uploads for this project"));
@@ -382,10 +426,16 @@ async function init(args: string[]): Promise<number> {
   );
   if (await ask(`Add the hooks to ${settingsLocalPath(cwd)}?`, true)) {
     const result = await runInit(cwd, pkg.version);
-    if (result.exitCode !== 0) return fail(result.message);
+    if (result.exitCode !== 0) {
+      return fail(result.message);
+    }
     log(success(err, result.message, [["Hooks added to", settingsLocalPath(cwd)]]));
-    for (const text of result.warnings) log(warning(err, text));
-  } else log("Skipped. Upload by hand with session-coach push --latest.");
+    for (const text of result.warnings) {
+      log(warning(err, text));
+    }
+  } else {
+    log("Skipped. Upload by hand with session-coach push --latest.");
+  }
 
   log(stepHeading(3, INIT_STEPS, "Send your newest session"));
   const found = await findLatestLog(defaultProjectsDir(), cwd);
@@ -395,9 +445,12 @@ async function init(args: string[]): Promise<number> {
     );
   } else if (await ask(`Upload ${found.name} (${formatSize(found.size)}) now?`)) {
     const code = await pushFile(found.path, "session-coach push --latest", false);
-    if (code !== 0)
+    if (code !== 0) {
       log("The upload didn't go through; the hook catches it up on your next session start.");
-  } else log("Skipped. The hook sends it later, or run session-coach push --latest.");
+    }
+  } else {
+    log("Skipped. The hook sends it later, or run session-coach push --latest.");
+  }
 
   log(stepHeading(4, INIT_STEPS, "What happens next"));
   log(
@@ -412,12 +465,14 @@ async function init(args: string[]): Promise<number> {
   return 0;
 }
 
-async function main(argv: string[]): Promise<number> {
+function main(argv: string[]): number | Promise<number> {
   const [command = "", ...args] = argv.filter((arg) => arg !== "--no-color");
   // Help and version work before any config or network, and do no work.
   if (command === "help") {
     const topic = args[0] ?? "";
-    if (!Object.hasOwn(HELP, topic)) return unknownCommand(topic);
+    if (!Object.hasOwn(HELP, topic)) {
+      return unknownCommand(topic);
+    }
     console.log(HELP[topic]);
     return 0;
   }
@@ -429,14 +484,22 @@ async function main(argv: string[]): Promise<number> {
     console.log(pkg.version);
     return 0;
   }
-  if (!Object.hasOwn(HELP, command)) return unknownCommand(command);
+  if (!Object.hasOwn(HELP, command)) {
+    return unknownCommand(command);
+  }
   if (args.includes("--help") || args.includes("-h")) {
     console.log(HELP[command]);
     return 0;
   }
-  if (command === "init") return init(args);
-  if (command === "login") return login(args);
-  if (command === "push") return push(args);
+  if (command === "init") {
+    return init(args);
+  }
+  if (command === "login") {
+    return login(args);
+  }
+  if (command === "push") {
+    return push(args);
+  }
   return sync();
 }
 
@@ -448,14 +511,11 @@ function unknownCommand(command: string): number {
   );
 }
 
-main(process.argv.slice(2)).then(
-  (code) => {
-    process.exitCode = code;
-  },
-  (error: unknown) => {
-    // Error messages here come from our own code or Node's fs; none carry the token.
-    const detail = error instanceof Error ? error.message : String(error);
-    log(failure(err, "Unexpected error in session-coach. This is a bug.", [["Error", detail]]));
-    process.exitCode = 1;
-  },
-);
+try {
+  process.exitCode = await main(process.argv.slice(2));
+} catch (error) {
+  // Error messages here come from our own code or Node's fs; none carry the token.
+  const detail = error instanceof Error ? error.message : String(error);
+  log(failure(err, "Unexpected error in session-coach. This is a bug.", [["Error", detail]]));
+  process.exitCode = 1;
+}

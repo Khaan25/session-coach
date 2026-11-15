@@ -18,15 +18,19 @@ export type SendOptions = {
   fetchImpl?: typeof fetch;
 };
 
-const DELTA_SECONDS = /^\d+$/;
+const DELTA_SECONDS = /^\d+$/u;
 
 async function attempt(req: HttpRequest, timeoutMs: number, fetchImpl: typeof fetch) {
   try {
     const res = await fetchImpl(req.url, { ...req.init, signal: AbortSignal.timeout(timeoutMs) });
     // An empty or non-JSON body is null; a timeout while reading it still fails the attempt.
-    const body: unknown = await res.json().catch((err: unknown) => {
-      if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError"))
-        throw err;
+    const body: unknown = await res.json().catch((error: unknown) => {
+      if (
+        error instanceof Error &&
+        (error.name === "TimeoutError" || error.name === "AbortError")
+      ) {
+        throw error;
+      }
       return null;
     });
     // Only the delta-seconds form; an HTTP date (which the server never sends) is ignored.
@@ -34,8 +38,8 @@ async function attempt(req: HttpRequest, timeoutMs: number, fetchImpl: typeof fe
     return retryAfter && DELTA_SECONDS.test(retryAfter)
       ? { status: res.status, body, retryAfter: Number(retryAfter) }
       : { status: res.status, body };
-  } catch (err) {
-    const timedOut = err instanceof Error && err.name === "TimeoutError";
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
     return { error: timedOut ? ("timeout" as const) : ("network" as const) };
   }
 }
@@ -48,15 +52,20 @@ export async function send(req: HttpRequest, options: SendOptions): Promise<Send
   const { timeoutMs, retry, backoffMs = 1000, fetchImpl = fetch } = options;
   const first = await attempt(req, timeoutMs, fetchImpl);
   const failed = "error" in first || first.status >= 500;
-  if (!retry || !failed) return first;
-  await new Promise((resolve) => setTimeout(resolve, backoffMs));
+  if (!retry || !failed) {
+    return first;
+  }
+  await new Promise((resolve) => {
+    setTimeout(resolve, backoffMs);
+  });
   return attempt(req, timeoutMs, fetchImpl);
 }
 
 /** The message for a request that never got an answer. */
 export function unreachable(error: "timeout" | "network", timeoutMs: number): string {
-  if (error === "timeout")
+  if (error === "timeout") {
     return `The server didn't answer within ${timeoutMs / 1000} s. Try again.`;
+  }
   return "Couldn't reach the server. Check your connection and the site URL (session-coach login --url <site url>), then try again.";
 }
 

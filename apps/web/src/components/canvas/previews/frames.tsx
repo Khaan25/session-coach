@@ -94,7 +94,7 @@ export function AppFrame({
   overlay?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const route = path.split("?")[0];
+  const [route] = path.split("?");
   const isActive = (url: string) => route === url || route.startsWith(`${url}/`);
   const title = [...navMain, ...navOther].find((item) => isActive(item.url))?.title;
   return (

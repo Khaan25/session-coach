@@ -12,7 +12,9 @@ import { getProfile } from "@/lib/auth/profile";
  */
 export async function getSettingsProfile() {
   const [user, profile] = await Promise.all([getCurrentUser(), getProfile()]);
-  if (!user || !profile) return null;
+  if (!user || !profile) {
+    return null;
+  }
   const { display_name, email, timezone, notify_email } = profile;
   // The trigger copies the email in; fall back to the claim if it hasn't yet.
   return { display_name, email: email ?? user.email, timezone, notify_email };
@@ -26,5 +28,5 @@ export async function getSettingsProfile() {
  * @returns Time zone names, sorted.
  */
 export function timeZoneOptions(current: string) {
-  return [...new Set(["UTC", current, ...Intl.supportedValuesOf("timeZone")])].sort();
+  return [...new Set(["UTC", current, ...Intl.supportedValuesOf("timeZone")])].toSorted();
 }

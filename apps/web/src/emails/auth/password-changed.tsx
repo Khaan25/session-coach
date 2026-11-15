@@ -1,4 +1,4 @@
-import { AuthEmail, AuthText } from "../auth-layout";
+import { AuthEmail, AuthText } from "@/emails/auth-layout";
 
 // Password changed notification: sent after any password change, including a reset. There's no token, so the button
 // starts a reset from the site.
@@ -13,9 +13,8 @@ export default function PasswordChangedEmail() {
     >
       <AuthText>The password for {"{{ .Email }}"} was just changed.</AuthText>
       <AuthText>
-        {
-          "If this was you, there's nothing to do. If it wasn't, reset your password now, then use Sign out everywhere in Settings."
-        }
+        If this was you, there&apos;s nothing to do. If it wasn&apos;t, reset your password now,
+        then use Sign out everywhere in Settings.
       </AuthText>
     </AuthEmail>
   );

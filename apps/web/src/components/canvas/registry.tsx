@@ -5,7 +5,8 @@
 // route in one state, rendered from the route's real components with synthetic data, so the canvas can't drift from
 // the app.
 
-import { Canvas, type CanvasItem } from "./canvas";
+import { Canvas } from "./canvas";
+import type { CanvasItem } from "./canvas";
 import {
   CliApproveScreen,
   DefendScreen,
@@ -27,7 +28,8 @@ import {
   TodayGuideOpenScreen,
 } from "./previews/flow-screens";
 import { INVENTORY } from "./previews/inventory-screens";
-import { ServerScreensContext, type ServerScreens } from "./previews/server-screens";
+import { ServerScreensContext } from "./previews/server-screens";
+import type { ServerScreens } from "./previews/server-screens";
 
 type Entry = Omit<CanvasItem, "x" | "y">;
 
@@ -52,8 +54,8 @@ const page = (
   const name = `${route} · ${state}`;
   const slug = name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replaceAll(/[^a-z0-9]+/gu, "-")
+    .replaceAll(/^-|-$/gu, "");
   return { id: `${prefix}-${slug}`, name, ...size, render };
 };
 
@@ -128,7 +130,7 @@ function stack(): CanvasItem[] {
   });
 }
 
-export const canvasItems: CanvasItem[] = stack();
+const canvasItems: CanvasItem[] = stack();
 
 /**
  * The page's only child: the canvas with every item above. Client-side, since each entry renders a component.

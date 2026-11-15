@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
-import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import type { VirtualItem } from "@tanstack/react-virtual";
 import { cn } from "cn";
 
 import { ComboboxItem, listMaxHeightClass } from "@/components/ui/combobox";
@@ -70,7 +71,7 @@ function useComboboxVirtualizer() {
     (item: unknown, { reason, index }: ComboboxPrimitive.Root.HighlightEventDetails) => {
       const virtualizer = virtualizerRef.current;
 
-      if (item == null || !virtualizer) {
+      if (item === null || item === undefined || !virtualizer) {
         return;
       }
 

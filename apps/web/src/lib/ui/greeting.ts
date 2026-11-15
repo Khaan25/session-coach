@@ -9,8 +9,12 @@ export function greeting(name: string | null | undefined, timeZone: string, now:
   const hour = Number(
     new Intl.DateTimeFormat("en", { hour: "numeric", hourCycle: "h23", timeZone }).format(now),
   );
-  const part =
-    hour >= 5 && hour < 12 ? "Morning" : hour >= 12 && hour < 18 ? "Afternoon" : "Evening";
-  const first = name?.trim().split(/\s+/)[0];
+  let part = "Evening";
+  if (hour >= 5 && hour < 12) {
+    part = "Morning";
+  } else if (hour >= 12 && hour < 18) {
+    part = "Afternoon";
+  }
+  const first = name?.trim().split(/\s+/u)[0];
   return first ? `${part}, ${first}` : part;
 }

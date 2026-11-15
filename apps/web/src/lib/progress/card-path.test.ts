@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { cardPath, type CardPathInput } from "./card-path.ts";
+import { cardPath } from "./card-path.ts";
+import type { CardPathInput } from "./card-path.ts";
 
 const base: CardPathInput = {
   decision: "Rate limit uploads per CLI token",

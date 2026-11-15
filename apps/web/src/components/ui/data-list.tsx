@@ -1,4 +1,5 @@
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 import { EMPTY_VALUE } from "@/lib/ui/format";
@@ -112,7 +113,7 @@ const isEmpty = (node: React.ReactNode): boolean =>
   node === undefined ||
   typeof node === "boolean" ||
   (typeof node === "string" && node.trim() === "") ||
-  (Array.isArray(node) && node.every(isEmpty));
+  (Array.isArray(node) && node.every((child) => isEmpty(child)));
 
 function DataListValue({
   className,

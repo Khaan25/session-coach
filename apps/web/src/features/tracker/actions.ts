@@ -43,7 +43,9 @@ async function updateTask(
 ): Promise<Result> {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
-  if (!claims?.claims.sub) return { error: "You're signed out. Sign in and try again." };
+  if (!claims?.claims.sub) {
+    return { error: "You're signed out. Sign in and try again." };
+  }
 
   const { data, error } = await supabase
     .from("tracker_tasks")
@@ -67,9 +69,11 @@ async function updateTask(
  */
 export async function setTaskDone(input: unknown): Promise<Result> {
   const parsed = toggleSchema.safeParse(input);
-  if (!parsed.success) return { error: "That task couldn't be updated." };
+  if (!parsed.success) {
+    return { error: "That task couldn't be updated." };
+  }
   const { id, done } = parsed.data;
-  return updateTask(id, { done_at: done ? new Date().toISOString() : null }, "setTaskDone");
+  return await updateTask(id, { done_at: done ? new Date().toISOString() : null }, "setTaskDone");
 }
 
 /**
@@ -84,7 +88,7 @@ export async function editTask(input: unknown): Promise<Result> {
     return { error: "A title needs 1 to 300 characters, and details at most 20,000." };
   }
   const { id, ...patch } = parsed.data;
-  return updateTask(id, patch, "editTask");
+  return await updateTask(id, patch, "editTask");
 }
 
 /**
@@ -97,12 +101,16 @@ export async function editTask(input: unknown): Promise<Result> {
  */
 export async function addTask(input: unknown): Promise<Result> {
   const parsed = addSchema.safeParse(input);
-  if (!parsed.success) return { error: "A title needs 1 to 300 characters." };
+  if (!parsed.success) {
+    return { error: "A title needs 1 to 300 characters." };
+  }
   const { section, title } = parsed.data;
 
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
-  if (!claims?.claims.sub) return { error: "You're signed out. Sign in and try again." };
+  if (!claims?.claims.sub) {
+    return { error: "You're signed out. Sign in and try again." };
+  }
 
   const { data: last, error: readError } = await supabase
     .from("tracker_tasks")

@@ -1,0 +1,12 @@
+{
+  "$schema": "../../apps/web/node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../.oxlintrc.json"],
+  "rules": {
+    "no-console": "off", // a CLI writes to the terminal
+    "node/no-sync": ["error", { "ignores": ["runSync"] }] // our async `sync` command runner, not an fs *Sync call
+  },
+  "env": {
+    "builtin": true,
+    "node": true
+  }
+}

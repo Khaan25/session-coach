@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { lockUnanswered, type CardView } from "./columns.ts";
+import { lockUnanswered } from "./columns.ts";
+import type { CardView } from "./columns.ts";
 
 const full = (id: string): CardView => ({
   id,

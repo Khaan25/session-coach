@@ -35,21 +35,24 @@ export function SessionList({
   );
 }
 
+const DEFAULT_EMPTY = <NoSessionsEmpty variant="plain" />;
+
 /** The rows as they are, with no live updates: what SessionList draws, for the skeleton and the canvas. */
 export function SessionRows({
   rows,
   now,
-  empty = <NoSessionsEmpty variant="plain" />,
+  empty = DEFAULT_EMPTY,
 }: {
   rows: SessionListItem[];
   now: Date;
   empty?: React.ReactNode;
 }) {
-  if (rows.length === 0) return empty;
+  if (rows.length === 0) {
+    return empty;
+  }
   return (
     // The rows sit straight in the Sessions card, split by its row rules; an ItemGroup would draw a second frame
     // inside it. A div with role="list", because SessionRow renders a div.
-    // eslint-disable-next-line jsx-a11y/prefer-tag-over-role
     <div role="list" aria-label="Sessions">
       {rows.map((session) => (
         <SessionRow key={session.id} session={session} cardCount={session.cardCount} now={now} />

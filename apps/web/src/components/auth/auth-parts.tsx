@@ -43,7 +43,6 @@ export function AuthCard({ children }: { children: React.ReactNode }) {
 /** The form's live region: always mounted, so a notice is read out when it appears. Put AuthNotice inside. */
 export function AuthStatus({ children }: { children: React.ReactNode }) {
   // A div, not <output>: the notice is block content.
-  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
   return <div role="status">{children}</div>;
 }
 

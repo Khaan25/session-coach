@@ -93,12 +93,16 @@ export function SettingsNav() {
       const atEnd =
         scroller !== null &&
         scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
-      if (atEnd && clicked.current) return;
+      if (atEnd && clicked.current) {
+        return;
+      }
       clicked.current = null;
       let current = ITEMS[0].id;
       for (const { id } of ITEMS) {
         const top = document.getElementById(id)?.getBoundingClientRect().top;
-        if (top !== undefined && top <= window.innerHeight / 3) current = id;
+        if (top !== undefined && top <= window.innerHeight / 3) {
+          current = id;
+        }
       }
       setActive(current);
     }
@@ -121,10 +125,12 @@ export function SettingsNav() {
         <Select
           value={active}
           onValueChange={(id: string | null) => {
-            if (!id) return;
+            if (!id) {
+              return;
+            }
             clicked.current = id;
             setActive(id);
-            window.location.hash = id;
+            globalThis.location.hash = id;
           }}
           items={ITEMS.map(({ id, title }) => ({ value: id, label: title }))}
         >

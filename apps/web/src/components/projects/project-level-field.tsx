@@ -25,19 +25,26 @@ export function ProjectLevelField({ repo, level }: { repo: string; level: Questi
         const previous = value;
         setValue(next);
         setPending(true);
-        toast
-          .promise(
-            save({ repo, question_level: next }).then(({ error }) => {
-              if (error) throw new Error(error);
-            }),
-            {
+        const saving = async () => {
+          const { error } = await save({ repo, question_level: next });
+          if (error) {
+            throw new Error(error);
+          }
+        };
+        const run = async () => {
+          try {
+            await toast.promise(saving(), {
               loading: "Saving",
               success: `Questions for ${repo} set to ${next}`,
               error: (error: Error) => error.message,
-            },
-          )
-          .catch(() => setValue(previous))
-          .finally(() => setPending(false));
+            });
+          } catch {
+            setValue(previous);
+          } finally {
+            setPending(false);
+          }
+        };
+        void run();
       }}
     />
   );

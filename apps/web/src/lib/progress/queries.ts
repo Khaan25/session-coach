@@ -5,9 +5,12 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 
 import { sessionName } from "@/lib/sessions/name";
 
-import { cardPath, type CardPath, type CardPathInput } from "./card-path";
-import { computeOwnership, type Ownership } from "./ownership";
-import { CHART_DAYS, computeProgress, type Progress, type ProgressInput } from "./progress";
+import { cardPath } from "./card-path";
+import type { CardPath, CardPathInput } from "./card-path";
+import { computeOwnership } from "./ownership";
+import type { Ownership } from "./ownership";
+import { CHART_DAYS, computeProgress } from "./progress";
+import type { Progress, ProgressInput } from "./progress";
 
 /**
  * The learner's progress from their visible cards, reviews, answers of the last CHART_DAYS days and ready sessions.
@@ -38,7 +41,9 @@ export async function getProgress(
         .from("decision_cards")
         .select("id, session_id, session:sessions!inner(repo)")
         .eq("user_id", userId);
-      if (repo) query = query.eq("session.repo", repo);
+      if (repo) {
+        query = query.eq("session.repo", repo);
+      }
       return query.order("id").range(from, to);
     }),
     fetchAll<ProgressInput["reviews"][number]>((from, to) =>
@@ -66,11 +71,15 @@ export async function getProgress(
         .select("id, title, repo, branch")
         .eq("user_id", userId)
         .eq("status", "ready");
-      if (repo) query = query.eq("repo", repo);
+      if (repo) {
+        query = query.eq("repo", repo);
+      }
       return query.order("created_at", { ascending: false }).order("id").range(from, to);
     }),
   ]);
-  if (profile.error) throw new Error(`getProgress: ${profile.error.message}`);
+  if (profile.error) {
+    throw new Error(`getProgress: ${profile.error.message}`);
+  }
 
   return computeProgress({
     cards,
@@ -91,7 +100,9 @@ export async function getProgress(
 export async function getOwnership(): Promise<Ownership> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("learner_ownership");
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return computeOwnership(data);
 }
 
@@ -118,7 +129,9 @@ export async function getCardPath(
       "card_id, step, due_on, mastered, card:decision_cards!inner(decision, created_at, session:sessions!inner(title, repo, branch))",
     )
     .eq("user_id", userId);
-  if (repo) reviewQuery = reviewQuery.eq("card.session.repo", repo);
+  if (repo) {
+    reviewQuery = reviewQuery.eq("card.session.repo", repo);
+  }
   const [profile, review] = await Promise.all([
     supabase.from("profiles").select("timezone").eq("id", userId).maybeSingle(),
     reviewQuery
@@ -128,9 +141,15 @@ export async function getCardPath(
       .limit(1)
       .maybeSingle(),
   ]);
-  if (profile.error) throw new Error(`getCardPath: ${profile.error.message}`);
-  if (review.error) throw new Error(`getCardPath: ${review.error.message}`);
-  if (!review.data) return null;
+  if (profile.error) {
+    throw new Error(`getCardPath: ${profile.error.message}`);
+  }
+  if (review.error) {
+    throw new Error(`getCardPath: ${review.error.message}`);
+  }
+  if (!review.data) {
+    return null;
+  }
 
   const answers = await supabase
     .from("answers")
@@ -139,7 +158,9 @@ export async function getCardPath(
     .eq("card_id", review.data.card_id)
     .order("created_at")
     .overrideTypes<CardPathInput["answers"], { merge: false }>();
-  if (answers.error) throw new Error(`getCardPath: ${answers.error.message}`);
+  if (answers.error) {
+    throw new Error(`getCardPath: ${answers.error.message}`);
+  }
 
   const { card, step, due_on, mastered } = review.data;
   return cardPath({

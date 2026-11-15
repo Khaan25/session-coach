@@ -48,7 +48,9 @@ export async function loadState(path: string): Promise<SyncState> {
   }
   for (const [id, entry] of Object.entries(done)) {
     const { outcome, at } = (entry ?? {}) as { outcome?: unknown; at?: unknown };
-    if (isOutcome(outcome) && typeof at === "string") empty.done[id] = { outcome, at };
+    if (isOutcome(outcome) && typeof at === "string") {
+      empty.done[id] = { outcome, at };
+    }
   }
   return empty;
 }
@@ -60,8 +62,11 @@ export async function loadState(path: string): Promise<SyncState> {
  */
 export async function saveState(path: string, state: SyncState): Promise<void> {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  for (const [id, entry] of Object.entries((await loadState(path)).done)) {
-    if (!Object.hasOwn(state.done, id)) state.done[id] = entry;
+  const saved = await loadState(path);
+  for (const [id, entry] of Object.entries(saved.done)) {
+    if (!Object.hasOwn(state.done, id)) {
+      state.done[id] = entry;
+    }
   }
   const temp = `${path}.${process.pid}.tmp`;
   await writeFile(temp, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });

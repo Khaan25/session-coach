@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { shapeReport, type OwnedRow } from "./report.ts";
+import { shapeReport } from "./report.ts";
+import type { OwnedRow } from "./report.ts";
 
 // Rows as wide as a careless query could make them: every secret column is present, so the test proves the shaping
 // drops them rather than relying on the select.
@@ -83,7 +84,7 @@ test("never the why, model_answer, answers, questions, hidden, flagged or untick
   ]) {
     assert.ok(!json.includes(secret), `report contains ${secret}`);
   }
-  assert.deepEqual(Object.keys(report.repos[0]?.decisions[0] ?? {}).sort(), [
+  assert.deepEqual(Object.keys(report.repos[0]?.decisions[0] ?? {}).toSorted(), [
     "decision",
     "defendedOn",
     "file",

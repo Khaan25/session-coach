@@ -3,13 +3,15 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { ApproveRequest } from "@/components/cli/approve-request";
-import { ApproveCodeForm, ApproveNotice, SETTLED_COPY } from "@/components/cli/approve-states";
+import { SETTLED_COPY } from "@/components/cli/approve-copy";
+import { ApproveCodeForm, ApproveNotice } from "@/components/cli/approve-states";
 import { buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { userRateLimit } from "@/lib/auth/rate-limit";
 import { formatRelativeTime } from "@/lib/relative-time";
-import { codeState, formatUserCode, normalizeUserCode, type DeviceRow } from "@/lib/tokens/device";
+import { codeState, formatUserCode, normalizeUserCode } from "@/lib/tokens/device";
+import type { DeviceRow } from "@/lib/tokens/device";
 import { findDeviceCode } from "@/lib/tokens/device-codes";
 
 export const metadata: Metadata = {
@@ -32,7 +34,9 @@ export default function CliApprovePage({ searchParams }: PageProps<"/cli/approve
 async function Request({ searchParams }: Pick<PageProps<"/cli/approve">, "searchParams">) {
   const { code: raw } = await searchParams;
   const typed = typeof raw === "string" ? raw : undefined;
-  if (!typed) return <ApproveCodeForm />;
+  if (!typed) {
+    return <ApproveCodeForm />;
+  }
 
   const userCode = normalizeUserCode(typed);
   if (!userCode) {
@@ -42,7 +46,9 @@ async function Request({ searchParams }: Pick<PageProps<"/cli/approve">, "search
   }
 
   const user = await getCurrentUser();
-  if (!user) return <ApproveCodeForm code={formatUserCode(userCode)} />;
+  if (!user) {
+    return <ApproveCodeForm code={formatUserCode(userCode)} />;
+  }
   // Each lookup spends the same budget as approving, so this page can't be used to guess codes either.
   const limited = await userRateLimit("deviceDecide", user.id);
   if (limited) {
@@ -78,7 +84,9 @@ async function Request({ searchParams }: Pick<PageProps<"/cli/approve">, "search
   }
 
   const state = codeState(row, now);
-  if (state !== "pending") return <ApproveNotice {...SETTLED_COPY[state]} />;
+  if (state !== "pending") {
+    return <ApproveNotice {...SETTLED_COPY[state]} />;
+  }
 
   return (
     <ApproveRequest
@@ -98,8 +106,8 @@ async function load(userCode: string): Promise<{ now: Date; row: DeviceRow | nul
   const now = new Date();
   try {
     return { now, row: await findDeviceCode(userCode) };
-  } catch (err) {
-    console.error("[cli/approve] lookup failed", err instanceof Error ? err.message : err);
+  } catch (error) {
+    console.error("[cli/approve] lookup failed", error instanceof Error ? error.message : error);
     return null;
   }
 }

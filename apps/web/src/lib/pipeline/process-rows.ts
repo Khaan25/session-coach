@@ -1,4 +1,5 @@
-import { gunzipSync } from "node:zlib";
+import { promisify } from "node:util";
+import { gunzip } from "node:zlib";
 import { decisionSourceSchema, evidenceSchema } from "@session-coach/shared/decision";
 import { MAX_UPLOAD_BYTES } from "@session-coach/shared/limits";
 import { z } from "zod";
@@ -17,7 +18,7 @@ import type { TimelineEvent } from "./parser.ts";
 export const MAX_TIMELINE_CHARS = 13_500;
 
 /** One event's text is cut to this many characters (the start is kept) so a single huge event can't eat the budget. */
-export const MAX_EVENT_CHARS = 1_500;
+export const MAX_EVENT_CHARS = 1500;
 
 /**
  * Caps each event's text, always keeps the first prompt (the developer's plan and reasons usually start there), then
@@ -44,10 +45,12 @@ export function trimTimeline(
   const first = events.findIndex((event) => event.kind === "prompt");
   const kept: TimelineEvent[] = [];
   let used = 0;
-  if (first >= 0) {
+  if (first !== -1) {
     const { chars, size } = capEvent(events[first]);
     const text = size > budget ? chars.slice(0, budget).join("") : chars.join("");
-    if (size > budget) return { kept: [{ ...events[first], text }], cut: events.length - 1 };
+    if (size > budget) {
+      return { kept: [{ ...events[first], text }], cut: events.length - 1 };
+    }
     used = size;
     kept.push({ ...events[first], text });
   }
@@ -58,13 +61,15 @@ export function trimTimeline(
     const { chars, size } = capEvent(event);
     let text = chars.join("");
     if (used + size > budget) {
-      if (kept.length + tail.length > 0) break;
+      if (kept.length + tail.length > 0) {
+        break;
+      }
       text = chars.slice(0, budget).join("");
     }
     used += size;
     tail.push({ ...event, text });
   }
-  kept.push(...tail.reverse());
+  kept.push(...tail.toReversed());
   return { kept, cut: events.length - kept.length };
 }
 
@@ -72,11 +77,16 @@ export function trimTimeline(
 function capEvent(event: TimelineEvent): { chars: string[]; size: number } {
   // Code points, not UTF-16 units, so a surrogate pair is never split.
   // Slice first so one huge event isn't expanded whole: a code point is at most 2 UTF-16 units, so this keeps at least MAX_EVENT_CHARS of them.
+  // oxlint-disable-next-line unicorn/no-useless-spread -- String#slice returns a string; the spread splits it into code points
   let chars = [...event.text.slice(0, MAX_EVENT_CHARS * 2 + 1)];
-  if (chars.length > MAX_EVENT_CHARS) chars = chars.slice(0, MAX_EVENT_CHARS);
+  if (chars.length > MAX_EVENT_CHARS) {
+    chars = chars.slice(0, MAX_EVENT_CHARS);
+  }
   const size = JSON.stringify({ id: event.id, kind: event.kind, text: chars.join("") }).length + 1;
   return { chars, size };
 }
+
+const unzip = promisify(gunzip);
 
 /** The most a log may unzip to: twice the 50 MB upload limit. A gzip bomb stops here instead of filling memory. */
 export const MAX_LOG_BYTES = 2 * MAX_UPLOAD_BYTES;
@@ -93,9 +103,10 @@ export class LogTooBigError extends Error {
  * @param maxBytes - The unzipped size limit; tests pass a small one.
  * @throws LogTooBigError when the log unzips past `maxBytes`. Other zlib errors (not gzip, truncated) pass through.
  */
-export function unzipLog(gzipped: Buffer, maxBytes = MAX_LOG_BYTES): string {
+export async function unzipLog(gzipped: Buffer, maxBytes = MAX_LOG_BYTES): Promise<string> {
   try {
-    return gunzipSync(gzipped, { maxOutputLength: maxBytes }).toString("utf8");
+    const text = await unzip(gzipped, { maxOutputLength: maxBytes });
+    return text.toString("utf8");
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ERR_BUFFER_TOO_LARGE") {
       throw new LogTooBigError(`log unzips past ${maxBytes} bytes`, { cause: error });
@@ -107,7 +118,7 @@ export function unzipLog(gzipped: Buffer, maxBytes = MAX_LOG_BYTES): string {
 /** A session title is cut to this many characters, then "…" is added. */
 export const MAX_TITLE_CHARS = 80;
 
-const LINE_BREAK = /\r?\n/;
+const LINE_BREAK = /\r?\n/u;
 
 /**
  * The session's length in whole minutes, from the top-level `timestamp` of each log line. Lines that aren't JSON
@@ -121,21 +132,29 @@ export function durationMinutes(raw: string): number | null {
   let last = -Infinity;
   let count = 0;
   for (const line of raw.split(LINE_BREAK)) {
-    if (line.trim() === "") continue;
+    if (line.trim() === "") {
+      continue;
+    }
     let entry: unknown;
     try {
       entry = JSON.parse(line);
     } catch {
       continue;
     }
-    if (typeof entry !== "object" || entry === null) continue;
+    if (typeof entry !== "object" || entry === null) {
+      continue;
+    }
     const stamp = (entry as Record<string, unknown>).timestamp;
-    if (typeof stamp !== "string") continue;
+    if (typeof stamp !== "string") {
+      continue;
+    }
     const time = Date.parse(stamp);
-    if (Number.isNaN(time)) continue;
+    if (Number.isNaN(time)) {
+      continue;
+    }
     first = Math.min(first, time);
     last = Math.max(last, time);
-    count++;
+    count += 1;
   }
   return count < 2 ? null : Math.round((last - first) / 60_000);
 }
@@ -150,9 +169,13 @@ export function durationMinutes(raw: string): number | null {
  */
 export function sessionTitle(events: readonly TimelineEvent[]): string | null {
   for (const event of events) {
-    if (event.kind !== "prompt") continue;
+    if (event.kind !== "prompt") {
+      continue;
+    }
     const text = cleanPromptTitle(event.text);
-    if (text === "") continue;
+    if (text === "") {
+      continue;
+    }
     return cutTitle(text);
   }
   return null;

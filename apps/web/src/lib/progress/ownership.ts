@@ -34,8 +34,11 @@ export function computeOwnership(rows: readonly OwnershipRow[]): Ownership {
   }
   const repos = rows
     .map(({ repo, explained, owned, total }) => ({ repo, explained, owned, total }))
-    .sort((a, b) =>
-      a.repo === null ? 1 : b.repo === null ? -1 : a.repo.localeCompare(b.repo, "en"),
-    );
+    .toSorted((a, b) => {
+      if (a.repo === null) {
+        return 1;
+      }
+      return b.repo === null ? -1 : a.repo.localeCompare(b.repo, "en");
+    });
   return { overall, repos };
 }

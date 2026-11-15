@@ -11,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { useTheme, type Theme } from "./theme-provider";
+import { useTheme } from "./theme-provider";
+import type { Theme } from "./theme-provider";
 
 const OPTIONS: { value: Theme; label: string }[] = [
   { value: "light", label: "Light" },

@@ -2,7 +2,7 @@ import "server-only";
 
 import { DEFAULT_QUESTION_LEVEL } from "@session-coach/shared/project";
 
-import { callModel, ModelCallError, ModelConfigError } from "@/lib/model/call-model";
+import { ModelCallError, ModelConfigError, callModel } from "@/lib/model/call-model";
 import { levelOrDefault } from "@/lib/projects/level";
 import { SESSIONS_BUCKET } from "@/lib/sessions/upload";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,10 +10,10 @@ import { checkEvidence } from "./evidence.ts";
 import { ExtractError, extractCards } from "./extract.ts";
 import { parseSession } from "./parser.ts";
 import {
-  buildCardRows,
-  durationMinutes,
   LogTooBigError,
   MAX_LOG_BYTES,
+  buildCardRows,
+  durationMinutes,
   sessionTitle,
   trimTimeline,
   unzipLog,
@@ -45,14 +45,24 @@ function learnerMessage(error: unknown): string {
   if (error instanceof LogTooBigError) {
     return `This session's log unzips to over ${MAX_LOG_BYTES / 1024 / 1024} MB, too big to read.`;
   }
-  if (error instanceof DeadlineError) return "Making your cards took too long, so we stopped.";
-  if (error instanceof EmptyLogError) return "We couldn't find a conversation in this log.";
-  if (error instanceof LogReadError) return "We couldn't read this session's log.";
-  if (error instanceof ModelConfigError) return "Cards aren't set up on our side yet.";
+  if (error instanceof DeadlineError) {
+    return "Making your cards took too long, so we stopped.";
+  }
+  if (error instanceof EmptyLogError) {
+    return "We couldn't find a conversation in this log.";
+  }
+  if (error instanceof LogReadError) {
+    return "We couldn't read this session's log.";
+  }
+  if (error instanceof ModelConfigError) {
+    return "Cards aren't set up on our side yet.";
+  }
   if (error instanceof ExtractError) {
     return "The model's answer didn't fit twice, so no cards were made.";
   }
-  if (error instanceof ModelCallError) return "The model didn't answer.";
+  if (error instanceof ModelCallError) {
+    return "The model didn't answer.";
+  }
   return "Something went wrong while making your cards.";
 }
 
@@ -75,7 +85,7 @@ export async function processSession(
   let timer: ReturnType<typeof setTimeout> | undefined;
   // On the deadline the run's model calls are cancelled, and it checks before each write.
   const stop = new AbortController();
-  const deadline = new Promise<never>((_, reject) => {
+  const deadline = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(
       () => {
         stop.abort();
@@ -132,14 +142,18 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
   }
   let raw: string;
   try {
-    raw = unzipLog(Buffer.from(await file.arrayBuffer()));
-  } catch (cause) {
-    if (cause instanceof LogTooBigError) throw cause;
-    throw new LogReadError("gunzip failed", { cause });
+    raw = await unzipLog(Buffer.from(await file.arrayBuffer()));
+  } catch (error) {
+    if (error instanceof LogTooBigError) {
+      throw error;
+    }
+    throw new LogReadError("gunzip failed", { cause: error });
   }
 
   const { events } = parseSession(raw);
-  if (events.length === 0) throw new EmptyLogError("parseSession returned no events");
+  if (events.length === 0) {
+    throw new EmptyLogError("parseSession returned no events");
+  }
 
   // The trimmed events feed both the model and the quote check, so event_index lines up.
   const { kept: timeline, cut } = trimTimeline(events);
@@ -158,7 +172,9 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
   signal.throwIfAborted();
   if (rows.length > 0) {
     const { error: insertError } = await admin.from("decision_cards").insert(rows);
-    if (insertError) throw insertError;
+    if (insertError) {
+      throw insertError;
+    }
   }
 
   // Title and duration are optional: if computing them throws, the session is still marked ready.
@@ -181,9 +197,14 @@ async function run(sessionId: string, startedAt: string, signal: AbortSignal): P
     .eq("status", "processing")
     .eq("processing_started_at", startedAt)
     .select("id");
-  if (readyError) throw readyError;
-  if (readied.length === 0) throw new Error("session left processing before the run finished");
+  if (readyError) {
+    throw readyError;
+  }
+  if (readied.length === 0) {
+    throw new Error("session left processing before the run finished");
+  }
 
+  // oxlint-disable-next-line no-console -- the run summary is a structured info line for the platform logs
   console.log("[pipeline/process]", {
     session_id: sessionId,
     level,
@@ -205,13 +226,17 @@ async function questionLevel(
   userId: string,
   repo: string | null,
 ) {
-  if (!repo) return DEFAULT_QUESTION_LEVEL;
+  if (!repo) {
+    return DEFAULT_QUESTION_LEVEL;
+  }
   const { data, error } = await admin
     .from("projects")
     .select("question_level")
     .eq("user_id", userId)
     .eq("repo", repo)
     .maybeSingle();
-  if (error) console.error("[pipeline/process] question level read failed", error.message);
+  if (error) {
+    console.error("[pipeline/process] question level read failed", error.message);
+  }
   return levelOrDefault(data?.question_level);
 }

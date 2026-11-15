@@ -58,7 +58,7 @@ test("invalid input is refused before any query", async () => {
   ]) {
     const { client, calls } = fakeClient();
     const { error } = await saveProjectLevel(client, "u1", bad, now);
-    assert.match(error ?? "", /simple, hard or complex/);
+    assert.match(error ?? "", /simple, hard or complex/u);
     assert.equal(calls.length, 0);
   }
 });

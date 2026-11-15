@@ -10,7 +10,9 @@ import {
 
 function form(fields: Record<string, string>) {
   const data = new FormData();
-  for (const [name, value] of Object.entries(fields)) data.set(name, value);
+  for (const [name, value] of Object.entries(fields)) {
+    data.set(name, value);
+  }
   return data;
 }
 
@@ -27,11 +29,12 @@ test("a valid form has no errors", () => {
 test("email: missing, blank or malformed", () => {
   assert.equal(validateResetRequest(form({})).email, "Enter your email address.");
   assert.equal(validateResetRequest(form({ email: "   " })).email, "Enter your email address.");
-  for (const email of ["a", "a@b", "a b@c.d", "@b.co"])
+  for (const email of ["a", "a@b", "a b@c.d", "@b.co"]) {
     assert.equal(
       validateResetRequest(form({ email })).email,
       "Enter an email address like name@example.com.",
     );
+  }
 });
 
 test("sign-in only needs a password; sign-up and reset need MIN_PASSWORD characters", () => {

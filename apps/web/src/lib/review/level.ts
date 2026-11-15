@@ -9,7 +9,9 @@ type ReviewRow = Pick<ReviewState, "step" | "mastered">;
 
 /** The card's level from its `reviews` row; no row means it was never answered. */
 export function levelOf(review: ReviewRow | null | undefined): Level {
-  if (!review) return 0;
+  if (!review) {
+    return 0;
+  }
   return review.mastered ? "owned" : review.step;
 }
 

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Toaster, createToastManager, toast } from "@/components/ui/toast";
 
-import { cards, session } from "../sample";
+import { cards, session } from "@/components/design-system/sample";
 
 // Real toasts, not fakes: stacking, dedup and a rejecting promise are what break. Needs the root layout's <Toaster>.
 
@@ -77,9 +77,9 @@ function PromiseExample() {
       <Button
         variant="secondary"
         className="flex-1"
-        onClick={() =>
-          toast
-            .promise(settleIn(2000, true), {
+        onClick={async () => {
+          try {
+            await toast.promise(settleIn(2000, true), {
               loading: "Writing decision cards",
               success: "Cards ready",
               error: (cause: Error) => ({
@@ -87,10 +87,11 @@ function PromiseExample() {
                 title: "Cards could not be written",
                 description: `${cause.message}. TODO(zia): retry copy.`,
               }),
-            })
+            });
+          } catch {
             // `promise` rejects with the original error once the toast shows; without this it reaches the console.
-            .catch(() => {})
-        }
+          }
+        }}
       >
         Promise that rejects
       </Button>

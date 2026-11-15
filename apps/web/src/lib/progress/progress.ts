@@ -59,8 +59,12 @@ export type Progress = {
 
 /** A card's step from its `reviews` row; no row means it was never answered. */
 function stepOf(review: { step: number; mastered: boolean } | undefined): ReviewStep {
-  if (!review) return "new";
-  if (review.mastered) return "mastered";
+  if (!review) {
+    return "new";
+  }
+  if (review.mastered) {
+    return "mastered";
+  }
   return REVIEW_STEPS[review.step] ?? "new";
 }
 
@@ -106,10 +110,16 @@ export function computeProgress({
 
   const weekAgo = now.getTime() - 7 * DAY_MS;
   const explainable = new Set<string>();
-  for (const [id, review] of reviewOf) if (review.mastered) explainable.add(id);
+  for (const [id, review] of reviewOf) {
+    if (review.mastered) {
+      explainable.add(id);
+    }
+  }
   for (const a of ownAnswers) {
     const at = Date.parse(a.created_at);
-    if (a.score === 2 && at >= weekAgo && at <= now.getTime()) explainable.add(a.card_id);
+    if (a.score === 2 && at >= weekAgo && at <= now.getTime()) {
+      explainable.add(a.card_id);
+    }
   }
 
   const steps: Record<ReviewStep, number> = {
@@ -119,7 +129,9 @@ export function computeProgress({
     "day-11": 0,
     mastered: 0,
   };
-  for (const { id } of cards) steps[stepOf(reviewOf.get(id))] += 1;
+  for (const { id } of cards) {
+    steps[stepOf(reviewOf.get(id))] += 1;
+  }
 
   const days = lastDays(timeZone, now, CHART_DAYS);
   const perDay = new Map(days.map((day) => [day, 0]));
@@ -127,7 +139,9 @@ export function computeProgress({
   for (const a of ownAnswers) {
     const day = localDate(timeZone, new Date(a.created_at));
     const count = perDay.get(day);
-    if (count === undefined) continue;
+    if (count === undefined) {
+      continue;
+    }
     perDay.set(day, count + 1);
     scoreMix[a.score] += 1;
   }

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { test } from "node:test";
-import { parseSession, RESULT_MAX_CHARS } from "./parser.ts";
+import { RESULT_MAX_CHARS, parseSession } from "./parser.ts";
 
-const fixture = readFileSync(new URL("./fixtures/session.fake.jsonl", import.meta.url), "utf8");
+const fixture = await readFile(new URL("fixtures/session.fake.jsonl", import.meta.url), "utf8");
 const { events, stats } = parseSession(fixture);
 
 const line = (obj: unknown) => JSON.stringify(obj);
@@ -87,6 +87,7 @@ test("tool results are not prompts and are cut to 500 characters", () => {
 });
 
 test("an edit preview is redacted before the 60-character cut", () => {
+  // oxlint-disable-next-line no-inline-comments -- the secret scanner only honours "allowlist secret" on the same line
   const fakeKey = "sk-FAKE0example0key0for0tests0only"; //allowlist secret
   const result = parseSession(
     assistant([
@@ -212,7 +213,7 @@ test("numbers events in order and keeps counting across skipped lines", () => {
   );
   assert.deepEqual(
     events.map((e) => e.line),
-    events.map((e) => e.line).sort((a, b) => a - b),
+    events.map((e) => e.line).toSorted((a, b) => a - b),
   );
 });
 

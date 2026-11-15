@@ -1,4 +1,4 @@
-const WORD_BREAK = /[\s._-]+/;
+const WORD_BREAK = /[\s._-]+/u;
 
 /**
  * Up to two initials for a learner's avatar: first and last word of the display name, else the start of the email,

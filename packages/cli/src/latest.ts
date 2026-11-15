@@ -19,20 +19,24 @@ export function resolveCwd(env: Record<string, string | undefined>, cwd: string)
   return env.INIT_CWD || cwd;
 }
 
-const NOT_DIR_CHAR = /[^a-zA-Z0-9-]/g;
+const NOT_DIR_CHAR = /[^a-zA-Z0-9-]/gu;
 
 /**
  * Claude Code's folder name for a project: every character other than a letter, digit or `-` becomes `-`.
  * Verified for `/` and `_`; the rule for dots, spaces and other characters is a guess.
  */
 export function projectDirName(cwd: string): string {
-  return cwd.replace(NOT_DIR_CHAR, "-");
+  return cwd.replaceAll(NOT_DIR_CHAR, "-");
 }
 
 /** Formats a byte count as B, KB or MB. */
 export function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
@@ -40,7 +44,7 @@ export function formatSize(bytes: number): string {
 const HEAD_BYTES = 64 * 1024;
 const HEAD_LINES = 50;
 
-const TRAILING_SLASHES = /\/+$/;
+const TRAILING_SLASHES = /\/+$/u;
 
 /** Drops trailing slashes, so `/work/a/` and `/work/a` compare equal. The root stays `/`. */
 function trimSlash(path: string): string {
@@ -69,8 +73,13 @@ async function recordedCwd(path: string): Promise<string | null> {
     } catch {
       continue;
     }
-    if (event !== null && typeof event === "object" && "cwd" in event) {
-      if (typeof event.cwd === "string") return event.cwd;
+    if (
+      event !== null &&
+      typeof event === "object" &&
+      "cwd" in event &&
+      typeof event.cwd === "string"
+    ) {
+      return event.cwd;
     }
   }
   return null;
@@ -97,14 +106,17 @@ async function listCandidates(dir: string): Promise<Candidate[] | null> {
       }),
   );
   const candidates = stats.filter((c): c is Candidate => c !== null);
-  return candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return candidates;
 }
 
 /** The spellings of `cwd` a log may record: as given, and with symlinks resolved. */
 async function acceptedCwds(cwd: string): Promise<Set<string>> {
   const accepted = new Set([trimSlash(cwd)]);
   const real = await realpath(cwd).catch(() => null);
-  if (real) accepted.add(trimSlash(real));
+  if (real) {
+    accepted.add(trimSlash(real));
+  }
   return accepted;
 }
 
@@ -124,8 +136,12 @@ export async function findLatestLog(
 ): Promise<LatestLog> {
   const dir = join(projectsDir, projectDirName(cwd));
   const all = await listCandidates(dir);
-  if (all === null) return { error: `No Claude Code logs found in ${dir}.` };
-  if (all.length === 0) return { error: `No .jsonl logs found in ${dir}.` };
+  if (all === null) {
+    return { error: `No Claude Code logs found in ${dir}.` };
+  }
+  if (all.length === 0) {
+    return { error: `No .jsonl logs found in ${dir}.` };
+  }
   const candidates = all.filter(({ mtimeMs }) => mtimeMs <= runningSince);
   if (candidates.length === 0) {
     return {
@@ -137,7 +153,9 @@ export async function findLatestLog(
   const accepted = await acceptedCwds(cwd);
   for (const { path, name, size } of candidates) {
     const recorded = await recordedCwd(path);
-    if (recorded !== null && accepted.has(trimSlash(recorded))) return { path, name, size };
+    if (recorded !== null && accepted.has(trimSlash(recorded))) {
+      return { path, name, size };
+    }
   }
   return { error: `No log in ${dir} was recorded in this folder (${cwd}), so nothing was chosen.` };
 }
@@ -159,7 +177,9 @@ export async function findRecentLogs(
   window: { since: number; until: number },
 ): Promise<LogFile[]> {
   const candidates = await listCandidates(join(projectsDir, projectDirName(cwd)));
-  if (candidates === null) return [];
+  if (candidates === null) {
+    return [];
+  }
   const accepted = await acceptedCwds(cwd);
   const inWindow = candidates.filter(
     ({ mtimeMs }) => mtimeMs >= window.since && mtimeMs <= window.until,
@@ -168,6 +188,6 @@ export async function findRecentLogs(
   const recorded = await Promise.all(inWindow.map(({ path }) => recordedCwd(path)));
   return inWindow.filter((_, i) => {
     const cwdOf = recorded[i];
-    return cwdOf != null && accepted.has(trimSlash(cwdOf));
+    return cwdOf !== null && cwdOf !== undefined && accepted.has(trimSlash(cwdOf));
   });
 }

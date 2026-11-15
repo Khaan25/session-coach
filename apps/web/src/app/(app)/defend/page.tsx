@@ -28,6 +28,8 @@ export default function DefendPage() {
 async function Defend() {
   const user = await getCurrentUser();
   const defendable = user ? await defendableCount(user.id) : 0;
-  if (defendable === 0) return <NothingToDefend />;
+  if (defendable === 0) {
+    return <NothingToDefend />;
+  }
   return <DefendFlow defendable={defendable} />;
 }

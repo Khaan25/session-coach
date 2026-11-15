@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import type { SessionStatus } from "@session-coach/shared/session";
 import { CaretRightIcon, FolderSimpleIcon } from "@phosphor-icons/react";
 
-import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
+import type { BadgeProps } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
@@ -41,7 +42,9 @@ export function NavSessions({
 }) {
   const pathname = usePathname();
   const { rows } = useLiveSessions(userId, sessions, { limit: 5 });
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    return null;
+  }
   return (
     <Collapsible
       defaultOpen

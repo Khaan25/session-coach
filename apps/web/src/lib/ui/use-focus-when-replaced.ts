@@ -21,15 +21,18 @@ function useFocusWhenReplaced<
   useEffect(() => {
     const before = was.current;
     was.current = replaced;
-    if (before || !replaced) return;
+    if (before || !replaced) {
+      return;
+    }
     const active = document.activeElement;
     if (
       !active ||
       active === document.body ||
       !active.isConnected ||
       region.current?.contains(active)
-    )
+    ) {
       target.current?.focus();
+    }
   }, [replaced]);
   return { region, target };
 }

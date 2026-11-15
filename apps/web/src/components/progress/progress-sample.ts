@@ -12,7 +12,7 @@ export const SAMPLE_PROGRESS: ProgressPageData = {
     answersPerDay: Array.from({ length: CHART_DAYS }, (_, i) => ({
       // Oct 5 to Nov 3.
       day: i < 27 ? `Oct ${i + 5}` : `Nov ${i - 26}`,
-      answers: [3, 0, 2, 4, 1, 5, 2][i % 7]!,
+      answers: [3, 0, 2, 4, 1, 5, 2][i % 7],
     })),
     scoreMix: { 2: 41, 1: 12, 0: 4 },
     bySession: [

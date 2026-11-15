@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import type { ComponentProps } from "react";
 import Link from "next/link";
 
 import { BrandMark } from "@/components/brand-mark";
@@ -25,14 +25,14 @@ export function AppSidebar({
   userId,
   user,
   ...props
-}: React.ComponentProps<typeof Sidebar> & {
+}: ComponentProps<typeof Sidebar> & {
   sessions: SessionListItem[];
   /** Cards due today, shown on the Review row; 0 hides the badge. */
   dueCount: number;
   /** Turns on live status updates for the sessions; null while signed out or loading. */
   userId: string | null;
   /** Null while signed out or loading: the footer is then empty. */
-  user: React.ComponentProps<typeof NavUser>["user"] | null;
+  user: ComponentProps<typeof NavUser>["user"] | null;
 }) {
   return (
     <Sidebar variant="inset" {...props}>
@@ -48,6 +48,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         <NavMain
+          // oxlint-disable-next-line oxc/no-map-spread -- navMain is a shared module constant; the one row is copied, never mutated
           items={navMain.map((item) =>
             item.url === "/review" ? { ...item, badge: dueCount } : item,
           )}

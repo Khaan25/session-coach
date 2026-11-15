@@ -24,7 +24,7 @@ export type SiteNavUser = { name: string; email: string; initials: string };
  * The header's account corner: signed in, the dashboard and an avatar menu; signed out, sign in.
  */
 export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
-  if (!user)
+  if (!user) {
     return (
       <>
         <ForgetShapes />
@@ -33,6 +33,7 @@ export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
         </Link>
       </>
     );
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -72,6 +73,7 @@ export function SiteNavAccount({ user }: { user: SiteNavUser | null }) {
             Settings
           </DropdownMenuLinkItem>
           <DropdownMenuSeparator />
+          {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the element is Base UI's `render` target; its label is the children the parent component passes in */}
           <DropdownMenuItem render={<button type="submit" form="header-sign-out" />}>
             <SignOutIcon />
             Sign out

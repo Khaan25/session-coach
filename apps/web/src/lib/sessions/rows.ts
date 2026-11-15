@@ -87,9 +87,11 @@ export function applySessionChange(
   { prepend, limit, repo }: { prepend: boolean; limit: number; repo?: string },
 ): SessionListItem[] {
   const i = rows.findIndex(({ id }) => id === row.id);
-  if (i >= 0) {
+  if (i !== -1) {
     // A retry can move a session to another repo: it leaves a list filtered to the old one.
-    if (repo !== undefined && row.repo !== repo) return rows.filter((_, j) => j !== i);
+    if (repo !== undefined && row.repo !== repo) {
+      return rows.filter((_, j) => j !== i);
+    }
     return rows.map((old, j) => (j === i ? { ...old, ...row } : old));
   }
   const newest = rows[0] ? Date.parse(rows[0].created_at) : -Infinity;

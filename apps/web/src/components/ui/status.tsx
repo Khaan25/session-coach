@@ -1,4 +1,5 @@
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
+import type { VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
 // Where a piece of work stands: idle, queued, running, ok, warn, fail, or waiting on a person. The status is a
@@ -90,6 +91,12 @@ type StatusProps = Omit<React.ComponentProps<"span">, "children"> &
     children?: React.ReactNode;
   };
 
+// In a DataTable or DataGrid row the waiting label is the ink word with no box.
+const inRow = cn(
+  "in-data-[slot=data-table]:h-auto in-data-[slot=data-table]:rounded-none in-data-[slot=data-table]:bg-transparent in-data-[slot=data-table]:px-0 in-data-[slot=data-table]:shadow-none",
+  "in-data-[slot=data-grid-row]:h-auto in-data-[slot=data-grid-row]:rounded-none in-data-[slot=data-grid-row]:bg-transparent in-data-[slot=data-grid-row]:px-0 in-data-[slot=data-grid-row]:shadow-none",
+);
+
 function Status({
   status = "idle",
   variant = "plain",
@@ -101,10 +108,11 @@ function Status({
   children,
   ...props
 }: StatusProps) {
-  if (process.env.NODE_ENV !== "production" && variant === "field")
+  if (process.env.NODE_ENV !== "production" && variant === "field") {
     console.warn(
       'Status: variant="field" renders as plain. Put data-status on the frame and the word in its header.',
     );
+  }
   const word = children ?? (typeof label === "string" ? label : statusLabels[status]);
   // The region is always in the DOM, so a change from empty to the word is what gets announced.
   const region = live ? (
@@ -112,7 +120,7 @@ function Status({
       {settled(status) ? word : ""}
     </span>
   ) : null;
-  if (status === "waiting")
+  if (status === "waiting") {
     return (
       <span
         data-slot="status"
@@ -126,6 +134,7 @@ function Status({
         {region}
       </span>
     );
+  }
   return (
     <span
       data-slot="status"
@@ -150,12 +159,6 @@ function Status({
     </span>
   );
 }
-
-// In a DataTable or DataGrid row the waiting label is the ink word with no box.
-const inRow = cn(
-  "in-data-[slot=data-table]:h-auto in-data-[slot=data-table]:rounded-none in-data-[slot=data-table]:bg-transparent in-data-[slot=data-table]:px-0 in-data-[slot=data-table]:shadow-none",
-  "in-data-[slot=data-grid-row]:h-auto in-data-[slot=data-grid-row]:rounded-none in-data-[slot=data-grid-row]:bg-transparent in-data-[slot=data-grid-row]:px-0 in-data-[slot=data-grid-row]:shadow-none",
-);
 
 /** A box one line tall, so the arc beside wrapped text centres on the first line, not the block. */
 function FirstLine({ children }: { children: React.ReactNode }) {

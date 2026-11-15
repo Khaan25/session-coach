@@ -1,0 +1,117 @@
+{
+  // Shared base for every package. Each package's .oxlintrc.json extends this file.
+  // Policy: every category is on at "error"; a rule is off only for one of the reasons noted
+  // beside it. `env` is not inherited through `extends`, so each package repeats it.
+  "$schema": "./apps/web/node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "node", "jsdoc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "style": "error",
+    "restriction": "error",
+    "nursery": "error"
+  },
+  "env": {
+    "builtin": true,
+    "node": true
+  },
+  "rules": {
+    // Configured
+    "one-var": ["error", "never"],
+    "func-style": ["error", "declaration", { "allowArrowFunctions": true }],
+    "sort-imports": ["error", { "ignoreDeclarationSort": true }],
+    "no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }], // pairs with import/consistent-type-specifier-style
+    // Only same-scope uses hit the TDZ; a function body that names a later module-level declaration runs after it exists
+    "no-use-before-define": ["error", { "functions": false, "classes": false, "variables": false }],
+    "no-plusplus": ["error", { "allowForLoopAfterthoughts": true }],
+    "prefer-arrow-callback": ["error", { "allowNamedFunctions": true }], // memo(function Name() {}) keeps the component's name
+    "unicorn/no-useless-undefined": ["error", { "checkArguments": false }], // an explicit undefined argument is how tests pass "missing" to a required parameter
+    "no-void": ["error", { "allowAsStatement": true }], // `void promise()` marks a deliberately unawaited promise
+    "typescript/consistent-type-definitions": ["error", "type"],
+    "unicorn/import-style": ["error", { "styles": { "node:path": { "named": true } } }], // the code imports path helpers by name
+    "typescript/explicit-member-accessibility": ["error", { "accessibility": "no-public" }],
+    "import/no-unassigned-import": [
+      "error",
+      { "allow": ["**/*.css", "server-only", "client-only"] }
+    ],
+
+    // Off: contradicts another enabled rule or a repo convention
+    "import/no-named-export": "off", // the repo exports named symbols only; import/no-default-export is on
+    "import/prefer-default-export": "off", // contradicts import/no-default-export
+    "import/group-exports": "off", // the repo exports at the declaration (docs/rules/components.md), not in one export list
+    "import/exports-last": "off", // same: exported functions sit next to the helpers they use
+    "init-declarations": "off", // `let x;` assigned later; `= undefined` is banned by unicorn/no-useless-undefined
+    "node/no-top-level-await": "off", // contradicts unicorn/prefer-top-level-await; every package is ESM
+    "unicorn/number-literal-case": "off", // wants 0xFF; oxfmt prints 0xff
+    "unicorn/no-nested-ternary": "off", // duplicate of eslint/no-nested-ternary, and its parentheses fight oxfmt
+
+    // Off: bans a language feature the code uses by design
+    "no-ternary": "off", // ternaries are fine; nesting is caught by no-nested-ternary
+    "no-undefined": "off", // optional values and APIs that take undefined
+    "no-continue": "off", // early `continue` keeps loops flat
+    "unicorn/no-null": "off", // Supabase, JSON and React all use null
+    "no-warning-comments": "off", // TODO(owner) notes are how the repo marks known gaps next to the code
+    "oxc/no-optional-chaining": "off", // modern syntax the code relies on
+    "oxc/no-rest-spread-properties": "off", // modern syntax the code relies on
+    "oxc/no-async-await": "off", // modern syntax the code relies on
+    "import/no-nodejs-modules": "off", // the CLI, the server code and the tests run on Node
+    "node/no-process-env": "off", // config comes from env vars by design (AGENTS.md: model names live in env vars)
+    "promise/avoid-new": "off", // wrapping callback APIs (readline, timers, child processes) needs new Promise
+
+    // Off: arbitrary size thresholds
+    "id-length": "off",
+    "max-lines": "off",
+    "max-lines-per-function": "off",
+    "max-statements": "off",
+    "max-params": "off",
+    "max-depth": "off",
+    "max-nested-callbacks": "off",
+    "max-classes-per-file": "off",
+    "complexity": "off",
+    "import/max-dependencies": "off",
+    "unicorn/max-nested-calls": "off",
+
+    // Off: TypeScript does the job better, or the rule is noise for inferred types
+    "no-undef": "off", // tsc reports undefined names, with types and globals it knows about
+    "typescript/explicit-function-return-type": "off", // return types are inferred and checked by tsc
+    "typescript/explicit-module-boundary-types": "off", // same
+    "jsdoc/require-param": "off", // TypeScript signatures document parameters; doc comments here are prose
+    "jsdoc/require-returns": "off", // same
+    "jsdoc/require-param-type": "off", // types live in TypeScript, not JSDoc
+    "jsdoc/require-returns-type": "off", // same
+    "jsdoc/require-throws-type": "off", // same
+
+    // Off: false positives here
+    "no-magic-numbers": "off", // flags HTTP statuses, time maths (60, 1000) and test fixtures; ~800 hits after options
+    "capitalized-comments": "off", // comments open with identifiers (cacheComponents, recharts, toSorted) and scanner pragmas (`allowlist secret`) whose case matters
+    "sort-keys": "off", // key order is meaningful (iteration order drives UI, JSON and schema output)
+    "unicorn/prefer-query-selector": "off", // querySelector(`#${id}`) throws on ids that aren't valid CSS; getElementById takes any id
+    "no-await-in-loop": "off" // sequential awaits are deliberate (polling, retries, pagination, ordered test steps)
+  },
+  "overrides": [
+    {
+      "files": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+      "rules": {
+        // Off in TypeScript: tsc reports these itself (the typescript-eslint recommended set)
+        "constructor-super": "off",
+        "getter-return": "off",
+        "no-class-assign": "off",
+        "no-const-assign": "off",
+        "no-dupe-class-members": "off",
+        "no-dupe-keys": "off",
+        "no-func-assign": "off",
+        "no-import-assign": "off",
+        "no-new-native-nonconstructor": "off",
+        "no-obj-calls": "off",
+        "no-redeclare": "off",
+        "no-setter-return": "off",
+        "no-this-before-super": "off",
+        "no-unreachable": "off",
+        "no-unsafe-negation": "off",
+        "no-with": "off"
+      }
+    }
+  ]
+}

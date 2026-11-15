@@ -7,11 +7,11 @@ import { NextResponse } from "next/server";
 
 import { requireUser, serverError } from "@/lib/api/http";
 import {
-  DEFEND_GRADE_INSTRUCTIONS,
   DEFENDED_LABEL,
+  DEFEND_GRADE_INSTRUCTIONS,
+  FOLLOW_UP_SECONDS,
   defendAnswerSchema,
   defendGradeData,
-  FOLLOW_UP_SECONDS,
 } from "@/lib/defend/defend";
 import {
   invalidDefenseId,
@@ -44,11 +44,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 export async function POST(request: Request, context: { params: Promise<{ defenseId: string }> }) {
   const signedIn = await requireUser();
-  if (signedIn instanceof NextResponse) return signedIn;
+  if (signedIn instanceof NextResponse) {
+    return signedIn;
+  }
   const { user } = signedIn;
 
-  const defenseId = parseDefenseId((await context.params).defenseId);
-  if (!defenseId) return invalidDefenseId();
+  const params = await context.params;
+  const defenseId = parseDefenseId(params.defenseId);
+  if (!defenseId) {
+    return invalidDefenseId();
+  }
   const body: unknown = await request.json().catch(() => null);
   const parsed = defendAnswerSchema.safeParse(body);
   if (!parsed.success) {
@@ -61,7 +66,9 @@ export async function POST(request: Request, context: { params: Promise<{ defens
     const admin = createAdminClient();
     const now = new Date();
     const loaded = await loadDefense(admin, defenseId, user.id);
-    if (!loaded) return NextResponse.json({ error: "Defense not found" }, { status: 404 });
+    if (!loaded) {
+      return NextResponse.json({ error: "Defense not found" }, { status: 404 });
+    }
     const { defense, card } = loaded;
     if (
       defense.status !== "follow_up" ||
@@ -80,7 +87,9 @@ export async function POST(request: Request, context: { params: Promise<{ defens
       { startedAt: defense.follow_up_started_at, seconds: FOLLOW_UP_SECONDS },
       now,
     );
-    if (late) return late;
+    if (late) {
+      return late;
+    }
 
     const grade = await limitedModelCall(
       user.id,
@@ -94,7 +103,9 @@ export async function POST(request: Request, context: { params: Promise<{ defens
       },
       parseGrade,
     );
-    if (grade instanceof Response) return grade;
+    if (grade instanceof Response) {
+      return grade;
+    }
     if (!grade) {
       console.error("[api/defend/follow-up] grading output invalid twice", { defenseId });
       return NextResponse.json(
@@ -114,7 +125,9 @@ export async function POST(request: Request, context: { params: Promise<{ defens
       .eq("id", defenseId)
       .eq("status", "follow_up")
       .select("id");
-    if (finished.error) throw finished.error;
+    if (finished.error) {
+      throw finished.error;
+    }
     if (finished.data.length === 0) {
       return NextResponse.json(
         { error: "This defense was just finished. Reload to see its grade." },

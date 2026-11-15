@@ -64,27 +64,31 @@ const writeStoredTheme = (theme: Theme) => {
     // Storage denied: the choice lasts for this page view only.
     memoryTheme = theme;
   }
-  storageListeners.forEach((listener) => listener());
+  for (const listener of storageListeners) {
+    listener();
+  }
 };
 
 const subscribeStorage = (onChange: () => void) => {
   storageListeners.add(onChange);
-  window.addEventListener("storage", onChange);
+  globalThis.addEventListener("storage", onChange);
   return () => {
     storageListeners.delete(onChange);
-    window.removeEventListener("storage", onChange);
+    globalThis.removeEventListener("storage", onChange);
   };
 };
 
 const subscribeSystem = (onChange: () => void) => {
-  const media = window.matchMedia(DARK_QUERY);
+  const media = globalThis.matchMedia(DARK_QUERY);
   media.addEventListener("change", onChange);
   return () => media.removeEventListener("change", onChange);
 };
 
-const getSystemPrefersDark = () => window.matchMedia(DARK_QUERY).matches;
+const getSystemPrefersDark = () => globalThis.matchMedia(DARK_QUERY).matches;
 
-const noopSubscribe = () => () => {};
+const noopSubscribe = () => () => {
+  // Nothing to unsubscribe from.
+};
 
 /**
  * Owns the app theme: the user's choice, its persistence, and the class on `<html>` that the
@@ -107,11 +111,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = storedTheme ?? DEFAULT_THEME;
 
   // `system` is a rule, not a value, so it is resolved every render instead of stored.
-  const resolvedTheme: ResolvedTheme =
-    theme === "system" ? (systemPrefersDark ? "dark" : "light") : theme;
+  const systemTheme: ResolvedTheme = systemPrefersDark ? "dark" : "light";
+  const resolvedTheme: ResolvedTheme = theme === "system" ? systemTheme : theme;
 
   useEffect(() => {
-    if (!isHydrated) return;
+    if (!isHydrated) {
+      return;
+    }
     const root = document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(resolvedTheme);
@@ -126,10 +132,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 }
 
 /** Reads the theme. Throws outside a `ThemeProvider`, so misuse fails loudly. */
-export const useTheme = () => {
+// oxlint-disable-next-line react/only-export-components -- a provider exports its own hook (docs/rules/components.md); split, the hook would sit apart from the context it reads
+export function useTheme() {
   const context = use(ThemeProviderContext);
   if (!context) {
     throw new Error("useTheme must be used within a ThemeProvider.");
   }
   return context;
-};
+}

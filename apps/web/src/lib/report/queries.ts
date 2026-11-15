@@ -6,10 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 
-import { type DefenseRow, type OwnedRow, type Report, shapeReport } from "./report";
+import { shapeReport } from "./report";
+import type { DefenseRow, OwnedRow, Report } from "./report";
 
 /** `profiles.report_slug`'s format (check constraint in 20261105000300_report.sql). */
-export const SLUG = /^[0-9a-f]{32}$/;
+export const SLUG = /^[0-9a-f]{32}$/u;
 
 /**
  * The public report for a slug, read with the service role: a stranger has no session, and the slug is the only key.
@@ -21,7 +22,9 @@ export const SLUG = /^[0-9a-f]{32}$/;
  * @throws When a query fails.
  */
 export const getReport = cache(async (slug: string): Promise<Report | null> => {
-  if (!SLUG.test(slug)) return null;
+  if (!SLUG.test(slug)) {
+    return null;
+  }
   const admin = createAdminClient();
   const profile = await admin
     .from("profiles")
@@ -29,8 +32,12 @@ export const getReport = cache(async (slug: string): Promise<Report | null> => {
     .eq("report_slug", slug)
     .eq("report_on", true)
     .maybeSingle();
-  if (profile.error) throw new Error(`getReport: ${profile.error.message}`);
-  if (!profile.data) return null;
+  if (profile.error) {
+    throw new Error(`getReport: ${profile.error.message}`);
+  }
+  if (!profile.data) {
+    return null;
+  }
   const userId = profile.data.id;
 
   const projects = await admin
@@ -38,9 +45,13 @@ export const getReport = cache(async (slug: string): Promise<Report | null> => {
     .select("repo")
     .eq("user_id", userId)
     .eq("report_shown", true);
-  if (projects.error) throw new Error(`getReport: ${projects.error.message}`);
+  if (projects.error) {
+    throw new Error(`getReport: ${projects.error.message}`);
+  }
   const shownRepos = projects.data.map(({ repo }) => repo);
-  if (shownRepos.length === 0) return shapeReport(profile.data.display_name, [], [], []);
+  if (shownRepos.length === 0) {
+    return shapeReport(profile.data.display_name, [], [], []);
+  }
 
   const [owned, defenses] = await Promise.all([
     fetchAll<OwnedRow>((from, to) =>
@@ -92,8 +103,12 @@ export async function getReportSettings(userId: string, repos: string[]): Promis
     supabase.from("profiles").select("report_on, report_slug").eq("id", userId).single(),
     supabase.from("projects").select("repo, report_shown").eq("user_id", userId),
   ]);
-  if (profile.error) throw new Error(`getReportSettings: ${profile.error.message}`);
-  if (projects.error) throw new Error(`getReportSettings: ${projects.error.message}`);
+  if (profile.error) {
+    throw new Error(`getReportSettings: ${profile.error.message}`);
+  }
+  if (projects.error) {
+    throw new Error(`getReportSettings: ${projects.error.message}`);
+  }
   const shown = new Set(projects.data.filter((p) => p.report_shown).map((p) => p.repo));
   return {
     on: profile.data.report_on,

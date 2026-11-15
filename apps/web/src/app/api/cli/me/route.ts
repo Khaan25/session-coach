@@ -11,15 +11,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function GET(request: Request) {
   try {
     const userId = await requireCliUser(request);
-    if (userId instanceof NextResponse) return userId;
+    if (userId instanceof NextResponse) {
+      return userId;
+    }
     const { data, error } = await createAdminClient()
       .from("profiles")
       .select("email")
       .eq("id", userId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(error.message);
+    }
     return NextResponse.json({ email: data?.email ?? null });
-  } catch (err) {
-    return serverError("[api/cli/me] lookup", err, "Couldn't check the token. Try again.");
+  } catch (error) {
+    return serverError("[api/cli/me] lookup", error, "Couldn't check the token. Try again.");
   }
 }

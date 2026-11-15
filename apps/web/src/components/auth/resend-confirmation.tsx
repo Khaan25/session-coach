@@ -2,7 +2,8 @@
 
 import { use, useActionState, useEffect, useState } from "react";
 
-import { type AuthState, resendConfirmation } from "@/app/(auth)/actions";
+import { resendConfirmation } from "@/app/(auth)/actions";
+import type { AuthState } from "@/app/(auth)/actions";
 import { useDryRun } from "@/components/app/dry-run";
 import { AuthPreviewContext } from "@/components/auth/use-auth-form";
 import { Button } from "@/components/ui/button";
@@ -25,14 +26,18 @@ export function ResendConfirmation({ email }: { email: string }) {
             message: "If that address is waiting to be confirmed, we sent a new link.",
           }
         : await resendConfirmation(prev, formData);
-      if (result.status === "sent") setLeft(COOLDOWN_S);
+      if (result.status === "sent") {
+        setLeft(COOLDOWN_S);
+      }
       return result;
     },
     preview?.status === "sent" ? preview : {},
   );
 
   useEffect(() => {
-    if (left <= 0) return;
+    if (left <= 0) {
+      return;
+    }
     const timer = setTimeout(() => setLeft(left - 1), 1000);
     return () => clearTimeout(timer);
   }, [left]);
@@ -43,7 +48,6 @@ export function ResendConfirmation({ email }: { email: string }) {
       <Button type="submit" variant="secondary" disabled={pending || left > 0}>
         {left > 0 ? `Resend in ${left} s` : "Resend the email"}
       </Button>
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <p role="status" className="text-center type-body-sm text-text-2">
         {state.message}
       </p>

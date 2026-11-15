@@ -11,7 +11,8 @@ import {
   XIcon,
 } from "@phosphor-icons/react";
 import { cn } from "cn";
-import { play, type SoundName } from "cuelume";
+import { play } from "cuelume";
+import type { SoundName } from "cuelume";
 
 import { Button } from "@/components/ui/button";
 import { tooltipPopupClass } from "@/components/ui/tooltip";
@@ -121,9 +122,12 @@ function ToastDescription({ className, ...props }: ToastPrimitive.Description.Pr
   );
 }
 
+const toastActionRender = <Button variant="secondary" size="xs" />;
+const toastCloseRender = <Button variant="ghost" size="icon-xs" />;
+
 function ToastAction({
   className,
-  render = <Button variant="secondary" size="xs" />,
+  render = toastActionRender,
   ...props
 }: ToastPrimitive.Action.Props) {
   return (
@@ -140,7 +144,7 @@ function ToastAction({
 function ToastClose({
   className,
   children,
-  render = <Button variant="ghost" size="icon-xs" />,
+  render = toastCloseRender,
   ...props
 }: ToastPrimitive.Close.Props) {
   return (
@@ -253,7 +257,7 @@ function ToastPositioner({ className, ...props }: ToastPrimitive.Positioner.Prop
  */
 function pulseOf(updateKey: number | undefined) {
   if (!updateKey) {
-    return undefined;
+    return;
   }
 
   return updateKey % 2 === 0 ? "even" : "odd";
@@ -271,7 +275,9 @@ const toastCues: Partial<Record<string, SoundName>> = {
 function useToastCue(toastItem: ToastPrimitive.Root.Props["toast"] | undefined) {
   const cue: SoundName | undefined = toastItem?.data?.cue ?? toastCues[toastItem?.type ?? ""];
   React.useEffect(() => {
-    if (cue) play(cue);
+    if (cue) {
+      play(cue);
+    }
   }, [cue]);
 }
 
@@ -358,8 +364,8 @@ function Toaster({
   );
 }
 
-const createToastManager = ToastPrimitive.createToastManager;
-const useToastManager = ToastPrimitive.useToastManager;
+const { createToastManager } = ToastPrimitive;
+const { useToastManager } = ToastPrimitive;
 
 export {
   Toaster,

@@ -1,10 +1,7 @@
 // What each question level means to a learner, and how a stored value maps to a level. Pure, so node --test runs it.
 
-import {
-  DEFAULT_QUESTION_LEVEL,
-  questionLevelSchema,
-  type QuestionLevel,
-} from "@session-coach/shared/project";
+import { DEFAULT_QUESTION_LEVEL, questionLevelSchema } from "@session-coach/shared/project";
+import type { QuestionLevel } from "@session-coach/shared/project";
 
 /** The three levels in order, with the label and the one-line example the picker shows. */
 export const QUESTION_LEVEL_OPTIONS: readonly {
@@ -32,5 +29,6 @@ export const QUESTION_LEVEL_OPTIONS: readonly {
 
 /** A stored or missing level as a level: no project row, no repo or an unknown value all mean the default (simple). */
 export function levelOrDefault(value: unknown): QuestionLevel {
+  // oxlint-disable-next-line promise/prefer-await-to-then -- zod's .catch() sets a fallback value; it is not a promise
   return questionLevelSchema.catch(DEFAULT_QUESTION_LEVEL).parse(value);
 }
