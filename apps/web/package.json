@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "oxlint --deny-warnings",
+    "lint": "next typegen && oxlint --deny-warnings",
     "typecheck": "next typegen && bun check",
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
     "test:rls": "node --test --experimental-strip-types tests/rls.test.ts",
