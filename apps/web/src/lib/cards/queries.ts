@@ -111,6 +111,6 @@ async function revealAnswered(userId: string, cardIds: string[]): Promise<CardVi
 
 /** Whether an embedded `reviews` (one-to-one, so an object, or an array from some clients) is the learner's own. */
 function answeredBy(reviews: unknown, userId: string): boolean {
-  const row = Array.isArray(reviews) ? reviews[0] : reviews;
+  const row: unknown = Array.isArray(reviews) ? reviews[0] : reviews;
   return (row as { user_id?: string } | null)?.user_id === userId;
 }

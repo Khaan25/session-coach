@@ -19,7 +19,7 @@ function thumbValuesOf(initial: number | readonly number[] | undefined, min: num
   if (initial === undefined) {
     return [min, max];
   }
-  return Array.isArray(initial) ? initial : [initial];
+  return typeof initial === "number" ? [initial] : initial;
 }
 
 function Slider({

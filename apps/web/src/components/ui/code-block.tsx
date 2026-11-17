@@ -132,7 +132,7 @@ function tokenizeLine(line: string, lang: Language, state: State): Token[] {
   const out: Token[] = [];
   const push = (type: TokenType, value: string) => {
     const last = out.at(-1);
-    if (last && last.type === type) {
+    if (last?.type === type) {
       last.value += value;
     } else {
       out.push({ type, value });
@@ -500,7 +500,7 @@ function commandLines(code: string, prompt: string): CommandLine[] {
       // An odd run of trailing backslashes continues the line; an even run is escaped backslashes and does not.
       const continues =
         prev?.kind === "command" &&
-        (prev.text.match(trailingBackslashes)?.[0].length ?? 0) % 2 === 1;
+        (trailingBackslashes.exec(prev.text)?.[0].length ?? 0) % 2 === 1;
       out.push({ kind: continues ? "command" : "output", text: l });
     }
   }

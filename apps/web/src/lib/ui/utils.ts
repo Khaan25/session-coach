@@ -1,4 +1,4 @@
-import type { Ref, RefCallback, RefObject } from "react";
+import type { Ref, RefCallback } from "react";
 import { cn } from "cn";
 
 // Helpers for the design system's components. Classes merge with the `cn` package, imported from its source.
@@ -48,9 +48,9 @@ export function mergeRefs<T>(...refs: (Ref<T> | undefined)[]): RefCallback<T> {
         return typeof cleanup === "function" ? cleanup : () => ref(null);
       }
       if (ref) {
-        (ref as RefObject<T | null>).current = node;
+        ref.current = node;
         return () => {
-          (ref as RefObject<T | null>).current = null;
+          ref.current = null;
         };
       }
       return null;

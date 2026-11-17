@@ -198,7 +198,7 @@ describe("redaction before upload", () => {
   });
 
   it("only string values are redacted, not keys", () => {
-    const key = `${FAKE_EMAIL}`;
+    const key = FAKE_EMAIL;
     assert.deepEqual(JSON.parse(redactLog(JSON.stringify({ [key]: FAKE_EMAIL }))), {
       [key]: "[EMAIL]",
     });

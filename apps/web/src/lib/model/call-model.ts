@@ -151,7 +151,9 @@ async function request(
     if (!response.ok) {
       throw new ProviderHttpError(provider, response.status, response.headers.get("retry-after"));
     }
-    const body = await response.json();
+    const body = (await response.json()) as {
+      candidates?: { content?: { parts?: { text?: unknown }[] } }[];
+    } | null;
     return String(body?.candidates?.[0]?.content?.parts?.[0]?.text ?? "");
   }
   const response = await fetch(CHAT_URL[provider], {
@@ -172,6 +174,8 @@ async function request(
   if (!response.ok) {
     throw new ProviderHttpError(provider, response.status, response.headers.get("retry-after"));
   }
-  const body = await response.json();
+  const body = (await response.json()) as {
+    choices?: { message?: { content?: unknown } }[];
+  } | null;
   return String(body?.choices?.[0]?.message?.content ?? "");
 }

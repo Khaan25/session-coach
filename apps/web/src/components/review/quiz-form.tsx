@@ -78,17 +78,19 @@ export function QuizForm({
   // The submit button unmounts when the result replaces the form, so focus moves to the result heading.
   const { target: resultHeading } = useFocusWhenReplaced<HTMLHeadingElement>(result !== null);
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending !== null) {
       return;
     }
     const trimmed = answer.trim();
     if (!trimmed) {
-      return setError("Write your explanation before you submit.");
+      setError("Write your explanation before you submit.");
+      return;
     }
     if (trimmed.length > MAX_ANSWER) {
-      return setError(`Keep it under ${MAX_ANSWER} characters.`);
+      setError(`Keep it under ${MAX_ANSWER} characters.`);
+      return;
     }
     setError(null);
     setPending("answer");
@@ -327,7 +329,7 @@ export function QuizAnswer({
   /** Which request is in flight, so each button says what it is doing. */
   pending: "answer" | "skip" | null;
   onAnswerChange?: (value: string) => void;
-  onSubmit?: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSubmit?: (event: React.SubmitEvent<HTMLFormElement>) => void;
   onSkip?: () => void;
   onBlockedPaste?: (event: React.ClipboardEvent | React.DragEvent) => void;
 }) {

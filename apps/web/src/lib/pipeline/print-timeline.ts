@@ -15,7 +15,7 @@ async function main(path: string | undefined): Promise<number> {
   try {
     raw = await readFile(path, "utf8");
   } catch (error) {
-    console.error(`cannot read ${path}: ${error instanceof Error ? error.message : error}`);
+    console.error(`cannot read ${path}: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
 

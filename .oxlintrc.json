@@ -13,6 +13,9 @@
     "restriction": "error",
     "nursery": "error"
   },
+  "options": {
+    "typeAware": true // type-aware rules run on tsrs (devDependency in each package)
+  },
   "env": {
     "builtin": true,
     "node": true
@@ -32,6 +35,19 @@
     "typescript/consistent-type-definitions": ["error", "type"],
     "unicorn/import-style": ["error", { "styles": { "node:path": { "named": true } } }], // the code imports path helpers by name
     "typescript/explicit-member-accessibility": ["error", { "accessibility": "no-public" }],
+    // node:test's test() and describe() return promises the runner awaits itself
+    "typescript/no-floating-promises": [
+      "error",
+      {
+        "allowForKnownSafeCalls": [
+          { "from": "package", "package": "node:test", "name": ["test", "describe", "it", "suite"] }
+        ]
+      }
+    ],
+    "typescript/no-confusing-void-expression": ["error", { "ignoreArrowShorthand": true }], // `onClick={() => setOpen(true)}`
+    // React ignores an event handler's return value, so an async onClick is fine; promises passed elsewhere are still checked
+    "typescript/no-misused-promises": ["error", { "checksVoidReturn": { "attributes": false } }],
+    "typescript/return-await": ["error", "error-handling-correctness-only"], // `return await` outside try is allowed; require-await wants the await kept
     "import/no-unassigned-import": [
       "error",
       { "allow": ["**/*.css", "server-only", "client-only"] }
@@ -40,6 +56,7 @@
     // Off: contradicts another enabled rule or a repo convention
     "import/no-named-export": "off", // the repo exports named symbols only; import/no-default-export is on
     "import/prefer-default-export": "off", // contradicts import/no-default-export
+    "typescript/non-nullable-type-assertion-style": "off", // wants `x!`, which typescript/no-non-null-assertion bans
     "import/group-exports": "off", // the repo exports at the declaration (docs/rules/components.md), not in one export list
     "import/exports-last": "off", // same: exported functions sit next to the helpers they use
     "init-declarations": "off", // `let x;` assigned later; `= undefined` is banned by unicorn/no-useless-undefined
@@ -58,6 +75,8 @@
     "oxc/no-async-await": "off", // modern syntax the code relies on
     "import/no-nodejs-modules": "off", // the CLI, the server code and the tests run on Node
     "node/no-process-env": "off", // config comes from env vars by design (AGENTS.md: model names live in env vars)
+    "typescript/strict-boolean-expressions": "off", // truthiness checks on strings, numbers and nullable values are idiomatic here
+    "typescript/no-unsafe-type-assertion": "off", // `as` narrows values zod or a DOM check already validated; zod guards the trust boundaries
     "promise/avoid-new": "off", // wrapping callback APIs (readline, timers, child processes) needs new Promise
 
     // Off: arbitrary size thresholds
@@ -82,8 +101,16 @@
     "jsdoc/require-param-type": "off", // types live in TypeScript, not JSDoc
     "jsdoc/require-returns-type": "off", // same
     "jsdoc/require-throws-type": "off", // same
+    "typescript/promise-function-async": "off", // style only: `() => fetch(url)` and `async () => fetch(url)` behave the same
+    "typescript/consistent-return": "off", // misfires on server actions whose other branch ends in redirect(), which throws
+    "typescript/prefer-readonly-parameter-types": "off", // flags every React props object, Supabase row and DOM event; ~1,200 hits with no bug among them
 
     // Off: false positives here
+    "typescript/prefer-nullish-coalescing": "off", // `||` is deliberate: an empty name or env var falls back, and `flag || undefined` drops a false attribute
+    "typescript/no-unnecessary-condition": "off", // Supabase and DOM types claim non-null where runtime can be null (data on error, navigator.clipboard over http)
+    "typescript/no-misused-spread": "off", // `[...text]` splits by code point on purpose, so truncation never cuts an emoji in half
+    "typescript/no-base-to-string": "off", // fires on `String(value ?? "")` over unknown JSON fields, which is the intended coercion
+    "typescript/strict-void-return": "off", // fires on async onClick handlers and setter shorthands; no-misused-promises catches the real cases
     "no-magic-numbers": "off", // flags HTTP statuses, time maths (60, 1000) and test fixtures; ~800 hits after options
     "capitalized-comments": "off", // comments open with identifiers (cacheComponents, recharts, toSorted) and scanner pragmas (`allowlist secret`) whose case matters
     "sort-keys": "off", // key order is meaningful (iteration order drives UI, JSON and schema output)
@@ -91,6 +118,28 @@
     "no-await-in-loop": "off" // sequential awaits are deliberate (polling, retries, pagination, ordered test steps)
   },
   "overrides": [
+    {
+      "files": ["**/*.mjs", "**/*.js"],
+      "rules": {
+        // Plain JavaScript has no types, so every value is `any`; tsc doesn't check these files either
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-return": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.ts", "**/*.test.mjs", "**/e2e/**", "**/tests/**"],
+      "rules": {
+        // Tests read fixtures and responses as `any` (JSON.parse, res.json()) and assert on them directly
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-return": "off"
+      }
+    },
     {
       "files": ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
       "rules": {

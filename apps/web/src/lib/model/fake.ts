@@ -50,8 +50,11 @@ const WHITESPACE = /\s+/u;
  * @returns The same `{ title, decisions }` shape the real extractor must return; empty when no event qualifies.
  */
 export function fakeExtract(data: { events?: unknown }) {
-  const events = Array.isArray(data.events) ? data.events : [];
-  const firstPrompt = events.find((event: { kind?: unknown }) => event.kind === "prompt");
+  const events = (Array.isArray(data.events) ? data.events : []) as {
+    kind?: unknown;
+    text?: unknown;
+  }[];
+  const firstPrompt = events.find((event) => event.kind === "prompt");
   const opening = String(firstPrompt?.text ?? "")
     .trim()
     .split(WHITESPACE)

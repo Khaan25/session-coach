@@ -126,7 +126,7 @@ function Timeline({
       (s.end === undefined && s.status !== "waiting" && s.status !== "queued"),
   );
   const failed = spans.some((s) => s.status === "fail");
-  const frameRef = useOffscreen<HTMLElement>(running);
+  const frameRef = useOffscreen(running);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const windowed = Boolean(maxHeight) && spans.length >= WINDOW_FROM;
   const virtualizer = useVirtualizer({

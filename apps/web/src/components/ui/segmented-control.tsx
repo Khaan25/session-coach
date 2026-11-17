@@ -121,7 +121,7 @@ function SegmentedControl(props: SegmentedControlProps) {
         data-size={size}
         data-multiple=""
         multiple
-        onValueChange={(value) => onValueChange?.(value as string[])}
+        onValueChange={(value) => onValueChange?.(value)}
         className={classes}
         {...rest}
       >
@@ -143,7 +143,7 @@ function SegmentedControl(props: SegmentedControlProps) {
     <RadioGroupPrimitive
       data-slot="segmented-control"
       data-size={size}
-      onValueChange={(value) => onValueChange?.(value as string)}
+      onValueChange={(value) => onValueChange?.(value)}
       className={classes}
       {...rest}
     >

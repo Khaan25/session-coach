@@ -35,7 +35,7 @@ function isOutcome(value: unknown): value is SyncOutcome {
  */
 export async function loadState(path: string): Promise<SyncState> {
   // No prototype, so an id like `__proto__` is an ordinary key.
-  const empty: SyncState = { version: 1, done: Object.create(null) };
+  const empty: SyncState = { version: 1, done: Object.create(null) as SyncState["done"] };
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(path, "utf8"));

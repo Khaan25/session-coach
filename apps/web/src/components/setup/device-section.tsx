@@ -50,7 +50,7 @@ export type DeviceListRow = { id: string; label: string; created: string; lastUs
 
 /** The error message a failed route returns, or a generic one when there is no answer at all. */
 async function errorOf(response: Response | null) {
-  const body: { error?: string } | null = await response?.json().catch(() => null);
+  const body = (await response?.json().catch(() => null)) as { error?: string } | null | undefined;
   return body?.error ?? "Check your connection and try again.";
 }
 
@@ -141,7 +141,8 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: DeviceListRow) => voi
   async function create() {
     // /canvas: no token is made for whoever is looking; the dialog shows where the token would be.
     if (dryRun) {
-      return setToken("A new token shows here once, on the real page.");
+      setToken("A new token shows here once, on the real page.");
+      return;
     }
     setPending(true);
     const response = await fetch("/api/cli/tokens", {
@@ -158,7 +159,7 @@ function CreateTokenDialog({ onCreate }: { onCreate: (row: DeviceListRow) => voi
       });
       return;
     }
-    const created: { id: string; label: string | null; token: string } = await response.json();
+    const created = (await response.json()) as { id: string; label: string | null; token: string };
     setPending(false);
     setToken(created.token);
     onCreate({
@@ -266,7 +267,8 @@ export function RevokeTokenDialog({
 
   async function revoke() {
     if (dryRun) {
-      return onRevoke();
+      onRevoke();
+      return;
     }
     setPending(true);
     const response = await fetch(`/api/cli/tokens?id=${encodeURIComponent(id)}`, {
