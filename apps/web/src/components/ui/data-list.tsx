@@ -113,7 +113,7 @@ const isEmpty = (node: React.ReactNode): boolean =>
   node === undefined ||
   typeof node === "boolean" ||
   (typeof node === "string" && node.trim() === "") ||
-  (Array.isArray(node) && node.every((child) => isEmpty(child)));
+  (Array.isArray(node) && (node as React.ReactNode[]).every((child) => isEmpty(child)));
 
 function DataListValue({
   className,

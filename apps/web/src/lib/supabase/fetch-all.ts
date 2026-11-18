@@ -15,6 +15,7 @@ export async function fetchAll<T>(
   for (;;) {
     const { data, error } = await page(rows.length, rows.length + PAGE_SIZE - 1);
     if (error) {
+      // oxlint-disable-next-line typescript/only-throw-error -- rethrows the client's PostgrestError, which callers read
       throw error;
     }
     rows.push(...(data ?? []));

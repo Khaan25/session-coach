@@ -1,5 +1,6 @@
 "use client";
 
+import { REALTIME_SUBSCRIBE_STATES } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -84,7 +85,7 @@ export function useLiveSessions(
         return;
       }
       if (data.session) {
-        supabase.realtime.setAuth(data.session.access_token);
+        void supabase.realtime.setAuth(data.session.access_token);
       }
       channel = supabase
         // One channel per mounted list (useId): the dashboard and the sidebar subscribe side by side.
@@ -126,14 +127,17 @@ export function useLiveSessions(
         // shortcut: a change between the server render and the first join is missed until the next navigation;
         // refresh on the first join too if that shows up in practice.
         .subscribe((status, error) => {
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          if (
+            status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR ||
+            status === REALTIME_SUBSCRIBE_STATES.TIMED_OUT
+          ) {
             console.error("useLiveSessions: subscribe", status, error);
           }
           // A rejoin after a dropped connection may have missed changes: re-read the rows through the server.
-          if (status === "SUBSCRIBED" && joined) {
+          if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED && joined) {
             router.refresh();
           }
-          if (status === "SUBSCRIBED") {
+          if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) {
             joined = true;
           }
         });

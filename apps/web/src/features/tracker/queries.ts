@@ -35,7 +35,7 @@ export async function getTrackerTasks(): Promise<TrackerTask[] | null> {
     .order("created_at")
     // so rows inserted together still keep one order
     .order("id")
-    .returns<TrackerTask[]>();
+    .overrideTypes<TrackerTask[], { merge: false }>();
   if (error) {
     throw new Error(`tracker_tasks: ${error.message}`);
   }

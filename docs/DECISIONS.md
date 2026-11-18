@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what we decided, why, and what we rejected.
 
+## 2026-11-18 · Type-aware oxlint rules on, backed by tsrs
+
+Supersedes the 2026-11-15 note that type-aware rules (`oxlint-tsgolint`) were not on yet.
+
+- **Decision:** `options.typeAware` is on in the root `.oxlintrc.json`, so `pnpm lint` runs oxlint's type-aware rules in all three packages. The backend is `tsrs` (a devDependency next to `oxlint` in each package), the Rust port of TypeScript that oxlint uses in place of `oxlint-tsgolint` ([announcement](https://oxc.rs/blog/2026-11-17-faster-type-aware-linting-with-tsrs)). The rules that catch real bugs stay on: `no-floating-promises`, `no-misused-promises`, the `no-unsafe-*` family, `only-throw-error`, `no-deprecated` and the rest. The noisy ones are configured or turned off, each with its reason in the config, following the 2026-11-15 off-list policy.
+- **Why:** the 2026-11-15 entry left type-aware rules off at about 2,700 diagnostics. Measured again with tsrs, it was about 2,800. Most came from three rules: `prefer-readonly-parameter-types` (about 1,220), `strict-boolean-expressions` (about 380) and `no-floating-promises` on `node:test` calls (about 537, now allowed by `allowForKnownSafeCalls`). After the config, about 90 real diagnostics were left, and this change fixes them. The main fixes make unchecked `any` from `res.json()` and `JSON.parse` an explicit cast, replace React's deprecated `FormEvent` with `SubmitEvent`, compare realtime statuses by enum, and mark one floating `setAuth` with `void`. The full `pnpm lint` takes 1.65 s with type-aware rules on.
+- **Rejected:** replacing `bun check` with `oxlint --type-aware --type-check`. On the web app, `bun check` took 0.30 s and the tsrs typecheck took 1.0 s, at about the same memory (415 MB and 430 MB). Both found no errors. Also rejected: fixing `prefer-nullish-coalescing` mechanically. There, `||` deliberately treats an empty string as missing.
+
 ## 2026-11-15 · Faster, stricter CI: bun check, every oxlint rule, affected tests, timed shards
 
 - **Decision:** `pnpm typecheck` runs `bun check` (the exact `bun` devDependency) instead of `tsc --noEmit`. oxlint turns every category on at "error" in all three packages (root `.oxlintrc.json`, extended by each package) and lint runs with `--deny-warnings`. CI splits lint, typecheck, unit tests, build, RLS and e2e into separate jobs that start together. On a pull request, `scripts/affected.mjs` follows the import graph from each unit test (plus fixtures read through `new URL(..., import.meta.url)`) and runs only the tests the diff reaches. RLS and e2e are gated by path. e2e runs in two shards, filled by recorded per-spec time (`scripts/shard-by-time.mjs`), which main refreshes into the Actions cache after each run. A final `ci` job is the single check to require.

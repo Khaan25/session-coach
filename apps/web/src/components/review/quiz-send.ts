@@ -18,7 +18,7 @@ async function postAnswer(cardId: string, attempt: Attempt): Promise<Grade> {
   if (!response) {
     throw new Error("Check your connection and try again.");
   }
-  const body = await response.json().catch(() => null);
+  const body = (await response.json().catch(() => null)) as { error?: string } | null;
   if (!response.ok) {
     throw new Error(body?.error ?? "Try again.");
   }

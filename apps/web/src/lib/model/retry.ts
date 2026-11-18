@@ -24,6 +24,7 @@ export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
     signal?.throwIfAborted();
     const onAbort = () => {
       clearTimeout(timer);
+      // oxlint-disable-next-line typescript/prefer-promise-reject-errors -- rejects with the abort reason, as fetch does
       reject(signal?.reason);
     };
     const timer = setTimeout(() => {

@@ -262,7 +262,7 @@ function AddTask({ section }: { section: string }) {
 
   function done(value: string | null) {
     setOpen(false);
-    if (value === null || !value.trim()) {
+    if (!value?.trim()) {
       setDraft("");
       return;
     }
@@ -387,6 +387,7 @@ function EditBox({
     onKeyDown: (event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       // Enter or Esc inside an IME composition belongs to the input method. Safari reports isComposing false on the
       // confirming Enter, hence keyCode 229.
+      // oxlint-disable-next-line typescript/no-deprecated -- the only signal Safari gives for that Enter
       if (event.nativeEvent.isComposing || event.keyCode === 229) {
         return;
       }

@@ -82,7 +82,7 @@ export function sessionWhere(jsonl: string): { repo: string | null; branch: stri
     }
     let event: { cwd?: unknown; gitBranch?: unknown } | null;
     try {
-      event = JSON.parse(line);
+      event = JSON.parse(line) as { cwd?: unknown; gitBranch?: unknown } | null;
     } catch {
       continue;
     }

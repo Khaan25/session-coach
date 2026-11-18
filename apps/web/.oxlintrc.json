@@ -98,6 +98,7 @@
     {
       "files": ["src/components/ui/**/*.tsx"],
       "rules": {
+        "typescript/no-deprecated": "off", // these files define the deprecated aliases, and each definition trips the rule
         "shadcn/no-restyle": "off",
         "shadcn/no-arbitrary-values": "off",
         "react/no-array-index-key": "off", // tokens, chart points and table cells are positional lists with no id

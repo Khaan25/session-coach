@@ -29,7 +29,10 @@ export function RetrySessionButton({ sessionId }: { sessionId: string }) {
     // 409: it already moved on (another tab, a re-push); showing its current state is the answer.
     if (!response?.ok && response?.status !== 409) {
       setPending(false);
-      const body: { error?: string } | null = await response?.json().catch(() => null);
+      const body = (await response?.json().catch(() => null)) as
+        | { error?: string }
+        | null
+        | undefined;
       toast.add({
         type: "error",
         title: "The session wasn't retried",

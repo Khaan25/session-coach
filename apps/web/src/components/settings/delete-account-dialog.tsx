@@ -37,7 +37,10 @@ export function DeleteAccountDialog({ email }: { email: string }) {
     const response = await fetch("/api/account", { method: "DELETE" }).catch(() => null);
     if (!response?.ok) {
       setPending(false);
-      const body: { error?: string } | null = await response?.json().catch(() => null);
+      const body = (await response?.json().catch(() => null)) as
+        | { error?: string }
+        | null
+        | undefined;
       toast.add({
         title: "Your account was not deleted",
         description: body?.error ?? "Check your connection and try again.",

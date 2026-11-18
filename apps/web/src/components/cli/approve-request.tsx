@@ -63,7 +63,8 @@ export function ApproveRequest({ request }: { request: ApproveRequestData }) {
   async function decide(decision: "approve" | "deny") {
     const done = decision === "approve" ? "approved" : "denied";
     if (dryRun) {
-      return setPhase({ kind: "done", done });
+      setPhase({ kind: "done", done });
+      return;
     }
     setPhase({ kind: "sending", decision });
     const response = await fetch(`/api/cli/device/${decision}`, {
@@ -72,9 +73,13 @@ export function ApproveRequest({ request }: { request: ApproveRequestData }) {
       body: JSON.stringify({ userCode: request.userCode }),
     }).catch(() => null);
     if (response?.ok) {
-      return setPhase({ kind: "done", done });
+      setPhase({ kind: "done", done });
+      return;
     }
-    const body: { error?: string } | null = await response?.json().catch(() => null);
+    const body = (await response?.json().catch(() => null)) as
+      | { error?: string }
+      | null
+      | undefined;
     setPhase({ kind: "asking", error: body?.error ?? "Check your connection and try again." });
   }
 

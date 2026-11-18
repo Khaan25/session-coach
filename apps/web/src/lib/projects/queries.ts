@@ -28,7 +28,7 @@ export async function listProjects(userId: string): Promise<ProjectListItem[]> {
   if (projects.error) {
     throw new Error(`listProjects: ${projects.error.message}`);
   }
-  const byRepo = new Map(projects.data.map((row) => [row.repo as string, row]));
+  const byRepo = new Map(projects.data.map((row) => [row.repo, row]));
   return ((repos.data ?? []) as { repo: string }[]).map(({ repo }) => {
     const row = byRepo.get(repo);
     return {

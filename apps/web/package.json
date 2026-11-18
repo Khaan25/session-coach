@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "oxlint --deny-warnings",
+    "lint": "next typegen && oxlint --deny-warnings",
     "typecheck": "next typegen && bun check",
     "test": "node --test --experimental-strip-types 'src/**/*.test.ts'",
     "test:rls": "node --test --experimental-strip-types tests/rls.test.ts",
@@ -49,9 +49,10 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "oxlint": "^1.90.0",
+    "oxlint": "^1.94.0",
     "shadcn": "^4.23.0",
     "tailwindcss": "^4",
+    "tsrs": "0.25.0-ts7.1.0-beta",
     "typescript": "^5",
     "zod": "4.3.3"
   }

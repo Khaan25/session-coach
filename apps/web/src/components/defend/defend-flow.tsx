@@ -99,7 +99,10 @@ async function post<T>(url: string, body?: unknown): Promise<T> {
   if (!response) {
     throw new Error("Check your connection and try again.");
   }
-  const data = await response.json().catch(() => null);
+  const data = (await response.json().catch(() => null)) as {
+    error?: string;
+    defenseId?: unknown;
+  } | null;
   if (response.status === 409) {
     const conflict = new ConflictError(data?.error ?? "Start again.");
     conflict.running = typeof data?.defenseId === "string";
@@ -235,17 +238,19 @@ export function DefendFlow({ defendable }: { defendable: number }) {
     void run();
   }
 
-  function submit(event: React.FormEvent<HTMLFormElement>) {
+  function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!timed || pending) {
       return;
     }
     const trimmed = answer.trim();
     if (!trimmed) {
-      return setError("Write your answer before you send it.");
+      setError("Write your answer before you send it.");
+      return;
     }
     if (trimmed.length > MAX_ANSWER) {
-      return setError(`Keep it under ${MAX_ANSWER} characters.`);
+      setError(`Keep it under ${MAX_ANSWER} characters.`);
+      return;
     }
     send(timed, trimmed);
   }

@@ -77,7 +77,7 @@ function Stat({
 type StatGroupProps = React.ComponentProps<"div"> & {
   /** The kind the whole strip counts: sets data-kind on the strip so every Stat's trend takes it. */
   kind?: Kind;
-  /** framed: the strip's own frame. plain: no edge, for a strip inside another frame, which draws only the rules. `frame` is a @deprecated alias of framed. */
+  /** framed: the strip's own frame. plain: no edge, for a strip inside another frame, which draws only the rules. `frame` is a deprecated alias of framed. */
   variant?: "framed" | "plain" | "frame";
 };
 

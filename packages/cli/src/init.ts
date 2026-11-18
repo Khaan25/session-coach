@@ -61,7 +61,7 @@ export function addSyncHooks(
         error: `"hooks.${event}" in the settings file is not a list, so nothing was changed.`,
       };
     }
-    next[event] = [...groups.filter((g) => !isOurs(g)), group];
+    next[event] = [...(groups as unknown[]).filter((g) => !isOurs(g)), group];
   }
   return { ...settings, hooks: next };
 }

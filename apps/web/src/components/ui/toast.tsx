@@ -273,7 +273,8 @@ const toastCues: Partial<Record<string, SoundName>> = {
 
 /** Sounds a toast's type when it appears and again when an update changes it (loading to success). `data.cue` overrides. */
 function useToastCue(toastItem: ToastPrimitive.Root.Props["toast"] | undefined) {
-  const cue: SoundName | undefined = toastItem?.data?.cue ?? toastCues[toastItem?.type ?? ""];
+  const cue =
+    (toastItem?.data as { cue?: SoundName } | undefined)?.cue ?? toastCues[toastItem?.type ?? ""];
   React.useEffect(() => {
     if (cue) {
       play(cue);

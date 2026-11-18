@@ -736,13 +736,13 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   // Keyboard focus that lands offscreen pulls the camera to it, since the page itself never scrolls.
   const onFocusCapture = (e: React.FocusEvent) => {
     const shell = shellRef.current;
-    const item = (e.target as Element).closest<HTMLElement>("[data-canvas-item]");
+    const item = e.target.closest<HTMLElement>("[data-canvas-item]");
     if (!shell || !item || e.target === shell) {
       return;
     }
     shell.scrollTop = 0;
     shell.scrollLeft = 0;
-    const r = (e.target as Element).getBoundingClientRect();
+    const r = e.target.getBoundingClientRect();
     const s = shell.getBoundingClientRect();
     if (r.right < s.left || r.left > s.right || r.bottom < s.top || r.top > s.bottom) {
       const { x, y, z } = camera.current;

@@ -32,11 +32,12 @@ export function useAuthForm(
   // Set when the browser-side check fails; cleared when a submit goes through, so the server's answer shows.
   const [clientErrors, setClientErrors] = useState<AuthFieldErrors>();
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.SubmitEvent<HTMLFormElement>) {
     const form = event.currentTarget;
     const found = validate(new FormData(form));
     if (Object.keys(found).length === 0) {
-      return setClientErrors(undefined);
+      setClientErrors(undefined);
+      return;
     }
     event.preventDefault();
     setClientErrors(found);

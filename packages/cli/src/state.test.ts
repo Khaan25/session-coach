@@ -79,11 +79,12 @@ describe("sync state", () => {
     const state = await loadState(path);
     assert.deepEqual(Object.keys(state.done), ["__proto__"]);
     assert.ok(Object.hasOwn(state.done, "__proto__"));
-    // oxlint-disable-next-line no-proto -- the test is about a log id that is literally "__proto__"
+    // oxlint-disable-next-line no-proto, typescript/dot-notation -- the test is about a log id that is literally "__proto__"
     assert.equal(state.done["__proto__"]?.outcome, "pushed");
     // An own key, not the prototype: the entry didn't replace it, and the global prototype is untouched.
     assert.equal(Object.getPrototypeOf(state.done), null);
     assert.equal(Object.getPrototypeOf({}), Object.prototype);
+    // oxlint-disable-next-line typescript/dot-notation -- reads the key the way the bug did, through the index
     assert.equal(({} as Record<string, unknown>)["outcome"], undefined);
   });
 
