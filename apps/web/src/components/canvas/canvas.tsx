@@ -7,7 +7,16 @@ import {
   MinusIcon,
   PlusIcon,
 } from "@phosphor-icons/react";
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -39,6 +48,15 @@ const SAVE_DELAY_MS = 300;
 const SETTLE_MS = 150;
 /** A press that moves less than this is a click, not a pan. */
 const DRAG_SLOP = 3;
+/**
+ * Below this zoom a preview is unreadable, so it stays an empty frame. Mounting all 131 live pages cost ~810ms of
+ * main-thread work on load; now a preview mounts the first time it is in view at this zoom or closer.
+ */
+const DETAIL_ZOOM = 0.2;
+/** How far outside the view a preview starts mounting, so it is ready by the time it pans in. */
+const PRELOAD_MARGIN = "25%";
+/** Focus that lands this soon after a preview mounts came from the preview, so the camera stays put. */
+const MOUNT_FOCUS_MS = 1000;
 
 type Gesture =
   | { kind: "pan"; pointerId: number; lastX: number; lastY: number; moved: boolean }
@@ -101,6 +119,8 @@ type EntryProps = {
   register: (id: string, node: HTMLDivElement | null) => void;
   onMoveStart: (id: string, e: React.PointerEvent) => void;
   onNudge: (id: string, dx: number, dy: number) => void;
+  /** Watches the preview box; calls `show` once it should mount. Returns the cleanup. */
+  watch: (id: string, node: HTMLDivElement, show: () => void) => () => void;
   moveHelpId: string;
 };
 
@@ -110,10 +130,24 @@ const CanvasEntry = memo(function CanvasEntry({
   register,
   onMoveStart,
   onNudge,
+  watch,
   moveHelpId,
 }: EntryProps) {
   const { id, name, width, height, render } = item;
   const [copy, setCopy] = useState<"idle" | "copied" | "manual">("idle");
+  // Once live, a preview stays mounted, so zooming out never loses what someone typed into it.
+  const [live, setLive] = useState(false);
+  const boxRef = useCallback(
+    (node: HTMLDivElement) => {
+      node.style.width = `${width}px`;
+      node.style.height = `${height}px`;
+      // Skips painting previews outside the view. With 125 full pages, a pan frame went from 14ms to 7ms at
+      // 50% zoom and 21ms to 7ms at fit. The fixed size above stands in for the skipped content.
+      node.style.contentVisibility = "auto";
+      return watch(id, node, () => startTransition(() => setLive(true)));
+    },
+    [id, width, height, watch],
+  );
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const manualRef = useRef<HTMLInputElement>(null);
 
@@ -216,19 +250,8 @@ const CanvasEntry = memo(function CanvasEntry({
           {copy === "copied" ? "Copied" : ""}
         </span>
       </div>
-      <div
-        ref={(node) => {
-          if (node) {
-            node.style.width = `${width}px`;
-            node.style.height = `${height}px`;
-            // Skips painting previews outside the view. With 125 full pages, a pan frame went from 14ms to 7ms at
-            // 50% zoom and 21ms to 7ms at fit. The fixed size above stands in for the skipped content.
-            node.style.contentVisibility = "auto";
-          }
-        }}
-        className="overflow-auto rounded-soft border border-hair bg-background"
-      >
-        {render()}
+      <div ref={boxRef} className="overflow-auto rounded-soft border border-hair bg-background">
+        {live ? render() : null}
       </div>
     </div>
   );
@@ -254,15 +277,52 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hadSavedCamera = useRef(false);
+  /** Previews not yet live: their box and how to mount them. */
+  const pending = useRef(new Map<string, { node: HTMLDivElement; show: () => void }>());
+  /** When the last preview went live: focus it grabs on mount must not pull the camera. */
+  const lastLive = useRef(0);
+  const detailed = useRef(false);
+  const observer = useRef<IntersectionObserver | null>(null);
   const [notice, setNotice] = useState("");
   const helpId = useId();
   const moveHelpId = useId();
 
   const ids = useMemo(() => new Set(items.map((i) => i.id)), [items]);
 
+  const goLive = useCallback((id: string) => {
+    const entry = pending.current.get(id);
+    if (!entry) {
+      return;
+    }
+    pending.current.delete(id);
+    observer.current?.unobserve(entry.node);
+    lastLive.current = performance.now();
+    entry.show();
+  }, []);
+
+  const watch = useCallback((id: string, node: HTMLDivElement, show: () => void) => {
+    pending.current.set(id, { node, show });
+    observer.current?.observe(node);
+    return () => {
+      pending.current.delete(id);
+      observer.current?.unobserve(node);
+    };
+  }, []);
+
   const paint = useCallback(() => {
     frame.current = 0;
     const { x, y, z } = camera.current;
+    if (z >= DETAIL_ZOOM !== detailed.current) {
+      detailed.current = z >= DETAIL_ZOOM;
+      // Re-observing makes the observer report every pending preview again, against the camera as it is now.
+      const io = observer.current;
+      if (detailed.current && io) {
+        for (const { node } of pending.current.values()) {
+          io.unobserve(node);
+          io.observe(node);
+        }
+      }
+    }
     const world = worldRef.current;
     if (world) {
       // While the camera moves, the world is one GPU layer, so a frame moves pixels instead of repainting every
@@ -284,6 +344,34 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
       zoomTextRef.current.textContent = `${Math.round(z * 100)}%`;
     }
   }, []);
+
+  // Mounts a preview the first time it is near the view at a readable zoom. The observer sees the world's transform,
+  // so panning and zooming move previews in and out of it with no extra work per frame.
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const id = (entry.target as HTMLElement).closest<HTMLElement>("[data-canvas-item]")
+            ?.dataset.canvasItem;
+          if (!id || !pending.current.has(id)) {
+            continue;
+          }
+          if (entry.isIntersecting && detailed.current) {
+            goLive(id);
+          }
+        }
+      },
+      { root: shellRef.current, rootMargin: PRELOAD_MARGIN },
+    );
+    observer.current = io;
+    for (const { node } of pending.current.values()) {
+      io.observe(node);
+    }
+    return () => {
+      io.disconnect();
+      observer.current = null;
+    };
+  }, [goLive]);
 
   const schedule = useCallback(() => {
     if (!frame.current) {
@@ -742,6 +830,10 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
     }
     shell.scrollTop = 0;
     shell.scrollLeft = 0;
+    // A preview that just mounted can take focus itself (an open dialog does); that is not the reader moving.
+    if (performance.now() - lastLive.current < MOUNT_FOCUS_MS) {
+      return;
+    }
     const r = e.target.getBoundingClientRect();
     const s = shell.getBoundingClientRect();
     if (r.right < s.left || r.left > s.right || r.bottom < s.top || r.top > s.bottom) {
@@ -804,6 +896,7 @@ export function Canvas({ items, title }: { items: CanvasItem[]; title: string })
                 register={register}
                 onMoveStart={startMove}
                 onNudge={nudge}
+                watch={watch}
                 moveHelpId={moveHelpId}
               />
             ))}
