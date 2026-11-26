@@ -33,6 +33,7 @@ export function Sprite({ name, className }: { name: SpriteName; className?: stri
         width={width}
         height={height}
         draggable={false}
+        unoptimized
         className="h-auto w-full dark:hidden"
       />
       <Image
@@ -41,6 +42,7 @@ export function Sprite({ name, className }: { name: SpriteName; className?: stri
         width={width}
         height={height}
         draggable={false}
+        unoptimized
         className="hidden h-auto w-full dark:block"
       />
     </span>

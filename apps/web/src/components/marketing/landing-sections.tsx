@@ -1,6 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import footerDeskNight from "@/assets/art/footer-desk-night.webp";
+import footerDesk from "@/assets/art/footer-desk.webp";
+import heroMeadowNight from "@/assets/art/hero-meadow-night.webp";
+import heroMeadow from "@/assets/art/hero-meadow.webp";
+
 import { Sprite } from "@/components/art/sprite";
 import { DecisionCardPreview } from "@/components/marketing/decision-card-preview";
 import { Reveal } from "@/components/marketing/reveal";
@@ -67,19 +72,15 @@ export function Hero() {
       {/* The team's two characters in watercolour: the learner at work in a meadow, the agent beside them with a card. */}
       <div className="mx-auto mt-4 w-full max-w-(--container) px-(--gutter-sm) sm:px-(--gutter)">
         <Image
-          src="/art/hero-meadow.webp"
+          src={heroMeadow}
           alt="A developer sitting cross-legged in a meadow, working on a laptop, with a small friendly robot holding a card beside them."
-          width={1903}
-          height={465}
           sizes="(min-width: 1120px) 1072px, 100vw"
           preload
           className="h-auto w-full dark:hidden"
         />
         <Image
-          src="/art/hero-meadow-night.webp"
+          src={heroMeadowNight}
           alt="A developer sitting cross-legged in a meadow, working on a laptop, with a small friendly robot holding a card beside them."
-          width={1903}
-          height={465}
           sizes="(min-width: 1120px) 1072px, 100vw"
           className="hidden h-auto w-full dark:block"
         />
@@ -266,18 +267,14 @@ export function DeskScene() {
       className="mx-auto w-full max-w-(--container) px-(--gutter-sm) pt-8 sm:px-(--gutter)"
     >
       <Image
-        src="/art/footer-desk.webp"
+        src={footerDesk}
         alt=""
-        width={1600}
-        height={533}
         sizes="(min-width: 1120px) 1072px, 100vw"
         className="h-auto w-full dark:hidden"
       />
       <Image
-        src="/art/footer-desk-night.webp"
+        src={footerDeskNight}
         alt=""
-        width={1600}
-        height={533}
         sizes="(min-width: 1120px) 1072px, 100vw"
         className="hidden h-auto w-full dark:block"
       />
